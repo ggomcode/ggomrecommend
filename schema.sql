@@ -150,6 +150,11 @@ BEGIN
     student_code_val := new.raw_user_meta_data->>'student_code';
     is_enrolled_val := COALESCE((new.raw_user_meta_data->>'is_enrolled')::boolean, TRUE);
     
+    -- 관리자 이메일 강제 매핑 규칙 추가
+    IF new.email = 'admin@ggomrecommend.ggomcode' THEN
+        role_val := 'admin';
+    END IF;
+    
     IF new.raw_user_meta_data->>'grad_year' IS NOT NULL THEN
         grad_year_val := (new.raw_user_meta_data->>'grad_year')::integer;
     ELSE
@@ -224,7 +229,7 @@ DECLARE
     v_email TEXT;
 BEGIN
     -- 이메일 규격 설정
-    v_email := 'teacher_' || p_grade || '_' || p_class_no || '@school.internal';
+    v_email := 'teacher_' || p_grade || '_' || p_class_no || '@ggomrecommend.ggomcode';
     
     -- 이미 존재하는 경우 비밀번호와 메타데이터 업데이트
     IF EXISTS (SELECT 1 FROM auth.users WHERE email = v_email) THEN
@@ -320,7 +325,7 @@ DECLARE
     v_user_id UUID;
     v_email TEXT;
 BEGIN
-    v_email := 'student_' || p_student_code || '@school.internal';
+    v_email := 'student_' || p_student_code || '@ggomrecommend.ggomcode';
     
     -- 이미 존재하는 경우 업데이트
     IF EXISTS (SELECT 1 FROM auth.users WHERE email = v_email) THEN

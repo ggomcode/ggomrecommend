@@ -151,33 +151,68 @@ export const useAuthStore = defineStore('auth', () => {
     _persist()
   }
 
-  // 관리자 로그인
-  async function loginAdmin(password) {
+  // 관리자 로그인 (최초 실행 시 자동 계정 생성 지원)
+  async function loginAdmin(adminId, password) {
     if (!supabase) throw new Error('Supabase가 설정되지 않았습니다.')
     
-    const email = 'admin@school.internal'
+    const email = `${adminId}@ggomrecommend.ggomcode`
+    
+    // 1. 기존 계정으로 로그인 시도
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     })
 
-    if (error) throw new Error('비밀번호가 일치하지 않거나 로그인이 차단되었습니다.')
+    // 2. 로그인 실패 시 계정 미설정 상태(최초 설치)로 판단하여 회원가입 시도
+    if (error) {
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            role: 'admin',
+            name: '관리자'
+          }
+        }
+      })
+
+      if (signUpError) {
+        throw new Error('관리자 계정 생성 및 설정에 실패했습니다: ' + (signUpError.message || '인증 오류'))
+      }
+
+      // 회원가입 직후 바로 세션이 획득되었을 경우
+      if (signUpData?.session) {
+        token.value = signUpData.session.access_token
+        await fetchProfile(signUpData.user.id)
+        return
+      } else {
+        // 회원가입 성공 후 재로그인 진행
+        const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        })
+        if (retryError) throw new Error('관리자 설정 후 로그인 처리에 실패했습니다.')
+        token.value = retryData.session.access_token
+        await fetchProfile(retryData.user.id)
+        return
+      }
+    }
 
     token.value = data.session.access_token
     await fetchProfile(data.user.id)
   }
 
   // 교사 로그인
-  async function loginTeacher(gradeVal, classNoVal, password) {
+  async function loginTeacher(teacherId, password) {
     if (!supabase) throw new Error('Supabase가 설정되지 않았습니다.')
     
-    const email = `teacher_${gradeVal}_${classNoVal}@school.internal`
+    const email = `${teacherId}@ggomrecommend.ggomcode`
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     })
 
-    if (error) throw new Error('학년, 반 또는 비밀번호가 올바르지 않습니다.')
+    if (error) throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.')
 
     token.value = data.session.access_token
     await fetchProfile(data.user.id)
@@ -187,7 +222,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function loginStudent(studentCodeVal, password) {
     if (!supabase) throw new Error('Supabase가 설정되지 않았습니다.')
     
-    const email = `student_${studentCodeVal}@school.internal`
+    const email = `student_${studentCodeVal}@ggomrecommend.ggomcode`
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -249,7 +284,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     // 2. 가상의 이메일 매핑으로 가입 진행
-    const email = `student_${sCode}@school.internal`
+    const email = `student_${sCode}@ggomrecommend.ggomcode`
     const { data, error } = await supabase.auth.signUp({
       email,
       password,

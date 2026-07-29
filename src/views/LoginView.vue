@@ -228,41 +228,20 @@
 
       <!-- [2] 담임 로그인 폼 -->
       <form v-if="mode === 'teacher'" @submit.prevent="handleTeacherLogin" class="flex flex-col gap-4">
-        <div :class="isGraduated ? '' : 'grid grid-cols-2 gap-3'">
-          <div>
-            <label class="block text-sm font-semibold mb-1.5 text-slate-500 dark:text-slate-400">학년</label>
-            <select
-              v-model.number="teacherGrade"
-              required
-              :disabled="classesLoading"
-              class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 dark:bg-slate-900 dark:text-white dark:border-slate-700 bg-white"
-              style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; box-sizing: border-box;"
-              @change="onGradeChange"
-            >
-              <option :value="''">{{ classesLoading ? '로딩 중…' : '선택' }}</option>
-              <option v-for="g in availableGrades" :key="g" :value="g">{{ g === 0 ? '졸업생' : g + '학년' }}</option>
-            </select>
-          </div>
-          <div v-if="!isGraduated">
-            <label class="block text-sm font-semibold mb-1.5 text-slate-500 dark:text-slate-400">반</label>
-            <select
-              v-model.number="teacherClassNo"
-              required
-              :disabled="classesLoading || !teacherGrade"
-              class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 dark:bg-slate-900 dark:text-white dark:border-slate-700 bg-white"
-              style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; box-sizing: border-box;"
-            >
-              <option :value="''">선택</option>
-              <option v-for="c in availableClassNos" :key="c" :value="c">{{ c }}반</option>
-            </select>
-          </div>
+        <div>
+          <label class="block text-sm font-semibold mb-1.5 text-slate-500 dark:text-slate-400">교사 아이디</label>
+          <input
+            v-model="teacherId"
+            type="text"
+            required
+            placeholder="교사 아이디 입력"
+            class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
+            style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; box-sizing: border-box;"
+          />
         </div>
 
         <div>
-          <label class="block text-sm font-semibold mb-1.5 text-slate-500 dark:text-slate-400">
-            비밀번호
-            <span v-if="isGraduated" class="text-xs font-normal text-slate-400 dark:text-slate-500" style="margin-left: 4px;">(관리자 비밀번호)</span>
-          </label>
+          <label class="block text-sm font-semibold mb-1.5 text-slate-500 dark:text-slate-400">비밀번호</label>
           <input
             v-model="teacherPassword"
             type="password"
@@ -275,7 +254,7 @@
 
         <button
           type="submit"
-          :disabled="loading || teacherGrade === '' || (!isGraduated && !teacherClassNo)"
+          :disabled="loading || !teacherId"
           class="w-full text-sm font-bold disabled:opacity-40 transition-colors cursor-pointer"
           style="padding: 12px; border: none; border-radius: 10px; background: #2563eb; color: white; margin-top: 4px;"
         >{{ loading ? '로그인 중…' : '로그인' }}</button>
@@ -283,6 +262,18 @@
 
       <!-- [3] 관리자 로그인 폼 -->
       <form v-if="mode === 'admin'" @submit.prevent="handleAdminLogin" class="flex flex-col gap-4">
+        <div>
+          <label class="block text-sm font-semibold mb-1.5 text-slate-500 dark:text-slate-400">관리자 아이디</label>
+          <input
+            v-model="adminId"
+            type="text"
+            required
+            placeholder="관리자 아이디 입력"
+            class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
+            style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; box-sizing: border-box;"
+          />
+        </div>
+
         <div>
           <label class="block text-sm font-semibold mb-1.5 text-slate-500 dark:text-slate-400">비밀번호</label>
           <input
@@ -297,7 +288,7 @@
 
         <button
           type="submit"
-          :disabled="loading"
+          :disabled="loading || !adminId"
           class="w-full text-sm font-bold disabled:opacity-40 transition-colors cursor-pointer"
           style="padding: 12px; border: none; border-radius: 10px; background: #2563eb; color: white; margin-top: 4px;"
         >{{ loading ? '로그인 중…' : '로그인' }}</button>
@@ -343,9 +334,9 @@ const signupPassword = ref('')
 const signupConfirm = ref('')
 
 // 관리자 / 교사용 상태
+const adminId = ref('')
 const adminPassword = ref('')
-const teacherGrade = ref(Number(localStorage.getItem(LS_GRADE)) || '')
-const teacherClassNo = ref(Number(localStorage.getItem(LS_CLASS)) || '')
+const teacherId = ref('')
 const teacherPassword = ref('')
 
 const classes = ref([])
@@ -525,10 +516,7 @@ async function handleTeacherLogin() {
   success.value = null
   loading.value = true
   try {
-    const classNoVal = isGraduated.value ? 0 : Number(teacherClassNo.value)
-    await auth.loginTeacher(Number(teacherGrade.value), classNoVal, teacherPassword.value)
-    localStorage.setItem(LS_GRADE, teacherGrade.value)
-    localStorage.setItem(LS_CLASS, classNoVal)
+    await auth.loginTeacher(teacherId.value, teacherPassword.value)
     router.push('/teacher')
   } catch (e) {
     error.value = e.message || '로그인에 실패했습니다.'
@@ -542,7 +530,7 @@ async function handleAdminLogin() {
   success.value = null
   loading.value = true
   try {
-    await auth.loginAdmin(adminPassword.value)
+    await auth.loginAdmin(adminId.value, adminPassword.value)
     router.push('/admin')
   } catch (e) {
     error.value = e.message || '로그인에 실패했습니다.'

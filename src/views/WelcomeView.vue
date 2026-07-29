@@ -78,10 +78,21 @@
           style="padding: 14px 16px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8;"
         >
           처음 실행되었습니다.<br>
-          관리자 비밀번호를 설정하면 시스템이 시작됩니다.
+          관리자 아이디와 비밀번호를 설정하면 시스템이 시작됩니다.
         </div>
 
         <form @submit.prevent="handleSetup" class="flex flex-col gap-4">
+          <div>
+            <label class="block text-base font-medium mb-1.5" style="color: #64748b;">관리자 아이디</label>
+            <input
+              v-model="adminId"
+              type="text"
+              required
+              placeholder="예: admin"
+              class="w-full text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+              style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; box-sizing: border-box;"
+            />
+          </div>
           <div>
             <label class="block text-base font-medium mb-1.5" style="color: #64748b;">새 비밀번호</label>
             <input
@@ -139,13 +150,14 @@ const auth = useAuthStore()
 
 const agreed = ref(false)
 const checked = ref(false)
+const adminId = ref('admin')
 const password = ref('')
 const confirm = ref('')
 const loading = ref(false)
 const error = ref(null)
 
 const canSubmit = computed(
-  () => password.value.length >= 8 && password.value === confirm.value
+  () => adminId.value.trim().length > 0 && password.value.length >= 8 && password.value === confirm.value
 )
 
 async function handleSetup() {
@@ -153,10 +165,10 @@ async function handleSetup() {
   error.value = null
   loading.value = true
   try {
-    await auth.loginAdmin(password.value)  // 미초기화 상태 → 비밀번호 등록 + 토큰 발급
+    await auth.loginAdmin(adminId.value.trim(), password.value)  // 미초기화 상태 → 비밀번호 등록 + 토큰 발급
     router.push('/admin')
   } catch (e) {
-    error.value = e.response?.data || '설정에 실패했습니다. 다시 시도해주세요.'
+    error.value = e.message || e.response?.data || '설정에 실패했습니다. 다시 시도해주세요.'
   } finally {
     loading.value = false
   }
