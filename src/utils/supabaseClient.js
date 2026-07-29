@@ -20,4 +20,4 @@ export const setSupabaseConfig = (newUrl, newAnonKey) => {
 }
 
 // 클라이언트 인스턴스 생성
-export const supabase = url ? createClient(url, anonKey) : null
+export const supabase = (url && anonKey) ? createClient(url, anonKey) : null

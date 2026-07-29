@@ -379,44 +379,88 @@ export const getUniversities = async () => {
     .order('univ_name', { ascending: true })
 
   if (error) throw error
-  return data
+  return data.map(u => {
+    let meta = {}
+    try {
+      meta = JSON.parse(u.remarks || '{}')
+    } catch (e) {
+      meta = { text: u.remarks }
+    }
+    return {
+      ...u,
+      total_quota: meta.total_quota !== undefined ? meta.total_quota : u.quota_limit,
+      unit_quota: u.quota_limit,
+      prioritize_enrolled: !!meta.prioritize_enrolled
+    }
+  })
 }
 
 // 11. 대학교 생성
 export const createUniversity = async (body) => {
   if (!supabase) return
+  const meta = {
+    total_quota: body.total_quota !== undefined ? body.total_quota : (body.quota_limit || null),
+    prioritize_enrolled: !!body.prioritize_enrolled
+  }
+  const quota_limit = body.unit_quota !== undefined ? body.unit_quota : (body.total_quota !== undefined ? body.total_quota : body.quota_limit)
+  
   const { data, error } = await supabase
     .from('universities')
     .insert({
       univ_name: body.univ_name,
       track_type: body.track_type || '교과',
-      track_name: body.track_name,
+      track_name: body.track_name || '',
       grad_allowed: body.grad_allowed !== undefined ? body.grad_allowed : true,
       csat_min: body.csat_min || 'X',
-      has_quota: body.has_quota || false,
-      quota_limit: body.quota_limit || null,
-      remarks: body.remarks || ''
+      has_quota: quota_limit !== null,
+      quota_limit: quota_limit,
+      remarks: JSON.stringify(meta)
     })
     .select()
 
   if (error) throw error
-  return data && data[0]
+  
+  const u = data && data[0]
+  if (!u) return null
+  return {
+    ...u,
+    total_quota: meta.total_quota,
+    unit_quota: u.quota_limit,
+    prioritize_enrolled: !!meta.prioritize_enrolled
+  }
 }
 
 // 12. 대학교 수정
 export const updateUniversity = async (id, body) => {
   if (!supabase) return
+  
+  // Fetch existing row to merge metadata
+  const { data: existing } = await supabase.from('universities').select('*').eq('id', id).single()
+  if (!existing) return
+  
+  let meta = {}
+  try {
+    meta = JSON.parse(existing.remarks || '{}')
+  } catch (e) {
+    meta = { text: existing.remarks }
+  }
+  
+  if (body.total_quota !== undefined) meta.total_quota = body.total_quota
+  if (body.prioritize_enrolled !== undefined) meta.prioritize_enrolled = body.prioritize_enrolled
+  
+  const quota_limit = body.unit_quota !== undefined ? body.unit_quota : (body.total_quota !== undefined ? body.total_quota : existing.quota_limit)
+  
   const { error } = await supabase
     .from('universities')
     .update({
-      univ_name: body.univ_name,
-      track_type: body.track_type,
-      track_name: body.track_name,
-      grad_allowed: body.grad_allowed,
-      csat_min: body.csat_min,
-      has_quota: body.has_quota,
-      quota_limit: body.quota_limit,
-      remarks: body.remarks
+      univ_name: body.univ_name !== undefined ? body.univ_name : existing.univ_name,
+      track_type: body.track_type !== undefined ? body.track_type : existing.track_type,
+      track_name: body.track_name !== undefined ? body.track_name : existing.track_name,
+      grad_allowed: body.grad_allowed !== undefined ? body.grad_allowed : existing.grad_allowed,
+      csat_min: body.csat_min !== undefined ? body.csat_min : existing.csat_min,
+      has_quota: quota_limit !== null,
+      quota_limit: quota_limit,
+      remarks: JSON.stringify(meta)
     })
     .eq('id', id)
 
@@ -439,7 +483,20 @@ export const getUnivTracks = async (univId) => {
   if (!supabase) return []
   const { data: u } = await supabase.from('universities').select('*').eq('id', univId).single()
   if (!u) return []
-  return [u]
+  
+  let meta = {}
+  try {
+    meta = JSON.parse(u.remarks || '{}')
+  } catch (e) {
+    meta = { text: u.remarks }
+  }
+  
+  return [{
+    ...u,
+    total_quota: meta.total_quota !== undefined ? meta.total_quota : u.quota_limit,
+    unit_quota: u.quota_limit,
+    prioritize_enrolled: !!meta.prioritize_enrolled
+  }]
 }
 
 export const getAllTracks = async () => getUniversities()
@@ -850,7 +907,7 @@ export const getQuotaStats = async () => {
     counts[ap.univ_id] = (counts[ap.univ_id] || 0) + 1
   })
 
-  return univs.map(u => {
+  const list = univs.map(u => {
     const recommended = counts[u.id] || 0
     const quota = u.has_quota ? u.quota_limit : 9999
     return {
@@ -862,6 +919,24 @@ export const getQuotaStats = async () => {
       remaining_quota: u.has_quota ? Math.max(0, quota - recommended) : null
     }
   })
+
+  // Attach univs property to the list array for UniversitiesTab.vue
+  list.univs = univs.map(u => {
+    const recommended = counts[u.id] || 0
+    return {
+      univ_id: u.id,
+      total_used: recommended,
+      tracks: [
+        {
+          track_id: u.id,
+          unit_used: recommended,
+          by_round: []
+        }
+      ]
+    }
+  })
+
+  return list
 }
 
 // 학급별 마감 확정 현황 (더미)
@@ -869,7 +944,26 @@ export const getRoundConfirmationStatus = async () => {
   return { classes: [] }
 }
 
-export const exportQuotaStats = () => {}
+export const exportQuotaStats = async (univId) => {
+  const XLSX = await import('xlsx')
+  const stats = await getQuotaStats()
+  const filtered = univId ? stats.filter(s => s.id === univId) : stats
+  
+  const headers = ['대학명', '모집단위명', '정원', '추천 확정 인원', '잔여 정원']
+  const rows = filtered.map(s => [
+    s.univ_name,
+    s.track_name,
+    s.quota !== null ? s.quota : '제한 없음',
+    s.recommended_count,
+    s.remaining_quota !== null ? s.remaining_quota : '제한 없음'
+  ])
+  
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, '정원 현황')
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+  return { data: wbout }
+}
 
 export const getTrackRecommendedList = async (trackId) => {
   if (!supabase) return []
@@ -881,13 +975,271 @@ export const getTrackRecommendedList = async (trackId) => {
     .eq('is_abandoned', false)
 
   if (error) throw error
-  return data
+  
+  // Format matching expected array
+  return data.map((ap, index) => ({
+    student_id: ap.student_id,
+    name: ap.profiles.name,
+    student_code: ap.profiles.student_code,
+    is_enrolled: ap.profiles.is_enrolled,
+    abandoned: ap.is_abandoned,
+    ranking: index + 1
+  }))
 }
 
-export const downloadUnivSettingsTemplate = () => {}
-export const exportUnivSettings = () => {}
-export const previewUnivSettings = () => {}
-export const importUnivSettings = () => {}
+export const downloadUnivSettingsTemplate = async () => {
+  const XLSX = await import('xlsx')
+  const headers = ['대학명', '대학 정원', '모집단위명', '모집단위 정원', '재학생 우선 여부']
+  const sampleData = [
+    ['○○대학교', 5, '인문계열', '제한 없음', 'Y'],
+    ['○○대학교', 5, '자연계열', '제한 없음', 'Y'],
+    ['△△대학교', '제한 없음', '인문계열', '제한 없음', 'N'],
+    ['△△대학교', '제한 없음', '자연계열', '제한 없음', 'N'],
+    ['△△대학교', '제한 없음', '의학계열', 1, 'N'],
+  ]
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData])
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, '대학 설정')
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+  return { data: wbout }
+}
+
+export const exportUnivSettings = async () => {
+  const XLSX = await import('xlsx')
+  const univs = await getUniversities()
+  const headers = ['대학명', '대학 정원', '모집단위명', '모집단위 정원', '재학생 우선 여부']
+  const rows = univs.map(u => [
+    u.univ_name,
+    u.total_quota !== null ? u.total_quota : '제한 없음',
+    u.track_name,
+    u.unit_quota !== null ? u.unit_quota : '제한 없음',
+    u.prioritize_enrolled ? 'Y' : 'N'
+  ])
+  
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, '대학 설정')
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+  return { data: wbout }
+}
+
+export const previewUnivSettings = async (file) => {
+  const XLSX = await import('xlsx')
+  const arrayBuffer = await file.arrayBuffer()
+  const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+  const sheetName = workbook.SheetNames[0]
+  const sheet = workbook.Sheets[sheetName]
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 })
+  
+  if (rows.length < 2) {
+    throw new Error('파일에 데이터가 없습니다.')
+  }
+  
+  const headers = rows[0]
+  const colUnivName = headers.indexOf('대학명')
+  const colUnivQuota = headers.indexOf('대학 정원')
+  const colTrackName = headers.indexOf('모집단위명')
+  const colTrackQuota = headers.indexOf('모집단위 정원')
+  const colPrioritize = headers.indexOf('재학생 우선 여부')
+  
+  if (colUnivName === -1 || colTrackName === -1) {
+    throw new Error('필수 열(대학명, 모집단위명)이 누락되었습니다.')
+  }
+  
+  const currentUnivs = await getUniversities()
+  const currentMap = new Map()
+  currentUnivs.forEach(u => {
+    currentMap.set(`${u.univ_name}-${u.track_name}`, u)
+  })
+  
+  const errors = []
+  const changes = []
+  let unchanged_count = 0
+  const processedKeys = new Set()
+  
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i]
+    if (!row || row.length === 0) continue
+    
+    const univName = String(row[colUnivName] || '').trim()
+    const trackName = String(row[colTrackName] || '').trim()
+    
+    if (!univName || !trackName) continue
+    
+    const key = `${univName}-${trackName}`
+    if (processedKeys.has(key)) {
+      errors.push(`행 ${i + 1}: 중복된 대학 및 모집단위가 존재합니다 (${univName} - ${trackName})`)
+      continue
+    }
+    processedKeys.add(key)
+    
+    let totalQuota = null
+    if (colUnivQuota !== -1) {
+      const qVal = String(row[colUnivQuota]).trim()
+      if (qVal && qVal !== '제한 없음' && qVal !== '무제한') {
+        const num = Number(qVal)
+        if (isNaN(num) || num < 1) {
+          errors.push(`행 ${i + 1}: 대학 정원은 숫자 또는 '제한 없음'이어야 합니다.`)
+        } else {
+          totalQuota = num
+        }
+      }
+    }
+    
+    let unitQuota = null
+    if (colTrackQuota !== -1) {
+      const qVal = String(row[colTrackQuota]).trim()
+      if (qVal && qVal !== '제한 없음' && qVal !== '무제한') {
+        const num = Number(qVal)
+        if (isNaN(num) || num < 1) {
+          errors.push(`행 ${i + 1}: 모집단위 정원은 숫자 또는 '제한 없음'이어야 합니다.`)
+        } else {
+          unitQuota = num
+        }
+      }
+    }
+    
+    let prioritizeEnrolled = false
+    if (colPrioritize !== -1) {
+      const pVal = String(row[colPrioritize] || '').trim().toUpperCase()
+      prioritizeEnrolled = pVal === 'Y' || pVal === 'TRUE' || pVal === '예' || pVal === '1'
+    }
+    
+    const existing = currentMap.get(key)
+    if (!existing) {
+      changes.push({
+        univ_name: univName,
+        track_name: trackName,
+        op: 'create',
+        blocked: false,
+        fields: [
+          { field: '대학명', old: '—', new: univName },
+          { field: '모집단위명', old: '—', new: trackName },
+          { field: '대학 정원', old: '—', new: totalQuota !== null ? `${totalQuota}명` : '제한 없음' },
+          { field: '모집단위 정원', old: '—', new: unitQuota !== null ? `${unitQuota}명` : '제한 없음' },
+          { field: '재학생 우선', old: '—', new: prioritizeEnrolled ? '설정' : '해제' }
+        ]
+      })
+    } else {
+      const fields = []
+      if (existing.total_quota !== totalQuota) {
+        fields.push({
+          field: '대학 정원',
+          old: existing.total_quota !== null ? `${existing.total_quota}명` : '제한 없음',
+          new: totalQuota !== null ? `${totalQuota}명` : '제한 없음'
+        })
+      }
+      if (existing.unit_quota !== unitQuota) {
+        fields.push({
+          field: '모집단위 정원',
+          old: existing.unit_quota !== null ? `${existing.unit_quota}명` : '제한 없음',
+          new: unitQuota !== null ? `${unitQuota}명` : '제한 없음'
+        })
+      }
+      if (existing.prioritize_enrolled !== prioritizeEnrolled) {
+        fields.push({
+          field: '재학생 우선',
+          old: existing.prioritize_enrolled ? '설정' : '해제',
+          new: prioritizeEnrolled ? '설정' : '해제'
+        })
+      }
+      
+      if (fields.length > 0) {
+        changes.push({
+          univ_name: univName,
+          track_name: trackName,
+          op: 'update',
+          blocked: false,
+          fields
+        })
+      } else {
+        unchanged_count++
+      }
+    }
+  }
+  
+  return {
+    errors,
+    changes,
+    unchanged_count,
+    closed_round_labels: [],
+    has_blocked: false
+  }
+}
+
+export const importUnivSettings = async (file) => {
+  const preview = await previewUnivSettings(file)
+  if (preview.errors.length > 0) {
+    throw new Error('가져오기 오류가 있습니다. 파일 내용을 확인하세요.')
+  }
+  
+  const XLSX = await import('xlsx')
+  const arrayBuffer = await file.arrayBuffer()
+  const workbook = XLSX.read(arrayBuffer, { type: 'array' })
+  const sheetName = workbook.SheetNames[0]
+  const sheet = workbook.Sheets[sheetName]
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 })
+  
+  const headers = rows[0]
+  const colUnivName = headers.indexOf('대학명')
+  const colUnivQuota = headers.indexOf('대학 정원')
+  const colTrackName = headers.indexOf('모집단위명')
+  const colTrackQuota = headers.indexOf('모집단위 정원')
+  const colPrioritize = headers.indexOf('재학생 우선 여부')
+  
+  const currentUnivs = await getUniversities()
+  const currentMap = new Map()
+  currentUnivs.forEach(u => {
+    currentMap.set(`${u.univ_name}-${u.track_name}`, u)
+  })
+  
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i]
+    if (!row || row.length === 0) continue
+    
+    const univName = String(row[colUnivName] || '').trim()
+    const trackName = String(row[colTrackName] || '').trim()
+    
+    if (!univName || !trackName) continue
+    
+    let totalQuota = null
+    if (colUnivQuota !== -1) {
+      const qVal = String(row[colUnivQuota]).trim()
+      if (qVal && qVal !== '제한 없음' && qVal !== '무제한') {
+        totalQuota = Number(qVal) || null
+      }
+    }
+    let unitQuota = null
+    if (colTrackQuota !== -1) {
+      const qVal = String(row[colTrackQuota]).trim()
+      if (qVal && qVal !== '제한 없음' && qVal !== '무제한') {
+        unitQuota = Number(qVal) || null
+      }
+    }
+    let prioritizeEnrolled = false
+    if (colPrioritize !== -1) {
+      const pVal = String(row[colPrioritize] || '').trim().toUpperCase()
+      prioritizeEnrolled = pVal === 'Y' || pVal === 'TRUE' || pVal === '예' || pVal === '1'
+    }
+    
+    const key = `${univName}-${trackName}`
+    const existing = currentMap.get(key)
+    
+    const body = {
+      univ_name: univName,
+      track_name: trackName,
+      total_quota: totalQuota,
+      unit_quota: unitQuota,
+      prioritize_enrolled: prioritizeEnrolled
+    }
+    
+    if (existing) {
+      await updateUniversity(existing.id, body)
+    } else {
+      await createUniversity(body)
+    }
+  }
+}
 
 // 28. 2-Phase 자동 추천 알고리즘 (클라이언트)
 export const autoRecommend = async (roundId) => {
