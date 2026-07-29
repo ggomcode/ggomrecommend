@@ -5,6 +5,28 @@ export async function blobErrMsg(e) {
   return e.message ?? '오류가 발생했습니다'
 }
 
+// 현재 활성화된 라운드 조회
+export const getCurrentRound = async () => {
+  if (!supabase) return null
+  const { data, error } = await supabase
+    .from('timeline_rounds')
+    .select('*')
+    .eq('status', 'OPEN')
+    .order('id', { ascending: true })
+    
+  if (error) throw error
+  if (data && data.length > 0) return data[0]
+  
+  const { data: closedData } = await supabase
+    .from('timeline_rounds')
+    .select('*')
+    .eq('status', 'CLOSED')
+    .order('id', { ascending: true })
+    
+  if (closedData && closedData.length > 0) return closedData[0]
+  return null
+}
+
 // 1. 개요 통계 조회
 export const getOverview = async () => {
   if (!supabase) return null
