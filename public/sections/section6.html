@@ -1,0 +1,264 @@
+<section class="page-break print-keep-bg" style="padding: 40px 0;">
+
+    <h2 class="text-xl font-bold text-slate-800 border-b-2 border-indigo-500 pb-2 mb-8">6. 결과 내보내기 및 백업</h2>
+
+    <!-- Excel 결과 파일 다운로드 -->
+    <div class="mb-10">
+        <h3 class="text-lg font-bold text-slate-700 mb-3">Excel 결과 파일 다운로드</h3>
+        <p class="text-lg text-slate-600 leading-relaxed mb-4">
+            관리자 화면의 <strong>라운드 관리</strong> 탭 → <strong>결과</strong> 탭에서 아래 두 버튼을 통해 Excel 파일을 다운로드할 수 있습니다.
+            이와 별도로 <strong>대학 설정</strong> 탭의 <strong>전체 명단·정원 현황 내보내기</strong>는 전체 라운드를 아우른 지원자 명단과 현재 시점의 대학·모집단위별 지원·추천·포기·잔여석을 한 파일(2개 시트)로 받습니다.
+        </p>
+
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 text-lg print-keep-bg">
+                <p class="mb-2">
+                    <span class="inline-block text-base font-semibold text-white rounded-lg px-4 py-1.5 print-keep-bg"
+                          style="background: #16a34a;">이 라운드 지원자 명단</span>
+                </p>
+                <p class="text-slate-600 leading-relaxed">점수 계산 완료 후 활성화. 이 라운드에 <strong>지원한 학생 전원</strong>의 명단(점수·순위·추천/미선발/포기 포함)을 담은
+                    <strong>지원자 명단</strong> 시트를 내려받습니다. 점수 미계산 지원자도 포함됩니다.</p>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 text-lg print-keep-bg">
+                <p class="mb-2">
+                    <span class="inline-block text-base font-semibold text-white rounded-lg px-4 py-1.5 print-keep-bg"
+                          style="background: #2563eb;">이 라운드 선발 현황</span>
+                </p>
+                <p class="text-slate-600 leading-relaxed">
+                    마감(<span class="px-2 py-0.5 rounded-md text-base font-bold bg-indigo-100 text-indigo-700 border border-indigo-300 print-keep-bg">FINALIZED</span>)
+                    상태에서만 활성화. 모집단위·대학별 <strong>지원·추천·포기 인원과 정원·잔여석</strong>을 요약한 <strong>선발 현황</strong> 시트를 내려받습니다.
+                </p>
+            </div>
+        </div>
+
+        <p class="text-lg font-bold text-slate-700 mb-2">이 라운드 지원자 명단 시트 열 구성</p>
+        <table class="w-full text-lg border-collapse mb-2 print-thead-repeat" style="table-layout: fixed;">
+            <colgroup>
+                <col style="width: 30%;">
+                <col style="width: 70%;">
+            </colgroup>
+            <thead>
+            <tr class="bg-slate-100 text-slate-700 font-bold print-keep-bg">
+                <th class="border border-slate-200 px-4 py-2 text-left">열 이름</th>
+                <th class="border border-slate-200 px-4 py-2 text-left">설명</th>
+            </tr>
+            </thead>
+            <tbody class="text-slate-600">
+            <tr>
+                <td class="border border-slate-200 px-4 py-2">대학 순위</td>
+                <td class="border border-slate-200 px-4 py-2">대학 전체 순위 (미계산 시 공백)</td>
+            </tr>
+            <tr class="bg-slate-50 print-keep-bg">
+                <td class="border border-slate-200 px-4 py-2">모집단위 순위</td>
+                <td class="border border-slate-200 px-4 py-2">모집단위 내 순위 (미계산 시 공백)</td>
+            </tr>
+            <tr>
+                <td class="border border-slate-200 px-4 py-2">대학</td>
+                <td class="border border-slate-200 px-4 py-2">지원 대학명</td>
+            </tr>
+            <tr class="bg-slate-50 print-keep-bg">
+                <td class="border border-slate-200 px-4 py-2">모집단위</td>
+                <td class="border border-slate-200 px-4 py-2">지원 모집단위명 (트랙)</td>
+            </tr>
+            <tr>
+                <td class="border border-slate-200 px-4 py-2">지원학과</td>
+                <td class="border border-slate-200 px-4 py-2">담임교사가 등록한 세부 지원학과명</td>
+            </tr>
+            <tr class="bg-slate-50 print-keep-bg">
+                <td class="border border-slate-200 px-4 py-2">학생명</td>
+                <td class="border border-slate-200 px-4 py-2">학생 이름</td>
+            </tr>
+            <tr>
+                <td class="border border-slate-200 px-4 py-2">학생코드</td>
+                <td class="border border-slate-200 px-4 py-2">학번 등 학생 고유 코드</td>
+            </tr>
+            <tr class="bg-slate-50 print-keep-bg">
+                <td class="border border-slate-200 px-4 py-2">학년</td>
+                <td class="border border-slate-200 px-4 py-2">소속 학년</td>
+            </tr>
+            <tr>
+                <td class="border border-slate-200 px-4 py-2">반</td>
+                <td class="border border-slate-200 px-4 py-2">소속 반</td>
+            </tr>
+            <tr class="bg-slate-50 print-keep-bg">
+                <td class="border border-slate-200 px-4 py-2">번호</td>
+                <td class="border border-slate-200 px-4 py-2">반 내 출석번호</td>
+            </tr>
+            <tr>
+                <td class="border border-slate-200 px-4 py-2">재학구분</td>
+                <td class="border border-slate-200 px-4 py-2">재학 / 졸업</td>
+            </tr>
+            <tr class="bg-slate-50 print-keep-bg">
+                <td class="border border-slate-200 px-4 py-2">[전형요소 이름] × N</td>
+                <td class="border border-slate-200 px-4 py-2">전형요소 설정 탭에 등록된 전형요소별 점수 열이 동적으로 추가됨</td>
+            </tr>
+            <tr>
+                <td class="border border-slate-200 px-4 py-2">총점</td>
+                <td class="border border-slate-200 px-4 py-2">전형요소 합산 점수 (미계산 시 "미계산")</td>
+            </tr>
+            <tr class="bg-slate-50 print-keep-bg">
+                <td class="border border-slate-200 px-4 py-2">추천</td>
+                <td class="border border-slate-200 px-4 py-2">추천 확정 시 "추천", 그 외 공백</td>
+            </tr>
+            <tr>
+                <td class="border border-slate-200 px-4 py-2">포기</td>
+                <td class="border border-slate-200 px-4 py-2">지원 포기 처리 시 "포기", 그 외 공백</td>
+            </tr>
+            <tr class="bg-slate-50 print-keep-bg">
+                <td class="border border-slate-200 px-4 py-2">미선발여부</td>
+                <td class="border border-slate-200 px-4 py-2">미선발 처리 시 "미선발", 그 외 공백</td>
+            </tr>
+            <tr>
+                <td class="border border-slate-200 px-4 py-2">미선발사유</td>
+                <td class="border border-slate-200 px-4 py-2">미선발 처리 시 입력한 사유</td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="text-base text-slate-400 mb-4">* 열 순서는 위 표의 순서와 동일합니다. 전형요소 열은 학교별 설정에 따라 달라집니다.</p>
+
+        <p class="text-lg font-bold text-slate-700 mb-2">이 라운드 선발 현황 시트 열 구성</p>
+        <table class="w-full text-lg border-collapse mb-2 print-thead-repeat" style="table-layout: fixed;">
+            <colgroup>
+                <col style="width: 42%;">
+                <col style="width: 58%;">
+            </colgroup>
+            <thead>
+            <tr class="bg-slate-100 text-slate-700 font-bold print-keep-bg">
+                <th class="border border-slate-200 px-4 py-2 text-left">열 이름</th>
+                <th class="border border-slate-200 px-4 py-2 text-left">설명</th>
+            </tr>
+            </thead>
+            <tbody class="text-slate-600">
+            <tr>
+                <td class="border border-slate-200 px-4 py-2">대학</td>
+                <td class="border border-slate-200 px-4 py-2">지원 대학명</td>
+            </tr>
+            <tr class="bg-slate-50 print-keep-bg">
+                <td class="border border-slate-200 px-4 py-2">모집단위</td>
+                <td class="border border-slate-200 px-4 py-2">지원 모집단위명 (트랙)</td>
+            </tr>
+            <tr>
+                <td class="border border-slate-200 px-4 py-2">모집단위 정원</td>
+                <td class="border border-slate-200 px-4 py-2">해당 모집단위의 전체 모집 정원 (무제한이면 "무제한")</td>
+            </tr>
+            <tr class="bg-slate-50 print-keep-bg">
+                <td class="border border-slate-200 px-4 py-2">지원 인원</td>
+                <td class="border border-slate-200 px-4 py-2">이번 라운드에 이 모집단위로 지원한 인원(포기 포함)</td>
+            </tr>
+            <tr>
+                <td class="border border-slate-200 px-4 py-2">추천 인원</td>
+                <td class="border border-slate-200 px-4 py-2">이번 라운드에서 추천 확정된 인원(포기 제외)</td>
+            </tr>
+            <tr class="bg-slate-50 print-keep-bg">
+                <td class="border border-slate-200 px-4 py-2">포기 인원</td>
+                <td class="border border-slate-200 px-4 py-2">이번 라운드에 지원 후 포기한 인원</td>
+            </tr>
+            <tr>
+                <td class="border border-slate-200 px-4 py-2">모집단위 라운드 전 잔여석</td>
+                <td class="border border-slate-200 px-4 py-2">이번 라운드 시작 시점의 모집단위 잔여석 (이전 라운드까지 추천된 인원 제외)</td>
+            </tr>
+            <tr class="bg-slate-50 print-keep-bg">
+                <td class="border border-slate-200 px-4 py-2">모집단위 남은 잔여석</td>
+                <td class="border border-slate-200 px-4 py-2">이번 라운드 이후 남은 모집단위 잔여석</td>
+            </tr>
+            <tr>
+                <td class="border border-slate-200 px-4 py-2">대학 전체 정원</td>
+                <td class="border border-slate-200 px-4 py-2">해당 대학 전체 모집단위 정원 합계 (무제한이면 "무제한")</td>
+            </tr>
+            <tr class="bg-slate-50 print-keep-bg">
+                <td class="border border-slate-200 px-4 py-2">대학 라운드 전 잔여석</td>
+                <td class="border border-slate-200 px-4 py-2">이번 라운드 시작 시점의 대학 전체 잔여석 합계</td>
+            </tr>
+            <tr>
+                <td class="border border-slate-200 px-4 py-2">대학 남은 잔여석</td>
+                <td class="border border-slate-200 px-4 py-2">이번 라운드 이후 남은 대학 전체 잔여석 합계</td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="text-base text-slate-400 mb-4">* 행은 모집단위(트랙) 단위로 구성됩니다.</p>
+
+    </div>
+
+    <!-- 데이터 백업과 복원 -->
+    <div class="space-y-6 break-before-page">
+        <h3 class="text-lg font-bold text-slate-700 mb-3">데이터 백업과 복원</h3>
+        <p class="text-lg text-slate-600 leading-relaxed mb-4">
+            모든 데이터는 실행 파일과 같은 폴더의
+            <code class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 print-keep-bg">pcm</code>
+            폴더 안에 있습니다. <strong>백업은 반드시 <code class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 print-keep-bg">pcm</code> 폴더 전체를 압축하여 보관하십시오.</strong>
+            <code class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 print-keep-bg">data.db</code> 파일 하나만 복사하면
+            프로그램이 강제 종료되거나 정전이 있었던 경우 최근 저장 내용이 빠질 수 있습니다.
+        </p>
+
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 text-lg mb-4 print-keep-bg">
+            <p class="font-bold text-slate-700 mb-2"><span class="mr-2">①</span>관리자 페이지에서 백업 파일 다운로드하기 — 평소 정기 백업용</p>
+            <p class="text-slate-600 leading-relaxed mb-2">
+                관리자 화면의 <span class="font-semibold text-slate-700">업데이트 &amp; 백업</span> 탭에서
+                <span class="font-semibold text-slate-700">백업 파일 다운로드</span> 버튼을 누르면
+                <code class="bg-white border border-slate-200 px-1 rounded print-keep-bg">pcm_backup_날짜시각.zip</code>
+                파일이 내려받아집니다. 프로그램을 켠 상태에서, 원격 접속 중에도 사용할 수 있습니다.
+            </p>
+            <p class="text-slate-600 leading-relaxed">
+                zip 안에는 <code class="bg-white border border-slate-200 px-1 rounded print-keep-bg">pcm/data.db</code>·
+                <code class="bg-white border border-slate-200 px-1 rounded print-keep-bg">pcm/config.json</code>과
+                복원 절차가 적힌 <code class="bg-white border border-slate-200 px-1 rounded print-keep-bg">복원방법.txt</code>가
+                함께 들어 있습니다. 프로그램이 실행 중이더라도 그 시점까지 저장된 내용을 빠짐없이 담은 완전한 스냅샷이므로,
+                가장 안전하고 손쉬운 백업 수단입니다.
+            </p>
+        </div>
+
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 text-lg mb-4 print-keep-bg">
+            <p class="font-bold text-slate-700 mb-2"><span class="mr-2">②</span>수동으로 pcm 폴더 압축하기 — 프로그램이 켜지지 않을 때의 퇴로</p>
+            <p class="text-slate-600 leading-relaxed">
+                프로그램이 고장으로 켜지지 않거나 PC를 교체하는 등 프로그램을 쓸 수 없는 상황을 대비해, 다음 절차로도 백업해 두십시오.
+            </p>
+            <ol class="space-y-1 text-slate-600 leading-relaxed list-decimal list-inside mt-2">
+                <li>프로그램을 <span class="font-semibold text-slate-700">완전히 종료</span>합니다 (트레이 아이콘 → 종료. 브라우저 창만 닫는 것으로는 종료되지 않습니다).</li>
+                <li>실행 파일이 있는 폴더로 이동합니다.</li>
+                <li><code class="bg-white border border-slate-200 px-1 rounded print-keep-bg">pcm</code> 폴더 <span class="font-semibold text-slate-700">전체를</span> 압축(zip)하여 외부 드라이브 또는 별도 폴더에 보관합니다. 폴더 안 파일을 골라 담지 말고 폴더째 압축하십시오.</li>
+            </ol>
+        </div>
+
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 text-lg mb-4 print-keep-bg">
+            <p class="font-bold text-slate-700 mb-2">복원 방법 (①·② 공통)</p>
+            <p class="text-slate-600 leading-relaxed mb-2">두 방법 모두 복원 절차는 같습니다. <span class="font-semibold text-slate-700">"폴더 통째 교체"</span>가 원칙입니다.</p>
+            <ol class="space-y-1 text-slate-600 leading-relaxed list-decimal list-inside">
+                <li>프로그램을 완전히 종료합니다.</li>
+                <li>실행 파일이 있는 폴더를 엽니다.</li>
+                <li>그 폴더에 있는 <span class="font-semibold text-slate-700">기존 <code class="bg-white border border-slate-200 px-1 rounded print-keep-bg">pcm</code> 폴더의 이름을 <code class="bg-white border border-slate-200 px-1 rounded print-keep-bg">pcm_old</code>로 바꿉니다</span> (지우지 말고 이름만 바꿉니다 — 복원이 잘못돼도 원본이 남아 있습니다).</li>
+                <li>백업 파일(①은 zip 압축을 푼 <code class="bg-white border border-slate-200 px-1 rounded print-keep-bg">pcm</code> 폴더, ②는 압축을 푼 <code class="bg-white border border-slate-200 px-1 rounded print-keep-bg">pcm</code> 폴더)을 2번에서 연 폴더(실행 파일 옆)에 그대로 꺼내 놓습니다.</li>
+                <li>프로그램을 다시 실행합니다.</li>
+                <li>데이터가 정상인지 확인한 뒤 <code class="bg-white border border-slate-200 px-1 rounded print-keep-bg">pcm_old</code> 폴더를 지웁니다.</li>
+            </ol>
+        </div>
+
+        <div class="bg-amber-50 border-2 border-amber-300 rounded-xl p-5 text-lg mb-4 print-keep-bg">
+            <p class="font-bold text-amber-700 mb-2"><span class="mr-2">⚠️</span>기존 폴더 위에 "덮어쓰기"로 풀지 마십시오</p>
+            <p class="text-amber-800 leading-relaxed">
+                기존 <code class="bg-white border border-amber-200 px-1 rounded print-keep-bg">pcm</code> 폴더를 그대로 둔 채 백업 폴더를 위에 덮어씌우면,
+                예전에 쓰던 파일의 흔적이 새 데이터베이스 파일과 뒤섞여 <strong>복원한 데이터가 손상될 수 있습니다.</strong>
+                반드시 위 3번처럼 <strong>기존 폴더를 먼저 통째로 치운 뒤</strong>에 백업 폴더를 넣으십시오.
+                "붙여넣고 덮어쓰기" 같은 방식은 쓰지 마십시오.
+            </p>
+        </div>
+
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 text-lg mb-4 print-keep-bg">
+            <p class="font-bold text-slate-700 mb-2"><span class="mr-2">🔒</span>개인정보 보관 주의</p>
+            <p class="text-slate-600 leading-relaxed">
+                백업 파일에는 <strong>전교생의 개인정보와 성적 자료 전체</strong>가 들어 있습니다. 외부로 유출되지 않도록 보관에
+                주의하고, 필요 없어진 백업 파일은 완전히 삭제하십시오. 인앱 백업 다운로드는 반출 이력이 감사 기록에
+                요청자 IP와 함께 자동으로 남습니다.
+            </p>
+        </div>
+
+        <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-5 text-lg print-keep-bg">
+            <p class="font-bold text-indigo-700 mb-1"><span class="mr-2">💡</span>팁</p>
+            <p class="text-indigo-800 leading-relaxed">
+                라운드가 마감(FINALIZED) 상태로 전환된 직후 백업을 권장합니다.
+                최종 추천 결과가 확정된 시점의 데이터가 가장 중요하므로,
+                이 시점에 백업 파일을 별도로 보관해 두면 분쟁 발생 시 근거 자료로 활용할 수 있습니다.
+            </p>
+        </div>
+    </div>
+
+</section>
