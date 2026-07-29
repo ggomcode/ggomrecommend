@@ -239,7 +239,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="s in studentPage.rows" :key="s.id"
+            <tr v-for="s in (studentPage?.rows || [])" :key="s.id"
               class="hover:bg-slate-50"
               style="border-bottom: 1px solid #f1f5f9; transition: background 0.1s;">
               <td class="text-base font-mono" style="padding: 13px 20px; color: #475569;">{{ s.student_code }}</td>
@@ -262,7 +262,7 @@
                 >삭제</button>
               </td>
             </tr>
-            <tr v-if="studentPage.rows.length === 0">
+            <tr v-if="!studentPage?.rows || studentPage.rows.length === 0">
               <td colspan="8" class="text-base text-center" style="padding: 48px 20px; color: #94a3b8;">
                 학생 데이터가 없습니다. 양식을 다운로드하여 작성 후 가져오기 하세요.
               </td>
@@ -385,12 +385,14 @@ async function submitAdd() {
 
 // 선택 학년에 따라 드롭다운에 표시할 반 목록
 const availableClasses = computed(() => {
+  const byGrade = gradeOptions.value?.by_grade
+  if (!byGrade) return []
   if (!filterGrade.value) {
     const all = new Set()
-    Object.values(gradeOptions.value.by_grade).forEach(arr => arr.forEach(c => all.add(c)))
+    Object.values(byGrade).forEach(arr => Array.isArray(arr) && arr.forEach(c => all.add(c)))
     return [...all].sort((a, b) => a - b)
   }
-  return gradeOptions.value.by_grade[String(filterGrade.value)] ?? []
+  return byGrade[String(filterGrade.value)] ?? []
 })
 
 // 졸업생 선택 시 학년·반 필터 초기화

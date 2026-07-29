@@ -1,0 +1,57 @@
+import { ref } from 'vue'
+import { supabase } from './supabaseClient'
+
+export const schoolName = ref(localStorage.getItem('pcm_school_name') || '우리학교')
+
+export function normalizeSchoolName(input) {
+  let name = String(input || '').trim()
+  if (!name) return '우리학교'
+  if (name.endsWith('고') && !name.endsWith('고등학교')) {
+    name = name.slice(0, -1) + '고등학교'
+  }
+  return name
+}
+
+export async function fetchSchoolName() {
+  const cached = localStorage.getItem('pcm_school_name')
+  if (cached) {
+    schoolName.value = cached
+  }
+
+  if (!supabase) return schoolName.value
+
+  try {
+    const { data } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', 'school_name')
+      .maybeSingle()
+
+    if (data && data.value) {
+      const val = normalizeSchoolName(data.value)
+      schoolName.value = val
+      localStorage.setItem('pcm_school_name', val)
+    } else if (!cached) {
+      schoolName.value = '우리학교'
+    }
+  } catch (e) {
+    console.warn('Failed to fetch school name config:', e)
+  }
+
+  return schoolName.value
+}
+
+export async function setSchoolNameConfig(nameInput) {
+  const finalName = normalizeSchoolName(nameInput)
+  schoolName.value = finalName
+  localStorage.setItem('pcm_school_name', finalName)
+
+  if (supabase) {
+    const { error } = await supabase
+      .from('config')
+      .upsert({ key: 'school_name', value: finalName })
+    if (error) throw error
+  }
+
+  return finalName
+}

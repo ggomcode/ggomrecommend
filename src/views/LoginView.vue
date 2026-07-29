@@ -19,8 +19,8 @@
             <path d="M6 12v5c3 3 9 3 12 0v-5"/>
           </svg>
         </div>
-        <h1 class="text-2xl font-bold text-slate-800 dark:text-white tracking-tight" style="margin: 0 0 4px;">학교장 추천자</h1>
-        <p class="text-sm font-medium text-slate-400 dark:text-slate-500" style="margin: 0;">선발 관리 시스템</p>
+        <p class="text-xs font-bold text-blue-600 dark:text-blue-400 mb-0.5 tracking-wide">{{ schoolName }}</p>
+        <h1 class="text-2xl font-bold tracking-tight" style="color: #0f172a; margin: 0;">학교장추천전형 시스템</h1>
       </div>
 
       <!-- 통합 로그인 폼 -->
@@ -36,6 +36,20 @@
               class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
               style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; box-sizing: border-box;"
             />
+          </div>
+
+          <div v-if="/^\d{5}$/.test(loginId.trim())" class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">학생 구분</span>
+            <div class="flex gap-4">
+              <label class="flex items-center gap-1.5 text-xs font-medium cursor-pointer text-slate-700 dark:text-slate-200">
+                <input type="radio" v-model="loginIsEnrolled" :value="true" class="accent-blue-600" />
+                재학생
+              </label>
+              <label class="flex items-center gap-1.5 text-xs font-medium cursor-pointer text-slate-700 dark:text-slate-200">
+                <input type="radio" v-model="loginIsEnrolled" :value="false" class="accent-blue-600" />
+                졸업생
+              </label>
+            </div>
           </div>
 
           <div>
@@ -215,7 +229,7 @@
           </div>
 
           <p class="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-lg border border-amber-200/60 text-center" style="margin: 0;">
-            * 담임 교사의 가입 승인 완료 후 로그인이 가능합니다.
+            * 관리자의 가입 승인 완료 후 로그인이 가능합니다.
           </p>
 
           <div class="flex gap-2 pt-1">
@@ -239,21 +253,33 @@
       </div>
 
       <!-- 메시지 배너 -->
-      <p v-if="error" class="text-sm font-semibold text-center mt-4 text-rose-500 bg-rose-50 dark:bg-rose-950/20 p-2.5 rounded-lg border border-rose-100 dark:border-rose-900/30">
-        {{ typeof error === 'object' ? (error.message || '가입 처리 중 오류가 발생했습니다.') : error }}
-      </p>
+      <div v-if="error" class="mt-4 p-3 rounded-lg border text-sm font-semibold text-center" :class="isRejectedError ? 'text-rose-700 bg-rose-50 border-rose-200' : 'text-rose-500 bg-rose-50 dark:bg-rose-950/20 border-rose-100 dark:border-rose-900/30'">
+        <p style="white-space: pre-line; margin: 0;">{{ typeof error === 'object' ? (error.message || '로그인 중 오류가 발생했습니다.') : error }}</p>
+        <button
+          v-if="isRejectedError"
+          @click="openSignupWithCode"
+          class="mt-2.5 px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg border-none cursor-pointer transition-colors shadow-sm"
+        >
+          ✏️ 가입 정보 수정하여 재신청하기
+        </button>
+      </div>
       <p v-if="success" class="text-sm font-semibold text-center mt-4 text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 p-2.5 rounded-lg border border-emerald-100 dark:border-emerald-900/30">{{ success }}</p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 
 const router = useRouter()
 const auth = useAuthStore()
+
+onMounted(() => {
+  fetchSchoolName()
+})
 
 const isSignUp = ref(false)
 const loading = ref(false)
@@ -261,9 +287,13 @@ const error = ref(null)
 const success = ref(null)
 const showConfirmModal = ref(false)
 
+const isRejectedError = ref(false)
+const rejectedCode = ref('')
+
 // 로그인 상태
 const loginId = ref('')
 const loginPassword = ref('')
+const loginIsEnrolled = ref(true)
 
 // 학생 회원가입 상태
 const signupCode = ref('')
@@ -280,6 +310,8 @@ const cleanPhoneInput = computed(() => {
 async function handleLogin() {
   error.value = null
   success.value = null
+  isRejectedError.value = false
+  rejectedCode.value = ''
   loading.value = true
   const id = loginId.value.trim()
   const pw = loginPassword.value
@@ -296,14 +328,28 @@ async function handleLogin() {
       if (!/^\d{5}$/.test(id)) {
         throw new Error('아이디는 admin, teacher 또는 5자리 학번이어야 합니다.')
       }
-      await auth.loginStudent(id, pw)
+      await auth.loginStudent(id, pw, loginIsEnrolled.value)
       router.push('/student')
     }
   } catch (e) {
     error.value = e.message || '로그인에 실패했습니다.'
+    if (e.isRejected) {
+      isRejectedError.value = true
+      rejectedCode.value = e.studentCode || id
+    }
   } finally {
     loading.value = false
   }
+}
+
+function openSignupWithCode() {
+  if (rejectedCode.value) {
+    signupStudentCode.value = rejectedCode.value
+    signupIsEnrolled.value = loginIsEnrolled.value
+  }
+  isSignUp.value = true
+  error.value = null
+  isRejectedError.value = false
 }
 
 // 1단계: 사전 입력 검증 후 최종 확인 모달 띄우기
@@ -361,7 +407,7 @@ async function confirmAndSignUp() {
     isSignUp.value = false
     loginId.value = signupStudentCode.value
     loginPassword.value = cleanPhoneInput.value
-    success.value = '회원가입 신청이 완료되었습니다! 담임 교사의 승인 후 로그인이 가능합니다.'
+    success.value = '회원가입 신청이 완료되었습니다! 관리자의 승인 후 로그인이 가능합니다.'
     
     // 입력폼 초기화
     signupCode.value = ''

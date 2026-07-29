@@ -10,9 +10,9 @@
               <path d="M6 12v5c3 3 9 3 12 0v-5"/>
             </svg>
           </div>
-          <div>
-            <h1 class="text-lg font-bold text-slate-800 dark:text-white">학교장 추천 전형 신청</h1>
-            <p class="text-xs text-slate-400 font-medium">학생 포탈</p>
+          <div class="flex flex-col leading-tight">
+            <span class="text-[11px] font-extrabold text-blue-600 dark:text-blue-400 tracking-tight">{{ schoolName }}</span>
+            <h1 class="text-base font-bold text-slate-900 dark:text-white">학교장 추천 전형 신청</h1>
           </div>
         </div>
 
@@ -257,6 +257,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { supabase } from '../utils/supabaseClient'
+import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { printApplicationForm } from '../utils/printTemplates'
 
 const router = useRouter()
@@ -567,15 +568,19 @@ async function handleApply() {
     }
 
     // 감사로그 기록
-    await supabase.from('audit_logs').insert({
-      actor_id: userId,
-      action: 'APPLY',
-      details: {
-        univ_id: selectedUnivId.value,
-        round: currentRound.value,
-        department_name: departmentName.value
-      }
-    })
+    try {
+      await supabase.from('audit_logs').insert({
+        actor_id: userId,
+        action: 'APPLY',
+        details: {
+          univ_id: selectedUnivId.value,
+          round: currentRound.value,
+          department_name: departmentName.value
+        }
+      })
+    } catch (e) {
+      console.warn('감사 로그 작성 실패:', e)
+    }
 
     formSuccess.value = '추천 희망원이 성공적으로 제출되었습니다!'
     
@@ -622,15 +627,19 @@ async function handleCancelApplication(id) {
     await supabase.storage.from('signatures').remove([studentSigPath, parentSigPath])
 
     // 감사로그 기록
-    await supabase.from('audit_logs').insert({
-      actor_id: userId,
-      action: 'CANCEL_APPLICATION',
-      details: {
-        univ_id: ap.univ_id,
-        round: ap.round,
-        department_name: ap.department_name
-      }
-    })
+    try {
+      await supabase.from('audit_logs').insert({
+        actor_id: userId,
+        action: 'CANCEL_APPLICATION',
+        details: {
+          univ_id: ap.univ_id,
+          round: ap.round,
+          department_name: ap.department_name
+        }
+      })
+    } catch (e) {
+      console.warn('감사 로그 작성 실패:', e)
+    }
 
     formSuccess.value = '신청이 취소되었습니다.'
     await loadData()
@@ -656,6 +665,7 @@ async function handleLogout() {
 }
 
 onMounted(async () => {
+  fetchSchoolName()
   await checkCurrentRound()
   await loadData()
   // Vue가 렌더링된 후 캔버스 초기화

@@ -15,54 +15,11 @@
             <path d="M6 12v5c3 3 9 3 12 0v-5"/>
           </svg>
         </div>
-        <h1 class="text-2xl font-bold" style="color: #1e293b; margin: 0 0 6px;">학교장 추천자</h1>
-        <p class="text-base" style="color: #94a3b8; margin: 0;">선발 관리 시스템</p>
+        <h1 class="text-2xl font-bold" style="color: #0f172a; margin: 0;">학교장추천전형 시스템</h1>
       </div>
 
-      <!-- 0단계: Supabase 연결 설정 -->
-      <template v-if="!isSupabaseConfigured">
-        <div
-          class="rounded-xl text-base leading-relaxed mb-6"
-          style="padding: 14px 16px; background: #fffbeb; border: 1px solid #fde68a; color: #78350f;"
-        >
-          <strong>Supabase 연결 설정 필요</strong><br>
-          시스템 구동을 위한 Supabase URL과 Anon Key를 입력해 주세요. 이 정보는 브라우저의 로컬 스토리지에 안전하게 저장됩니다.
-        </div>
-
-        <form @submit.prevent="handleSaveSupabase" class="flex flex-col gap-4">
-          <div>
-            <label class="block text-base font-medium mb-1.5" style="color: #64748b;">SUPABASE URL</label>
-            <input
-              v-model="inputUrl"
-              type="text"
-              required
-              placeholder="https://your-instance.supabase.co"
-              class="w-full text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
-              style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; box-sizing: border-box;"
-            />
-          </div>
-          <div>
-            <label class="block text-base font-medium mb-1.5" style="color: #64748b;">SUPABASE ANON KEY</label>
-            <textarea
-              v-model="inputAnonKey"
-              required
-              rows="3"
-              placeholder="eyJhbGciOi..."
-              class="w-full text-base focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono"
-              style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; box-sizing: border-box;"
-            ></textarea>
-          </div>
-
-          <button
-            type="submit"
-            class="w-full text-base font-semibold"
-            style="padding: 12px; border: none; border-radius: 10px; background: #2563eb; color: white; cursor: pointer; margin-top: 4px;"
-          >연결 설정 저장 및 시작하기</button>
-        </form>
-      </template>
-
       <!-- 1단계: 이용 안내 동의 -->
-      <template v-else-if="!agreed">
+      <template v-if="!agreed">
         <div
           class="rounded-xl text-base leading-relaxed mb-6"
           style="padding: 20px 22px; background: #f8fafc; border: 1px solid #e2e8f0; color: #334155; line-height: 1.9;"
@@ -235,17 +192,18 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { supabase, setSupabaseConfig } from '../utils/supabaseClient'
+import { supabase } from '../utils/supabaseClient'
+import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 
 const router = useRouter()
 const auth = useAuthStore()
 
-const isSupabaseConfigured = ref(!!supabase)
-const inputUrl = ref(localStorage.getItem('pcm_supabase_url') || '')
-const inputAnonKey = ref(localStorage.getItem('pcm_supabase_anon_key') || '')
+onMounted(() => {
+  fetchSchoolName()
+})
 
 const agreed = ref(false)
 const checked = ref(false)
@@ -269,14 +227,6 @@ const canSubmit = computed(
         teacherPassword.value.length >= 8 &&
         teacherPassword.value === teacherConfirm.value
 )
-
-function handleSaveSupabase() {
-  if (!inputUrl.value.trim() || !inputAnonKey.value.trim()) {
-    error.value = 'URL과 API 키를 입력해 주세요.'
-    return
-  }
-  setSupabaseConfig(inputUrl.value.trim(), inputAnonKey.value.trim())
-}
 
 async function handleSetup() {
   if (!canSubmit.value) return

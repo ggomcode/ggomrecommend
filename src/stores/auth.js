@@ -256,15 +256,57 @@ export const useAuthStore = defineStore('auth', () => {
     await fetchProfile(data.user.id)
   }
 
-  // 학생 로그인
-  async function loginStudent(studentCodeVal, password) {
+  // 학생 로그인 (재학생/졸업생 구분 지원)
+  async function loginStudent(studentCodeVal, password, isEnrolled = true) {
     if (!supabase) throw new Error('Supabase가 설정되지 않았습니다.')
     
-    const email = `student_${studentCodeVal}@ggomrecommend.ggomcode`
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const cleanCode = String(studentCodeVal).trim()
+    
+    // 1. profiles 테이블에서 학번으로 가입 프로필 탐색
+    const { data: matchedProfiles } = await supabase
+      .from('profiles')
+      .select('id, student_code, is_enrolled, grad_year')
+      .eq('student_code', cleanCode)
+
+    let targetProfile = null
+    if (matchedProfiles && matchedProfiles.length > 0) {
+      if (isEnrolled !== null) {
+        targetProfile = matchedProfiles.find(p => Boolean(p.is_enrolled) === Boolean(isEnrolled))
+      }
+      if (!targetProfile) {
+        targetProfile = matchedProfiles[0]
+      }
+    }
+
+    let email = isEnrolled 
+      ? `student_${cleanCode}@ggomrecommend.ggomcode` 
+      : `grad_${targetProfile?.grad_year || ''}_${cleanCode}@ggomrecommend.ggomcode`
+
+    if (targetProfile) {
+      email = targetProfile.is_enrolled 
+        ? `student_${cleanCode}@ggomrecommend.ggomcode` 
+        : `grad_${targetProfile.grad_year || ''}_${cleanCode}@ggomrecommend.ggomcode`
+    }
+
+    let { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     })
+
+    // 실패 시 교차 학번(재학생/졸업생) 가입 계정 재시도
+    if (error && matchedProfiles && matchedProfiles.length > 1) {
+      const altProfile = matchedProfiles.find(p => p.id !== targetProfile?.id)
+      if (altProfile) {
+        const altEmail = altProfile.is_enrolled 
+          ? `student_${cleanCode}@ggomrecommend.ggomcode` 
+          : `grad_${altProfile.grad_year || ''}_${cleanCode}@ggomrecommend.ggomcode`
+        const retryResult = await supabase.auth.signInWithPassword({ email: altEmail, password })
+        if (!retryResult.error) {
+          data = retryResult.data
+          error = null
+        }
+      }
+    }
 
     if (error) throw new Error('학번 또는 비밀번호가 올바르지 않습니다.')
 
@@ -273,7 +315,7 @@ export const useAuthStore = defineStore('auth', () => {
       const userId = data.user.id
       const { data: profile, error: profileErr } = await supabase
         .from('profiles')
-        .select('status')
+        .select('status, rejection_reason')
         .eq('id', userId)
         .single()
 
@@ -283,10 +325,15 @@ export const useAuthStore = defineStore('auth', () => {
 
       if (profile.status === 'pending') {
         await supabase.auth.signOut()
-        throw new Error('교사의 회원가입 승인을 대기 중입니다.')
+        throw new Error('관리자의 회원가입 승인을 대기 중입니다.')
       } else if (profile.status === 'rejected') {
         await supabase.auth.signOut()
-        throw new Error('회원가입이 거절되었습니다. 담당 교사에게 문의하세요.')
+        const reasonStr = profile.rejection_reason ? ` (반려 사유: ${profile.rejection_reason})` : ''
+        const err = new Error(`회원가입 신청이 반려되었습니다.${reasonStr}\n'학생 회원가입 신청'에서 가입 정보를 수정하여 다시 제출해 주세요.`)
+        err.isRejected = true
+        err.rejectionReason = profile.rejection_reason || ''
+        err.studentCode = cleanCode
+        throw err
       }
 
       token.value = data.session.access_token
@@ -358,16 +405,67 @@ export const useAuthStore = defineStore('auth', () => {
       }
     }
 
-    // 2. 재학생/졸업생 간 동일 학번 및 이름 충돌 사전 방지 검사
+    // 2. 동일 학번/구분의 기존 가입 정보 검사 (반려된 계정이면 기존 정보 갱신 처리)
     const { data: duplicateProfile } = await supabase
       .from('profiles')
-      .select('id, name, student_code, is_enrolled')
+      .select('id, name, student_code, is_enrolled, status')
       .eq('student_code', sCode)
-      .eq('name', name.trim())
+      .eq('is_enrolled', Boolean(enrolled))
       .maybeSingle()
 
     if (duplicateProfile) {
-      throw new Error('동일한 학번과 이름을 가진 가입 정보가 이미 시스템에 존재합니다. 가입 절차 진행을 위해 학교 담당자에게 문의해 주세요.')
+      if (duplicateProfile.status === 'approved') {
+        throw new Error('이미 회원가입 승인이 완료된 계정입니다. 해당 학번으로 로그인해 주세요.')
+      } else if (duplicateProfile.status === 'pending') {
+        throw new Error('이미 관리자의 회원가입 승인을 대기 중인 계정입니다.')
+      } else if (duplicateProfile.status === 'rejected') {
+        // 반려된 계정이면 기존 프로필을 갱신(Update)하고 승인 대기(pending) 상태로 재전환
+        const updateData = {
+          name: name.trim(),
+          phone_last4: pLast4,
+          status: 'pending',
+          rejection_reason: null,
+          grade: enrolled ? parsedGrade : null,
+          class_no: enrolled ? parsedClass : null,
+          seq_no: enrolled ? parsedSeq : null,
+          grad_year: !enrolled && gYear ? Number(gYear) : null
+        }
+
+        const { error: updateErr } = await supabase
+          .from('profiles')
+          .update(updateData)
+          .eq('id', duplicateProfile.id)
+
+        if (updateErr) throw updateErr
+
+        const metaData = {
+          role: 'student',
+          name: name.trim(),
+          phone_last4: pLast4,
+          full_phone: cleanPhone,
+          student_code: String(sCode),
+          is_enrolled: Boolean(enrolled)
+        }
+        if (enrolled) {
+          if (parsedGrade !== null) metaData.grade = parsedGrade
+          if (parsedClass !== null) metaData.class_no = parsedClass
+          if (parsedSeq !== null) metaData.seq_no = parsedSeq
+        } else {
+          if (gYear) metaData.grad_year = Number(gYear)
+        }
+
+        const email = enrolled 
+          ? `student_${sCode}@ggomrecommend.ggomcode`
+          : `grad_${gYear || ''}_${sCode}@ggomrecommend.ggomcode`
+
+        await supabase.auth.signUp({
+          email,
+          password: cleanPhone,
+          options: { data: metaData }
+        })
+
+        return { updated: true }
+      }
     }
 
     // 3. 가상의 이메일 매핑으로 가입 진행 (메타데이터 객체 정제)
@@ -388,7 +486,10 @@ export const useAuthStore = defineStore('auth', () => {
       if (gYear) metaData.grad_year = Number(gYear)
     }
 
-    const email = `student_${sCode}@ggomrecommend.ggomcode`
+    const email = enrolled 
+      ? `student_${sCode}@ggomrecommend.ggomcode`
+      : `grad_${gYear || ''}_${sCode}@ggomrecommend.ggomcode`
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password: cleanPhone,

@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS config (
 INSERT INTO config (key, value) VALUES ('registration_code', 'school2026!') ON CONFLICT (key) DO NOTHING;
 INSERT INTO config (key, value) VALUES ('openai_api_key', '') ON CONFLICT (key) DO NOTHING;
 INSERT INTO config (key, value) VALUES ('class_count', '11') ON CONFLICT (key) DO NOTHING;
+INSERT INTO config (key, value) VALUES ('school_name', '우리학교') ON CONFLICT (key) DO NOTHING;
 
 -- 2. PROFILES (사용자 프로필 테이블)
 -- status: 'pending' (승인대기), 'approved' (승인), 'rejected' (승인거절)
@@ -28,8 +29,8 @@ CREATE TABLE IF NOT EXISTS profiles (
     grad_year INTEGER, -- 졸업학년도 (is_enrolled가 false인 경우 필수)
     grade INTEGER, -- 학년
     class_no INTEGER, -- 반
-    seq_no INTEGER, -- 번호
     has_disciplinary BOOLEAN NOT NULL DEFAULT FALSE, -- 선도처분 여부 (사회봉사 이상 시 true)
+    rejection_reason TEXT, -- 관리자 가입 반려 사유
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     CONSTRAINT chk_enrolled_student CHECK (
         (role <> 'student') OR
@@ -142,7 +143,7 @@ DECLARE
     grade_val INTEGER;
     class_no_val INTEGER;
     seq_no_val INTEGER;
-    has_disc BOOLEAN;
+    has_disc BOOLEAN := FALSE;
 BEGIN
     -- user_metadata에서 가입 정보 추출
     role_val := COALESCE(new.raw_user_meta_data->>'role', 'student');
@@ -158,25 +159,25 @@ BEGIN
         role_val := 'teacher';
     END IF;
     
-    IF new.raw_user_meta_data->>'grad_year' IS NOT NULL AND new.raw_user_meta_data->>'grad_year' != 'null' THEN
+    IF new.raw_user_meta_data->>'grad_year' IS NOT NULL AND new.raw_user_meta_data->>'grad_year' != 'null' AND new.raw_user_meta_data->>'grad_year' != '' THEN
         grad_year_val := (new.raw_user_meta_data->>'grad_year')::integer;
     ELSE
         grad_year_val := NULL;
     END IF;
 
-    IF new.raw_user_meta_data->>'grade' IS NOT NULL AND new.raw_user_meta_data->>'grade' != 'null' THEN
+    IF new.raw_user_meta_data->>'grade' IS NOT NULL AND new.raw_user_meta_data->>'grade' != 'null' AND new.raw_user_meta_data->>'grade' != '' THEN
         grade_val := (new.raw_user_meta_data->>'grade')::integer;
     ELSE
         grade_val := NULL;
     END IF;
 
-    IF new.raw_user_meta_data->>'class_no' IS NOT NULL AND new.raw_user_meta_data->>'class_no' != 'null' THEN
+    IF new.raw_user_meta_data->>'class_no' IS NOT NULL AND new.raw_user_meta_data->>'class_no' != 'null' AND new.raw_user_meta_data->>'class_no' != '' THEN
         class_no_val := (new.raw_user_meta_data->>'class_no')::integer;
     ELSE
         class_no_val := NULL;
     END IF;
 
-    IF new.raw_user_meta_data->>'seq_no' IS NOT NULL AND new.raw_user_meta_data->>'seq_no' != 'null' THEN
+    IF new.raw_user_meta_data->>'seq_no' IS NOT NULL AND new.raw_user_meta_data->>'seq_no' != 'null' AND new.raw_user_meta_data->>'seq_no' != '' THEN
         seq_no_val := (new.raw_user_meta_data->>'seq_no')::integer;
     ELSE
         seq_no_val := NULL;
@@ -189,15 +190,37 @@ BEGIN
         status_val := 'pending';
     END IF;
 
-    -- 선도 처분 명단 대조
+    -- 선도 처분 명단 대조 (테이블 미생성 시 안전 처리)
     IF student_code_val IS NOT NULL THEN
-        SELECT EXISTS(SELECT 1 FROM disciplinary_students WHERE student_code = student_code_val) INTO has_disc;
+        BEGIN
+            SELECT EXISTS(SELECT 1 FROM public.disciplinary_students WHERE student_code = student_code_val) INTO has_disc;
+        EXCEPTION WHEN OTHERS THEN
+            has_disc := FALSE;
+        END;
     ELSE
         has_disc := FALSE;
     END IF;
 
-    INSERT INTO public.profiles (id, student_code, name, phone_last4, role, status, is_enrolled, grad_year, grade, class_no, seq_no, has_disciplinary)
-    VALUES (new.id, student_code_val, name_val, phone_last4_val, role_val, status_val, is_enrolled_val, grad_year_val, grade_val, class_no_val, seq_no_val, has_disc);
+    -- profiles 테이블 삽입 (예외 발생 시 500 에러 방지)
+    BEGIN
+        INSERT INTO public.profiles (id, student_code, name, phone_last4, role, status, is_enrolled, grad_year, grade, class_no, seq_no, has_disciplinary)
+        VALUES (new.id, student_code_val, name_val, phone_last4_val, role_val, status_val, is_enrolled_val, grad_year_val, grade_val, class_no_val, seq_no_val, has_disc)
+        ON CONFLICT (id) DO UPDATE SET
+            student_code = EXCLUDED.student_code,
+            name = EXCLUDED.name,
+            phone_last4 = EXCLUDED.phone_last4,
+            role = EXCLUDED.role,
+            status = EXCLUDED.status,
+            is_enrolled = EXCLUDED.is_enrolled,
+            grad_year = EXCLUDED.grad_year,
+            grade = EXCLUDED.grade,
+            class_no = EXCLUDED.class_no,
+            seq_no = EXCLUDED.seq_no,
+            has_disciplinary = EXCLUDED.has_disciplinary;
+    EXCEPTION WHEN OTHERS THEN
+        RAISE WARNING 'handle_new_user insert error: %', SQLERRM;
+    END;
+
     RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -606,3 +629,15 @@ BEGIN
     RETURN (trim(input_code) = trim(v_target));
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 11. AUDIT_LOGS 테이블 RLS 설정
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can insert audit_logs" ON public.audit_logs;
+CREATE POLICY "Anyone can insert audit_logs" ON public.audit_logs FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Anyone can select audit_logs" ON public.audit_logs;
+CREATE POLICY "Anyone can select audit_logs" ON public.audit_logs FOR SELECT USING (true);
+
+-- 12. PROFILES 테이블 반려 사유 컬럼 자동 추가
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS rejection_reason TEXT;

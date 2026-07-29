@@ -7,6 +7,33 @@
     </div>
 
     <div class="flex flex-col gap-6">
+      <!-- 0. 학교 이름 설정 -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+        <h2 class="text-base font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
+          <span class="w-1 h-3 bg-blue-600 rounded-full"></span>
+          학교 이름 설정
+        </h2>
+        <p class="text-xs text-slate-400 mb-4">
+          시스템 헤더 및 메인 타이틀 상단에 표시될 학교 이름을 지정합니다. (미입력 시 기본값: '우리학교', '우리고' 입력 시 '우리고등학교'로 자동 변환 저장됩니다)
+        </p>
+
+        <form @submit.prevent="saveSchoolName" class="flex gap-3 max-w-md">
+          <input
+            v-model="inputSchoolName"
+            type="text"
+            placeholder="예: 우리고 또는 우리고등학교"
+            class="flex-1 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white"
+          />
+          <button
+            type="submit"
+            :disabled="schoolNameLoading"
+            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap"
+          >
+            {{ schoolNameLoading ? '저장 중…' : '학교 이름 저장' }}
+          </button>
+        </form>
+      </div>
+
       <!-- 1. 학급 수 설정 (디폴트 11반) -->
       <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
         <h2 class="text-base font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
@@ -95,6 +122,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { supabase } from '../../utils/supabaseClient'
+import { fetchSchoolName, setSchoolNameConfig } from '../../utils/schoolConfig'
+
+const inputSchoolName = ref('')
+const schoolNameLoading = ref(false)
 
 const classCount = ref(11)
 const classCountLoading = ref(false)
@@ -106,6 +137,7 @@ const openaiKey = ref('')
 const openaiLoading = ref(false)
 
 async function loadConfig() {
+  inputSchoolName.value = await fetchSchoolName()
   if (!supabase) return
   try {
     const { data: countData } = await supabase
@@ -136,6 +168,18 @@ async function loadConfig() {
     }
   } catch (e) {
     console.error('Error loading config:', e)
+  }
+async function saveSchoolName() {
+  schoolNameLoading.value = true
+  try {
+    const finalName = await setSchoolNameConfig(inputSchoolName.value)
+    inputSchoolName.value = finalName
+    alert(`학교 이름이 '${finalName}'(으)로 설정되었습니다.`)
+  } catch (e) {
+    console.error(e)
+    alert('학교 이름 저장 도중 오류가 발생했습니다.')
+  } finally {
+    schoolNameLoading.value = false
   }
 }
 

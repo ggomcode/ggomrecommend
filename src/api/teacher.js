@@ -186,11 +186,18 @@ export const teacherCreateApplication = async (body) => {
   if (error) throw error
   
   // 감사로그 기록
-  await supabase.from('audit_logs').insert({
-    actor_id: (await supabase.auth.getUser()).data.user?.id,
-    action: 'TEACHER_APPLY',
-    details: { student_id: body.student_id, univ_id: body.track_id, round: body.round_id }
-  })
+  try {
+    const userRes = await supabase.auth.getUser()
+    if (userRes?.data?.user) {
+      await supabase.from('audit_logs').insert({
+        actor_id: userRes.data.user.id,
+        action: 'TEACHER_APPLY',
+        details: { student_id: body.student_id, univ_id: body.track_id, round: body.round_id }
+      })
+    }
+  } catch (e) {
+    console.warn('감사 로그 작성 실패:', e)
+  }
 }
 
 // 10. 지원서 삭제
@@ -348,11 +355,18 @@ export const teacherAbandonApplication = async (sid, tid, rid, docUrl = null) =>
   if (error) throw error
 
   // 감사로그 기록
-  await supabase.from('audit_logs').insert({
-    actor_id: (await supabase.auth.getUser()).data.user?.id,
-    action: 'ABANDON',
-    details: { student_id: sid, univ_id: tid, round: rid }
-  })
+  try {
+    const userRes = await supabase.auth.getUser()
+    if (userRes?.data?.user) {
+      await supabase.from('audit_logs').insert({
+        actor_id: userRes.data.user.id,
+        action: 'ABANDON',
+        details: { student_id: sid, univ_id: tid, round: rid }
+      })
+    }
+  } catch (e) {
+    console.warn('감사 로그 작성 실패:', e)
+  }
 }
 
 // 14. 라운드 컨펌 상태 조회 (더미)

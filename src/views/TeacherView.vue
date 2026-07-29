@@ -21,11 +21,14 @@
         }"
       >
         <div v-if="!collapsed" class="flex items-center gap-2 whitespace-nowrap">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
             <path d="M6 12v5c3 3 9 3 12 0v-5"/>
           </svg>
-          <span class="text-base font-bold" style="color: #1e293b;">학교장추천 선발 시스템</span>
+          <div class="flex flex-col leading-tight">
+            <span class="text-[11px] font-extrabold text-blue-600 dark:text-blue-400 tracking-tight">{{ schoolName }}</span>
+            <span class="text-sm font-bold" style="color: #0f172a;">학교장추천전형 시스템</span>
+          </div>
         </div>
         <button
           @click="collapsed = !collapsed"
@@ -256,6 +259,7 @@ import { teacherChangePassword, getCurrentRound } from '../api/teacher.js'
 import { dialog } from '../components/common/dialog.js'
 import { LayoutGrid, UserPlus, Trophy, ChevronRight, LogOut, KeyRound, Menu, BookOpen, ExternalLink, UserCheck } from 'lucide-vue-next'
 import { supabase } from '../utils/supabaseClient'
+import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 
 const router = useRouter()
 const auth   = useAuthStore()
@@ -371,14 +375,12 @@ watch([selectedGrade, selectedClassNo], ([g, c]) => {
 // ── 탭 컴포넌트 ──────────────────────────────────────────────
 const ClassTab       = defineAsyncComponent(() => import('../components/teacher/ClassTab.vue'))
 const ApplicationTab = defineAsyncComponent(() => import('../components/teacher/ApplicationTab.vue'))
-const ApprovalTab    = defineAsyncComponent(() => import('../components/teacher/ApprovalTab.vue'))
 const ResultsTab     = defineAsyncComponent(() => import('../components/teacher/ResultsTab.vue'))
 
 // ── 메뉴 정의 ────────────────────────────────────────────────
 const sidebarMenus = [
   { key: 'class',       label: '학급 관리',   icon: LayoutGrid },
   { key: 'application', label: '지원자 등록', icon: UserPlus },
-  { key: 'approval',    label: '가입 승인',   icon: UserCheck },
   { key: 'results',     label: '라운드 결과', icon: Trophy },
 ]
 
@@ -388,7 +390,6 @@ const active = ref('class')
 const currentTab = computed(() => {
   if (active.value === 'class')       return ClassTab
   if (active.value === 'application') return ApplicationTab
-  if (active.value === 'approval')    return ApprovalTab
   return ResultsTab
 })
 
@@ -409,6 +410,7 @@ const roleLabel = computed(() => {
 const currentRound = ref(null)
 
 onMounted(async () => {
+  fetchSchoolName()
   await fetchClasses()
   try {
     currentRound.value = await getCurrentRound()

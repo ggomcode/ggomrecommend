@@ -28,7 +28,7 @@
             <p class="text-base font-semibold" style="color: #94a3b8; text-transform: uppercase; letter-spacing: 0.07em;">
               Teacher Utility Kit
             </p>
-            <p class="text-xl font-bold mt-0.5" style="color: #1e293b;">학교장 추천자 선발 관리 시스템</p>
+            <p class="text-xl font-bold mt-0.5" style="color: #0f172a;">학교장추천전형 시스템</p>
           </div>
           <div class="lg:text-right">
             <p class="text-base font-semibold" style="color: #475569;">© luminousky</p>
@@ -451,17 +451,17 @@ const allReady = computed(() => checklist.value?.every(item => item.count > 0) ?
 
 // ── 파생값 ────────────────────────────────────────────────────
 const totalApplicants = computed(() => {
-  const classSum = data.value?.classes.reduce((s, c) => s + c.submitted, 0) ?? 0
+  const classSum = data.value?.classes?.reduce((s, c) => s + (c.submitted || c.count || 0), 0) ?? 0
   const gradSum  = data.value?.graduated?.submitted ?? 0
   return classSum + gradSum
 })
 const zeroClassCount = computed(() => {
-  let count = data.value?.classes.filter(c => c.submitted === 0).length ?? 0
+  let count = data.value?.classes?.filter(c => (c.submitted ?? c.count ?? 0) === 0).length ?? 0
   if (data.value?.graduated && data.value.graduated.submitted === 0) count++
   return count
 })
 const unconfirmedCount = computed(() => {
-  let count = data.value?.classes.filter(c => !c.confirmed).length ?? 0
+  let count = data.value?.classes?.filter(c => !c.confirmed).length ?? 0
   if (data.value?.graduated && !data.value.graduated.confirmed) count++
   return count
 })
@@ -469,7 +469,7 @@ const helpBox = computed(() => {
   if (!data.value) return null
   const round = data.value.round
   if (!round) {
-    if (data.value.all_time.total_rounds === 0) {
+    if ((data.value.all_time?.total_rounds ?? 0) === 0) {
       return {
         key: 'overview-first',
         title: '도움말 — 처음 시작하기',
@@ -517,12 +517,12 @@ const helpBox = computed(() => {
 
 const allTimeStats = computed(() => {
   if (!data.value) return []
-  const t = data.value.all_time
+  const t = data.value.all_time || {}
   return [
-    { label: '진행된 라운드 차수',  value: `${t.total_rounds}차` },
-    { label: '누적 지원자',  value: `${t.total_applicants}명` },
-    { label: '확정 추천자',  value: `${t.confirmed}명` },
-    { label: '포기자',       value: `${t.abandoned}명` },
+    { label: '진행된 라운드 차수',  value: `${t.total_rounds ?? 0}차` },
+    { label: '누적 지원자',  value: `${t.total_applicants ?? 0}명` },
+    { label: '확정 추천자',  value: `${t.confirmed ?? 0}명` },
+    { label: '포기자',       value: `${t.abandoned ?? 0}명` },
   ]
 })
 

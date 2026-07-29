@@ -99,9 +99,37 @@ export const getOverview = async () => {
         class_no: t.class_no,
         teacher_name: t.name,
         count,
+        submitted: count,
         confirmed: true // 완료 여부 디폴트 true
       })
     }
+  }
+
+  // 누적 통계 데이터 (all_time) 집계
+  const { data: allRounds } = await supabase
+    .from('timeline_rounds')
+    .select('id')
+  const totalRounds = allRounds ? allRounds.length : 0
+
+  const { count: totalApplicants } = await supabase
+    .from('applications')
+    .select('*', { count: 'exact', head: true })
+
+  const { count: confirmedCount } = await supabase
+    .from('applications')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_recommended', true)
+
+  const { count: abandonedCount } = await supabase
+    .from('applications')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_abandoned', true)
+
+  const all_time = {
+    total_rounds: totalRounds,
+    total_applicants: totalApplicants || 0,
+    confirmed: confirmedCount || 0,
+    abandoned: abandonedCount || 0
   }
 
   return {
@@ -109,7 +137,8 @@ export const getOverview = async () => {
     server_addr,
     round,
     student_count: studentCount || 0,
-    classes
+    classes,
+    all_time
   }
 }
 
@@ -192,32 +221,90 @@ export const importUniv = () => {}
 
 // 6. 학생 관리 조회
 export const getStudents = async (params = {}) => {
-  if (!supabase) return []
-  let query = supabase.from('profiles').select('*').eq('role', 'student')
+  if (!supabase) return { rows: [], total: 0, page: 1, per_page: 100 }
 
-  if (params.grade !== undefined && params.grade !== '') {
+  let query = supabase.from('profiles').select('*', { count: 'exact' }).eq('role', 'student')
+
+  if (params.is_enrolled !== undefined && params.is_enrolled !== null) {
+    const isEnrolledBool = Boolean(Number(params.is_enrolled))
+    query = query.eq('is_enrolled', isEnrolledBool)
+  }
+  if (params.grade !== undefined && params.grade !== null && params.grade !== '') {
     query = query.eq('grade', params.grade)
   }
-  if (params.class_no !== undefined && params.class_no !== '') {
+  if (params.class_no !== undefined && params.class_no !== null && params.class_no !== '') {
     query = query.eq('class_no', params.class_no)
   }
   if (params.search) {
     query = query.or(`name.ilike.%${params.search}%,student_code.ilike.%${params.search}%`)
   }
 
-  const { data, error } = await query
+  const page = params.page || 1
+  const perPage = params.per_page || 100
+  const from = (page - 1) * perPage
+  const to = from + perPage - 1
+
+  const { data, count, error } = await query
     .order('is_enrolled', { ascending: false })
     .order('grade', { ascending: true })
     .order('class_no', { ascending: true })
     .order('seq_no', { ascending: true })
+    .range(from, to)
 
   if (error) throw error
-  return data
+
+  return {
+    rows: data || [],
+    total: count !== null ? count : (data ? data.length : 0),
+    page,
+    per_page: perPage
+  }
 }
 
 // 학생 학년 선택 옵션 목록
 export const getStudentGradeOptions = async () => {
-  return [{ grade: 1 }, { grade: 2 }, { grade: 3 }]
+  const defaultOptions = {
+    grades: [3],
+    by_grade: {
+      '3': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    }
+  }
+
+  if (!supabase) return defaultOptions
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('grade, class_no')
+      .eq('role', 'student')
+      .not('grade', 'is', null)
+
+    if (error || !data || data.length === 0) return defaultOptions
+
+    const gradesSet = new Set()
+    const byGradeMap = {}
+
+    data.forEach(item => {
+      if (item.grade) {
+        gradesSet.add(item.grade)
+        if (!byGradeMap[item.grade]) byGradeMap[item.grade] = new Set()
+        if (item.class_no) byGradeMap[item.grade].add(item.class_no)
+      }
+    })
+
+    const grades = Array.from(gradesSet).sort((a, b) => a - b)
+    if (grades.length === 0) return defaultOptions
+
+    const by_grade = {}
+    Object.keys(byGradeMap).forEach(g => {
+      const classes = Array.from(byGradeMap[g]).sort((a, b) => a - b)
+      by_grade[g] = classes.length > 0 ? classes : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    })
+
+    return { grades, by_grade }
+  } catch (e) {
+    return defaultOptions
+  }
 }
 
 // 학생 일괄 관리 (Mocking)

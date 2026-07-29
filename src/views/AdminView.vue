@@ -21,11 +21,14 @@
         }"
       >
         <div v-if="!collapsed" class="flex items-center gap-2 whitespace-nowrap">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
             <path d="M6 12v5c3 3 9 3 12 0v-5"/>
           </svg>
-          <span class="text-base font-bold" style="color: #1e293b;">학교장추천 선발 시스템</span>
+          <div class="flex flex-col leading-tight">
+            <span class="text-[11px] font-extrabold text-blue-600 dark:text-blue-400 tracking-tight">{{ schoolName }}</span>
+            <span class="text-sm font-bold" style="color: #0f172a;">학교장추천전형 시스템</span>
+          </div>
         </div>
         <button
           @click="collapsed = !collapsed"
@@ -240,9 +243,10 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { changeAdminPassword, getCurrentRound } from '../api/admin.js'
 import { dialog } from '../components/common/dialog.js'
+import { schoolName, fetchSchoolName } from '../utils/schoolConfig.js'
 import {
   Home, Trophy, LayoutGrid, Users, SlidersHorizontal,
-  Building2, BookOpen, RefreshCw, ChevronRight, LogOut, KeyRound, Menu, ScrollText, Settings
+  Building2, BookOpen, RefreshCw, ChevronRight, LogOut, KeyRound, Menu, ScrollText, Settings, UserCheck
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -250,6 +254,7 @@ const auth = useAuthStore()
 
 // ── 탭 컴포넌트 ──────────────────────────────────────────────
 const OverviewTab = defineAsyncComponent(() => import('../components/admin/OverviewTab.vue'))
+const ApprovalTab = defineAsyncComponent(() => import('../components/teacher/ApprovalTab.vue'))
 const RoundsTab   = defineAsyncComponent(() => import('../components/admin/RoundsTab.vue'))
 const ClassesTab  = defineAsyncComponent(() => import('../components/admin/ClassesTab.vue'))
 const StudentsTab = defineAsyncComponent(() => import('../components/admin/StudentsTab.vue'))
@@ -262,6 +267,7 @@ const AuditTab    = defineAsyncComponent(() => import('../components/admin/Audit
 // ── 메뉴 정의 ────────────────────────────────────────────────
 const mainMenus = [
   { key: 'home',     label: '개요',          icon: Home },
+  { key: 'approval', label: '가입 승인',     icon: UserCheck },
   { key: 'classes',  label: '학급 관리',     icon: LayoutGrid },
   { key: 'students', label: '학생 관리',     icon: Users },
   { key: 'areas',    label: '전형요소 설정', icon: SlidersHorizontal },
@@ -284,6 +290,7 @@ const active = ref('home')
 
 const currentTab = computed(() => {
   if (active.value === 'home')     return OverviewTab
+  if (active.value === 'approval') return ApprovalTab
   if (active.value === 'classes')  return ClassesTab
   if (active.value === 'students') return StudentsTab
   if (active.value === 'areas')    return AreasTab
@@ -319,23 +326,8 @@ function stripV(v) {
 }
 
 onMounted(async () => {
+  fetchSchoolName()
   await refreshRound()
-
-  // 업데이트 뱃지: 백그라운드에서 조용히 확인
-  try {
-    const [verRes, ghRes] = await Promise.all([
-      axios.get('/api/version'),
-      fetch('https://api.github.com/repos/itmir913/principal-candidate-manager/releases/latest', {
-        headers: { Accept: 'application/vnd.github+json' },
-      }),
-    ])
-    if (ghRes.ok) {
-      const gh = await ghRes.json()
-      hasUpdate.value = stripV(verRes.data.version) !== stripV(gh.tag_name)
-    }
-  } catch {
-    // 업데이트 확인 실패 시 뱃지 표시 안 함
-  }
 })
 
 // ── 비밀번호 변경 ─────────────────────────────────────────────
