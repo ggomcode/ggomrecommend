@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS config (
 -- 초기 설정 데이터 삽입
 INSERT INTO config (key, value) VALUES ('registration_code', 'school2026!') ON CONFLICT (key) DO NOTHING;
 INSERT INTO config (key, value) VALUES ('openai_api_key', '') ON CONFLICT (key) DO NOTHING;
+INSERT INTO config (key, value) VALUES ('class_count', '11') ON CONFLICT (key) DO NOTHING;
 
 -- 2. PROFILES (사용자 프로필 테이블)
 -- status: 'pending' (승인대기), 'approved' (승인), 'rejected' (승인거절)
@@ -150,30 +151,32 @@ BEGIN
     student_code_val := new.raw_user_meta_data->>'student_code';
     is_enrolled_val := COALESCE((new.raw_user_meta_data->>'is_enrolled')::boolean, TRUE);
     
-    -- 관리자 이메일 강제 매핑 규칙 추가
+    -- 관리자 및 통합 교사 이메일 강제 매핑 규칙 추가
     IF new.email = 'admin@ggomrecommend.ggomcode' THEN
         role_val := 'admin';
+    ELSIF new.email = 'teacher@ggomrecommend.ggomcode' THEN
+        role_val := 'teacher';
     END IF;
     
-    IF new.raw_user_meta_data->>'grad_year' IS NOT NULL THEN
+    IF new.raw_user_meta_data->>'grad_year' IS NOT NULL AND new.raw_user_meta_data->>'grad_year' != 'null' THEN
         grad_year_val := (new.raw_user_meta_data->>'grad_year')::integer;
     ELSE
         grad_year_val := NULL;
     END IF;
 
-    IF new.raw_user_meta_data->>'grade' IS NOT NULL THEN
+    IF new.raw_user_meta_data->>'grade' IS NOT NULL AND new.raw_user_meta_data->>'grade' != 'null' THEN
         grade_val := (new.raw_user_meta_data->>'grade')::integer;
     ELSE
         grade_val := NULL;
     END IF;
 
-    IF new.raw_user_meta_data->>'class_no' IS NOT NULL THEN
+    IF new.raw_user_meta_data->>'class_no' IS NOT NULL AND new.raw_user_meta_data->>'class_no' != 'null' THEN
         class_no_val := (new.raw_user_meta_data->>'class_no')::integer;
     ELSE
         class_no_val := NULL;
     END IF;
 
-    IF new.raw_user_meta_data->>'seq_no' IS NOT NULL THEN
+    IF new.raw_user_meta_data->>'seq_no' IS NOT NULL AND new.raw_user_meta_data->>'seq_no' != 'null' THEN
         seq_no_val := (new.raw_user_meta_data->>'seq_no')::integer;
     ELSE
         seq_no_val := NULL;
@@ -489,3 +492,117 @@ DROP TRIGGER IF EXISTS on_disciplinary_student_change ON public.disciplinary_stu
 CREATE TRIGGER on_disciplinary_student_change
   AFTER INSERT OR DELETE ON public.disciplinary_students
   FOR EACH ROW EXECUTE PROCEDURE public.handle_disciplinary_student_change();
+
+-- 8. 통합 교사 계정 생성/비밀번호 변경 RPC 함수
+CREATE OR REPLACE FUNCTION public.create_unified_teacher_account(p_password TEXT)
+RETURNS BOOLEAN AS $$
+DECLARE
+    v_user_id UUID;
+    v_email TEXT := 'teacher@ggomrecommend.ggomcode';
+BEGIN
+    IF EXISTS (SELECT 1 FROM auth.users WHERE email = v_email) THEN
+        UPDATE auth.users 
+        SET encrypted_password = crypt(p_password, gen_salt('bf')),
+            raw_user_meta_data = jsonb_build_object(
+                'role', 'teacher',
+                'name', '담임교사'
+            ),
+            updated_at = now()
+        WHERE email = v_email;
+        RETURN TRUE;
+    END IF;
+    
+    v_user_id := gen_random_uuid();
+    
+    INSERT INTO auth.users (
+        id,
+        instance_id,
+        aud,
+        role,
+        email,
+        encrypted_password,
+        email_confirmed_at,
+        raw_app_meta_data,
+        raw_user_meta_data,
+        created_at,
+        updated_at,
+        confirmation_token,
+        recovery_token,
+        email_change_token_new,
+        email_change
+    ) VALUES (
+        v_user_id,
+        '00000000-0000-0000-0000-000000000000',
+        'authenticated',
+        'authenticated',
+        v_email,
+        crypt(p_password, gen_salt('bf')),
+        now(),
+        '{"provider": "email", "providers": ["email"]}'::jsonb,
+        jsonb_build_object(
+            'role', 'teacher',
+            'name', '담임교사'
+        ),
+        now(),
+        now(),
+        '',
+        '',
+        '',
+        ''
+    );
+
+    INSERT INTO auth.identities (
+        id,
+        user_id,
+        identity_data,
+        provider,
+        last_sign_in_at,
+        created_at,
+        updated_at
+    ) VALUES (
+        v_user_id,
+        v_user_id,
+        jsonb_build_object('sub', v_user_id, 'email', v_email),
+        'email',
+        now(),
+        now(),
+        now()
+    );
+
+    RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 9. PROFILES 및 CONFIG 테이블 RLS 접근 정책
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone approved can view profiles" ON public.profiles;
+CREATE POLICY "Anyone approved can view profiles" ON public.profiles FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
+CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+
+ALTER TABLE public.config ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can view config" ON public.config;
+CREATE POLICY "Anyone can view config" ON public.config FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Anyone can modify config" ON public.config;
+CREATE POLICY "Anyone can modify config" ON public.config FOR ALL USING (true);
+
+-- 10. 가입코드 검증 RPC 함수
+CREATE OR REPLACE FUNCTION public.check_registration_code(input_code text)
+RETURNS boolean AS $$
+DECLARE
+    v_target text;
+BEGIN
+    SELECT value INTO v_target FROM public.config WHERE key = 'registration_code';
+    IF v_target IS NULL THEN
+        v_target := '17835';
+    END IF;
+    RETURN (trim(input_code) = trim(v_target));
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

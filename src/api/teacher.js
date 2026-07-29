@@ -27,33 +27,34 @@ export const getCurrentRound = async () => {
 export const teacherGetStudents = async () => {
   if (!supabase) return []
   
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
+  const savedGrade = localStorage.getItem('teacher_selected_grade')
+  const savedClass = localStorage.getItem('teacher_selected_class')
   
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-    
-  if (!profile) return []
+  const targetGrade = savedGrade === '0' || savedGrade === '3' ? Number(savedGrade) : 3
+  const targetClassNo = savedClass !== null && savedClass !== '' ? Number(savedClass) : 0
 
   let query = supabase
     .from('profiles')
     .select('*')
     .eq('role', 'student')
-    .order('name', { ascending: true })
 
-  // 졸업생 담당 교사(grade=0)인 경우 졸업생만 조회, 그 외에는 본인 학급만 조회
-  if (profile.grade === 0) {
-    query = query.eq('is_enrolled', false)
+  // 졸업생(grade=0)인 경우 졸업생만 조회, 그 외에는 해당 학년(반=0이면 전체반) 조회
+  if (targetGrade === 0) {
+    query = query.eq('is_enrolled', false).order('name', { ascending: true })
   } else {
-    query = query.eq('grade', profile.grade).eq('class_no', profile.class_no).eq('is_enrolled', true)
+    query = query.eq('grade', targetGrade).eq('is_enrolled', true)
+    if (targetClassNo > 0) {
+      query = query.eq('class_no', targetClassNo)
+    }
+    query = query
+      .order('class_no', { ascending: true })
+      .order('seq_no', { ascending: true })
+      .order('name', { ascending: true })
   }
 
   const { data, error } = await query
   if (error) throw error
-  return data
+  return data || []
 }
 
 // 3. 대학 목록 (고유 대학명 리스트)
@@ -128,13 +129,19 @@ export const teacherGetApplications = async (roundId) => {
   
   const studentIds = students.map(s => s.id)
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('applications')
     .select('*, profiles:student_id(*), universities:univ_id(*)')
-    .eq('round', roundId)
     .in('student_id', studentIds)
 
+  if (roundId !== undefined && roundId !== null && roundId !== '') {
+    query = query.eq('round', Number(roundId))
+  }
+
+  const { data, error } = await query
+
   if (error) throw error
+  if (!data) return []
 
   return data.map(ap => ({
     student_id: ap.student_id,
@@ -144,15 +151,15 @@ export const teacherGetApplications = async (roundId) => {
     excluded: ap.is_excluded,
     excluded_reason: ap.excluded_reason,
     department_name: ap.department_name,
-    student_code: ap.profiles.student_code,
-    name: ap.profiles.name,
-    grade: ap.profiles.grade,
-    class_no: ap.profiles.class_no,
-    seq_no: ap.profiles.seq_no,
-    is_enrolled: ap.profiles.is_enrolled,
+    student_code: ap.profiles?.student_code || '',
+    name: ap.profiles?.name || '',
+    grade: ap.profiles?.grade,
+    class_no: ap.profiles?.class_no,
+    seq_no: ap.profiles?.seq_no,
+    is_enrolled: ap.profiles?.is_enrolled,
     univ_id: ap.univ_id,
-    univ_name: ap.universities.univ_name,
-    track_name: ap.universities.track_name,
+    univ_name: ap.universities?.univ_name || '',
+    track_name: ap.universities?.track_name || '',
     recommended: ap.is_recommended,
     round_status: 'OPEN' // 라운드 상태 바인딩용
   }))

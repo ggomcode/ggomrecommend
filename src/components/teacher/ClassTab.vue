@@ -7,6 +7,7 @@
         <p class="text-base mb-1" style="color: #94a3b8;">담임 교사</p>
         <h1 class="text-2xl font-semibold" style="color: #1e293b; margin: 0;">
           <template v-if="auth.grade === 0">졸업생 현황</template>
+          <template v-else-if="!auth.classNo || auth.classNo === 0">{{ auth.grade }}학년 전체 학급 현황</template>
           <template v-else>{{ auth.grade }}학년 {{ auth.classNo }}반 학급 현황</template>
         </h1>
       </div>

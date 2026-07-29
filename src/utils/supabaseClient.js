@@ -22,8 +22,9 @@ export const getSupabaseConfig = () => {
 export const setSupabaseConfig = (newUrl, newAnonKey) => {
   localStorage.setItem('pcm_supabase_url', newUrl)
   localStorage.setItem('pcm_supabase_anon_key', newAnonKey)
-  // 페이지 새로고침을 통해 새로운 클라이언트 인스턴스 반영
-  window.location.reload()
+  const baseUrl = import.meta.env.BASE_URL || '/'
+  const targetPath = baseUrl.endsWith('/') ? `${baseUrl}welcome` : `${baseUrl}/welcome`
+  window.location.href = targetPath
 }
 
 // 클라이언트 인스턴스 생성 (설정이 유효한 경우에만)

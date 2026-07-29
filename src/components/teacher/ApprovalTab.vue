@@ -99,11 +99,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../../utils/supabaseClient'
+import { teacherGetStudents } from '../../api/teacher'
 
 const students = ref([])
 const loading = ref(true)
 const statusFilter = ref('pending')
-const regCode = ref('school2026!')
+const regCode = ref('')
 
 function statusLabel(s) {
   if (s === 'pending') return '승인 대기'
@@ -119,16 +120,23 @@ function filteredStudentsCount(s) {
   return students.value.filter(item => item.status === s).length
 }
 
-// 가입코드 조회
+// 가입코드 동적 조회 (DB 최신 설정값만 바인딩)
 async function loadRegCode() {
   if (!supabase) return
-  const { data } = await supabase
-    .from('config')
-    .select('value')
-    .eq('key', 'registration_code')
-    .single()
-  if (data) {
-    regCode.value = data.value
+  try {
+    const { data } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', 'registration_code')
+      .maybeSingle()
+    if (data && data.value) {
+      regCode.value = data.value
+    } else {
+      regCode.value = ''
+    }
+  } catch (e) {
+    console.error('Error loading regCode:', e)
+    regCode.value = ''
   }
 }
 
@@ -137,23 +145,7 @@ async function loadStudents() {
   loading.value = true
   try {
     if (!supabase) return
-    
-    // 교사의 담당 학급 획득하여 해당 반 학생들만 조회 가능
-    const { data: { user } } = await supabase.auth.getUser()
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-
-    let query = supabase.from('profiles').select('*').eq('role', 'student')
-    
-    // 졸업생 담당 교사는 졸업생만, 그 외에는 자기 학급만
-    if (profile.grade !== 0) {
-      query = query.eq('grade', profile.grade).eq('class_no', profile.class_no).eq('is_enrolled', true)
-    } else {
-      query = query.eq('is_enrolled', false)
-    }
-
-    const { data, error } = await query.order('created_at', { ascending: false })
-    if (error) throw error
-    students.value = data || []
+    students.value = await teacherGetStudents()
   } catch (e) {
     console.error('Error loading students for approval:', e)
   } finally {

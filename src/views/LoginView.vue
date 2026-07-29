@@ -23,61 +23,28 @@
         <p class="text-sm font-medium text-slate-400 dark:text-slate-500" style="margin: 0;">선발 관리 시스템</p>
       </div>
 
-      <!-- 역할 토글 (3선택) -->
-      <div
-        class="flex rounded-xl overflow-hidden mb-6 p-1 bg-slate-100/80 dark:bg-slate-900/50"
-        style="border: 1px solid #e2e8f0; border-color: rgba(226, 232, 240, 0.8);"
-      >
-        <button
-          type="button"
-          @click="switchMode('student')"
-          class="flex-1 text-sm font-bold py-2 rounded-lg transition-all duration-200 cursor-pointer"
-          :style="mode === 'student'
-            ? { background: '#2563eb', color: 'white', border: 'none' }
-            : { background: 'transparent', color: '#64748b', border: 'none' }"
-        >학생</button>
-        <button
-          type="button"
-          @click="switchMode('teacher')"
-          class="flex-1 text-sm font-bold py-2 rounded-lg transition-all duration-200 cursor-pointer"
-          :style="mode === 'teacher'
-            ? { background: '#2563eb', color: 'white', border: 'none' }
-            : { background: 'transparent', color: '#64748b', border: 'none' }"
-        >담임</button>
-        <button
-          type="button"
-          @click="switchMode('admin')"
-          class="flex-1 text-sm font-bold py-2 rounded-lg transition-all duration-200 cursor-pointer"
-          :style="mode === 'admin'
-            ? { background: '#2563eb', color: 'white', border: 'none' }
-            : { background: 'transparent', color: '#64748b', border: 'none' }"
-        >관리자</button>
-      </div>
-
-      <!-- [1] 학생 로그인 및 가입 폼 -->
-      <div v-if="mode === 'student'">
-        <!-- 로그인 화면 -->
-        <form v-if="!isSignUp" @submit.prevent="handleStudentLogin" class="flex flex-col gap-4">
+      <!-- 통합 로그인 폼 -->
+      <div v-if="!isSignUp">
+        <form @submit.prevent="handleLogin" class="flex flex-col gap-4">
           <div>
-            <label class="block text-sm font-semibold mb-1.5 text-slate-500 dark:text-slate-400">학번 (5자리)</label>
+            <label class="block text-sm font-semibold mb-1.5 text-slate-500 dark:text-slate-400">아이디 또는 학번</label>
             <input
-              v-model="studentCode"
+              v-model="loginId"
               type="text"
               required
-              placeholder="예: 30120"
-              maxlength="5"
-              pattern="\d{5}"
+              placeholder="아이디 또는 5자리 학번 입력"
               class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
               style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; box-sizing: border-box;"
             />
           </div>
 
           <div>
-            <label class="block text-sm font-semibold mb-1.5 text-slate-500 dark:text-slate-400">비밀번호</label>
+            <label class="block text-sm font-semibold mb-1.5 text-slate-500 dark:text-slate-400">비밀번호 또는 학생 연락처</label>
             <input
-              v-model="studentPassword"
+              v-model="loginPassword"
               type="password"
               required
+              placeholder="비밀번호 또는 연락처(010...) 입력"
               class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
               style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; box-sizing: border-box;"
             />
@@ -90,15 +57,22 @@
             style="padding: 12px; border: none; border-radius: 10px; background: #2563eb; color: white; margin-top: 4px;"
           >{{ loading ? '로그인 중…' : '로그인' }}</button>
 
-          <div class="text-center mt-3">
-            <button type="button" @click="isSignUp = true" class="text-xs text-blue-500 hover:underline cursor-pointer bg-transparent border-none">
-              아직 계정이 없으신가요? 회원가입 신청
+          <div class="text-center mt-4">
+            <button
+              type="button"
+              @click="isSignUp = true"
+              class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer bg-transparent border-none transition-colors"
+            >
+              아직 계정이 없으신가요?
+              <span class="text-blue-600 dark:text-blue-400 font-bold underline ml-1">학생 회원가입 신청</span>
             </button>
           </div>
         </form>
+      </div>
 
-        <!-- 회원가입 화면 -->
-        <form v-else @submit.prevent="handleStudentSignUp" class="flex flex-col gap-3">
+      <!-- 학생 회원가입 폼 -->
+      <div v-else>
+        <form @submit.prevent="openConfirmModal" class="flex flex-col gap-3">
           <div>
             <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">학교 배포 가입코드</label>
             <input
@@ -123,24 +97,14 @@
                 <option :value="false">졸업생</option>
               </select>
             </div>
-            <div v-if="!signupIsEnrolled">
-              <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">졸업 학년도</label>
-              <input
-                v-model.number="signupGradYear"
-                type="number"
-                required
-                class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
-                style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
-              />
-            </div>
-            <div v-else>
+            <div>
               <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">학번 (5자리)</label>
               <input
                 v-model="signupStudentCode"
                 type="text"
                 required
+                placeholder="예: 30120"
                 maxlength="5"
-                placeholder="예: 30205"
                 pattern="\d{5}"
                 class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
                 style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
@@ -148,67 +112,45 @@
             </div>
           </div>
 
-          <!-- 졸업생인 경우 학번도 함께 입력받기 위해 grid 아래에 배치 -->
           <div v-if="!signupIsEnrolled">
-            <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">학번 (재학 당시 5자리)</label>
+            <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">졸업 학년도</label>
             <input
-              v-model="signupStudentCode"
+              v-model.number="signupGradYear"
+              type="number"
+              required
+              placeholder="예: 2025"
+              class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
+              style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">이름</label>
+            <input
+              v-model="signupName"
               type="text"
               required
-              maxlength="5"
-              placeholder="예: 30120"
-              class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
-              style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
-            />
-          </div>
-
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">이름</label>
-              <input
-                v-model="signupName"
-                type="text"
-                required
-                class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
-                style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">연락처 끝 4자리</label>
-              <input
-                v-model="signupPhoneLast4"
-                type="text"
-                required
-                maxlength="4"
-                pattern="\d{4}"
-                placeholder="예: 5678"
-                class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
-                style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">비밀번호 (8자 이상)</label>
-            <input
-              v-model="signupPassword"
-              type="password"
-              required
-              minlength="8"
+              placeholder="학생 이름 입력"
               class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
               style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
             />
           </div>
 
           <div>
-            <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">비밀번호 확인</label>
+            <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">전화번호 (로그인 비밀번호로 사용)</label>
             <input
-              v-model="signupConfirm"
-              type="password"
+              v-model="signupPhone"
+              type="tel"
               required
-              class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
-              style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
+              placeholder="01012345678 (- 없이 입력)"
+              class="w-full text-sm focus:outline-none focus:ring-2 dark:bg-slate-900 dark:text-white"
+              :class="signupPhone.includes('-') ? 'border-rose-400 focus:ring-rose-400 dark:border-rose-500' : 'border-slate-200 focus:ring-blue-400 dark:border-slate-700'"
+              style="border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
             />
+            <p v-if="signupPhone.includes('-')" class="text-xs text-rose-500 dark:text-rose-400 font-semibold mt-1" style="margin: 2px 0 0;">
+              ⚠️ 하이픈('-')을 제외하고 숫자만 입력해 주세요 (예: 01012345678).
+            </p>
+            <p v-else class="text-xs text-slate-400 mt-1" style="margin: 2px 0 0;">* 이 전화번호가 추후 로그인 시 비밀번호가 됩니다.</p>
           </div>
 
           <button
@@ -216,112 +158,112 @@
             :disabled="loading"
             class="w-full text-sm font-bold disabled:opacity-40 transition-colors cursor-pointer"
             style="padding: 10px; border: none; border-radius: 8px; background: #2563eb; color: white; margin-top: 4px;"
-          >{{ loading ? '가입 신청 중…' : '가입 신청 완료하기' }}</button>
+          >{{ loading ? '검증 중…' : '가입 신청 완료하기' }}</button>
 
-          <div class="text-center mt-2">
-            <button type="button" @click="isSignUp = false" class="text-xs text-blue-500 hover:underline cursor-pointer bg-transparent border-none">
-              이미 가입하셨나요? 로그인하러 가기
+          <div class="text-center mt-3">
+            <button
+              type="button"
+              @click="isSignUp = false"
+              class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer bg-transparent border-none transition-colors"
+            >
+              이미 가입하셨나요?
+              <span class="text-blue-600 dark:text-blue-400 font-bold underline ml-1">로그인하러 가기</span>
             </button>
           </div>
         </form>
       </div>
 
-      <!-- [2] 담임 로그인 폼 -->
-      <form v-if="mode === 'teacher'" @submit.prevent="handleTeacherLogin" class="flex flex-col gap-4">
-        <div>
-          <label class="block text-sm font-semibold mb-1.5 text-slate-500 dark:text-slate-400">교사 아이디</label>
-          <input
-            v-model="teacherId"
-            type="text"
-            required
-            placeholder="교사 아이디 입력"
-            class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
-            style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; box-sizing: border-box;"
-          />
+      <!-- 가입 정보 최종 확인 팝업 모달 -->
+      <div
+        v-if="showConfirmModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      >
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 max-w-sm w-full space-y-4">
+          <div class="text-center">
+            <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white" style="margin: 0 0 4px;">가입 정보 최종 확인</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400" style="margin: 0;">입력하신 가입 정보가 맞는지 확인해 주세요.</p>
+          </div>
+
+          <div class="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-4 border border-slate-100 dark:border-slate-700/60 text-sm space-y-2.5">
+            <div class="flex justify-between items-center">
+              <span class="text-xs text-slate-400 font-semibold">구분</span>
+              <span class="font-bold text-slate-700 dark:text-slate-200">
+                {{ signupIsEnrolled ? '재학생' : `졸업생 (${signupGradYear}학년도)` }}
+              </span>
+            </div>
+            <div v-if="signupIsEnrolled" class="flex justify-between items-center">
+              <span class="text-xs text-slate-400 font-semibold">학번</span>
+              <span class="font-bold text-blue-600 dark:text-blue-400 font-mono">
+                {{ signupStudentCode }}
+                <span class="text-xs font-normal text-slate-500 dark:text-slate-400 ml-1">
+                  <template v-if="parseInt(signupStudentCode.substring(1, 3)) === 99">(테스트용 99반 {{ parseInt(signupStudentCode.substring(3, 5)) }}번)</template>
+                  <template v-else>(3학년 {{ parseInt(signupStudentCode.substring(1, 3)) }}반 {{ parseInt(signupStudentCode.substring(3, 5)) }}번)</template>
+                </span>
+              </span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs text-slate-400 font-semibold">이름</span>
+              <span class="font-bold text-slate-700 dark:text-slate-200">{{ signupName }}</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs text-slate-400 font-semibold">전화번호 (로그인 비번)</span>
+              <span class="font-bold text-slate-700 dark:text-slate-200 font-mono">{{ cleanPhoneInput }}</span>
+            </div>
+          </div>
+
+          <p class="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-lg border border-amber-200/60 text-center" style="margin: 0;">
+            * 담임 교사의 가입 승인 완료 후 로그인이 가능합니다.
+          </p>
+
+          <div class="flex gap-2 pt-1">
+            <button
+              type="button"
+              @click="showConfirmModal = false"
+              class="flex-1 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl transition-colors cursor-pointer border-none"
+            >
+              수정하기
+            </button>
+            <button
+              type="button"
+              :disabled="loading"
+              @click="confirmAndSignUp"
+              class="flex-1 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors cursor-pointer border-none shadow-sm disabled:opacity-40"
+            >
+              {{ loading ? '가입 진행 중…' : '확인 및 가입 신청' }}
+            </button>
+          </div>
         </div>
-
-        <div>
-          <label class="block text-sm font-semibold mb-1.5 text-slate-500 dark:text-slate-400">비밀번호</label>
-          <input
-            v-model="teacherPassword"
-            type="password"
-            autocomplete="current-password"
-            required
-            class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
-            style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; box-sizing: border-box;"
-          />
-        </div>
-
-        <button
-          type="submit"
-          :disabled="loading || !teacherId"
-          class="w-full text-sm font-bold disabled:opacity-40 transition-colors cursor-pointer"
-          style="padding: 12px; border: none; border-radius: 10px; background: #2563eb; color: white; margin-top: 4px;"
-        >{{ loading ? '로그인 중…' : '로그인' }}</button>
-      </form>
-
-      <!-- [3] 관리자 로그인 폼 -->
-      <form v-if="mode === 'admin'" @submit.prevent="handleAdminLogin" class="flex flex-col gap-4">
-        <div>
-          <label class="block text-sm font-semibold mb-1.5 text-slate-500 dark:text-slate-400">관리자 아이디</label>
-          <input
-            v-model="adminId"
-            type="text"
-            required
-            placeholder="관리자 아이디 입력"
-            class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
-            style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; box-sizing: border-box;"
-          />
-        </div>
-
-        <div>
-          <label class="block text-sm font-semibold mb-1.5 text-slate-500 dark:text-slate-400">비밀번호</label>
-          <input
-            v-model="adminPassword"
-            type="password"
-            autocomplete="current-password"
-            required
-            class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
-            style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; box-sizing: border-box;"
-          />
-        </div>
-
-        <button
-          type="submit"
-          :disabled="loading || !adminId"
-          class="w-full text-sm font-bold disabled:opacity-40 transition-colors cursor-pointer"
-          style="padding: 12px; border: none; border-radius: 10px; background: #2563eb; color: white; margin-top: 4px;"
-        >{{ loading ? '로그인 중…' : '로그인' }}</button>
-      </form>
+      </div>
 
       <!-- 메시지 배너 -->
-      <p v-if="error" class="text-sm font-semibold text-center mt-4 text-rose-500 bg-rose-50 dark:bg-rose-950/20 p-2.5 rounded-lg border border-rose-100 dark:border-rose-900/30">{{ error }}</p>
+      <p v-if="error" class="text-sm font-semibold text-center mt-4 text-rose-500 bg-rose-50 dark:bg-rose-950/20 p-2.5 rounded-lg border border-rose-100 dark:border-rose-900/30">
+        {{ typeof error === 'object' ? (error.message || '가입 처리 중 오류가 발생했습니다.') : error }}
+      </p>
       <p v-if="success" class="text-sm font-semibold text-center mt-4 text-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 p-2.5 rounded-lg border border-emerald-100 dark:border-emerald-900/30">{{ success }}</p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { supabase } from '../utils/supabaseClient'
 
 const router = useRouter()
 const auth = useAuthStore()
 
-const LS_GRADE = 'login_teacher_grade'
-const LS_CLASS = 'login_teacher_class'
-
-const mode = ref('student')
 const isSignUp = ref(false)
 const loading = ref(false)
 const error = ref(null)
 const success = ref(null)
+const showConfirmModal = ref(false)
 
-// 학생용 상태
-const studentCode = ref('')
-const studentPassword = ref('')
+// 로그인 상태
+const loginId = ref('')
+const loginPassword = ref('')
 
 // 학생 회원가입 상태
 const signupCode = ref('')
@@ -329,116 +271,34 @@ const signupIsEnrolled = ref(true)
 const signupGradYear = ref(new Date().getFullYear())
 const signupStudentCode = ref('')
 const signupName = ref('')
-const signupPhoneLast4 = ref('')
-const signupPassword = ref('')
-const signupConfirm = ref('')
+const signupPhone = ref('')
 
-// 관리자 / 교사용 상태
-const adminId = ref('')
-const adminPassword = ref('')
-const teacherId = ref('')
-const teacherPassword = ref('')
-
-const classes = ref([])
-const classesLoading = ref(false)
-
-const availableGrades = computed(() =>
-  [...new Set(classes.value.map(c => c.grade))].sort((a, b) => a - b)
-)
-
-const isGraduated = computed(() => teacherGrade.value === 0)
-
-const availableClassNos = computed(() => {
-  if (teacherGrade.value === '' || isGraduated.value) return []
-  return classes.value
-    .filter(c => c.grade === teacherGrade.value)
-    .map(c => c.class_no)
-    .sort((a, b) => a - b)
+const cleanPhoneInput = computed(() => {
+  return signupPhone.value.replace(/\D/g, '')
 })
 
-function onGradeChange() {
-  if (isGraduated.value) {
-    teacherClassNo.value = 0
-  } else if (!availableClassNos.value.includes(teacherClassNo.value)) {
-    teacherClassNo.value = ''
-  }
-}
-
-// Supabase DB에 등록된 담임 교사 기반 학급 조회 (없으면 디폴트 로드)
-async function fetchClasses() {
-  classesLoading.value = true
-  try {
-    if (!supabase) throw new Error('Supabase client uninitialized')
-    const { data, error: err } = await supabase
-      .from('profiles')
-      .select('grade, class_no')
-      .eq('role', 'teacher')
-
-    if (err) throw err
-
-    if (!data || data.length === 0) {
-      const defaultClasses = [{ grade: 0, class_no: 0 }]
-      for (let g = 1; g <= 3; g++) {
-        for (let c = 1; c <= 15; c++) {
-          defaultClasses.push({ grade: g, class_no: c })
-        }
-      }
-      classes.value = defaultClasses
-    } else {
-      // 중복 제거 및 졸업생 담임 포함
-      const uniqueClasses = [{ grade: 0, class_no: 0 }]
-      const seen = new Set()
-      data.forEach(c => {
-        if (c.grade !== null && c.class_no !== null) {
-          const key = `${c.grade}-${c.class_no}`
-          if (!seen.has(key)) {
-            seen.add(key)
-            uniqueClasses.push(c)
-          }
-        }
-      })
-      classes.value = uniqueClasses
-    }
-
-    if (teacherGrade.value !== '' && !availableGrades.value.includes(Number(teacherGrade.value))) {
-      teacherGrade.value = ''
-      teacherClassNo.value = ''
-    } else if (teacherClassNo.value !== '' && !availableClassNos.value.includes(Number(teacherClassNo.value))) {
-      teacherClassNo.value = ''
-    }
-  } catch (e) {
-    // 오프라인/테스트 대응 디폴트 구성
-    const defaultClasses = [{ grade: 0, class_no: 0 }]
-    for (let g = 1; g <= 3; g++) {
-      for (let c = 1; c <= 15; c++) {
-        defaultClasses.push({ grade: g, class_no: c })
-      }
-    }
-    classes.value = defaultClasses
-  } finally {
-    classesLoading.value = false
-  }
-}
-
-function switchMode(m) {
-  mode.value = m
-  isSignUp.value = false
-  error.value = null
-  success.value = null
-}
-
-async function handleStudentLogin() {
+async function handleLogin() {
   error.value = null
   success.value = null
   loading.value = true
+  const id = loginId.value.trim()
+  const pw = loginPassword.value
+
   try {
-    if (!/^\d{5}$/.test(studentCode.value)) {
-      error.value = '학번은 5자리 숫자 형식이어야 합니다.'
-      loading.value = false
-      return
+    if (id === 'admin') {
+      await auth.loginAdmin(id, pw)
+      router.push('/admin')
+    } else if (id === 'teacher') {
+      await auth.loginTeacher(id, pw)
+      router.push('/teacher')
+    } else {
+      // 5자리 숫자 학번 형태를 검사해서 학생 로그인 처리 (전화번호 비밀번호 정제 지원)
+      if (!/^\d{5}$/.test(id)) {
+        throw new Error('아이디는 admin, teacher 또는 5자리 학번이어야 합니다.')
+      }
+      await auth.loginStudent(id, pw)
+      router.push('/student')
     }
-    await auth.loginStudent(studentCode.value, studentPassword.value)
-    router.push('/student')
   } catch (e) {
     error.value = e.message || '로그인에 실패했습니다.'
   } finally {
@@ -446,98 +306,73 @@ async function handleStudentLogin() {
   }
 }
 
-async function handleStudentSignUp() {
+// 1단계: 사전 입력 검증 후 최종 확인 모달 띄우기
+function openConfirmModal() {
   error.value = null
   success.value = null
-  loading.value = true
-  
-  if (signupPassword.value !== signupConfirm.value) {
-    error.value = '비밀번호가 일치하지 않습니다.'
-    loading.value = false
+
+  if (signupPhone.value.includes('-')) {
+    error.value = "전화번호에 하이픈('-')을 제외하고 숫자만 입력해 주세요 (예: 01012345678)."
+    return
+  }
+
+  const cleanPhone = cleanPhoneInput.value
+  if (!cleanPhone || cleanPhone.length < 10 || !cleanPhone.startsWith('010')) {
+    error.value = '전화번호는 010으로 시작하는 10~11자리 숫자여야 합니다 (예: 01012345678).'
     return
   }
 
   if (!signupCode.value) {
     error.value = '가입코드를 입력해 주세요.'
-    loading.value = false
     return
   }
 
-  if (signupIsEnrolled.value && !/^\d{5}$/.test(signupStudentCode.value)) {
-    error.value = '학번은 5자리 숫자여야 합니다 (예: 30205).'
-    loading.value = false
+  if (!/^\d{5}$/.test(signupStudentCode.value)) {
+    error.value = '학번은 5자리 숫자여야 합니다 (예: 30120).'
     return
   }
 
   if (!signupName.value) {
     error.value = '이름을 입력해 주세요.'
-    loading.value = false
     return
   }
 
-  if (!/^\d{4}$/.test(signupPhoneLast4.value)) {
-    error.value = '연락처 끝 4자리는 숫자 4자리여야 합니다.'
-    loading.value = false
-    return
-  }
+  // 모달 열기
+  showConfirmModal.value = true
+}
+
+// 2단계: 모달에서 '확인 및 가입 신청' 클릭 시 실제 가입 수행
+async function confirmAndSignUp() {
+  loading.value = true
+  error.value = null
 
   try {
     await auth.signUpStudent({
       studentCode: signupStudentCode.value,
       name: signupName.value,
-      phoneLast4: signupPhoneLast4.value,
-      password: signupPassword.value,
+      phone: cleanPhoneInput.value,
       isEnrolled: signupIsEnrolled.value,
       gradYear: signupIsEnrolled.value ? null : signupGradYear.value,
       registrationCode: signupCode.value
     })
     
-    // 성공 시 초기화 및 로그인 폼 이동
+    // 모달 닫기 & 성공 처리 및 로그인 폼으로 자동 전환
+    showConfirmModal.value = false
     isSignUp.value = false
-    studentCode.value = signupStudentCode.value
+    loginId.value = signupStudentCode.value
+    loginPassword.value = cleanPhoneInput.value
     success.value = '회원가입 신청이 완료되었습니다! 담임 교사의 승인 후 로그인이 가능합니다.'
     
     // 입력폼 초기화
     signupCode.value = ''
     signupStudentCode.value = ''
     signupName.value = ''
-    signupPhoneLast4.value = ''
-    signupPassword.value = ''
-    signupConfirm.value = ''
+    signupPhone.value = ''
   } catch (e) {
+    showConfirmModal.value = false
     error.value = e.message || '회원가입에 실패했습니다.'
   } finally {
     loading.value = false
   }
 }
-
-async function handleTeacherLogin() {
-  error.value = null
-  success.value = null
-  loading.value = true
-  try {
-    await auth.loginTeacher(teacherId.value, teacherPassword.value)
-    router.push('/teacher')
-  } catch (e) {
-    error.value = e.message || '로그인에 실패했습니다.'
-  } finally {
-    loading.value = false
-  }
-}
-
-async function handleAdminLogin() {
-  error.value = null
-  success.value = null
-  loading.value = true
-  try {
-    await auth.loginAdmin(adminId.value, adminPassword.value)
-    router.push('/admin')
-  } catch (e) {
-    error.value = e.message || '로그인에 실패했습니다.'
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(fetchClasses)
 </script>

@@ -37,6 +37,30 @@
         </button>
       </div>
 
+      <!-- 학급 선택 필터 (사이드바가 열려있을 때만 노출) -->
+      <div v-if="!collapsed" style="padding: 12px 14px 4px; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid #f1f5f9;">
+        <label class="block text-xs font-semibold text-slate-400">조회 학급 선택</label>
+        <div style="display: flex; gap: 6px;">
+          <select
+            v-model.number="selectedGrade"
+            class="flex-1 text-sm bg-slate-50 border border-slate-200 rounded-md p-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white"
+            @change="onGradeChange"
+          >
+            <option :value="''">학년</option>
+            <option v-for="g in availableGrades" :key="g" :value="g">{{ g === 0 ? '졸업생' : g + '학년' }}</option>
+          </select>
+          <select
+            v-if="selectedGrade !== 0"
+            v-model.number="selectedClassNo"
+            :disabled="!selectedGrade"
+            class="flex-1 text-sm bg-slate-50 border border-slate-200 rounded-md p-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50 bg-white"
+          >
+            <option :value="0">전체반</option>
+            <option v-for="c in availableClassNos" :key="c" :value="c">{{ c }}반</option>
+          </select>
+        </div>
+      </div>
+
       <!-- 메뉴 내비게이션 -->
       <nav class="flex-1 overflow-y-auto" style="padding: 10px 8px; display: flex; flex-direction: column; gap: 2px;">
         <button
@@ -104,7 +128,7 @@
           <div
             class="flex items-center justify-center rounded-full font-bold"
             style="width: 36px; height: 36px; background: #dbeafe; color: #1d4ed8; font-size: 16px;"
-          >{{ auth.grade === 0 ? '졸' : '담' }}</div>
+          >{{ selectedGrade === 0 ? '졸' : '담' }}</div>
         </div>
         <!-- 펼침: 정보 카드 -->
         <div
@@ -127,14 +151,14 @@
           <!-- 사용자 정보 -->
           <div>
             <p class="text-base font-semibold whitespace-nowrap" style="margin: 0; color: #1e293b;">
-              {{ auth.teacherName ? `${auth.teacherName} 선생님` : '선생님' }}
+              {{ auth.teacherName ? `${auth.teacherName} 선생님` : '담임교사 선생님' }}
             </p>
             <p class="text-base whitespace-nowrap" style="margin: 2px 0 0; color: #94a3b8;">{{ roleLabel }}</p>
           </div>
           <!-- 액션 버튼 -->
           <div class="flex gap-3">
             <button
-              v-if="auth.grade !== 0"
+              v-if="selectedGrade !== 0"
               @click="showPwModal = true"
               class="flex items-center gap-1 text-base"
               style="background: none; border: none; cursor: pointer; color: #94a3b8; padding: 0;"
@@ -159,7 +183,7 @@
       <Transition name="tab-fade" mode="out-in">
         <div :key="active">
           <Suspense v-if="currentTab">
-            <component :is="currentTab" />
+            <component :is="currentTab" :key="selectedGrade + '-' + selectedClassNo" />
           </Suspense>
           <div v-else class="flex items-center justify-center" style="height: 320px;">
             <p class="text-base" style="color: #94a3b8;">{{ currentMenuItem?.label ?? '' }} 탭 준비 중</p>
@@ -225,15 +249,124 @@
 </template>
 
 <script setup>
-import { ref, computed, defineAsyncComponent, onMounted } from 'vue'
+import { ref, computed, defineAsyncComponent, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { teacherChangePassword, getCurrentRound } from '../api/teacher.js'
 import { dialog } from '../components/common/dialog.js'
 import { LayoutGrid, UserPlus, Trophy, ChevronRight, LogOut, KeyRound, Menu, BookOpen, ExternalLink, UserCheck } from 'lucide-vue-next'
+import { supabase } from '../utils/supabaseClient'
 
 const router = useRouter()
 const auth   = useAuthStore()
+
+// ── 학급 선택 상태 및 저장 ────────────────────────────────────
+const LS_GRADE = 'teacher_selected_grade'
+const LS_CLASS = 'teacher_selected_class'
+
+// 최초 접속 시 무조건 3학년 전체반(classNo = 0)이 디폴트로 선택되도록 초기화
+const selectedGrade = ref(3)
+const selectedClassNo = ref(0)
+
+localStorage.setItem(LS_GRADE, '3')
+localStorage.setItem(LS_CLASS, '0')
+
+const classes = ref([])
+const classesLoading = ref(false)
+const maxClassCount = ref(Number(localStorage.getItem('pcm_class_count')) || 11)
+
+// 3학년(디폴트)과 졸업생(0)만 드롭다운에 노출
+const availableGrades = computed(() => [3, 0])
+
+const isGraduated = computed(() => selectedGrade.value === 0)
+
+const availableClassNos = computed(() => {
+  if (selectedGrade.value === '' || isGraduated.value) return []
+  const found = classes.value
+    .filter(c => c.grade === selectedGrade.value)
+    .map(c => c.class_no)
+    .filter(Boolean)
+    .sort((a, b) => a - b)
+  
+  if (found.length > 0) return [...new Set(found)]
+  
+  // 관리자 설정 학급 수 (기본 11반)
+  const list = []
+  for (let i = 1; i <= maxClassCount.value; i++) {
+    list.push(i)
+  }
+  return list
+})
+
+function onGradeChange() {
+  selectedClassNo.value = 0
+}
+
+// Supabase DB에 등록된 학생들의 학년/반 정보를 분석해 고유 학급 목록 추출
+async function fetchClasses() {
+  classesLoading.value = true
+  try {
+    if (!supabase) throw new Error('Supabase client uninitialized')
+
+    // 관리자 설정 학급 수 가져오기 (기본 11반)
+    const { data: countData } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', 'class_count')
+      .maybeSingle()
+
+    if (countData && countData.value) {
+      maxClassCount.value = Number(countData.value) || 11
+      localStorage.setItem('pcm_class_count', countData.value)
+    }
+
+    const { data, error: err } = await supabase
+      .from('profiles')
+      .select('grade, class_no')
+      .eq('role', 'student')
+      .eq('is_enrolled', true)
+
+    if (err) throw err
+
+    if (!data || data.length === 0) {
+      const defaultClasses = [{ grade: 0, class_no: 0 }]
+      for (let c = 1; c <= maxClassCount.value; c++) {
+        defaultClasses.push({ grade: 3, class_no: c })
+      }
+      classes.value = defaultClasses
+    } else {
+      const uniqueClasses = [{ grade: 0, class_no: 0 }]
+      const seen = new Set()
+      data.forEach(c => {
+        if (c.grade !== null && c.class_no !== null) {
+          const key = `${c.grade}-${c.class_no}`
+          if (!seen.has(key)) {
+            seen.add(key)
+            uniqueClasses.push(c)
+          }
+        }
+      })
+      classes.value = uniqueClasses.sort((a, b) => a.grade - b.grade || a.class_no - b.class_no)
+    }
+  } catch (e) {
+    console.error('Error fetching classes:', e)
+    const defaultClasses = [{ grade: 0, class_no: 0 }]
+    for (let c = 1; c <= maxClassCount.value; c++) {
+      defaultClasses.push({ grade: 3, class_no: c })
+    }
+    classes.value = defaultClasses
+  } finally {
+    classesLoading.value = false
+  }
+}
+
+// auth store와 동기화
+watch([selectedGrade, selectedClassNo], ([g, c]) => {
+  auth.grade = g === '' ? null : g
+  auth.classNo = c === '' ? null : c
+  localStorage.setItem(LS_GRADE, g)
+  localStorage.setItem(LS_CLASS, c)
+}, { immediate: true })
 
 // ── 탭 컴포넌트 ──────────────────────────────────────────────
 const ClassTab       = defineAsyncComponent(() => import('../components/teacher/ClassTab.vue'))
@@ -266,15 +399,17 @@ const collapsed = ref(false)
 
 // ── 역할 레이블 ───────────────────────────────────────────────
 const roleLabel = computed(() => {
-  if (auth.grade === 0) return '졸업생 담당'
-  return `${auth.grade}학년 ${auth.classNo}반 담임`
+  if (selectedGrade.value === 0) return '졸업생 담당'
+  if (selectedGrade.value === '') return '학급 미선택'
+  if (selectedClassNo.value === 0 || !selectedClassNo.value) return '3학년 전체 학급'
+  return `${selectedGrade.value}학년 ${selectedClassNo.value}반 담임`
 })
 
 // ── 현재 라운드 ───────────────────────────────────────────────
 const currentRound = ref(null)
-// AdminView.vue::refreshRound 와 같은 가드 — 조회 실패를 사이드바의
-// "진행 중인 라운드 없음" 표시로 위장하지 않도록 명시적으로 폴백한다.
+
 onMounted(async () => {
+  await fetchClasses()
   try {
     currentRound.value = await getCurrentRound()
   } catch {
@@ -321,6 +456,7 @@ async function changePw() {
   }
 }
 
+// 로그아웃
 function logout() {
   auth.logout()
   router.push('/login')

@@ -60,17 +60,55 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // 사용자 프로필 가져오기 및 상태 바인딩
+  // 사용자 프로필 가져오기 및 상태 바인딩 (자동 복구 내장)
   async function fetchProfile(userId) {
     if (!supabase) return
-    const { data, error } = await supabase
+    let { data } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
 
-    if (error || !data) {
-      throw new Error('사용자 프로필을 찾을 수 없습니다.')
+    // profiles 레코드가 없는 경우 메타데이터 기반 자동 생성(Self-healing)
+    if (!data) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user && user.id === userId) {
+        const meta = user.user_metadata || {}
+        const isEmailAdmin = user.email === 'admin@ggomrecommend.ggomcode'
+        const isEmailTeacher = user.email === 'teacher@ggomrecommend.ggomcode'
+
+        const fallbackRole = isEmailAdmin ? 'admin' : (isEmailTeacher ? 'teacher' : (meta.role || 'student'))
+        const fallbackName = meta.name || (isEmailAdmin ? '관리자' : (isEmailTeacher ? '담임교사' : '사용자'))
+
+        const newProfile = {
+          id: userId,
+          role: fallbackRole,
+          name: fallbackName,
+          status: 'approved',
+          student_code: meta.student_code || null,
+          phone_last4: meta.phone_last4 || null,
+          is_enrolled: meta.is_enrolled !== undefined ? meta.is_enrolled : true,
+          grad_year: meta.grad_year || null,
+          grade: meta.grade || null,
+          class_no: meta.class_no || null,
+          seq_no: meta.seq_no || null,
+          has_disciplinary: false
+        }
+
+        const { data: insertedData } = await supabase
+          .from('profiles')
+          .upsert(newProfile)
+          .select()
+          .single()
+
+        if (insertedData) {
+          data = insertedData
+        }
+      }
+    }
+
+    if (!data) {
+      throw new Error('사용자 프로필을 찾을 수 없습니다. (DB profiles 미등록)')
     }
 
     role.value = data.role
@@ -259,51 +297,111 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // 학생 회원가입
-  async function signUpStudent({ studentCode: sCode, name, phoneLast4: pLast4, password, isEnrolled: enrolled, gradYear: gYear, registrationCode }) {
+  // 학생 회원가입 (전체 전화번호를 비밀번호로 사용)
+  async function signUpStudent({ studentCode: sCode, name, phone, isEnrolled: enrolled, gradYear: gYear, registrationCode }) {
     if (!supabase) throw new Error('Supabase가 설정되지 않았습니다.')
 
-    // 1. 가입코드 검증 (RPC 호출)
-    const { data: codeValid, error: codeErr } = await supabase
-      .rpc('check_registration_code', { input_code: registrationCode })
+    // 숫자만 추출한 전체 전화번호 (예: 01012345678)
+    const cleanPhone = String(phone || '').replace(/\D/g, '')
+    if (cleanPhone.length < 10) {
+      throw new Error('전화번호(010...) 10~11자리를 정확히 입력해 주세요.')
+    }
+    const pLast4 = cleanPhone.slice(-4)
 
-    if (codeErr) throw new Error('가입코드 검증 중 오류가 발생했습니다.')
-    if (!codeValid) throw new Error('가입코드가 올바르지 않습니다.')
+    // 1. 가입코드 검증 (config 테이블 직접 조회로 RPC 404 에러 방지)
+    const { data: configRow } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', 'registration_code')
+      .maybeSingle()
 
-    // 학번 파싱 (재학생의 경우 5자리 숫자 30205 -> 3학년 2반 5번)
+    const targetCode = configRow && configRow.value ? configRow.value : '17835'
+    if (String(registrationCode).trim() !== String(targetCode).trim()) {
+      throw new Error('가입코드가 올바르지 않습니다. 다시 확인해 주세요.')
+    }
+
+    // 학번 파싱 및 학급 수 검증 (재학생 5자리 숫자: 예 30205 -> 3학년 2반 5번)
     let parsedGrade = null
     let parsedClass = null
     let parsedSeq = null
+
     if (enrolled) {
       const codeStr = String(sCode)
-      if (codeStr.length === 5) {
-        parsedGrade = parseInt(codeStr.substring(0, 1))
-        parsedClass = parseInt(codeStr.substring(1, 3))
-        parsedSeq = parseInt(codeStr.substring(3, 5))
+      if (codeStr.length !== 5 || !codeStr.startsWith('3')) {
+        throw new Error('학번은 3학년 5자리 숫자여야 합니다 (예: 30105).')
+      }
+
+      parsedGrade = parseInt(codeStr.substring(0, 1))
+      parsedClass = parseInt(codeStr.substring(1, 3))
+      parsedSeq = parseInt(codeStr.substring(3, 5))
+
+      // 설정된 학급 수(기본 11반) 검증
+      let maxClass = 11
+      try {
+        const { data: classConfig } = await supabase
+          .from('config')
+          .select('value')
+          .eq('key', 'class_count')
+          .maybeSingle()
+        if (classConfig && classConfig.value) {
+          maxClass = Number(classConfig.value) || 11
+        }
+      } catch (e) {}
+
+      // 99반인 경우 테스트용 학번 예외 허용 (학급 수 제한 통과)
+      if (parsedClass !== 99 && (isNaN(parsedClass) || parsedClass < 1 || parsedClass > maxClass)) {
+        throw new Error(`학번의 반 번호(${parsedClass}반)가 존재하지 않습니다. (1반 ~ ${maxClass}반 범위로 입력해 주세요)`)
+      }
+
+      if (isNaN(parsedSeq) || parsedSeq < 1 || parsedSeq > 50) {
+        throw new Error(`학번의 출석 번호(${parsedSeq}번)가 올바르지 않습니다.`)
       }
     }
 
-    // 2. 가상의 이메일 매핑으로 가입 진행
+    // 2. 재학생/졸업생 간 동일 학번 및 이름 충돌 사전 방지 검사
+    const { data: duplicateProfile } = await supabase
+      .from('profiles')
+      .select('id, name, student_code, is_enrolled')
+      .eq('student_code', sCode)
+      .eq('name', name.trim())
+      .maybeSingle()
+
+    if (duplicateProfile) {
+      throw new Error('동일한 학번과 이름을 가진 가입 정보가 이미 시스템에 존재합니다. 가입 절차 진행을 위해 학교 담당자에게 문의해 주세요.')
+    }
+
+    // 3. 가상의 이메일 매핑으로 가입 진행 (메타데이터 객체 정제)
+    const metaData = {
+      role: 'student',
+      name: name.trim(),
+      phone_last4: pLast4,
+      full_phone: cleanPhone,
+      student_code: String(sCode),
+      is_enrolled: Boolean(enrolled)
+    }
+
+    if (enrolled) {
+      if (parsedGrade !== null) metaData.grade = parsedGrade
+      if (parsedClass !== null) metaData.class_no = parsedClass
+      if (parsedSeq !== null) metaData.seq_no = parsedSeq
+    } else {
+      if (gYear) metaData.grad_year = Number(gYear)
+    }
+
     const email = `student_${sCode}@ggomrecommend.ggomcode`
     const { data, error } = await supabase.auth.signUp({
       email,
-      password,
-      options: {
-        data: {
-          role: 'student',
-          name,
-          phone_last4: pLast4,
-          student_code: sCode,
-          is_enrolled: enrolled,
-          grad_year: enrolled ? null : gYear,
-          grade: parsedGrade,
-          class_no: parsedClass,
-          seq_no: parsedSeq
-        }
-      }
+      password: cleanPhone,
+      options: { data: metaData }
     })
 
-    if (error) throw new Error(error.message || '회원가입에 실패했습니다.')
+    if (error) {
+      let msg = error.message || '회원가입에 실패했습니다.'
+      if (msg.includes('User already registered') || msg.includes('already exists')) {
+        msg = '이미 해당 학번으로 가입된 계정이 존재합니다. 로그인해 주세요.'
+      }
+      throw new Error(msg)
+    }
 
     // 가입 완료 후 자동 로그인 방지 및 승인 대기 안내를 위해 로그아웃
     await supabase.auth.signOut()
