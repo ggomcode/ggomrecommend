@@ -23,7 +23,7 @@
 
       <!-- ① 앱 정보 -->
       <div class="rounded-xl" style="padding: 20px 24px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 items-center">
           <div>
             <p class="text-base font-semibold" style="color: #94a3b8; text-transform: uppercase; letter-spacing: 0.07em;">
               Teacher Utility Kit
@@ -31,38 +31,9 @@
             <p class="text-xl font-bold mt-0.5" style="color: #0f172a;">학교장추천전형 시스템</p>
           </div>
           <div class="lg:text-right">
-            <p class="text-base font-semibold" style="color: #475569;">© luminousky</p>
-            <p class="text-base mt-0.5" style="color: #94a3b8;">
-              Principal Candidate Manager · v{{ data.version }}
-            </p>
+            <p class="text-base font-semibold" style="color: #475569;">© luminousky, murmurgene</p>
           </div>
         </div>
-      </div>
-
-      <!-- ② 서버 접속 정보 -->
-      <div class="rounded-xl" style="padding: 20px 24px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
-        <SectionLabel title="서버 접속 정보" />
-        <div class="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-2">
-          <div class="rounded-lg font-mono text-base select-all"
-            style="padding: 10px 16px; background: #f8fafc; border: 1px solid #e2e8f0; color: #1e293b; min-width: 0; overflow-x: auto; white-space: nowrap;">
-            http://{{ data.server_addr }}
-          </div>
-          <button
-            @click="handleCopy"
-            class="flex items-center justify-center gap-1.5 text-base font-semibold rounded-lg transition-colors"
-            style="padding: 10px 20px; border: none; cursor: pointer; white-space: nowrap;"
-            :style="copied
-              ? { background: '#16a34a', color: 'white' }
-              : { background: '#2563eb', color: 'white' }"
-          >
-            <Check v-if="copied" :size="16" />
-            <Copy v-else :size="16" />
-            {{ copied ? '복사됨' : '복사' }}
-          </button>
-        </div>
-        <p class="text-base mt-2" style="color: #94a3b8;">
-          교사들이 이 주소로 접속합니다. 같은 네트워크에 연결되어 있어야 합니다.
-        </p>
       </div>
 
       <!-- 라운드 시작 전 준비 체크리스트 -->
@@ -140,7 +111,7 @@
           >
             {{ roundStatusLabel(data.round.status) }}
           </span>
-          <span class="text-base ml-auto" style="color: #94a3b8;">개시일 {{ data.round.opened_at.slice(0, 10) }}</span>
+          <span class="text-base ml-auto" style="color: #94a3b8;">개시일 {{ data.round.opened_at ? data.round.opened_at.slice(0, 10) : '—' }}</span>
         </div>
         <div v-else class="flex items-center justify-between">
           <p class="text-base" style="color: #94a3b8;">현재 진행 중인 라운드가 없습니다.</p>
@@ -277,7 +248,7 @@
             <SectionLabel title="이번 라운드 · 모집단위별 지원 현황" />
           </div>
 
-          <div v-if="data.universities.length === 0" class="flex-1 flex items-center justify-center text-base" style="color: #94a3b8;">
+          <div v-if="!data.universities || data.universities.length === 0" class="flex-1 flex items-center justify-center text-base" style="color: #94a3b8;">
             등록된 대학·모집단위가 없습니다.
           </div>
 
@@ -498,7 +469,7 @@ const helpBox = computed(() => {
       intro: '지금은 담임교사들이 지원자를 등록하는 기간입니다.',
       items: [
         '아래 "학급별 지원자 현황"에서 학급별 입력 상황을 확인하세요. 빨간색으로 표시된 학급은 아직 지원자를 한 명도 등록하지 않은 학급입니다.',
-        '위의 "서버 접속 정보" 주소를 담임교사들에게 알려주세요. 담임교사는 이 주소로 접속해 로그인합니다.',
+        '담임교사들에게 웹 접속 주소를 안내해 주세요. 교사는 해당 주소로 접속하여 로그인합니다.',
         '모든 담임교사의 입력이 끝나면 [라운드 관리]에서 "종료하기"를 눌러 입력을 마감하세요.',
       ],
     }

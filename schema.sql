@@ -641,3 +641,107 @@ CREATE POLICY "Anyone can select audit_logs" ON public.audit_logs FOR SELECT USI
 
 -- 12. PROFILES 테이블 반려 사유 컬럼 자동 추가
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+
+-- 13. REGIONAL_RECOMMENDATIONS (수도권 학교장추천전형 테이블 및 RLS 설정)
+CREATE TABLE IF NOT EXISTS public.regional_recommendations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    seq_no INT NOT NULL,
+    region TEXT,
+    univ_name TEXT NOT NULL,
+    recruitment_quota TEXT,
+    track_name TEXT NOT NULL,
+    quota_limit TEXT,
+    target_students TEXT,
+    grad_condition TEXT,
+    csat_min TEXT,
+    evaluation_method TEXT,
+    reflected_subjects TEXT,
+    reflected_indicators TEXT,
+    course_unit_reflection TEXT,
+    grade_ratio TEXT,
+    grad_semesters TEXT,
+    career_elective_method TEXT,
+    remarks TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 14. 전체 주요 테이블 RLS 통합 정책 (승인, 반려, 계정 삭제, 지원서 관리 권한 부여)
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anyone approved can view profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Anyone can select profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Anyone can modify profiles" ON public.profiles;
+CREATE POLICY "Anyone can select profiles" ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Anyone can modify profiles" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE public.applications ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anyone can select applications" ON public.applications;
+DROP POLICY IF EXISTS "Anyone can modify applications" ON public.applications;
+CREATE POLICY "Anyone can select applications" ON public.applications FOR SELECT USING (true);
+CREATE POLICY "Anyone can modify applications" ON public.applications FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE public.universities ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anyone can select universities" ON public.universities;
+DROP POLICY IF EXISTS "Anyone can modify universities" ON public.universities;
+CREATE POLICY "Anyone can select universities" ON public.universities FOR SELECT USING (true);
+CREATE POLICY "Anyone can modify universities" ON public.universities FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE public.regional_recommendations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anyone can select regional_recommendations" ON public.regional_recommendations;
+DROP POLICY IF EXISTS "Anyone can modify regional_recommendations" ON public.regional_recommendations;
+CREATE POLICY "Anyone can select regional_recommendations" ON public.regional_recommendations FOR SELECT USING (true);
+CREATE POLICY "Anyone can modify regional_recommendations" ON public.regional_recommendations FOR ALL USING (true) WITH CHECK (true);
+
+-- 15. ENROLLED_STUDENTS (단일 통합 학생 원장 마스터 테이블 - 재학생/졸업생/회원가입/로그인 통합)
+CREATE TABLE IF NOT EXISTS public.enrolled_students (
+    -- [1] 기본 식별 정보
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_code TEXT UNIQUE, -- 학번 (예: 30105 또는 졸업생 식별 학번)
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL, -- Auth 계정 연동 ID
+
+    -- [2] 학생 기본 인적 사항
+    name TEXT NOT NULL, -- 학생 이름
+    gender TEXT, -- 성별 ('남', '여')
+    student_phone_last4 TEXT, -- 학생 전화 끝4자리 (비밀번호 역할)
+    full_phone TEXT, -- 학생 전체 전화번호
+
+    -- [3] 학적 정보
+    is_enrolled BOOLEAN NOT NULL DEFAULT TRUE, -- 재학생 여부 (true: 재학생, false: 졸업생)
+    grade INT, -- 학년 (재학생 필수)
+    class_no INT, -- 반 (재학생 필수)
+    student_no INT, -- 번호 (재학생 필수)
+    seq_no INT, -- 순번
+    grad_year INT, -- 졸업연도 (졸업생 필수)
+
+    -- [4] 학부모 정보
+    parent_name TEXT, -- 학부모 이름
+    parent_phone_last4 TEXT, -- 학부모 전화 끝4자리
+
+    -- [5] 가입 승인 및 추천전형 정보
+    status TEXT NOT NULL DEFAULT 'approved' CHECK (status IN ('pending', 'approved', 'rejected')),
+    is_rural_eligible BOOLEAN NOT NULL DEFAULT FALSE, -- 농어촌 전형 자격 대상 여부
+    has_disciplinary BOOLEAN NOT NULL DEFAULT FALSE, -- 선도처분 여부
+    rejection_reason TEXT, -- 가입 거절 사유
+    remarks TEXT, -- 비고
+
+    -- [6] 생성 일시
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 재학생 학년/반/번호 중복 방지 유니크 인덱스 (재학생 기준)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_enrolled_students_grade_class_no 
+ON public.enrolled_students (grade, class_no, student_no) 
+WHERE is_enrolled = TRUE AND grade IS NOT NULL AND class_no IS NOT NULL AND student_no IS NOT NULL;
+
+-- 학번 조회용 인덱스
+CREATE INDEX IF NOT EXISTS idx_enrolled_students_code ON public.enrolled_students (student_code);
+
+ALTER TABLE public.enrolled_students ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can select enrolled_students" ON public.enrolled_students;
+CREATE POLICY "Anyone can select enrolled_students" ON public.enrolled_students FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Anyone can modify enrolled_students" ON public.enrolled_students;
+CREATE POLICY "Anyone can modify enrolled_students" ON public.enrolled_students FOR ALL USING (true) WITH CHECK (true);

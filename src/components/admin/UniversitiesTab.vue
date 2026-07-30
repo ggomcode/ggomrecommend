@@ -2,12 +2,41 @@
   <div class="py-8 px-4 sm:px-10">
 
     <!-- 페이지 헤더 -->
-    <div class="flex items-start justify-between mb-5">
+    <div class="flex items-start justify-between mb-5 flex-wrap gap-4">
       <div>
         <p class="text-base mb-1" style="color: #94a3b8;">관리자</p>
         <h1 class="text-2xl font-semibold" style="color: #1e293b; margin: 0;">대학 설정</h1>
       </div>
-      <div class="flex flex-wrap items-center gap-2">
+
+      <!-- 서브탭 버튼 -->
+      <div class="flex items-center gap-2 p-1.5 rounded-xl" style="background: #f1f5f9; border: 1px solid #e2e8f0;">
+        <button
+          class="px-4 py-2 rounded-lg text-base font-semibold transition-all cursor-pointer"
+          :style="{
+            border: 'none',
+            background: subTab === 'regional' ? '#2563eb' : 'transparent',
+            color: subTab === 'regional' ? 'white' : '#64748b',
+            boxShadow: subTab === 'regional' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }"
+          @click="subTab = 'regional'"
+        >
+          🎓 수도권 학교장추천전형 요강 (엑셀 데이터)
+        </button>
+        <button
+          class="px-4 py-2 rounded-lg text-base font-semibold transition-all cursor-pointer"
+          :style="{
+            border: 'none',
+            background: subTab === 'system' ? '#2563eb' : 'transparent',
+            color: subTab === 'system' ? 'white' : '#64748b',
+            boxShadow: subTab === 'system' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }"
+          @click="subTab = 'system'"
+        >
+          ⚙️ 대학 및 모집단위 정원 설정
+        </button>
+      </div>
+
+      <div v-if="subTab === 'system'" class="flex flex-wrap items-center gap-2">
         <button
             class="text-base font-medium rounded-lg disabled:opacity-40"
             style="padding: 8px 16px; border: none; background: #16a34a; color: white; cursor: pointer;"
@@ -38,9 +67,123 @@
       </div>
     </div>
 
-    <HelpBox class="mb-5" storage-key="univs" :title="HELP.title" :intro="HELP.intro" :items="HELP.items" />
+    <!-- ── 1. 수도권 학교장추천전형 (지역균형) 엑셀 요강 뷰 ──────────────── -->
+    <template v-if="subTab === 'regional'">
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div class="flex items-center gap-3">
+          <input
+            v-model="regionalSearch"
+            type="text"
+            placeholder="대학명, 전형명, 지역 검색…"
+            class="text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+            style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 14px; width: 260px; background: white;"
+          />
+          <span class="text-base" style="color: #64748b;">총 {{ filteredRegionalRecs.length }}건</span>
+        </div>
 
-    <div class="flex flex-col lg:flex-row lg:items-start gap-6" style="min-height: 480px;">
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            class="text-base font-medium rounded-lg"
+            style="padding: 8px 16px; border: 1px solid #e2e8f0; background: white; color: #475569; cursor: pointer;"
+            @click="dlSettingsTemplate"
+          >
+            📋 추천전형 엑셀 양식 다운로드
+          </button>
+          <label
+            class="text-base font-medium rounded-lg cursor-pointer"
+            :class="saving ? 'opacity-60 pointer-events-none' : ''"
+            style="padding: 8px 16px; background: #2563eb; color: white;"
+          >
+            {{ saving ? '업로드 중…' : '📥 추천전형 엑셀 가져오기' }}
+            <input type="file" accept=".xlsx,.csv" class="hidden" :disabled="saving" @change="onRegionalFile" />
+          </label>
+          <button
+            v-if="regionalRecs.length > 0"
+            class="text-base font-medium rounded-lg"
+            style="padding: 8px 16px; border: 1px solid #fca5a5; background: #fef2f2; color: #dc2626; cursor: pointer;"
+            :disabled="saving"
+            @click="clearRegionalRecs"
+          >
+            🗑️ 데이터 전체 삭제
+          </button>
+        </div>
+      </div>
+
+      <p v-if="error" class="text-base mb-4" style="color: #ef4444;">{{ error }}</p>
+
+      <!-- 엑셀 데이터 테이블 -->
+      <div class="rounded-xl overflow-hidden shadow-sm mb-6" style="background: white; border: 1px solid #e2e8f0;">
+        <div class="overflow-x-auto" style="max-height: 680px;">
+          <table class="w-full text-left" style="border-collapse: collapse; min-width: 2200px;">
+            <thead class="sticky top-0 z-10" style="background: #f8fafc; border-bottom: 2px solid #cbd5e1;">
+              <tr>
+                <th style="padding: 12px 14px; width: 60px; text-align: center; color: #475569;">No</th>
+                <th style="padding: 12px 14px; width: 90px; color: #475569;">지역</th>
+                <th style="padding: 12px 14px; width: 150px; color: #475569;">대학명</th>
+                <th style="padding: 12px 14px; width: 90px; color: #475569;">모집정원</th>
+                <th style="padding: 12px 14px; width: 150px; color: #475569;">전형명</th>
+                <th style="padding: 12px 14px; width: 120px; color: #475569;">인원제한</th>
+                <th style="padding: 12px 14px; width: 180px; color: #475569;">대상</th>
+                <th style="padding: 12px 14px; width: 150px; color: #475569;">졸업생조건</th>
+                <th style="padding: 12px 14px; width: 240px; color: #475569;">수능최저학력기준</th>
+                <th style="padding: 12px 14px; width: 220px; color: #475569;">전형방법</th>
+                <th style="padding: 12px 14px; width: 160px; color: #475569;">반영교과</th>
+                <th style="padding: 12px 14px; width: 140px; color: #475569;">반영지표</th>
+                <th style="padding: 12px 14px; width: 130px; color: #475569;">이수단위 반영</th>
+                <th style="padding: 12px 14px; width: 140px; color: #475569;">학년별 반영비율</th>
+                <th style="padding: 12px 14px; width: 140px; color: #475569;">졸업생 반영학기</th>
+                <th style="padding: 12px 14px; width: 200px; color: #475569;">진로선택과목 반영방법</th>
+                <th style="padding: 12px 14px; width: 180px; color: #475569;">비고</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="regionalLoading">
+                <td colspan="17" class="text-center py-12" style="color: #94a3b8;">
+                  수도권 학교장추천전형 데이터를 불러오는 중입니다…
+                </td>
+              </tr>
+              <tr v-else-if="filteredRegionalRecs.length === 0">
+                <td colspan="17" class="text-center py-16" style="color: #94a3b8;">
+                  등록된 수도권 학교장추천전형 정보가 없습니다.<br>
+                  우측 상단 <strong>[📥 추천전형 엑셀 가져오기]</strong> 버튼으로 엑셀 자료를 올려주세요.
+                </td>
+              </tr>
+              <tr
+                v-else
+                v-for="r in filteredRegionalRecs"
+                :key="r.id || r.seq_no"
+                class="hover:bg-slate-50 transition-colors"
+                style="border-bottom: 1px solid #f1f5f9;"
+              >
+                <td class="text-center font-medium" style="padding: 12px 14px; color: #64748b;">{{ r.seq_no }}</td>
+                <td style="padding: 12px 14px; color: #475569;">{{ r.region }}</td>
+                <td class="font-semibold" style="padding: 12px 14px; color: #1e293b;">{{ r.univ_name }}</td>
+                <td style="padding: 12px 14px; color: #475569;">{{ r.recruitment_quota }}</td>
+                <td class="font-medium" style="padding: 12px 14px; color: #2563eb;">{{ r.track_name }}</td>
+                <td style="padding: 12px 14px; color: #475569;">{{ r.quota_limit }}</td>
+                <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all;">{{ r.target_students }}</td>
+                <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all;">{{ r.grad_condition }}</td>
+                <td style="padding: 12px 14px; color: #1e293b; white-space: pre-line; word-break: keep-all;" class="font-medium">{{ r.csat_min }}</td>
+                <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all;">{{ r.evaluation_method }}</td>
+                <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all;">{{ r.reflected_subjects }}</td>
+                <td style="padding: 12px 14px; color: #475569;">{{ r.reflected_indicators }}</td>
+                <td style="padding: 12px 14px; color: #475569;">{{ r.course_unit_reflection }}</td>
+                <td style="padding: 12px 14px; color: #475569;">{{ r.grade_ratio }}</td>
+                <td style="padding: 12px 14px; color: #475569;">{{ r.grad_semesters }}</td>
+                <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all;">{{ r.career_elective_method }}</td>
+                <td style="padding: 12px 14px; color: #64748b; white-space: pre-line; word-break: keep-all;">{{ r.remarks }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </template>
+
+    <!-- ── 2. 대학 및 모집단위 정원 설정 뷰 ──────────────── -->
+    <template v-else-if="subTab === 'system'">
+      <HelpBox class="mb-5" storage-key="univs" :title="HELP.title" :intro="HELP.intro" :items="HELP.items" />
+
+      <div class="flex flex-col lg:flex-row lg:items-start gap-6" style="min-height: 480px;">
 
       <!-- ── 좌측: 대학 목록 ─────────────────────────────────── -->
       <div class="flex flex-col flex-shrink-0 w-full lg:w-[300px]">
@@ -341,6 +484,7 @@
         </template>
       </div>
     </div>
+  </template>
   </div>
 
   <!-- ── 추천 확정 목록 모달 ──────────────────────────────────── -->
@@ -560,6 +704,7 @@ import {
   getQuotaStats, exportQuotaStats, getTrackRecommendedList,
   downloadUnivSettingsTemplate, exportUnivSettings, previewUnivSettings, importUnivSettings,
   blobErrMsg,
+  getRegionalRecommendations, deleteRegionalRecommendations, importRegionalRecommendations,
 } from '../../api/admin.js'
 import HelpBox from '../common/HelpBox.vue'
 import { dialog } from '../common/dialog.js'
@@ -711,8 +856,12 @@ function saveSettingsBlob(response, fallback) {
   URL.revokeObjectURL(url)
 }
 async function dlSettingsTemplate() {
-  try { saveSettingsBlob(await downloadUnivSettingsTemplate(), 'univ_settings_template.xlsx') }
-  catch (e) { error.value = await blobErrMsg(e) }
+  try {
+    const a = document.createElement('a')
+    a.href = encodeURI('/data/학교장추천전형_대학설정_양식.xlsx')
+    a.download = '학교장추천전형_대학설정_양식.xlsx'
+    a.click()
+  } catch (e) { error.value = await blobErrMsg(e) }
 }
 async function dlSettingsExport() {
   try { saveSettingsBlob(await exportUnivSettings(), 'univ_settings.xlsx') }
@@ -962,5 +1111,70 @@ async function removeTrack(id) {
   finally { saving.value = false }
 }
 
-onMounted(() => { loadUnivs(); loadQuotaStats() })
+// ── 수도권 학교장추천전형 (regional_recommendations) ──────────────
+const subTab = ref('regional')
+const regionalRecs = ref([])
+const regionalLoading = ref(false)
+const regionalSearch = ref('')
+
+async function loadRegionalRecs() {
+  regionalLoading.value = true
+  try {
+    regionalRecs.value = await getRegionalRecommendations()
+  } catch (e) {
+    error.value = e.message || '추천전형 정보 조회에 실패했습니다.'
+  } finally {
+    regionalLoading.value = false
+  }
+}
+
+async function onRegionalFile(evt) {
+  const file = evt.target.files?.[0]
+  evt.target.value = ''
+  if (!file) return
+  saving.value = true
+  error.value = ''
+  try {
+    const res = await importRegionalRecommendations(file)
+    await loadRegionalRecs()
+    await dialog.alert({
+      title: '업로드 완료',
+      message: `총 ${res.count}건의 수도권 학교장추천전형 정보가 성공적으로 등록되었습니다.`,
+    })
+  } catch (e) {
+    error.value = e.message || '엑셀 가져오기 중 오류가 발생했습니다.'
+  } finally {
+    saving.value = false
+  }
+}
+
+async function clearRegionalRecs() {
+  if (!(await dialog.confirm({
+    title: '전형 정보 전체 삭제',
+    message: '등록된 수도권 학교장추천전형 엑셀 정보(16개 컬럼)를 전체 삭제하시겠습니까?',
+    confirmText: '삭제',
+    level: 'danger',
+  }))) return
+  saving.value = true
+  try {
+    await deleteRegionalRecommendations()
+    await loadRegionalRecs()
+  } catch (e) {
+    error.value = e.message || '삭제 중 오류가 발생했습니다.'
+  } finally {
+    saving.value = false
+  }
+}
+
+const filteredRegionalRecs = computed(() => {
+  if (!regionalSearch.value.trim()) return regionalRecs.value
+  const kw = regionalSearch.value.trim().toLowerCase()
+  return regionalRecs.value.filter(r =>
+    (r.univ_name && r.univ_name.toLowerCase().includes(kw)) ||
+    (r.track_name && r.track_name.toLowerCase().includes(kw)) ||
+    (r.region && r.region.toLowerCase().includes(kw))
+  )
+})
+
+onMounted(() => { loadUnivs(); loadQuotaStats(); loadRegionalRecs() })
 </script>

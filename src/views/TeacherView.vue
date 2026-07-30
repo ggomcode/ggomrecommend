@@ -26,8 +26,8 @@
             <path d="M6 12v5c3 3 9 3 12 0v-5"/>
           </svg>
           <div class="flex flex-col leading-tight">
-            <span class="text-[11px] font-extrabold text-blue-600 dark:text-blue-400 tracking-tight">{{ schoolName }}</span>
-            <span class="text-sm font-bold" style="color: #0f172a;">학교장추천전형 시스템</span>
+            <span class="text-[11px] font-extrabold text-blue-600 tracking-tight">{{ schoolName }}</span>
+            <span class="text-sm font-bold text-slate-900">학교장추천전형 시스템</span>
           </div>
         </div>
         <button
@@ -159,7 +159,14 @@
             <p class="text-base whitespace-nowrap" style="margin: 2px 0 0; color: #94a3b8;">{{ roleLabel }}</p>
           </div>
           <!-- 액션 버튼 -->
-          <div class="flex gap-3">
+          <div class="flex gap-3 flex-wrap">
+            <button
+              @click="router.push('/select-system')"
+              class="flex items-center gap-1 text-base font-semibold"
+              style="background: none; border: none; cursor: pointer; color: #2563eb; padding: 0;"
+            >
+              <Home :size="14" /> 포털이동
+            </button>
             <button
               v-if="selectedGrade !== 0"
               @click="showPwModal = true"
@@ -257,7 +264,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { teacherChangePassword, getCurrentRound } from '../api/teacher.js'
 import { dialog } from '../components/common/dialog.js'
-import { LayoutGrid, UserPlus, Trophy, ChevronRight, LogOut, KeyRound, Menu, BookOpen, ExternalLink, UserCheck } from 'lucide-vue-next'
+import { LayoutGrid, UserPlus, Trophy, ChevronRight, LogOut, KeyRound, Menu, BookOpen, ExternalLink, UserCheck, Home } from 'lucide-vue-next'
 import { supabase } from '../utils/supabaseClient'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 

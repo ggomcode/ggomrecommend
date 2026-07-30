@@ -169,6 +169,7 @@ async function loadConfig() {
   } catch (e) {
     console.error('Error loading config:', e)
   }
+}
 async function saveSchoolName() {
   schoolNameLoading.value = true
   try {

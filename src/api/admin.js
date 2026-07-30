@@ -1,4 +1,7 @@
 import { supabase } from '../utils/supabaseClient'
+import * as XLSX from 'xlsx'
+import { formatPhoneLast4, hashPhone } from '../utils/phoneUtils'
+import { encryptText, decryptText, hashText } from '../utils/cryptoUtils'
 
 // Helper for error parsing
 export async function blobErrMsg(e) {
@@ -76,13 +79,25 @@ export const getOverview = async () => {
       // 학급별 지원자 수 계산
       let count = 0
       if (round) {
-        // 해당 교사 학급의 모든 학생 ID 조회
-        const { data: classStudents } = await supabase
+        // 해당 교사 학급의 모든 학생 ID 조회 (null 안전 처리)
+        let studentQuery = supabase
           .from('profiles')
           .select('id')
-          .eq('grade', t.grade)
-          .eq('class_no', t.class_no)
           .eq('is_enrolled', true)
+
+        if (t.grade != null) {
+          studentQuery = studentQuery.eq('grade', t.grade)
+        } else {
+          studentQuery = studentQuery.is('grade', null)
+        }
+
+        if (t.class_no != null) {
+          studentQuery = studentQuery.eq('class_no', t.class_no)
+        } else {
+          studentQuery = studentQuery.is('class_no', null)
+        }
+
+        const { data: classStudents } = await studentQuery
         
         if (classStudents && classStudents.length > 0) {
           const studentIds = classStudents.map(s => s.id)
@@ -100,9 +115,47 @@ export const getOverview = async () => {
         teacher_name: t.name,
         count,
         submitted: count,
-        confirmed: true // 완료 여부 디폴트 true
+        confirmed: true
       })
     }
+  }
+
+  // 대학 및 모집단위별 현황 (universities)
+  const universities = []
+  const { data: univList } = await supabase
+    .from('universities')
+    .select('*')
+    .order('univ_name', { ascending: true })
+
+  if (univList) {
+    const univMap = new Map()
+    for (const u of univList) {
+      if (!univMap.has(u.univ_name)) {
+        univMap.set(u.univ_name, {
+          univ_id: u.id,
+          univ_name: u.univ_name,
+          total_quota: u.total_quota,
+          tracks: []
+        })
+      }
+      let applicants = 0
+      if (round) {
+        const { count: appCount } = await supabase
+          .from('applications')
+          .select('*', { count: 'exact', head: true })
+          .eq('round', round.id)
+          .eq('univ_name', u.univ_name)
+          .eq('track_name', u.track_name)
+        applicants = appCount || 0
+      }
+      univMap.get(u.univ_name).tracks.push({
+        track_id: u.id,
+        track_name: u.track_name,
+        unit_quota: u.quota,
+        applicants
+      })
+    }
+    universities.push(...Array.from(univMap.values()))
   }
 
   // 누적 통계 데이터 (all_time) 집계
@@ -138,6 +191,7 @@ export const getOverview = async () => {
     round,
     student_count: studentCount || 0,
     classes,
+    universities,
     all_time
   }
 }
@@ -219,15 +273,19 @@ export const importDaegyo = () => {}
 export const previewUnivImport = () => {}
 export const importUniv = () => {}
 
-// 6. 학생 관리 조회
+// 6. 학생 관리 조회 (enrolled_students 통합 마스터 원장 전용)
 export const getStudents = async (params = {}) => {
   if (!supabase) return { rows: [], total: 0, page: 1, per_page: 100 }
 
-  let query = supabase.from('profiles').select('*', { count: 'exact' }).eq('role', 'student')
+  const page = params.page || 1
+  const perPage = params.per_page || 100
+  const from = (page - 1) * perPage
+  const to = from + perPage - 1
+
+  let query = supabase.from('enrolled_students').select('*', { count: 'exact' })
 
   if (params.is_enrolled !== undefined && params.is_enrolled !== null) {
-    const isEnrolledBool = Boolean(Number(params.is_enrolled))
-    query = query.eq('is_enrolled', isEnrolledBool)
+    query = query.eq('is_enrolled', Boolean(Number(params.is_enrolled)))
   }
   if (params.grade !== undefined && params.grade !== null && params.grade !== '') {
     query = query.eq('grade', params.grade)
@@ -239,23 +297,32 @@ export const getStudents = async (params = {}) => {
     query = query.or(`name.ilike.%${params.search}%,student_code.ilike.%${params.search}%`)
   }
 
-  const page = params.page || 1
-  const perPage = params.per_page || 100
-  const from = (page - 1) * perPage
-  const to = from + perPage - 1
-
   const { data, count, error } = await query
     .order('is_enrolled', { ascending: false })
     .order('grade', { ascending: true })
     .order('class_no', { ascending: true })
-    .order('seq_no', { ascending: true })
+    .order('student_no', { ascending: true })
     .range(from, to)
 
   if (error) throw error
 
+  const rows = await Promise.all((data || []).map(async s => ({
+    id: s.id,
+    student_code: s.student_code || (s.grade && s.class_no && s.student_no ? `${s.grade}${String(s.class_no).padStart(2, '0')}${String(s.student_no).padStart(2, '0')}` : ''),
+    name: await decryptText(s.name),
+    parent_name: await decryptText(s.parent_name),
+    is_enrolled: s.is_enrolled !== false,
+    grade: s.grade,
+    class_no: s.class_no,
+    seq_no: s.student_no || s.seq_no,
+    phone_last4: s.student_phone_last4 || '0000',
+    status: s.status || 'approved',
+    grad_year: s.grad_year
+  })))
+
   return {
-    rows: data || [],
-    total: count !== null ? count : (data ? data.length : 0),
+    rows,
+    total: count !== null ? count : rows.length,
     page,
     per_page: perPage
   }
@@ -307,51 +374,113 @@ export const getStudentGradeOptions = async () => {
   }
 }
 
-// 학생 일괄 관리 (Mocking)
-export const downloadStudentTemplate = () => {}
+// 학생 일괄 관리 (엑셀 다운로드 및 업로드)
+export const downloadEnrolledTemplate = async () => {
+  const headers = [
+    '순번',
+    '학년',
+    '반',
+    '번호',
+    '이름',
+    '성별',
+    '비고',
+    '학생전화(끝4자리)',
+    '학부모이름',
+    '학부모전화(끝4자리)'
+  ]
+  const sampleData = [
+    [1, 3, 1, 1, '홍길동', '남', '', '1234', '홍부모', '5678'],
+    [2, 3, 1, 2, '성춘향', '여', '', '2345', '성부모', '6789'],
+    [3, 3, 2, 1, '이몽룡', '남', '특기사항 예시', '3456', '이부모', '7890']
+  ]
+  const wsData = [headers, ...sampleData]
+  const ws = XLSX.utils.aoa_to_sheet(wsData)
+
+  ws['!cols'] = [
+    { wch: 8 },  // 순번
+    { wch: 8 },  // 학년
+    { wch: 8 },  // 반
+    { wch: 8 },  // 번호
+    { wch: 12 }, // 이름
+    { wch: 8 },  // 성별
+    { wch: 20 }, // 비고
+    { wch: 18 }, // 학생전화(끝4자리)
+    { wch: 14 }, // 학부모이름
+    { wch: 18 }  // 학부모전화(끝4자리)
+  ]
+
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, '재학생명단양식')
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+  const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  return { data: blob }
+}
+
+export const downloadGraduatedTemplate = async () => {
+  const headers = ['학생코드', '이름', '졸업연도', '비고']
+  const sampleData = [
+    ['G2025001', '강감찬', 2025, ''],
+    ['G2025002', '을지문덕', 2025, '']
+  ]
+  const wsData = [headers, ...sampleData]
+  const ws = XLSX.utils.aoa_to_sheet(wsData)
+  ws['!cols'] = [{ wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 20 }]
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, '졸업생명단양식')
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+  const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  return { data: blob }
+}
+
+export const downloadStudentTemplate = downloadEnrolledTemplate
 export const exportStudents = () => {}
 export const importStudents = () => {}
-export const downloadEnrolledTemplate = () => {}
 export const exportEnrolled = () => {}
 export const importEnrolled = () => {}
-export const downloadGraduatedTemplate = () => {}
 export const exportGraduated = () => {}
 export const importGraduated = () => {}
 
-// 7. 재학생 추가 (RPC 호출)
+// 7. 재학생 추가 (enrolled_students 원장 연동)
 export const addEnrolledStudent = async (body) => {
   if (!supabase) return
+  const grade = Number(body.grade)
+  const class_no = Number(body.class_no)
+  const student_no = Number(body.seq_no) || 1
+  const student_code = body.student_code || `${grade}${String(class_no).padStart(2, '0')}${String(student_no).padStart(2, '0')}`
+
   const { data, error } = await supabase
-    .rpc('create_student_account', {
-      p_student_code: body.student_code,
-      p_name: body.name,
-      p_phone_last4: body.phone_last4 || '0000',
-      p_password: body.password || 'school1234!',
-      p_is_enrolled: true,
-      p_grad_year: null,
-      p_grade: Number(body.grade),
-      p_class_no: Number(body.class_no),
-      p_seq_no: Number(body.seq_no)
-    })
+    .from('enrolled_students')
+    .upsert({
+      student_code,
+      name: body.name,
+      student_phone_last4: body.phone_last4 || '0000',
+      is_enrolled: true,
+      grade,
+      class_no,
+      student_no,
+      seq_no: student_no,
+      status: 'approved'
+    }, { onConflict: 'grade,class_no,student_no' })
 
   if (error) throw error
   return data
 }
 
-// 8. 졸업생 추가 (RPC 호출)
+// 8. 졸업생 추가 (enrolled_students 원장 연동)
 export const addGraduatedStudent = async (body) => {
   if (!supabase) return
+  const grad_year = Number(body.grad_year)
+  const student_code = body.student_code || `grad_${grad_year}_${Date.now().toString().slice(-4)}`
+
   const { data, error } = await supabase
-    .rpc('create_student_account', {
-      p_student_code: body.student_code,
-      p_name: body.name,
-      p_phone_last4: body.phone_last4 || '0000',
-      p_password: body.password || 'school1234!',
-      p_is_enrolled: false,
-      p_grad_year: Number(body.grad_year),
-      p_grade: null,
-      p_class_no: null,
-      p_seq_no: null
+    .from('enrolled_students')
+    .insert({
+      student_code,
+      name: body.name,
+      student_phone_last4: body.phone_last4 || '0000',
+      is_enrolled: false,
+      grad_year,
+      status: 'approved'
     })
 
   if (error) throw error
@@ -361,8 +490,12 @@ export const addGraduatedStudent = async (body) => {
 // 9. 학생/졸업생 삭제
 export const deleteStudent = async (id) => {
   if (!supabase) return
-  // profiles에서 삭제하면 PostgreSQL 트리거가 auth.users에서도 지웁니다.
   const { error } = await supabase
+    .from('enrolled_students')
+    .delete()
+    .eq('id', id)
+
+  await supabase
     .from('profiles')
     .delete()
     .eq('id', id)
@@ -1023,3 +1156,246 @@ export const getAuditLogs = async (params = {}) => {
 
 export const exportAuditLogs = () => {}
 export const adminAreaScorePreview = async () => ({ score: 0 })
+
+// 30. 수도권 학교장추천전형 (regional_recommendations) API
+export const getRegionalRecommendations = async () => {
+  if (!supabase) return []
+  const { data, error } = await supabase
+    .from('regional_recommendations')
+    .select('*')
+    .order('seq_no', { ascending: true })
+
+  if (error) throw error
+  return data || []
+}
+
+export const deleteRegionalRecommendations = async () => {
+  if (!supabase) return
+  const { error } = await supabase
+    .from('regional_recommendations')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000')
+
+  if (error) throw error
+}
+
+export const importRegionalRecommendations = async (file) => {
+  if (!supabase) return { count: 0 }
+  
+  const buffer = await file.arrayBuffer()
+  const workbook = XLSX.read(buffer, { type: 'array' })
+  const firstSheetName = workbook.SheetNames[0]
+  const worksheet = workbook.Sheets[firstSheetName]
+  const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' })
+
+  if (!rawRows || rawRows.length === 0) {
+    throw new Error('엑셀 파일에 데이터가 없습니다.')
+  }
+
+  // 16개 컬럼 매핑
+  const mappedRows = rawRows.map((row, index) => {
+    return {
+      seq_no: index + 1,
+      region: String(row['지역'] ?? '').trim(),
+      univ_name: String(row['대학명'] ?? '').trim(),
+      recruitment_quota: String(row['모집정원'] ?? '').trim(),
+      track_name: String(row['전형명'] ?? '').trim(),
+      quota_limit: String(row['인원제한'] ?? '').trim(),
+      target_students: String(row['대상'] ?? '').trim(),
+      grad_condition: String(row['졸업생조건'] ?? '').trim(),
+      csat_min: String(row['수능최저학력기준'] ?? '').trim(),
+      evaluation_method: String(row['전형방법'] ?? '').trim(),
+      reflected_subjects: String(row['반영교과'] ?? '').trim(),
+      reflected_indicators: String(row['반영지표'] ?? '').trim(),
+      course_unit_reflection: String(row['이수단위 반영'] ?? row['이수단위반영'] ?? '').trim(),
+      grade_ratio: String(row['학년별 반영비율'] ?? row['학년별반영비율'] ?? '').trim(),
+      grad_semesters: String(row['졸업생 반영학기'] ?? row['졸업생반영학기'] ?? '').trim(),
+      career_elective_method: String(row['진로선택과목 반영방법'] ?? row['진로선택과목반영방법'] ?? '').trim(),
+      remarks: String(row['비고'] ?? '').trim(),
+    }
+  }).filter(r => r.univ_name || r.track_name)
+
+  if (mappedRows.length === 0) {
+    throw new Error('올바른 전형 정보(대학명/전형명)를 찾을 수 없습니다.')
+  }
+
+  // 기존 데이터 삭제 후 새 데이터 일괄 삽입
+  await deleteRegionalRecommendations()
+
+  const chunkSize = 100
+  for (let i = 0; i < mappedRows.length; i += chunkSize) {
+    const chunk = mappedRows.slice(i, i + chunkSize)
+    const { error } = await supabase.from('regional_recommendations').insert(chunk)
+    if (error) throw error
+  }
+
+  return { count: mappedRows.length }
+}
+
+// 31. 재학생 명단 (enrolled_students) API
+export const getEnrolledStudents = async () => {
+  if (!supabase) return []
+  const { data, error } = await supabase
+    .from('enrolled_students')
+    .select('*')
+    .order('grade', { ascending: true })
+    .order('class_no', { ascending: true })
+    .order('student_no', { ascending: true })
+
+  if (error) throw error
+  return data || []
+}
+
+export const importEnrolledStudents = async (file) => {
+  if (!supabase) return { count: 0 }
+  
+  const buffer = await file.arrayBuffer()
+  const workbook = XLSX.read(buffer, { type: 'array' })
+  const firstSheetName = workbook.SheetNames[0]
+  const worksheet = workbook.Sheets[firstSheetName]
+  const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' })
+
+  if (!rawRows || rawRows.length === 0) {
+    throw new Error('엑셀 파일에 데이터가 없습니다.')
+  }
+
+  const enrolledRows = []
+
+  for (let index = 0; index < rawRows.length; index++) {
+    const row = rawRows[index]
+    const rawStudentPhone = row['학생전화(끝4자리)'] ?? row['학생전화'] ?? row['학생연락처'] ?? row['학생전화번호'] ?? row['학생 H.P'] ?? row['학생HP'] ?? ''
+    const rawParentPhone = row['학부모전화(끝4자리)'] ?? row['학부모전화'] ?? row['학부모연락처'] ?? row['학부모전화번호'] ?? row['학부모 H.P'] ?? row['학부모HP'] ?? ''
+
+    const grade = Number(row['학년']) || 3
+    const class_no = Number(row['반'])
+    const student_no = Number(row['번호']) || Number(row['순번']) || (index + 1)
+    const rawName = String(row['이름'] ?? '').trim()
+    const rawParentName = String(row['학부모이름'] ?? row['학부모 성명'] ?? '').trim()
+    const gender = String(row['성별'] ?? '').trim()
+    const remarks = String(row['비고'] ?? '').trim()
+    const sPhoneLast4 = formatPhoneLast4(rawStudentPhone)
+    const pPhoneLast4 = formatPhoneLast4(rawParentPhone)
+
+    const cleanStudentPhone = String(rawStudentPhone || '').trim().replace(/\D/g, '')
+    const sPhoneHash = cleanStudentPhone ? await hashPhone(cleanStudentPhone) : null
+    
+    const encName = await encryptText(rawName)
+    const encParentName = await encryptText(rawParentName)
+    const nameHash = await hashText(rawName)
+
+    if (rawName && class_no && student_no) {
+      const studentCode = `${grade}${String(class_no).padStart(2, '0')}${String(student_no).padStart(2, '0')}`
+
+      enrolledRows.push({
+        student_code: studentCode,
+        seq_no: student_no,
+        grade,
+        class_no,
+        student_no,
+        name: encName,
+        name_hash: nameHash,
+        gender,
+        remarks,
+        student_phone_last4: sPhoneLast4,
+        phone_hash: sPhoneHash,
+        parent_name: encParentName,
+        parent_phone_last4: pPhoneLast4,
+        is_enrolled: true,
+        status: 'approved'
+      })
+    }
+  }
+
+  if (enrolledRows.length === 0) {
+    throw new Error('올바른 학생 정보(학년, 반, 번호, 이름)를 찾을 수 없습니다.')
+  }
+
+  // 1. enrolled_students 마스터 테이블에 업서트 (전화번호 SHA-256 암호화 저장)
+  const { error: enrolledErr } = await supabase.from('enrolled_students').upsert(enrolledRows, {
+    onConflict: 'grade,class_no,student_no'
+  })
+  if (enrolledErr) throw enrolledErr
+
+  // 2. profiles 테이블 한 번에 조회하여 메모리 인덱싱 (네트워크 요청 1,000번 ➔ 1번으로 극적 최적화)
+  const { data: existingProfiles } = await supabase
+    .from('profiles')
+    .select('id, name, student_code, grade, class_no, seq_no, phone_last4')
+    .eq('role', 'student')
+    .eq('is_enrolled', true)
+
+  if (existingProfiles && existingProfiles.length > 0) {
+    const codeMap = new Map()
+    const classSeqMap = new Map()
+    const nameClassMap = new Map()
+
+    existingProfiles.forEach(p => {
+      if (p.student_code) codeMap.set(p.student_code, p)
+      if (p.grade && p.class_no && p.seq_no) {
+        classSeqMap.set(`${p.grade}-${p.class_no}-${p.seq_no}`, p)
+      }
+      if (p.name && p.grade && p.class_no) {
+        nameClassMap.set(`${p.name}-${p.grade}-${p.class_no}`, p)
+      }
+    })
+
+    const updates = []
+    profileRows.forEach(p => {
+      const sCode = p.student_code
+      const csKey = `${p.grade}-${p.class_no}-${p.seq_no}`
+      const ncKey = `${p.name}-${p.grade}-${p.class_no}`
+
+      const matched = codeMap.get(sCode) || classSeqMap.get(csKey) || nameClassMap.get(ncKey)
+      if (matched) {
+        const updatePayload = {
+          name: p.name,
+          student_code: p.student_code,
+          grade: p.grade,
+          class_no: p.class_no,
+          seq_no: p.seq_no,
+          is_enrolled: true
+        }
+        if (p.phone_last4 && p.phone_last4 !== '0000') {
+          updatePayload.phone_last4 = p.phone_last4
+        }
+        updates.push(supabase.from('profiles').update(updatePayload).eq('id', matched.id))
+      }
+    })
+
+    if (updates.length > 0) {
+      await Promise.all(updates)
+    }
+  }
+
+  // 3. 미존재 학급(교사 계정) 1회 일괄 조회 및 자동 생성
+  const classMap = new Map()
+  enrolledRows.forEach(r => {
+    const key = `${r.grade}-${r.class_no}`
+    if (!classMap.has(key)) classMap.set(key, { grade: r.grade, class_no: r.class_no })
+  })
+
+  const { data: existingTeachers } = await supabase
+    .from('profiles')
+    .select('grade, class_no')
+    .eq('role', 'teacher')
+
+  const teacherSet = new Set()
+  if (existingTeachers) {
+    existingTeachers.forEach(t => teacherSet.add(`${t.grade}-${t.class_no}`))
+  }
+
+  const creationTasks = []
+  for (const [, c] of classMap) {
+    if (!teacherSet.has(`${c.grade}-${c.class_no}`)) {
+      const defaultTeacherName = `${c.grade}학년 ${c.class_no}반 담임`
+      creationTasks.push(
+        upsertClass(c.grade, c.class_no, { teacher_name: defaultTeacherName, password: 'school1234!' }).catch(() => {})
+      )
+    }
+  }
+
+  if (creationTasks.length > 0) {
+    await Promise.all(creationTasks)
+  }
+
+  return { count: enrolledRows.length }
+}

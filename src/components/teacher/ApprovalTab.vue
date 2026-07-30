@@ -20,12 +20,12 @@
     <!-- 메인 컨텐츠 -->
     <div v-else class="flex flex-col gap-5">
       <!-- 상태 필터 탭 -->
-      <div class="flex gap-2 p-1 bg-slate-100 border border-slate-200 rounded-xl max-w-sm">
+      <div class="flex gap-2 p-1 bg-slate-100 border border-slate-200 rounded-xl max-w-md">
         <button
-          v-for="s in ['pending', 'approved', 'rejected']"
+          v-for="s in ['all', 'pending', 'approved', 'rejected']"
           :key="s"
           @click="statusFilter = s"
-          class="flex-1 text-xs font-bold py-1.5 rounded-lg border-none transition-all cursor-pointer"
+          class="flex-1 text-xs font-bold py-1.5 rounded-lg border-none transition-all cursor-pointer whitespace-nowrap"
           :class="statusFilter === s ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 bg-transparent hover:text-slate-700'"
         >
           {{ statusLabel(s) }} ({{ filteredStudentsCount(s) }})
@@ -159,11 +159,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../../utils/supabaseClient'
-import { teacherGetStudents, deleteStudent } from '../../api/admin'
+import { teacherGetStudents } from '../../api/teacher'
+import { deleteStudent } from '../../api/admin'
 
 const students = ref([])
 const loading = ref(true)
-const statusFilter = ref('pending')
+const statusFilter = ref('all')
 const regCode = ref('')
 
 const processingId = ref(null)
@@ -173,6 +174,7 @@ const rejectingStudent = ref(null)
 const rejectionReasonInput = ref('')
 
 function statusLabel(s) {
+  if (s === 'all') return '전체'
   if (s === 'pending') return '승인 대기'
   if (s === 'approved') return '승인'
   if (s === 'rejected') return '반려'
@@ -180,10 +182,12 @@ function statusLabel(s) {
 }
 
 const filteredStudents = computed(() => {
+  if (statusFilter.value === 'all') return students.value
   return students.value.filter(s => s.status === statusFilter.value)
 })
 
 function filteredStudentsCount(s) {
+  if (s === 'all') return students.value.length
   return students.value.filter(item => item.status === s).length
 }
 
@@ -228,7 +232,7 @@ async function handleApprove(student) {
 
   try {
     const { error } = await supabase
-      .from('profiles')
+      .from('enrolled_students')
       .update({ status: 'approved', rejection_reason: null })
       .eq('id', student.id)
 
@@ -246,6 +250,7 @@ async function handleApprove(student) {
     } catch (logErr) {}
 
     await loadStudents()
+    alert(`'${student.name}' 학생의 가입이 승인되었습니다.`)
   } catch (e) {
     console.error(e)
     alert('승인 처리 중 오류가 발생했습니다.')
@@ -276,7 +281,7 @@ async function confirmReject() {
 
   try {
     const { error } = await supabase
-      .from('profiles')
+      .from('enrolled_students')
       .update({ status: 'rejected', rejection_reason: reason })
       .eq('id', student.id)
 
@@ -296,6 +301,7 @@ async function confirmReject() {
     rejectingStudent.value = null
     rejectionReasonInput.value = ''
     await loadStudents()
+    alert(`'${student.name}' 학생의 가입이 반려되었습니다.`)
   } catch (e) {
     console.error(e)
     alert('반려 처리 중 오류가 발생했습니다.')
@@ -314,6 +320,7 @@ async function handleDelete(student) {
   try {
     await deleteStudent(student.id)
     await loadStudents()
+    alert(`'${student.name}' 학생 계정이 삭제되었습니다.`)
   } catch (e) {
     console.error(e)
     alert('학생 삭제 처리 중 오류가 발생했습니다.')

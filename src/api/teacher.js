@@ -1,4 +1,5 @@
 import { supabase } from '../utils/supabaseClient'
+import { decryptText } from '../utils/cryptoUtils'
 
 // 1. 현재 활성화된 라운드 조회
 export const getCurrentRound = async () => {
@@ -23,7 +24,7 @@ export const getCurrentRound = async () => {
   return null
 }
 
-// 2. 담당 학급 학생 목록 조회
+// 2. 담당 학급 학생 목록 조회 (enrolled_students 통합 마스터 원장 참조)
 export const teacherGetStudents = async () => {
   if (!supabase) return []
   
@@ -34,13 +35,11 @@ export const teacherGetStudents = async () => {
   const targetClassNo = savedClass !== null && savedClass !== '' ? Number(savedClass) : 0
 
   let query = supabase
-    .from('profiles')
+    .from('enrolled_students')
     .select('*')
-    .eq('role', 'student')
 
-  // 졸업생(grade=0)인 경우 졸업생만 조회, 그 외에는 해당 학년(반=0이면 전체반) 조회
   if (targetGrade === 0) {
-    query = query.eq('is_enrolled', false).order('name', { ascending: true })
+    query = query.eq('is_enrolled', false).order('student_code', { ascending: true })
   } else {
     query = query.eq('grade', targetGrade).eq('is_enrolled', true)
     if (targetClassNo > 0) {
@@ -48,13 +47,24 @@ export const teacherGetStudents = async () => {
     }
     query = query
       .order('class_no', { ascending: true })
-      .order('seq_no', { ascending: true })
-      .order('name', { ascending: true })
+      .order('student_no', { ascending: true })
   }
 
   const { data, error } = await query
   if (error) throw error
-  return data || []
+
+  return Promise.all((data || []).map(async s => ({
+    id: s.id,
+    student_code: s.student_code || `${s.grade}${String(s.class_no).padStart(2, '0')}${String(s.student_no || s.seq_no).padStart(2, '0')}`,
+    name: await decryptText(s.name),
+    parent_name: await decryptText(s.parent_name),
+    is_enrolled: s.is_enrolled !== false,
+    grade: s.grade,
+    class_no: s.class_no,
+    seq_no: s.student_no || s.seq_no,
+    phone_last4: s.student_phone_last4 || '0000',
+    status: s.status || 'approved'
+  })))
 }
 
 // 3. 대학 목록 (고유 대학명 리스트)

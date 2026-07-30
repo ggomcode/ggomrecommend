@@ -303,7 +303,7 @@
         <p class="text-xl font-bold" style="color: #0f172a;">학교장추천전형 시스템</p>
         <div class="flex flex-col gap-2">
           <p class="text-base" style="color:#64748b; line-height:1.6;">
-            <strong>luminousky</strong> · © 2026<br>
+            <strong>luminousky, murmurgene</strong> · © 2026<br>
             <a
                 href="https://luminousky.com/teacher-utility-kit/principal-candidate-manager/"
                 target="_blank"
