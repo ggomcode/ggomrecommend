@@ -26,8 +26,8 @@
             <path d="M6 12v5c3 3 9 3 12 0v-5"/>
           </svg>
           <div class="flex flex-col leading-tight">
-            <span class="text-[11px] font-extrabold text-blue-600 dark:text-blue-400 tracking-tight">{{ schoolName }}</span>
-            <span class="text-sm font-bold" style="color: #0f172a;">학교장추천전형 시스템</span>
+            <span class="text-[11px] font-extrabold text-blue-600 tracking-tight">{{ schoolName }}</span>
+            <span class="text-sm font-bold text-slate-900">학교장추천전형 시스템</span>
           </div>
         </div>
         <button
@@ -142,7 +142,14 @@
             <p class="text-base whitespace-nowrap" style="margin: 2px 0 0; color: #94a3b8;">시스템 관리자</p>
           </div>
           <!-- 액션 버튼 -->
-          <div class="flex gap-3">
+          <div class="flex gap-3 flex-wrap">
+            <button
+              @click="router.push('/select-system')"
+              class="flex items-center gap-1 text-base font-semibold"
+              style="background: none; border: none; cursor: pointer; color: #2563eb; padding: 0;"
+            >
+              <Home :size="14" /> 포털이동
+            </button>
             <button
               @click="showPwModal = true"
               class="flex items-center gap-1 text-base"
@@ -267,11 +274,11 @@ const AuditTab    = defineAsyncComponent(() => import('../components/admin/Audit
 // ── 메뉴 정의 ────────────────────────────────────────────────
 const mainMenus = [
   { key: 'home',     label: '개요',          icon: Home },
-  { key: 'approval', label: '가입 승인',     icon: UserCheck },
   { key: 'classes',  label: '학급 관리',     icon: LayoutGrid },
+  { key: 'approval', label: '가입 승인',     icon: UserCheck },
   { key: 'students', label: '학생 관리',     icon: Users },
-  { key: 'areas',    label: '전형요소 설정', icon: SlidersHorizontal },
   { key: 'univs',    label: '대학 설정',     icon: Building2 },
+  { key: 'areas',    label: '전형요소 설정', icon: SlidersHorizontal },
   { key: 'rounds',   label: '라운드 관리',   icon: Trophy },
   { key: 'audit',    label: '감사 기록',     icon: ScrollText },
 ]

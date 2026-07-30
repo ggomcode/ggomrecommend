@@ -11,8 +11,8 @@
             </svg>
           </div>
           <div class="flex flex-col leading-tight">
-            <span class="text-[11px] font-extrabold text-blue-600 dark:text-blue-400 tracking-tight">{{ schoolName }}</span>
-            <h1 class="text-base font-bold text-slate-900 dark:text-white">학교장 추천 전형 신청</h1>
+            <span class="text-[11px] font-extrabold text-blue-600 tracking-tight">{{ schoolName }}</span>
+            <h1 class="text-base font-bold text-slate-900 m-0">학교장 추천 전형 신청</h1>
           </div>
         </div>
 
@@ -26,6 +26,10 @@
             </p>
             <p class="text-xs text-slate-400 font-semibold">학번: {{ auth.studentCode }}</p>
           </div>
+          <button
+            @click="router.push('/select-system')"
+            class="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40 px-3.5 py-2 rounded-lg transition-all cursor-pointer"
+          >🏠 포털 이동</button>
           <button
             @click="handleLogout"
             class="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 px-3.5 py-2 rounded-lg transition-all cursor-pointer"
@@ -153,6 +157,32 @@
                   {{ u.univ_name }} ({{ u.track_name }}) {{ u.grad_allowed ? '' : '[재학생 전용]' }}
                 </option>
               </select>
+
+              <!-- 전체 요강 보기 버튼 -->
+              <div class="mt-1.5 text-right">
+                <button
+                  type="button"
+                  @click="showRegionalModal = true"
+                  class="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline bg-transparent border-none cursor-pointer p-0"
+                >
+                  📖 2027 수도권 학교장추천전형 요강 전체보기
+                </button>
+              </div>
+
+              <!-- 선택한 대학의 상세 요강 안내 카드 -->
+              <div v-if="selectedUnivRegionalInfo.length > 0" class="mt-3 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-blue-200 dark:border-blue-900/40 text-xs space-y-2">
+                <div v-for="info in selectedUnivRegionalInfo" :key="info.id || info.seq_no" class="space-y-1.5">
+                  <div class="font-bold text-blue-700 dark:text-blue-300 flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-1">
+                    <span>{{ info.univ_name }} - {{ info.track_name }}</span>
+                    <span class="text-[11px] text-slate-500 font-normal">정원: {{ info.recruitment_quota || '—' }} (제한: {{ info.quota_limit || '—' }})</span>
+                  </div>
+                  <div v-if="info.csat_min"><strong class="text-slate-700 dark:text-slate-300">수능최저:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.csat_min }}</span></div>
+                  <div v-if="info.evaluation_method"><strong class="text-slate-700 dark:text-slate-300">전형방법:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.evaluation_method }}</span></div>
+                  <div v-if="info.grad_condition"><strong class="text-slate-700 dark:text-slate-300">졸업생조건:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.grad_condition }}</span></div>
+                  <div v-if="info.career_elective_method"><strong class="text-slate-700 dark:text-slate-300">진로선택과목:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.career_elective_method }}</span></div>
+                  <div v-if="info.remarks"><strong class="text-slate-700 dark:text-slate-300">비고:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.remarks }}</span></div>
+                </div>
+              </div>
             </div>
 
             <!-- 지원학과 -->
@@ -247,6 +277,86 @@
           <p v-if="formError" class="text-xs font-semibold text-rose-500 mt-3 bg-rose-50 dark:bg-rose-950/20 p-2 rounded-lg border border-rose-100 dark:border-rose-900/30 text-center">{{ formError }}</p>
           <p v-if="formSuccess" class="text-xs font-semibold text-emerald-500 mt-3 bg-emerald-50 dark:bg-emerald-950/20 p-2 rounded-lg border border-emerald-100 dark:border-emerald-900/30 text-center">{{ formSuccess }}</p>
         </div>
+    <!-- 2027 수도권 학교장추천전형 요강 전체 보기 모달 -->
+    <div v-if="showRegionalModal"
+      class="fixed inset-0 flex items-center justify-center z-50 p-4"
+      style="background: rgba(0,0,0,0.5);"
+      @click.self="showRegionalModal = false"
+      @keydown.escape.window="showRegionalModal = false"
+    >
+      <div class="bg-white dark:bg-slate-800 flex flex-col rounded-2xl shadow-xl w-full max-w-5xl h-[85vh] overflow-hidden border border-slate-200 dark:border-slate-700">
+        <!-- 헤더 -->
+        <div class="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
+          <div>
+            <h3 class="text-base font-bold text-slate-800 dark:text-white">📖 2027학년도 수도권 학교장추천전형 (지역균형) 상세 모집요강</h3>
+            <p class="text-xs text-slate-400 mt-0.5">원하는 대학이나 계열명을 검색하여 수능최저기준 및 전형방법을 확인하세요.</p>
+          </div>
+          <button @click="showRegionalModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold bg-transparent border-none cursor-pointer">✕</button>
+        </div>
+
+        <!-- 검색바 -->
+        <div class="p-4 border-b border-slate-100 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-900/40 flex items-center justify-between gap-3">
+          <input
+            v-model="regionalSearch"
+            type="text"
+            placeholder="대학명, 전형명, 지역 검색…"
+            class="text-xs w-64 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+          <span class="text-xs text-slate-500 font-semibold">총 {{ filteredRegionalRecs.length }}건</span>
+        </div>
+
+        <!-- 본문 테이블 -->
+        <div class="overflow-auto flex-1 p-4">
+          <table class="w-full text-left text-xs border-collapse" style="min-width: 1800px;">
+            <thead class="sticky top-0 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
+              <tr>
+                <th class="p-2.5 w-12 text-center">No</th>
+                <th class="p-2.5 w-20">지역</th>
+                <th class="p-2.5 w-32">대학명</th>
+                <th class="p-2.5 w-20">모집정원</th>
+                <th class="p-2.5 w-32">전형명</th>
+                <th class="p-2.5 w-28">인원제한</th>
+                <th class="p-2.5 w-40">대상</th>
+                <th class="p-2.5 w-32">졸업생조건</th>
+                <th class="p-2.5 w-52">수능최저학력기준</th>
+                <th class="p-2.5 w-48">전형방법</th>
+                <th class="p-2.5 w-36">반영교과</th>
+                <th class="p-2.5 w-32">반영지표</th>
+                <th class="p-2.5 w-32">진로선택과목 반영</th>
+                <th class="p-2.5 w-40">비고</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              <tr v-if="filteredRegionalRecs.length === 0">
+                <td colspan="14" class="text-center py-12 text-slate-400">
+                  조건에 일치하는 추천전형 정보가 없습니다.
+                </td>
+              </tr>
+              <tr v-else v-for="r in filteredRegionalRecs" :key="r.id || r.seq_no" class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                <td class="p-2.5 text-center font-medium text-slate-400">{{ r.seq_no }}</td>
+                <td class="p-2.5 text-slate-500">{{ r.region }}</td>
+                <td class="p-2.5 font-bold text-slate-800 dark:text-slate-100">{{ r.univ_name }}</td>
+                <td class="p-2.5 text-slate-600 dark:text-slate-400">{{ r.recruitment_quota }}</td>
+                <td class="p-2.5 font-semibold text-blue-600 dark:text-blue-400">{{ r.track_name }}</td>
+                <td class="p-2.5 text-slate-600 dark:text-slate-400">{{ r.quota_limit }}</td>
+                <td class="p-2.5 text-slate-600 dark:text-slate-400 whitespace-pre-line">{{ r.target_students }}</td>
+                <td class="p-2.5 text-slate-600 dark:text-slate-400 whitespace-pre-line">{{ r.grad_condition }}</td>
+                <td class="p-2.5 font-medium text-slate-800 dark:text-slate-200 whitespace-pre-line">{{ r.csat_min }}</td>
+                <td class="p-2.5 text-slate-600 dark:text-slate-400 whitespace-pre-line">{{ r.evaluation_method }}</td>
+                <td class="p-2.5 text-slate-600 dark:text-slate-400 whitespace-pre-line">{{ r.reflected_subjects }}</td>
+                <td class="p-2.5 text-slate-600 dark:text-slate-400">{{ r.reflected_indicators }}</td>
+                <td class="p-2.5 text-slate-600 dark:text-slate-400 whitespace-pre-line">{{ r.career_elective_method }}</td>
+                <td class="p-2.5 text-slate-500 whitespace-pre-line">{{ r.remarks }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="p-3 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+          <button @click="showRegionalModal = false" class="px-4 py-2 text-xs font-bold bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-600 dark:text-slate-200 rounded-lg cursor-pointer border-none">닫기</button>
+        </div>
+      </div>
+    </div>
       </section>
     </main>
   </div>
@@ -290,6 +400,33 @@ const parentCanvasRef = ref(null)
 let parentCtx = null
 let parentDrawing = false
 
+// 수도권 학교장추천전형 (regional_recommendations) 데이터
+const regionalRecs = ref([])
+const showRegionalModal = ref(false)
+const regionalSearch = ref('')
+
+const selectedUnivRegionalInfo = computed(() => {
+  if (!selectedUnivId.value) return []
+  const univ = availableUnivs.value.find(u => u.id === selectedUnivId.value)
+  if (!univ) return []
+  return regionalRecs.value.filter(r => 
+    r.univ_name && univ.univ_name && 
+    (r.univ_name.trim().toLowerCase() === univ.univ_name.trim().toLowerCase() ||
+     r.univ_name.trim().includes(univ.univ_name.trim()) ||
+     univ.univ_name.trim().includes(r.univ_name.trim()))
+  )
+})
+
+const filteredRegionalRecs = computed(() => {
+  if (!regionalSearch.value.trim()) return regionalRecs.value
+  const kw = regionalSearch.value.trim().toLowerCase()
+  return regionalRecs.value.filter(r => 
+    (r.univ_name && r.univ_name.toLowerCase().includes(kw)) ||
+    (r.track_name && r.track_name.toLowerCase().includes(kw)) ||
+    (r.region && r.region.toLowerCase().includes(kw))
+  )
+})
+
 // 데이터 로드
 async function loadData() {
   loading.value = true
@@ -331,6 +468,14 @@ async function loadData() {
     } else {
       availableUnivs.value = univs
     }
+
+    // 3. 수도권 학교장추천전형 (regional_recommendations) 목록 로드
+    const { data: regRecs } = await supabase
+      .from('regional_recommendations')
+      .select('*')
+      .order('seq_no', { ascending: true })
+
+    regionalRecs.value = regRecs || []
 
   } catch (e) {
     console.error('Error loading student data:', e)

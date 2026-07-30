@@ -162,17 +162,17 @@
     <div v-if="result" class="mb-5 rounded-xl text-base"
       :style="{
         padding: '14px 18px',
-        border: result.errors.length ? '1px solid #fca5a5' : '1px solid #86efac',
-        background: result.errors.length ? '#fef2f2' : '#f0fdf4',
-        color: result.errors.length ? '#991b1b' : '#15803d',
+        border: result.errors?.length ? '1px solid #fca5a5' : '1px solid #86efac',
+        background: result.errors?.length ? '#fef2f2' : '#f0fdf4',
+        color: result.errors?.length ? '#991b1b' : '#15803d',
       }">
       <p class="font-semibold mb-1">
         [{{ result.label }}]
-        {{ result.errors.length
+        {{ result.errors?.length
           ? '오류 발생 — 가져오기 실패'
-          : `완료 — 신규 ${result.inserted}명, 수정 ${result.updated}명` }}
+          : `가져오기 완료 (${result.count != null ? result.count + '명' : `신규 ${result.inserted || 0}명, 수정 ${result.updated || 0}명`})` }}
       </p>
-      <ul v-if="result.errors.length" class="list-disc list-inside space-y-0.5">
+      <ul v-if="result.errors?.length" class="list-disc list-inside space-y-0.5">
         <li v-for="(e, i) in result.errors" :key="i">{{ e }}</li>
       </ul>
     </div>
@@ -208,7 +208,7 @@
           class="text-base font-medium rounded-lg px-[18px] py-2 bg-[#2563eb] text-white hover:bg-blue-700 transition-colors"
           @click="loadStudents()">조회</button>
 
-      <span class="ml-auto text-base font-medium text-slate-500">총 {{ studentPage.total }}명</span>
+      <span class="ml-auto text-base font-medium text-slate-500">총 {{ studentPage?.total || 0 }}명</span>
     </div>
 
     <!-- 학생 목록 테이블 -->
@@ -273,22 +273,22 @@
     </div>
 
     <!-- 페이지 내비게이션 -->
-    <div v-if="studentPage.total > 0" class="mt-4 flex items-center justify-center gap-4">
+    <div v-if="studentPage?.total > 0" class="mt-4 flex items-center justify-center gap-4">
       <button
         class="text-base rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
         style="padding: 8px 18px; border: 1px solid #e2e8f0; background: white; color: #475569; cursor: pointer;"
-        :disabled="studentPage.page <= 1"
-        @click="loadStudents(studentPage.page - 1)"
+        :disabled="(studentPage?.page || 1) <= 1"
+        @click="loadStudents((studentPage?.page || 1) - 1)"
       >&lt; 이전</button>
       <span class="text-base" style="color: #64748b;">
-        {{ studentPage.page }} / {{ Math.ceil(studentPage.total / studentPage.per_page) }} 페이지
-        (총 {{ studentPage.total }}명)
+        {{ studentPage?.page || 1 }} / {{ Math.ceil((studentPage?.total || 0) / (studentPage?.per_page || 100)) }} 페이지
+        (총 {{ studentPage?.total || 0 }}명)
       </span>
       <button
         class="text-base rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
         style="padding: 8px 18px; border: 1px solid #e2e8f0; background: white; color: #475569; cursor: pointer;"
-        :disabled="studentPage.page >= Math.ceil(studentPage.total / studentPage.per_page)"
-        @click="loadStudents(studentPage.page + 1)"
+        :disabled="(studentPage?.page || 1) >= Math.ceil((studentPage?.total || 0) / (studentPage?.per_page || 100))"
+        @click="loadStudents((studentPage?.page || 1) + 1)"
       >다음 &gt;</button>
     </div>
   </div>
@@ -302,6 +302,7 @@ import {
   exportStudents,
   downloadEnrolledTemplate,
   importEnrolled,
+  importEnrolledStudents,
   downloadGraduatedTemplate,
   importGraduated,
   addEnrolledStudent,
@@ -476,9 +477,9 @@ async function dlTemplate() {
   downloading.value = true
   try {
     if (studentType.value === 'enrolled') {
-      saveBlob(await downloadEnrolledTemplate(), 'students_enrolled_template.xlsx')
+      saveBlob(await downloadEnrolledTemplate(), '재학생_명단_등록_양식.xlsx')
     } else {
-      saveBlob(await downloadGraduatedTemplate(), 'students_graduated_template.xlsx')
+      saveBlob(await downloadGraduatedTemplate(), '졸업생_명단_등록_양식.xlsx')
     }
   } catch (e) { error.value = await blobErrMsg(e) }
   finally { downloading.value = false }
@@ -486,7 +487,7 @@ async function dlTemplate() {
 
 function onImport(evt) {
   const label = studentType.value === 'enrolled' ? '재학생' : '졸업생'
-  const apiFn = studentType.value === 'enrolled' ? importEnrolled : importGraduated
+  const apiFn = studentType.value === 'enrolled' ? importEnrolledStudents : importGraduated
   runImport(apiFn, label, evt)
 }
 
