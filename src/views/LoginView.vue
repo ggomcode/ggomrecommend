@@ -153,7 +153,7 @@
           </div>
 
           <div>
-            <label class="block text-xs font-semibold mb-1 text-slate-600">전화번호 (로그인 비밀번호로 사용)</label>
+            <label class="block text-xs font-semibold mb-1 text-slate-600">학생 전화번호 (로그인 비밀번호로 사용)</label>
             <input
               v-model="signupPhone"
               type="tel"
@@ -167,6 +167,25 @@
               ⚠️ 하이픈('-')을 제외하고 숫자만 입력해 주세요 (예: 01012345678).
             </p>
             <p v-else class="text-xs text-slate-500 mt-1" style="margin: 2px 0 0;">* 이 전화번호가 추후 로그인 시 비밀번호가 됩니다.</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold mb-1 text-slate-600">학부모 전화번호 (선택)</label>
+            <input
+              v-model="signupParentPhone"
+              type="tel"
+              placeholder="01087654321 (- 없이 입력)"
+              class="w-full text-sm focus:outline-none focus:ring-2 bg-white text-slate-800 border-slate-300 focus:ring-blue-400"
+              style="border-radius: 8px; padding: 8px 12px; box-sizing: border-box; border-width: 1px; border-style: solid;"
+            />
+            <div class="mt-2.5 p-2.5 bg-blue-50/80 border border-blue-200/80 rounded-lg text-xs text-blue-700 space-y-1" style="margin-top: 10px;">
+              <p class="font-bold flex items-center gap-1" style="margin: 0 0 3px;">
+                🔒 개인정보 보호 및 보안 암호화 안내
+              </p>
+              <p class="leading-relaxed text-blue-600/90" style="margin: 0; font-size: 11px; line-height: 1.4;">
+                가입 시 입력한 내용은 <strong>SHA-256 단방향 암호화 해시 및 AES-256 보안 알고리즘</strong>을 거쳐 저장됩니다. 원본 복호화가 불가능하므로 관리자를 포함한 그 누구도 조회하거나 알 수 없습니다.
+              </p>
+            </div>
           </div>
 
           <button
@@ -304,6 +323,7 @@ const signupGradYear = ref(new Date().getFullYear())
 const signupStudentCode = ref('')
 const signupName = ref('')
 const signupPhone = ref('')
+const signupParentPhone = ref('')
 
 const cleanPhoneInput = computed(() => {
   return signupPhone.value.replace(/\D/g, '')
@@ -393,10 +413,11 @@ async function confirmAndSignUp() {
   error.value = null
 
   try {
-    await auth.signUpStudent({
+    const res = await auth.signUpStudent({
       studentCode: signupStudentCode.value,
       name: signupName.value,
       phone: cleanPhoneInput.value,
+      parentPhone: signupParentPhone.value,
       isEnrolled: signupIsEnrolled.value,
       gradYear: signupIsEnrolled.value ? null : signupGradYear.value,
       registrationCode: signupCode.value
@@ -407,13 +428,19 @@ async function confirmAndSignUp() {
     isSignUp.value = false
     loginId.value = signupStudentCode.value
     loginPassword.value = cleanPhoneInput.value
-    success.value = '회원가입 신청이 완료되었습니다! 관리자의 승인 후 로그인이 가능합니다.'
+    
+    if (res?.isAutoApproved) {
+      success.value = '기존 학생 명단과 확인되어 승인 처리되었습니다! 입력하신 전화번호로 로그인해 주세요.'
+    } else {
+      success.value = '회원가입 신청이 완료되었습니다! 관리자의 승인 후 로그인이 가능합니다.'
+    }
     
     // 입력폼 초기화
     signupCode.value = ''
     signupStudentCode.value = ''
     signupName.value = ''
     signupPhone.value = ''
+    signupParentPhone.value = ''
   } catch (e) {
     showConfirmModal.value = false
     error.value = e.message || '회원가입에 실패했습니다.'

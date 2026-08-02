@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-300">
+  <div class="min-h-screen bg-slate-50 text-slate-800 font-sans transition-colors duration-300">
     <!-- 네비게이션 바 -->
-    <header class="bg-white dark:bg-slate-800 border-b border-slate-200/80 dark:border-slate-700/80 sticky top-0 z-50 shadow-sm backdrop-blur-md bg-white/90 dark:bg-slate-800/90">
+    <header class="bg-white/90 border-b border-slate-200/80 sticky top-0 z-50 shadow-sm backdrop-blur-md">
       <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md">
@@ -21,7 +21,7 @@
             <p class="text-sm font-bold text-slate-700 dark:text-slate-200">
               {{ auth.studentName }} 
               <span class="text-xs font-medium text-slate-400 dark:text-slate-500">
-                ({{ auth.isEnrolled ? `${auth.grade}학년 ${auth.classNo}반 ${auth.seqNo}번` : `${auth.gradYear}년 졸업생` }})
+                ({{ auth.isEnrolled ? `${auth.grade ?? (auth.studentCode?.length === 5 ? parseInt(auth.studentCode.substring(0, 1)) : 3)}학년 ${auth.classNo ?? (auth.studentCode?.length === 5 ? parseInt(auth.studentCode.substring(1, 3)) : '')}반 ${auth.seqNo ?? (auth.studentCode?.length === 5 ? parseInt(auth.studentCode.substring(3, 5)) : '')}번` : `${auth.gradYear}년 졸업생` }})
               </span>
             </p>
             <p class="text-xs text-slate-400 font-semibold">학번: {{ auth.studentCode }}</p>
@@ -41,6 +41,55 @@
     <main class="max-w-6xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
       <!-- 왼쪽: 내 신청 현황 -->
       <section class="lg:col-span-2 flex flex-col gap-6">
+
+        <!-- 💡 학교장 추천전형 지원 안내 및 지원 전략 가이드 -->
+        <div class="bg-gradient-to-br from-blue-50 to-indigo-50/60 dark:from-slate-800 dark:to-slate-800/90 rounded-2xl p-5 border border-blue-200/80 dark:border-blue-900/40 shadow-sm space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+              <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white text-sm font-bold shadow-sm">💡</span>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white m-0">학교장 추천전형 지원 안내 및 전략 가이드</h3>
+            </div>
+            <span class="text-xs font-extrabold text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/60 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-800">
+              ★ 1차 라운드 적극 지원 유효
+            </span>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-white/90 dark:bg-slate-900/80 border border-blue-100 dark:border-slate-700/60 text-xs text-slate-700 dark:text-slate-300 space-y-2">
+            <p class="font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5 text-xs m-0">
+              <span class="text-sm">🎯</span> 1차 라운드 적극 지원의 법칙 (가장 중요)
+            </p>
+            <p class="leading-relaxed pl-5 text-slate-600 dark:text-slate-300 m-0">
+              <strong>1차 라운드에 희망하는 대학을 빠짐없이 미리 신청하시는 것이 가장 유리합니다!</strong><br />
+              1차 라운드에서 <strong>[추천 확정](합격)</strong>을 받은 학생의 자리는 2차 라운드가 열려 성적이 더 우수한 학생이 추가 지원하더라도 <strong>절대로 박탈되거나 취소되지 않으며 100% 안전하게 보호</strong>됩니다.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">
+            <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
+              <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">1️⃣ 1차 라운드 (메인 선발)</p>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
+                주요 대학 추천 희망자 접수 및 1차 추천자 확정 (합격자 기득권 완전 보장)
+              </p>
+            </div>
+            <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
+              <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">2️⃣ 2차 라운드 (잔여 정원)</p>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
+                1차 합격자를 제외한 <strong>남은 정원(잔여 T/O)</strong>에 대해서만 2차 신청자 간 성적순 경쟁
+              </p>
+            </div>
+            <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
+              <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">3️⃣ 3차 라운드 (최종 미달)</p>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
+                추가 모집 및 잔여 미달 모집단위 최종 접수 및 마무리 선발
+              </p>
+            </div>
+          </div>
+
+          <div class="text-[11px] text-slate-500 dark:text-slate-400 pt-2 flex items-center justify-between border-t border-blue-100 dark:border-slate-700/50">
+            <span>🛡️ <strong>포기자 발생 시</strong>: 1차 합격자가 포기서를 제출한 경우에만 해당 빈자리가 다음 차수 잔여 정원으로 이월됩니다.</span>
+          </div>
+        </div>
+
         <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200/50 dark:border-slate-700/50 shadow-sm relative overflow-hidden">
           <h2 class="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
             <span class="w-1.5 h-4 bg-blue-600 rounded-full"></span>
@@ -165,7 +214,7 @@
                   @click="showRegionalModal = true"
                   class="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline bg-transparent border-none cursor-pointer p-0"
                 >
-                  📖 2027 수도권 학교장추천전형 요강 전체보기
+                  📖 2027 학교장추천전형 요강 전체보기
                 </button>
               </div>
 
@@ -174,7 +223,7 @@
                 <div v-for="info in selectedUnivRegionalInfo" :key="info.id || info.seq_no" class="space-y-1.5">
                   <div class="font-bold text-blue-700 dark:text-blue-300 flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-1">
                     <span>{{ info.univ_name }} - {{ info.track_name }}</span>
-                    <span class="text-[11px] text-slate-500 font-normal">정원: {{ info.recruitment_quota || '—' }} (제한: {{ info.quota_limit || '—' }})</span>
+                    <span class="text-[11px] text-slate-500 font-normal">정원: {{ info.recruitment_quota || '—' }} (제한: {{ formatQuotaLimit(info.quota_limit) || '—' }})</span>
                   </div>
                   <div v-if="info.csat_min"><strong class="text-slate-700 dark:text-slate-300">수능최저:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.csat_min }}</span></div>
                   <div v-if="info.evaluation_method"><strong class="text-slate-700 dark:text-slate-300">전형방법:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.evaluation_method }}</span></div>
@@ -277,7 +326,7 @@
           <p v-if="formError" class="text-xs font-semibold text-rose-500 mt-3 bg-rose-50 dark:bg-rose-950/20 p-2 rounded-lg border border-rose-100 dark:border-rose-900/30 text-center">{{ formError }}</p>
           <p v-if="formSuccess" class="text-xs font-semibold text-emerald-500 mt-3 bg-emerald-50 dark:bg-emerald-950/20 p-2 rounded-lg border border-emerald-100 dark:border-emerald-900/30 text-center">{{ formSuccess }}</p>
         </div>
-    <!-- 2027 수도권 학교장추천전형 요강 전체 보기 모달 -->
+    <!-- 2027 학교장추천전형 요강 전체 보기 모달 -->
     <div v-if="showRegionalModal"
       class="fixed inset-0 flex items-center justify-center z-50 p-4"
       style="background: rgba(0,0,0,0.5);"
@@ -288,7 +337,7 @@
         <!-- 헤더 -->
         <div class="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
           <div>
-            <h3 class="text-base font-bold text-slate-800 dark:text-white">📖 2027학년도 수도권 학교장추천전형 (지역균형) 상세 모집요강</h3>
+            <h3 class="text-base font-bold text-slate-800 dark:text-white">📖 2027학년도 주요 대학 학교장추천전형 (지역균형) 상세 모집요강</h3>
             <p class="text-xs text-slate-400 mt-0.5">원하는 대학이나 계열명을 검색하여 수능최저기준 및 전형방법을 확인하세요.</p>
           </div>
           <button @click="showRegionalModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold bg-transparent border-none cursor-pointer">✕</button>
@@ -306,39 +355,40 @@
         </div>
 
         <!-- 본문 테이블 -->
-        <div class="overflow-auto flex-1 p-4">
-          <table class="w-full text-left text-xs border-collapse" style="min-width: 1800px;">
-            <thead class="sticky top-0 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
+        <div class="overflow-x-auto flex-1 p-4">
+          <div class="overflow-y-auto h-full max-h-[calc(85vh-130px)]">
+            <table class="w-full text-left text-xs" style="border-collapse: separate; border-spacing: 0; min-width: 1800px;">
+            <thead class="sticky top-0 bg-slate-100 z-30 border-b border-slate-200 text-slate-600">
               <tr>
-                <th class="p-2.5 w-12 text-center">No</th>
-                <th class="p-2.5 w-20">지역</th>
-                <th class="p-2.5 w-32">대학명</th>
-                <th class="p-2.5 w-20">모집정원</th>
-                <th class="p-2.5 w-32">전형명</th>
-                <th class="p-2.5 w-28">인원제한</th>
-                <th class="p-2.5 w-40">대상</th>
-                <th class="p-2.5 w-32">졸업생조건</th>
-                <th class="p-2.5 w-52">수능최저학력기준</th>
-                <th class="p-2.5 w-48">전형방법</th>
-                <th class="p-2.5 w-36">반영교과</th>
-                <th class="p-2.5 w-32">반영지표</th>
-                <th class="p-2.5 w-32">진로선택과목 반영</th>
-                <th class="p-2.5 w-40">비고</th>
+                <th class="p-2.5 w-12 text-center sticky left-0 top-0 z-30 bg-slate-100 border-b border-slate-200 border-r border-slate-200" style="min-width: 48px; max-width: 48px;">No</th>
+                <th class="p-2.5 w-20 sticky left-[48px] top-0 z-30 bg-slate-100 border-b border-slate-200 border-r border-slate-200" style="min-width: 80px; max-width: 80px;">지역</th>
+                <th class="p-2.5 w-32 sticky left-[128px] top-0 z-30 bg-slate-100 border-b border-slate-200 border-r border-slate-200" style="min-width: 130px; max-width: 130px;">대학명</th>
+                <th class="p-2.5 w-20 border-b border-slate-200 border-r border-slate-200">모집정원</th>
+                <th class="p-2.5 w-32 border-b border-slate-200 border-r border-slate-200">전형명</th>
+                <th class="p-2.5 w-28 border-b border-slate-200 border-r border-slate-200">인원제한</th>
+                <th class="p-2.5 w-40 border-b border-slate-200 border-r border-slate-200">대상</th>
+                <th class="p-2.5 w-32 border-b border-slate-200 border-r border-slate-200">졸업생조건</th>
+                <th class="p-2.5 w-52 border-b border-slate-200 border-r border-slate-200">수능최저학력기준</th>
+                <th class="p-2.5 w-48 border-b border-slate-200 border-r border-slate-200">전형방법</th>
+                <th class="p-2.5 w-36 border-b border-slate-200 border-r border-slate-200">반영교과</th>
+                <th class="p-2.5 w-32 border-b border-slate-200 border-r border-slate-200">반영지표</th>
+                <th class="p-2.5 w-32 border-b border-slate-200 border-r border-slate-200">진로선택과목 반영</th>
+                <th class="p-2.5 w-40 border-b border-slate-200">비고</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody class="divide-y divide-slate-100">
               <tr v-if="filteredRegionalRecs.length === 0">
                 <td colspan="14" class="text-center py-12 text-slate-400">
                   조건에 일치하는 추천전형 정보가 없습니다.
                 </td>
               </tr>
-              <tr v-else v-for="r in filteredRegionalRecs" :key="r.id || r.seq_no" class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                <td class="p-2.5 text-center font-medium text-slate-400">{{ r.seq_no }}</td>
-                <td class="p-2.5 text-slate-500">{{ r.region }}</td>
-                <td class="p-2.5 font-bold text-slate-800 dark:text-slate-100">{{ r.univ_name }}</td>
+              <tr v-else v-for="r in filteredRegionalRecs" :key="r.id || r.seq_no" class="hover:bg-slate-50 group">
+                <td class="p-2.5 text-center font-medium text-slate-400 sticky left-0 z-20 bg-white group-hover:!bg-slate-50 border-b border-slate-100 border-r border-slate-200" style="min-width: 48px; max-width: 48px;">{{ r.seq_no }}</td>
+                <td class="p-2.5 text-slate-500 sticky left-[48px] z-20 bg-white group-hover:!bg-slate-50 border-b border-slate-100 border-r border-slate-200" style="min-width: 80px; max-width: 80px;">{{ r.region }}</td>
+                <td class="p-2.5 font-bold text-slate-800 sticky left-[128px] z-20 bg-white group-hover:!bg-slate-50 border-b border-slate-100 border-r border-slate-200" style="min-width: 130px; max-width: 130px;">{{ r.univ_name }}</td>
                 <td class="p-2.5 text-slate-600 dark:text-slate-400">{{ r.recruitment_quota }}</td>
                 <td class="p-2.5 font-semibold text-blue-600 dark:text-blue-400">{{ r.track_name }}</td>
-                <td class="p-2.5 text-slate-600 dark:text-slate-400">{{ r.quota_limit }}</td>
+                <td class="p-2.5 text-slate-600 dark:text-slate-400">{{ formatQuotaLimit(r.quota_limit) }}</td>
                 <td class="p-2.5 text-slate-600 dark:text-slate-400 whitespace-pre-line">{{ r.target_students }}</td>
                 <td class="p-2.5 text-slate-600 dark:text-slate-400 whitespace-pre-line">{{ r.grad_condition }}</td>
                 <td class="p-2.5 font-medium text-slate-800 dark:text-slate-200 whitespace-pre-line">{{ r.csat_min }}</td>
@@ -349,7 +399,8 @@
                 <td class="p-2.5 text-slate-500 whitespace-pre-line">{{ r.remarks }}</td>
               </tr>
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
 
         <div class="p-3 border-t border-slate-200 dark:border-slate-700 flex justify-end">
@@ -363,12 +414,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { supabase } from '../utils/supabaseClient'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { printApplicationForm } from '../utils/printTemplates'
+import { getDisclosureCount } from '../api/admin.js'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -404,6 +456,40 @@ let parentDrawing = false
 const regionalRecs = ref([])
 const showRegionalModal = ref(false)
 const regionalSearch = ref('')
+const disclosureCount = ref(null)  // 정보공시 재학생 수 (% 인원제한 환산용)
+
+/**
+ * quota_limit 값을 표시용 문자열로 변환합니다.
+ * - % 형태 ("3%", "0.03") → disclosureCount 설정 시: "10명 (3%)"
+ *                         → 미설정 시: "3%" (원문 그대로)
+ * - 일반 숫자/텍스트 → 그대로 반환
+ */
+function formatQuotaLimit(rawVal) {
+  if (rawVal == null || rawVal === '') return ''
+  const str = String(rawVal).trim()
+  if (!str) return ''
+
+  const num = parseFloat(str)
+  let pct = null
+
+  if (!isNaN(num) && num > 0 && num < 1) {
+    pct = num * 100
+  } else {
+    const pctMatch = str.match(/^(\d+(?:\.\d+)?)\s*%$/)
+    if (pctMatch) pct = parseFloat(pctMatch[1])
+  }
+
+  if (pct !== null) {
+    const pctClean = parseFloat(pct.toPrecision(10))
+    if (disclosureCount.value != null && disclosureCount.value > 0) {
+      const count = Math.ceil(disclosureCount.value * pct / 100)
+      return `${count}명 (${pctClean}%)`
+    }
+    return `${pctClean}%`
+  }
+
+  return str
+}
 
 const selectedUnivRegionalInfo = computed(() => {
   if (!selectedUnivId.value) return []
@@ -433,26 +519,30 @@ async function loadData() {
   try {
     if (!supabase) return
 
-    // 1. 로그인한 학생의 신청 내역 조회
-    const { data: apps, error: err1 } = await supabase
-      .from('applications')
-      .select('*, universities(*)')
-      .eq('student_id', auth.token ? (await supabase.auth.getUser()).data.user?.id : '')
-      .order('created_at', { ascending: false })
+    // 1. 사용자 ID 획득 (Auth 유저 또는 fallback 학생 세션)
+    const { data: userData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }))
+    const userId = userData?.user?.id || (auth.token?.startsWith('student_') ? auth.token.split('_')[1] : null)
 
-    if (err1) throw err1
+    if (userId) {
+      const { data: apps, error: err1 } = await supabase
+        .from('applications')
+        .select('*, universities(*)')
+        .eq('student_id', userId)
+        .order('created_at', { ascending: false })
 
-    // 각 신청 건의 라운드 마감상태를 알기 위해 timeline_rounds 정보 조인하여 가공
-    const { data: rounds } = await supabase.from('timeline_rounds').select('*')
-    const roundsMap = {}
-    rounds?.forEach(r => {
-      roundsMap[r.id] = r.status
-    })
+      if (!err1 && apps) {
+        const { data: rounds } = await supabase.from('timeline_rounds').select('*')
+        const roundsMap = {}
+        rounds?.forEach(r => {
+          roundsMap[r.id] = r.status
+        })
 
-    myApplications.value = apps.map(ap => ({
-      ...ap,
-      round_status: roundsMap[ap.round] || 'OPEN'
-    }))
+        myApplications.value = apps.map(ap => ({
+          ...ap,
+          round_status: roundsMap[ap.round] || 'OPEN'
+        }))
+      }
+    }
 
     // 2. 지원 가능한 대학 목록 로드
     const { data: univs, error: err2 } = await supabase
@@ -460,13 +550,12 @@ async function loadData() {
       .select('*')
       .order('univ_name', { ascending: true })
 
-    if (err2) throw err2
-    
-    // 졸업생 여부에 따라 필터링 (졸업생 비허용 대학인 경우 재학생만 가능)
-    if (!auth.isEnrolled) {
-      availableUnivs.value = univs.filter(u => u.grad_allowed)
-    } else {
-      availableUnivs.value = univs
+    if (!err2 && univs) {
+      if (!auth.isEnrolled) {
+        availableUnivs.value = univs.filter(u => u.grad_allowed)
+      } else {
+        availableUnivs.value = univs
+      }
     }
 
     // 3. 수도권 학교장추천전형 (regional_recommendations) 목록 로드
@@ -668,8 +757,8 @@ async function handleApply() {
 
   submitLoading.value = true
   try {
-    const { data: { user } } = await supabase.auth.getUser()
-    const userId = user.id
+    const { data: userData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }))
+    const userId = userData?.user?.id || (auth.token?.startsWith('student_') ? auth.token.split('_')[1] : 'guest')
 
     // 1. 서명 파일 Storage 업로드
     const studentSigBlob = dataURLtoBlob(studentCanvasRef.value.toDataURL('image/png'))
@@ -754,8 +843,8 @@ async function handleCancelApplication(id) {
     const ap = myApplications.value.find(item => item.id === id)
     if (!ap) return
 
-    const { data: { user } } = await supabase.auth.getUser()
-    const userId = user.id
+    const { data: userData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }))
+    const userId = userData?.user?.id || (auth.token?.startsWith('student_') ? auth.token.split('_')[1] : 'guest')
 
     const studentSigPath = `student_${userId}_r${ap.round}_u_${ap.univ_id}_student.png`
     const parentSigPath = `student_${userId}_r${ap.round}_u_${ap.univ_id}_parent.png`
@@ -811,6 +900,7 @@ async function handleLogout() {
 
 onMounted(async () => {
   fetchSchoolName()
+  disclosureCount.value = await getDisclosureCount()
   await checkCurrentRound()
   await loadData()
   // Vue가 렌더링된 후 캔버스 초기화

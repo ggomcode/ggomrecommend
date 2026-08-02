@@ -71,7 +71,7 @@
             </div>
 
             <div class="inline-block px-2.5 py-1 rounded-md text-xs font-extrabold bg-blue-100 text-blue-700 mb-3">
-              수도권 및 전국 대입
+              전국 대입
             </div>
 
             <h3 class="text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors mb-3">
@@ -79,7 +79,7 @@
             </h3>
             
             <p class="text-sm text-slate-600 leading-relaxed">
-              수도권 및 주요 대학 학교장추천전형(지역균형) 신청서 제출, 대학별 정원 관리, 교내 석차 심의 및 최종 추천 확정을 관리합니다.
+              주요 대학 학교장추천전형(지역균형) 신청서 제출, 대학별 정원 관리, 교내 석차 심의 및 최종 추천 확정을 관리합니다.
             </p>
           </div>
 
@@ -207,9 +207,13 @@ const roleBadgeClass = computed(() => {
 
 const userSubInfo = computed(() => {
   if (auth.isStudent) {
-    return auth.isEnrolled
-      ? `${auth.grade}학년 ${auth.classNo}반 (${auth.studentCode})`
-      : `${auth.gradYear}년 졸업생 (${auth.studentCode})`
+    if (!auth.isEnrolled) {
+      return `${auth.gradYear || ''}년 졸업생 (${auth.studentCode})`
+    }
+    const codeStr = String(auth.studentCode || '')
+    const displayGrade = auth.grade ?? (codeStr.length === 5 ? parseInt(codeStr.substring(0, 1)) : 3)
+    const displayClass = auth.classNo ?? (codeStr.length === 5 ? parseInt(codeStr.substring(1, 3)) : '')
+    return `${displayGrade}학년 ${displayClass}반 (${auth.studentCode})`
   }
   return null
 })

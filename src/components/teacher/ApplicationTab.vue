@@ -19,7 +19,55 @@
       </a>
     </div>
 
-    <div>
+    <!-- 💡 학교장 추천전형 지원 안내 및 지원 전략 가이드 -->
+    <div class="mx-4 sm:mx-10 mb-4 bg-gradient-to-br from-blue-50 to-indigo-50/60 dark:from-slate-800 dark:to-slate-800/90 rounded-2xl p-5 border border-blue-200/80 dark:border-blue-900/40 shadow-sm space-y-3">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white text-sm font-bold shadow-sm">💡</span>
+          <h3 class="text-base font-bold text-slate-900 dark:text-white m-0">학교장 추천전형 지원 안내 및 전략 가이드</h3>
+        </div>
+        <span class="text-xs font-extrabold text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/60 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-800">
+          ★ 1차 라운드 적극 지원 유효
+        </span>
+      </div>
+
+      <div class="p-3.5 rounded-xl bg-white/90 dark:bg-slate-900/80 border border-blue-100 dark:border-slate-700/60 text-xs text-slate-700 dark:text-slate-300 space-y-2">
+        <p class="font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5 text-xs m-0">
+          <span class="text-sm">🎯</span> 1차 라운드 적극 지원의 법칙 (가장 중요)
+        </p>
+        <p class="leading-relaxed pl-5 text-slate-600 dark:text-slate-300 m-0">
+          <strong>1차 라운드에 희망하는 대학을 빠짐없이 미리 신청하도록 지도해 주세요!</strong><br />
+          1차 라운드에서 <strong>[추천 확정](합격)</strong>을 받은 학생의 자리는 2차 라운드가 열려 성적이 더 우수한 학생이 추가 지원하더라도 <strong>절대로 박탈되거나 취소되지 않으며 100% 안전하게 보호</strong>됩니다.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">
+        <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
+          <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">1️⃣ 1차 라운드 (메인 선발)</p>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
+            주요 대학 추천 희망자 접수 및 1차 추천자 확정 (합격자 기득권 완전 보장)
+          </p>
+        </div>
+        <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
+          <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">2️⃣ 2차 라운드 (잔여 정원)</p>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
+            1차 합격자를 제외한 <strong>남은 정원(잔여 T/O)</strong>에 대해서만 2차 신청자 간 성적순 경쟁
+          </p>
+        </div>
+        <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
+          <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">3️⃣ 3차 라운드 (최종 미달)</p>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
+            추가 모집 및 잔여 미달 모집단위 최종 접수 및 마무리 선발
+          </p>
+        </div>
+      </div>
+
+      <div class="text-[11px] text-slate-500 dark:text-slate-400 pt-2 flex items-center justify-between border-t border-blue-100 dark:border-slate-700/50">
+        <span>🛡️ <strong>포기자 발생 시</strong>: 1차 합격자가 포기서를 제출한 경우에만 해당 빈자리가 다음 차수 잔여 정원으로 이월됩니다.</span>
+      </div>
+    </div>
+
+    <div class="px-4 sm:px-10">
 
       <!-- 입력 확정 버튼 -->
       <div v-if="currentRound && loaded" class="flex items-center gap-3 flex-wrap mt-2">

@@ -287,9 +287,9 @@
                     <!-- 파이 차트 or 무제한 표시 -->
                     <td style="padding: 14px 20px 14px 28px;">
                       <MiniPie
-                        v-if="track.unit_quota !== null"
-                        :filled="track.applicants"
-                        :total="track.unit_quota"
+                        v-if="track.unit_quota != null"
+                        :filled="track.applicants || 0"
+                        :total="track.unit_quota || 0"
                         :size="40"
                       />
                       <span v-else class="text-base font-semibold" style="color: #94a3b8;">∞</span>
@@ -411,9 +411,9 @@ const checklist = computed(() => {
   if (!readiness.value) return null
   const r = readiness.value
   return [
-    { key: 'classes',  label: '학급 등록',     desc: '담임교사 계정을 생성합니다',            count: r.classes,  unit: '개 학급', tab: 'classes' },
+    { key: 'classes',  label: '학급 현황',     desc: '담임교사 계정을 생성합니다',            count: r.classes,  unit: '개 학급', tab: 'classes' },
     { key: 'students', label: '학생 명단 등록', desc: '추천 대상 재학생·졸업생 명단을 입력합니다',      count: r.students, unit: '명',     tab: 'students' },
-    { key: 'areas',    label: '전형요소 설정',  desc: '학교장추천 선발을 위한 영역과 배점을 정합니다',             count: r.areas,    unit: '개 항목', tab: 'areas' },
+    { key: 'areas',    label: '추천순위 기준 설정',  desc: '학교장추천 선발을 위한 영역과 배점을 정합니다',             count: r.areas,    unit: '개 항목', tab: 'areas' },
     { key: 'univs',    label: '대학 설정',      desc: '지원할 대학·모집단위와 정원을 정합니다',  count: r.univs,    unit: '개 대학', tab: 'univs' },
   ]
 })
@@ -446,7 +446,7 @@ const helpBox = computed(() => {
         title: '도움말 — 처음 시작하기',
         intro: '이 화면은 시스템의 전체 현황을 한눈에 보여줍니다. 아직 진행 중인 라운드가 없습니다.',
         items: [
-          '처음 사용하신다면 왼쪽 메뉴에서 [학급 관리] → [학생 관리] → [전형요소 설정] → [대학 설정] 순서로 기초 정보를 먼저 입력하세요.',
+          '처음 사용하신다면 왼쪽 메뉴에서 [학급 관리] → [학생 관리] → [추천순위 기준 설정] → [대학 설정] 순서로 기초 정보를 먼저 입력하세요.',
           '준비가 끝나면 [라운드 관리]에서 "+ 라운드 열기"를 눌러 담임교사의 입력을 시작할 수 있습니다.',
           '자세한 사용 방법은 왼쪽 아래 [매뉴얼] 메뉴에서 볼 수 있습니다.',
         ],

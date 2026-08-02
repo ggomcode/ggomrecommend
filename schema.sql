@@ -14,6 +14,10 @@ INSERT INTO config (key, value) VALUES ('registration_code', 'school2026!') ON C
 INSERT INTO config (key, value) VALUES ('openai_api_key', '') ON CONFLICT (key) DO NOTHING;
 INSERT INTO config (key, value) VALUES ('class_count', '11') ON CONFLICT (key) DO NOTHING;
 INSERT INTO config (key, value) VALUES ('school_name', '우리학교') ON CONFLICT (key) DO NOTHING;
+INSERT INTO config (key, value) VALUES ('allow_area_edit', 'false') ON CONFLICT (key) DO NOTHING;
+INSERT INTO config (key, value) VALUES ('eval_areas_store', '[]') ON CONFLICT (key) DO NOTHING;
+INSERT INTO config (key, value) VALUES ('disclosure_student_count', '') ON CONFLICT (key) DO NOTHING;
+INSERT INTO config (key, value) VALUES ('round_schedules_map', '{"1":{"apply_start":"2026-08-19","apply_end":"2026-08-20","eval_date":"2026-08-21","announce_date":"2026-08-24"},"2":{"apply_start":"2026-08-26","apply_end":"2026-08-27","eval_date":"2026-08-28","announce_date":"2026-08-31"},"3":{"apply_start":"2026-09-02","apply_end":"2026-09-03","eval_date":"2026-09-04","announce_date":"2026-09-04"}}') ON CONFLICT (key) DO NOTHING;
 
 -- 2. PROFILES (사용자 프로필 테이블)
 -- status: 'pending' (승인대기), 'approved' (승인), 'rejected' (승인거절)
@@ -56,12 +60,12 @@ CREATE TABLE IF NOT EXISTS universities (
 );
 
 -- 4. APPLICATIONS (추천 신청 및 결과 테이블)
--- round: 1, 2, 3 (각 신청 차수)
+-- round: 1, 2, 3... (각 신청 차수)
 CREATE TABLE IF NOT EXISTS applications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     univ_id UUID NOT NULL REFERENCES universities(id) ON DELETE CASCADE,
-    round INTEGER NOT NULL CHECK (round IN (1, 2, 3)),
+    round INTEGER NOT NULL,
     department_name TEXT NOT NULL DEFAULT '', -- 지원학과
     
     -- 성적 및 추천 가드
@@ -106,7 +110,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 -- 6. TIMELINE_ROUNDS (라운드 제어 테이블)
 -- status: 'OPEN' (신청 중), 'CLOSED' (마감 및 정렬/수동조정), 'FINALIZED' (확정 및 완료)
 CREATE TABLE IF NOT EXISTS timeline_rounds (
-    id INTEGER PRIMARY KEY CHECK (id IN (1, 2, 3)),
+    id INTEGER PRIMARY KEY,
     status TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'CLOSED', 'FINALIZED')),
     opened_at TIMESTAMP WITH TIME ZONE,
     closed_at TIMESTAMP WITH TIME ZONE,
@@ -701,10 +705,10 @@ CREATE TABLE IF NOT EXISTS public.enrolled_students (
     user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL, -- Auth 계정 연동 ID
 
     -- [2] 학생 기본 인적 사항
-    name TEXT NOT NULL, -- 학생 이름
+    name TEXT NOT NULL, -- 학생 이름 (AES-256 암호화)
+    name_hash TEXT, -- 학생 이름 SHA-256 해시
     gender TEXT, -- 성별 ('남', '여')
-    student_phone_last4 TEXT, -- 학생 전화 끝4자리 (비밀번호 역할)
-    full_phone TEXT, -- 학생 전체 전화번호
+    student_phone_hash TEXT, -- 학생 전화번호 SHA-256 해시 (로그인 비밀번호 용도)
 
     -- [3] 학적 정보
     is_enrolled BOOLEAN NOT NULL DEFAULT TRUE, -- 재학생 여부 (true: 재학생, false: 졸업생)
@@ -715,8 +719,8 @@ CREATE TABLE IF NOT EXISTS public.enrolled_students (
     grad_year INT, -- 졸업연도 (졸업생 필수)
 
     -- [4] 학부모 정보
-    parent_name TEXT, -- 학부모 이름
-    parent_phone_last4 TEXT, -- 학부모 전화 끝4자리
+    parent_name_hash TEXT, -- 학부모 이름 (AES-256 암호화)
+    parent_phone_hash TEXT, -- 학부모 전화번호 SHA-256 해시
 
     -- [5] 가입 승인 및 추천전형 정보
     status TEXT NOT NULL DEFAULT 'approved' CHECK (status IN ('pending', 'approved', 'rejected')),
@@ -725,7 +729,19 @@ CREATE TABLE IF NOT EXISTS public.enrolled_students (
     rejection_reason TEXT, -- 가입 거절 사유
     remarks TEXT, -- 비고
 
-    -- [6] 생성 일시
+    -- [6] 학년/학기별/전학년 석차등급 내신 성적 컬럼
+    gpa_1_1 TEXT, -- 1학년 1학기 석차등급
+    gpa_1_2 TEXT, -- 1학년 2학기 석차등급
+    gpa_1_all TEXT, -- 1학년 전학기 석차등급
+    gpa_2_1 TEXT, -- 2학년 1학기 석차등급
+    gpa_2_2 TEXT, -- 2학년 2학기 석차등급
+    gpa_2_all TEXT, -- 2학년 전학기 석차등급
+    gpa_3_1 TEXT, -- 3학년 1학기 석차등급
+    gpa_3_2 TEXT, -- 3학년 2학기 석차등급
+    gpa_3_all TEXT, -- 3학년 전학기 석차등급
+    gpa_overall NUMERIC, -- 전학년 석차등급 (대표 평균 내신)
+
+    -- [7] 생성 일시
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

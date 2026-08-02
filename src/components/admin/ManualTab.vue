@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="py-8 px-4 sm:px-10">
 
     <!-- 페이지 헤더 -->
@@ -104,7 +104,7 @@
         <ul class="text-base space-y-2 mt-3" style="color: #78350f; padding-left: 0; list-style: none;">
           <li class="flex items-start gap-2">
             <span>•</span>
-            <span><strong>대학·모집단위는 지원 기록이 생기면 삭제할 수 없고, 전형요소는 종료·마감된 라운드가 하나라도 있으면 수정·삭제할 수 없습니다.</strong> 전형요소 설정과 대학 설정을 완전히 마친 뒤 라운드를 여세요.</span>
+            <span><strong>대학·모집단위는 지원 기록이 생기면 삭제할 수 없고, 전형요소는 종료·마감된 라운드가 하나라도 있으면 수정·삭제할 수 없습니다.</strong> 추천순위 기준 설정과 대학 설정을 완전히 마친 뒤 라운드를 여세요.</span>
           </li>
           <li class="flex items-start gap-2">
             <span>•</span>
@@ -136,7 +136,7 @@
     <div v-else-if="activeTab === 'setup'">
       <p class="text-base mb-6" style="color: #475569; line-height: 1.7;">
         시스템을 처음 사용하거나 새 학년도가 시작되면 아래 순서대로 기초 정보를 설정해 주세요.
-        전형요소 설정과 대학 설정은 이후 "전형요소 설정" 탭에서 자세한 방법을 확인할 수 있습니다.
+        추천순위 기준 설정과 대학 설정은 이후 "추천순위 기준 설정" 탭에서 자세한 방법을 확인할 수 있습니다.
       </p>
 
       <div class="space-y-4">
@@ -214,7 +214,7 @@
           <ul class="space-y-2 mb-4" style="padding-left: 0; list-style: none;">
             <li class="flex items-start gap-2">
               <span class="font-bold flex-shrink-0" style="color: #2563eb;">①</span>
-              <span><strong>전형요소 설정 탭</strong>에서 해당 전형요소를 클릭합니다.</span>
+              <span><strong>추천순위 기준 설정 탭</strong>에서 해당 전형요소를 클릭합니다.</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="font-bold flex-shrink-0" style="color: #2563eb;">②</span>
@@ -241,7 +241,7 @@
           <ul class="space-y-2 mb-4" style="padding-left: 0; list-style: none;">
             <li class="flex items-start gap-2">
               <span class="font-bold flex-shrink-0" style="color: #2563eb;">①</span>
-              <span><strong>전형요소 설정 탭</strong>에서 해당 전형요소를 클릭합니다.</span>
+              <span><strong>추천순위 기준 설정 탭</strong>에서 해당 전형요소를 클릭합니다.</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="font-bold flex-shrink-0" style="color: #2563eb;">②</span>
@@ -339,14 +339,14 @@ const activeTab = ref('overview')
 const tabs = [
   { key: 'overview', label: '전체 흐름',     icon: LayoutList        },
   { key: 'setup',    label: '사전 설정',     icon: Settings2         },
-  { key: 'areas',    label: '전형요소 설정', icon: SlidersHorizontal },
+  { key: 'areas',    label: '추천순위 기준 설정', icon: SlidersHorizontal },
   { key: 'rounds',   label: '라운드 운영',   icon: Trophy            },
 ]
 
 const setupSteps = [
   { num: 1, title: '학급 데이터 불러오기',  desc: '학급·담임 정보를 업로드합니다. 담임교사 계정이 자동으로 생성됩니다.' },
   { num: 2, title: '학생 데이터 불러오기',  desc: '재학생·졸업생 학적 명렬표를 각각 업로드합니다.' },
-  { num: 3, title: '전형요소 설정',         desc: '평가 항목(전형요소)을 등록하고 점수 기준표와 기초 데이터를 업로드합니다.' },
+  { num: 3, title: '추천순위 기준 설정',     desc: '평가 항목을 등록하고 점수 기준표와 기초 데이터를 업로드합니다.' },
   { num: 4, title: '대학 설정',             desc: '지원 가능한 대학·모집단위와 모집 정원을 입력합니다.' },
 ]
 
@@ -377,9 +377,9 @@ const setupGuides = [
   },
   {
     step: 3,
-    title: '전형요소 설정',
-    where: '전형요소 설정 탭',
-    desc: '각 고등학교의 학교장추천전형 선발기준 평가 항목(내신, 수상, 봉사 등)을 등록합니다. 전형요소마다 점수 계산 방식을 지정하고, 유형에 따라 점수 기준표와 기초 데이터를 업로드합니다. 점수 기준 등록 후 "점수 계산 테스트"로 산출 결과를 즉시 확인할 수 있습니다. 자세한 방법은 "전형요소 설정" 탭을 참고하세요.',
+    title: '추천순위 기준 설정',
+    where: '추천순위 기준 설정 탭',
+    desc: '각 고등학교의 학교장추천전형 선발기준 평가 항목(내신, 수상, 봉사 등)을 등록합니다. 전형요소마다 점수 계산 방식을 지정하고, 유형에 따라 점수 기준표와 기초 데이터를 업로드합니다. 점수 기준 등록 후 "점수 계산 테스트"로 산출 결과를 즉시 확인할 수 있습니다. 자세한 방법은 "추천순위 기준 설정" 탭을 참고하세요.',
     note: '✓ 대학별 기준 전형요소(예: 환산내신등급)의 기초 데이터로 대학·모집단위별 석차연명부를 업로드하면 대학명과 모집단위명이 자동으로 생성됩니다. 이후 대학 설정 탭에서 정원과 배점만 입력하면 됩니다.',
     warning: '⚠ 종료되거나 마감된 라운드가 하나라도 있으면 전형요소 이름·점수 기준표를 수정할 수 없습니다. 라운드를 열기 전에 반드시 전형요소 설정을 완료해 주세요.',
   },

@@ -25,6 +25,7 @@ export const useAuthStore = defineStore('auth', () => {
   const studentCode = ref(localStorage.getItem('pcm_student_code') || null)
   const studentName = ref(localStorage.getItem('pcm_student_name') || null)
   const phoneLast4 = ref(localStorage.getItem('pcm_phone_last4') || null)
+  const seqNo = ref(localStorage.getItem('pcm_seq_no') != null ? Number(localStorage.getItem('pcm_seq_no')) : null)
   const isEnrolled = ref(localStorage.getItem('pcm_is_enrolled') != null ? localStorage.getItem('pcm_is_enrolled') === 'true' : true)
   const gradYear = ref(localStorage.getItem('pcm_grad_year') != null ? Number(localStorage.getItem('pcm_grad_year')) : null)
   const hasDisciplinary = ref(localStorage.getItem('pcm_has_disciplinary') === 'true')
@@ -85,7 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
         const meta = user?.user_metadata || {}
         grade.value = Number(meta.grade) || null
         classNo.value = Number(meta.class_no) || null
-        teacherName.value = adminTeacherData.name
+        teacherName.value = adminTeacherData.name === '관리자' ? '관리자' : await decryptText(adminTeacherData.name)
       }
       _persist()
       return
@@ -120,10 +121,23 @@ export const useAuthStore = defineStore('auth', () => {
       status.value = studentData.status || 'approved'
       studentCode.value = studentData.student_code
       studentName.value = await decryptText(studentData.name)
-      phoneLast4.value = studentData.student_phone_last4 || '0000'
+      phoneLast4.value = '****'
       isEnrolled.value = studentData.is_enrolled !== false
       gradYear.value = studentData.grad_year
       hasDisciplinary.value = studentData.has_disciplinary || false
+
+      const sCodeStr = String(studentData.student_code || '')
+      let pGrade = studentData.grade
+      let pClass = studentData.class_no
+      let pSeq = studentData.student_no || studentData.seq_no
+      if (pGrade == null && sCodeStr.length === 5 && sCodeStr.startsWith('3')) {
+        pGrade = parseInt(sCodeStr.substring(0, 1))
+        pClass = parseInt(sCodeStr.substring(1, 3))
+        pSeq = parseInt(sCodeStr.substring(3, 5))
+      }
+      grade.value = pGrade
+      classNo.value = pClass
+      seqNo.value = pSeq
 
       if (userId && !studentData.user_id) {
         await supabase.from('enrolled_students').update({ user_id: userId }).eq('id', studentData.id)
@@ -178,6 +192,9 @@ export const useAuthStore = defineStore('auth', () => {
     if (phoneLast4.value) localStorage.setItem('pcm_phone_last4', phoneLast4.value)
     else localStorage.removeItem('pcm_phone_last4')
 
+    if (seqNo.value != null) localStorage.setItem('pcm_seq_no', seqNo.value)
+    else localStorage.removeItem('pcm_seq_no')
+
     localStorage.setItem('pcm_is_enrolled', isEnrolled.value ? 'true' : 'false')
 
     if (gradYear.value != null) localStorage.setItem('pcm_grad_year', gradYear.value)
@@ -199,6 +216,7 @@ export const useAuthStore = defineStore('auth', () => {
     studentCode.value = null
     studentName.value = null
     phoneLast4.value = null
+    seqNo.value = null
     isEnrolled.value = true
     gradYear.value = null
     hasDisciplinary.value = false
@@ -270,94 +288,84 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // 학생 로그인 (enrolled_students 마스터 기반 통합 로그인 - 재학생/졸업생 공통)
-  async function loginStudent(studentCodeVal, password, isEnrolled = true) {
+  async function loginStudent(studentCodeVal, password, isEnrolledParam = true) {
     if (!supabase) throw new Error('Supabase가 설정되지 않았습니다.')
     
     const cleanCode = String(studentCodeVal).trim()
-    
+    const cleanPasswordDigits = String(password || '').trim().replace(/\D/g, '')
+    if (!cleanPasswordDigits) {
+      throw new Error('비밀번호(전화번호)를 입력해 주세요.')
+    }
+    const inputHash = await hashPhone(cleanPasswordDigits)
+
     // 1. enrolled_students 원장 테이블에서 학번으로 학생 프로필 검색
-    const { data: matchedRows } = await supabase
+    const { data: matchedRows, error: searchErr } = await supabase
       .from('enrolled_students')
       .select('*')
       .eq('student_code', cleanCode)
 
+    if (searchErr) throw searchErr
+
     let targetRow = null
     if (matchedRows && matchedRows.length > 0) {
-      if (isEnrolled !== null) {
-        targetRow = matchedRows.find(r => Boolean(r.is_enrolled) === Boolean(isEnrolled))
+      if (isEnrolledParam !== null) {
+        targetRow = matchedRows.find(r => Boolean(r.is_enrolled) === Boolean(isEnrolledParam))
       }
       if (!targetRow) targetRow = matchedRows[0]
     }
 
-    if (targetRow) {
-      if (targetRow.status === 'pending') {
-        throw new Error('관리자의 회원가입 승인을 대기 중입니다.')
-      } else if (targetRow.status === 'rejected') {
-        const reasonStr = targetRow.rejection_reason ? ` (반려 사유: ${targetRow.rejection_reason})` : ''
-        const err = new Error(`회원가입 신청이 반려되었습니다.${reasonStr}\n'학생 회원가입 신청'에서 가입 정보를 수정하여 다시 제출해 주세요.`)
-        err.isRejected = true
-        err.rejectionReason = targetRow.rejection_reason || ''
-        err.studentCode = cleanCode
-        throw err
-      }
+    if (!targetRow) {
+      throw new Error('등록된 학생 정보를 찾을 수 없습니다. 학번을 확인해 주세요.')
     }
 
-    let email = isEnrolled 
-      ? `student_${cleanCode}@ggomrecommend.ggomcode` 
-      : `grad_${targetRow?.grad_year || ''}_${cleanCode}@ggomrecommend.ggomcode`
-
-    if (targetRow) {
-      email = targetRow.is_enrolled 
-        ? `student_${cleanCode}@ggomrecommend.ggomcode` 
-        : `grad_${targetRow.grad_year || ''}_${cleanCode}@ggomrecommend.ggomcode`
+    if (targetRow.status === 'pending') {
+      throw new Error('관리자의 회원가입 승인을 대기 중입니다.')
+    } else if (targetRow.status === 'rejected') {
+      const reasonStr = targetRow.rejection_reason ? ` (반려 사유: ${targetRow.rejection_reason})` : ''
+      const err = new Error(`회원가입 신청이 반려되었습니다.${reasonStr}\n'학생 회원가입 신청'에서 가입 정보를 수정하여 다시 제출해 주세요.`)
+      err.isRejected = true
+      err.rejectionReason = targetRow.rejection_reason || ''
+      err.studentCode = cleanCode
+      throw err
     }
 
-    let { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    })
+    // 2. 비밀번호(전화번호 해시) 검증
+    const isHashMatched = (targetRow.student_phone_hash && targetRow.student_phone_hash === inputHash) ||
+                          (targetRow.phone_hash && targetRow.phone_hash === inputHash)
+    const isLast4Matched = targetRow.student_phone_last4 && cleanPasswordDigits.endsWith(targetRow.student_phone_last4)
 
-    if (error && targetRow) {
-      const cleanPasswordDigits = String(password || '').trim().replace(/\D/g, '')
-      const inputHash = await hashPhone(cleanPasswordDigits)
-
-      const isHashMatched = targetRow.phone_hash && targetRow.phone_hash === inputHash
-      const isLast4Matched = targetRow.student_phone_last4 && cleanPasswordDigits.endsWith(targetRow.student_phone_last4)
-
-      if (isHashMatched || isLast4Matched) {
-        const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-          email,
-          password: cleanPasswordDigits,
-          options: {
-            data: {
-              role: 'student',
-              name: targetRow.name,
-              student_code: cleanCode,
-              is_enrolled: targetRow.is_enrolled
-            }
-          }
-        })
-        if (!signUpErr && signUpData?.session) {
-          data = signUpData
-          error = null
-        } else {
-          const retryResult = await supabase.auth.signInWithPassword({ email, password: cleanPasswordDigits })
-          if (!retryResult.error) {
-            data = retryResult.data
-            error = null
-          }
-        }
-      }
+    if (!isHashMatched && !isLast4Matched) {
+      throw new Error('학번 또는 비밀번호(전화번호)가 올바르지 않습니다.')
     }
 
-    if (error) throw new Error('학번 또는 비밀번호가 올바르지 않습니다.')
+    // 3. 인증 성공 시 세션 생성
+    const sCodeStr = String(cleanCode || '')
+    let pGrade = targetRow.grade
+    let pClass = targetRow.class_no
+    let pSeq = targetRow.student_no || targetRow.seq_no
+    if (pGrade == null && sCodeStr.length === 5 && sCodeStr.startsWith('3')) {
+      pGrade = parseInt(sCodeStr.substring(0, 1))
+      pClass = parseInt(sCodeStr.substring(1, 3))
+      pSeq = parseInt(sCodeStr.substring(3, 5))
+    }
 
-    token.value = data.session.access_token
-    await fetchProfile(data.user.id)
+    token.value = `student_${targetRow.id}_${Date.now()}`
+    role.value = 'student'
+    status.value = targetRow.status
+    grade.value = pGrade
+    classNo.value = pClass
+    seqNo.value = pSeq
+    studentCode.value = cleanCode
+    studentName.value = await decryptText(targetRow.name)
+    phoneLast4.value = '****'
+    isEnrolled.value = targetRow.is_enrolled !== false
+    gradYear.value = targetRow.grad_year
+    hasDisciplinary.value = targetRow.has_disciplinary || false
+    _persist()
   }
 
   // 학생 회원가입 (enrolled_students 마스터 원장에 저장 - profiles 미생성)
-  async function signUpStudent({ studentCode: sCode, name, phone, isEnrolled: enrolled, gradYear: gYear, registrationCode }) {
+  async function signUpStudent({ studentCode: sCode, name, phone, parentPhone, isEnrolled: enrolled, gradYear: gYear, registrationCode }) {
     if (!supabase) throw new Error('Supabase가 설정되지 않았습니다.')
 
     const cleanPhone = String(phone || '').replace(/\D/g, '')
@@ -366,6 +374,9 @@ export const useAuthStore = defineStore('auth', () => {
     }
     const pLast4 = cleanPhone.slice(-4)
     const pHash = await hashPhone(cleanPhone)
+
+    const cleanParentPhone = String(parentPhone || '').replace(/\D/g, '')
+    const pPhoneHash = cleanParentPhone ? await hashPhone(cleanParentPhone) : null
 
     // 1. 가입코드 검증
     const { data: configRow } = await supabase
@@ -416,87 +427,64 @@ export const useAuthStore = defineStore('auth', () => {
 
     let studentCodeStr = String(sCode).trim()
     if (!enrolled && gYear) {
-      studentCodeStr = sCode ? String(sCode).trim() : `grad_${gYear}_${cleanPhone.slice(-4)}`
+      const gYearStr = String(gYear)
+      studentCodeStr = sCode 
+        ? (studentCodeStr.startsWith(gYearStr) ? studentCodeStr : `${gYearStr}${studentCodeStr}`)
+        : `grad_${gYear}_${cleanPhone.slice(-4)}`
     }
 
     const encName = await encryptText(name.trim())
     const nameHash = await hashText(name.trim())
 
-    // 2. enrolled_students 원장 테이블에서 기존 가입 검사 및 업서트 (AES-256 이름 암호화 & SHA-256 해시 저장)
-    const { data: duplicateStudent } = await supabase
+    // 2. enrolled_students 원장 테이블에서 기존 가입 검사
+    const { data: matchedStudent } = await supabase
       .from('enrolled_students')
-      .select('id, name, student_code, is_enrolled, status')
+      .select('id, name, student_code, is_enrolled, status, user_id')
       .eq('student_code', studentCodeStr)
       .maybeSingle()
 
-    if (duplicateStudent) {
-      if (duplicateStudent.status === 'approved') {
-        throw new Error('이미 회원가입 승인이 완료된 계정입니다. 해당 학번으로 로그인해 주세요.')
-      } else if (duplicateStudent.status === 'pending') {
-        throw new Error('이미 관리자의 회원가입 승인을 대기 중인 계정입니다.')
-      } else if (duplicateStudent.status === 'rejected') {
-        const updatePayload = {
-          name: encName,
-          name_hash: nameHash,
-          student_phone_last4: pLast4,
-          phone_hash: pHash,
-          status: 'pending',
-          rejection_reason: null,
-          is_enrolled: Boolean(enrolled),
-          grade: enrolled ? parsedGrade : null,
-          class_no: enrolled ? parsedClass : null,
-          student_no: enrolled ? parsedSeq : null,
-          seq_no: enrolled ? parsedSeq : null,
-          grad_year: !enrolled && gYear ? Number(gYear) : null
-        }
-        await supabase.from('enrolled_students').update(updatePayload).eq('id', duplicateStudent.id)
+    let isAutoApproved = false
+
+    if (matchedStudent) {
+      // 기존 enrolled_students 원장에 학생이 있는 경우: 승인절차 없이 학생이 새로 입력한 전화번호 업데이트 및 자동 승인(approved)
+      isAutoApproved = true
+      const updatePayload = {
+        name: encName,
+        name_hash: nameHash,
+        student_phone_hash: pHash,
+        parent_phone_hash: pPhoneHash,
+        status: 'approved', // 승인절차 없이 즉시 승인!
+        rejection_reason: null,
+        is_enrolled: Boolean(enrolled),
+        grade: enrolled ? parsedGrade : (matchedStudent.grade || null),
+        class_no: enrolled ? parsedClass : (matchedStudent.class_no || null),
+        student_no: enrolled ? parsedSeq : (matchedStudent.student_no || null),
+        seq_no: enrolled ? parsedSeq : (matchedStudent.seq_no || null),
+        grad_year: !enrolled && gYear ? Number(gYear) : (matchedStudent.grad_year || null)
       }
+      await supabase.from('enrolled_students').update(updatePayload).eq('id', matchedStudent.id)
     } else {
+      // enrolled_students 원장에 없는 학생인 경우: 승인 절차(pending) 필요
+      isAutoApproved = false
       const insertPayload = {
         student_code: studentCodeStr,
         name: encName,
         name_hash: nameHash,
-        student_phone_last4: pLast4,
-        phone_hash: pHash,
+        student_phone_hash: pHash,
+        parent_phone_hash: pPhoneHash,
         is_enrolled: Boolean(enrolled),
         grade: enrolled ? parsedGrade : null,
         class_no: enrolled ? parsedClass : null,
         student_no: enrolled ? parsedSeq : null,
         seq_no: enrolled ? parsedSeq : null,
         grad_year: !enrolled && gYear ? Number(gYear) : null,
-        status: 'pending'
+        status: 'pending' // 승인 절차 필요
       }
       await supabase.from('enrolled_students').insert(insertPayload)
     }
 
-    const email = enrolled 
-      ? `student_${studentCodeStr}@ggomrecommend.ggomcode`
-      : `grad_${gYear || ''}_${studentCodeStr}@ggomrecommend.ggomcode`
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password: cleanPhone,
-      options: {
-        data: {
-          role: 'student',
-          name: name.trim(),
-          student_code: studentCodeStr,
-          is_enrolled: Boolean(enrolled)
-        }
-      }
-    })
-
-    if (error) {
-      let msg = error.message || '회원가입에 실패했습니다.'
-      if (msg.includes('User already registered') || msg.includes('already exists')) {
-        msg = '이미 해당 학번으로 가입된 계정이 존재합니다. 로그인해 주세요.'
-      }
-      throw new Error(msg)
-    }
-
-    // 가입 완료 후 자동 로그인 방지 및 승인 대기 안내를 위해 로그아웃
-    await supabase.auth.signOut()
     clearAuthStates()
+    return { isAutoApproved }
   }
 
   // 로그아웃
@@ -510,7 +498,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     token, role, status, grade, classNo, teacherName,
-    studentCode, studentName, phoneLast4, isEnrolled, gradYear, hasDisciplinary,
+    studentCode, studentName, phoneLast4, seqNo, isEnrolled, gradYear, hasDisciplinary,
     initialized, isAdmin, isTeacher, isStudent,
     checkStatus, loginAdmin, loginTeacher, loginStudent, signUpStudent, logout
   }

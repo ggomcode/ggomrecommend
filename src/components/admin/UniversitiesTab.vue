@@ -1,106 +1,54 @@
 <template>
-  <div class="py-8 px-4 sm:px-10">
+  <div class="flex flex-col h-full pt-4 pb-4 px-4 sm:px-10 overflow-hidden box-border">
 
     <!-- 페이지 헤더 -->
-    <div class="flex items-start justify-between mb-5 flex-wrap gap-4">
+    <div class="flex-shrink-0 flex items-start justify-between mb-3 flex-wrap gap-3">
       <div>
-        <p class="text-base mb-1" style="color: #94a3b8;">관리자</p>
+        <p class="text-base mb-0.5" style="color: #94a3b8;">관리자</p>
         <h1 class="text-2xl font-semibold" style="color: #1e293b; margin: 0;">대학 설정</h1>
+        <p class="text-xs mt-0.5" style="color: #64748b;">
+          대학별 전형 요강 엑셀을 업로드하시면 우리 학교 추천 대상 대학과 학과별 모집정원이 백그라운드에서 자동으로 등록·연동됩니다.
+        </p>
       </div>
+    </div>
 
-      <!-- 서브탭 버튼 -->
-      <div class="flex items-center gap-2 p-1.5 rounded-xl" style="background: #f1f5f9; border: 1px solid #e2e8f0;">
-        <button
-          class="px-4 py-2 rounded-lg text-base font-semibold transition-all cursor-pointer"
-          :style="{
-            border: 'none',
-            background: subTab === 'regional' ? '#2563eb' : 'transparent',
-            color: subTab === 'regional' ? 'white' : '#64748b',
-            boxShadow: subTab === 'regional' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-          }"
-          @click="subTab = 'regional'"
-        >
-          🎓 수도권 학교장추천전형 요강 (엑셀 데이터)
-        </button>
-        <button
-          class="px-4 py-2 rounded-lg text-base font-semibold transition-all cursor-pointer"
-          :style="{
-            border: 'none',
-            background: subTab === 'system' ? '#2563eb' : 'transparent',
-            color: subTab === 'system' ? 'white' : '#64748b',
-            boxShadow: subTab === 'system' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-          }"
-          @click="subTab = 'system'"
-        >
-          ⚙️ 대학 및 모집단위 정원 설정
-        </button>
+    <!-- 직관적인 안내 가이드 카드 (고정 영역) -->
+    <div class="flex-shrink-0 mb-3 p-3 rounded-2xl flex items-center justify-between gap-4" style="background: #eff6ff; border: 1px solid #bfdbfe;">
+      <div>
+        <h2 class="text-sm font-bold" style="color: #1e3a8a; margin: 0;">대학별 추천전형 요강 엑셀을 업로드하세요</h2>
+        <p class="text-xs mt-0.5" style="color: #2563eb; margin: 2px 0 0;">
+          엑셀(.xlsx) 파일을 올리시면 대학별 모집정원, 전형방법, 수능최저학력기준, 반영교과 정보와 우리 학교 추천 정원이 자동으로 연동됩니다.
+        </p>
       </div>
-
-      <div v-if="subTab === 'system'" class="flex flex-wrap items-center gap-2">
-        <button
-            class="text-base font-medium rounded-lg disabled:opacity-40"
-            style="padding: 8px 16px; border: none; background: #16a34a; color: white; cursor: pointer;"
-            :disabled="downloading"
-            @click="doExportQuotaStats(true)"
-        >전체 명단·정원 현황 내보내기</button>
-        <span style="color: #cbd5e1; user-select: none;">|</span>
-        <button
-          class="text-base font-medium rounded-lg disabled:opacity-40"
-          style="padding: 8px 16px; border: 1px solid #e2e8f0; background: white; color: #475569; cursor: pointer;"
-          :disabled="settingsBusy"
-          @click="dlSettingsTemplate"
-        >대학 설정 양식 다운로드</button>
-        <button
-            class="text-base font-medium rounded-lg disabled:opacity-40"
-            style="padding: 8px 16px; border: 1px solid #e2e8f0; background: white; color: #475569; cursor: pointer;"
-            :disabled="settingsBusy"
-            @click="dlSettingsExport"
-        >대학 설정 내보내기</button>
-        <label
-            class="text-base font-medium rounded-lg cursor-pointer"
-            :class="settingsBusy ? 'opacity-60 pointer-events-none' : ''"
-            style="padding: 8px 16px; background: #2563eb; color: white;"
-        >
-          {{ settingsBusy ? '불러오는 중…' : '대학 설정 가져오기' }}
-          <input type="file" accept=".xlsx,.csv" class="hidden" :disabled="settingsBusy" @change="onSettingsFile" />
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <label class="text-xs font-bold px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl cursor-pointer shadow-sm flex items-center gap-1.5">
+          <span>📥 {{ saving ? '업로드 중…' : '추천전형 엑셀 가져오기 (파일 선택)' }}</span>
+          <input type="file" accept=".xlsx,.csv" class="hidden" :disabled="saving" @change="onRegionalFile" />
         </label>
       </div>
     </div>
 
-    <!-- ── 1. 수도권 학교장추천전형 (지역균형) 엑셀 요강 뷰 ──────────────── -->
-    <template v-if="subTab === 'regional'">
-      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+      <!-- 검색바 및 삭제 버튼 (고정 영역) -->
+      <div class="flex-shrink-0 flex items-center justify-between mb-3 flex-wrap gap-3">
         <div class="flex items-center gap-3">
           <input
             v-model="regionalSearch"
             type="text"
             placeholder="대학명, 전형명, 지역 검색…"
             class="text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
-            style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 14px; width: 260px; background: white;"
+            style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 7px 14px; width: 260px; background: white;"
           />
           <span class="text-base" style="color: #64748b;">총 {{ filteredRegionalRecs.length }}건</span>
+          <span v-if="filteredRegionalRecs.length > 0" class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md border border-slate-200">
+            ↔️ 표를 좌우로 스크롤하여 17개 항목을 모두 확인하세요
+          </span>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
           <button
-            class="text-base font-medium rounded-lg"
-            style="padding: 8px 16px; border: 1px solid #e2e8f0; background: white; color: #475569; cursor: pointer;"
-            @click="dlSettingsTemplate"
-          >
-            📋 추천전형 엑셀 양식 다운로드
-          </button>
-          <label
-            class="text-base font-medium rounded-lg cursor-pointer"
-            :class="saving ? 'opacity-60 pointer-events-none' : ''"
-            style="padding: 8px 16px; background: #2563eb; color: white;"
-          >
-            {{ saving ? '업로드 중…' : '📥 추천전형 엑셀 가져오기' }}
-            <input type="file" accept=".xlsx,.csv" class="hidden" :disabled="saving" @change="onRegionalFile" />
-          </label>
-          <button
             v-if="regionalRecs.length > 0"
             class="text-base font-medium rounded-lg"
-            style="padding: 8px 16px; border: 1px solid #fca5a5; background: #fef2f2; color: #dc2626; cursor: pointer;"
+            style="padding: 7px 16px; border: 1px solid #fca5a5; background: #fef2f2; color: #dc2626; cursor: pointer;"
             :disabled="saving"
             @click="clearRegionalRecs"
           >
@@ -109,591 +57,258 @@
         </div>
       </div>
 
-      <p v-if="error" class="text-base mb-4" style="color: #ef4444;">{{ error }}</p>
+      <p v-if="error" class="flex-shrink-0 text-base mb-2" style="color: #ef4444;">{{ error }}</p>
 
-      <!-- 엑셀 데이터 테이블 -->
-      <div class="rounded-xl overflow-hidden shadow-sm mb-6" style="background: white; border: 1px solid #e2e8f0;">
-        <div class="overflow-x-auto" style="max-height: 680px;">
-          <table class="w-full text-left" style="border-collapse: collapse; min-width: 2200px;">
-            <thead class="sticky top-0 z-10" style="background: #f8fafc; border-bottom: 2px solid #cbd5e1;">
-              <tr>
-                <th style="padding: 12px 14px; width: 60px; text-align: center; color: #475569;">No</th>
-                <th style="padding: 12px 14px; width: 90px; color: #475569;">지역</th>
-                <th style="padding: 12px 14px; width: 150px; color: #475569;">대학명</th>
-                <th style="padding: 12px 14px; width: 90px; color: #475569;">모집정원</th>
-                <th style="padding: 12px 14px; width: 150px; color: #475569;">전형명</th>
-                <th style="padding: 12px 14px; width: 120px; color: #475569;">인원제한</th>
-                <th style="padding: 12px 14px; width: 180px; color: #475569;">대상</th>
-                <th style="padding: 12px 14px; width: 150px; color: #475569;">졸업생조건</th>
-                <th style="padding: 12px 14px; width: 240px; color: #475569;">수능최저학력기준</th>
-                <th style="padding: 12px 14px; width: 220px; color: #475569;">전형방법</th>
-                <th style="padding: 12px 14px; width: 160px; color: #475569;">반영교과</th>
-                <th style="padding: 12px 14px; width: 140px; color: #475569;">반영지표</th>
-                <th style="padding: 12px 14px; width: 130px; color: #475569;">이수단위 반영</th>
-                <th style="padding: 12px 14px; width: 140px; color: #475569;">학년별 반영비율</th>
-                <th style="padding: 12px 14px; width: 140px; color: #475569;">졸업생 반영학기</th>
-                <th style="padding: 12px 14px; width: 200px; color: #475569;">진로선택과목 반영방법</th>
-                <th style="padding: 12px 14px; width: 180px; color: #475569;">비고</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="regionalLoading">
-                <td colspan="17" class="text-center py-12" style="color: #94a3b8;">
-                  수도권 학교장추천전형 데이터를 불러오는 중입니다…
-                </td>
-              </tr>
-              <tr v-else-if="filteredRegionalRecs.length === 0">
-                <td colspan="17" class="text-center py-16" style="color: #94a3b8;">
-                  등록된 수도권 학교장추천전형 정보가 없습니다.<br>
-                  우측 상단 <strong>[📥 추천전형 엑셀 가져오기]</strong> 버튼으로 엑셀 자료를 올려주세요.
-                </td>
-              </tr>
-              <tr
-                v-else
-                v-for="r in filteredRegionalRecs"
-                :key="r.id || r.seq_no"
-                class="hover:bg-slate-50 transition-colors"
-                style="border-bottom: 1px solid #f1f5f9;"
-              >
-                <td class="text-center font-medium" style="padding: 12px 14px; color: #64748b;">{{ r.seq_no }}</td>
-                <td style="padding: 12px 14px; color: #475569;">{{ r.region }}</td>
-                <td class="font-semibold" style="padding: 12px 14px; color: #1e293b;">{{ r.univ_name }}</td>
-                <td style="padding: 12px 14px; color: #475569;">{{ r.recruitment_quota }}</td>
-                <td class="font-medium" style="padding: 12px 14px; color: #2563eb;">{{ r.track_name }}</td>
-                <td style="padding: 12px 14px; color: #475569;">{{ r.quota_limit }}</td>
-                <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all;">{{ r.target_students }}</td>
-                <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all;">{{ r.grad_condition }}</td>
-                <td style="padding: 12px 14px; color: #1e293b; white-space: pre-line; word-break: keep-all;" class="font-medium">{{ r.csat_min }}</td>
-                <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all;">{{ r.evaluation_method }}</td>
-                <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all;">{{ r.reflected_subjects }}</td>
-                <td style="padding: 12px 14px; color: #475569;">{{ r.reflected_indicators }}</td>
-                <td style="padding: 12px 14px; color: #475569;">{{ r.course_unit_reflection }}</td>
-                <td style="padding: 12px 14px; color: #475569;">{{ r.grade_ratio }}</td>
-                <td style="padding: 12px 14px; color: #475569;">{{ r.grad_semesters }}</td>
-                <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all;">{{ r.career_elective_method }}</td>
-                <td style="padding: 12px 14px; color: #64748b; white-space: pre-line; word-break: keep-all;">{{ r.remarks }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </template>
-
-    <!-- ── 2. 대학 및 모집단위 정원 설정 뷰 ──────────────── -->
-    <template v-else-if="subTab === 'system'">
-      <HelpBox class="mb-5" storage-key="univs" :title="HELP.title" :intro="HELP.intro" :items="HELP.items" />
-
-      <div class="flex flex-col lg:flex-row lg:items-start gap-6" style="min-height: 480px;">
-
-      <!-- ── 좌측: 대학 목록 ─────────────────────────────────── -->
-      <div class="flex flex-col flex-shrink-0 w-full lg:w-[300px]">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold" style="color: #1e293b;">대학 목록</h2>
-          <button
-            class="text-base font-medium rounded-lg disabled:opacity-40"
-            style="padding: 7px 14px; border: none; background: #2563eb; color: white; cursor: pointer;"
-            :disabled="saving"
-            @click="startAddUniv"
-          >+ 대학 추가</button>
+      <!-- 엑셀 데이터 테이블 카드가 남은 전체 화면 높이를 100% 차지함 -->
+      <div class="flex-1 min-h-0 flex flex-col rounded-xl overflow-hidden shadow-sm mb-1" style="background: white; border: 1px solid #e2e8f0;">
+        <div v-if="regionalLoading" class="text-center py-16" style="color: #94a3b8;">
+          학교장추천전형 데이터를 불러오는 중입니다…
         </div>
 
-        <p v-if="error" class="text-base mb-4" style="color: #ef4444;">{{ error }}</p>
-
-        <!-- 대학 추가 폼 -->
-        <div v-if="addingUniv" class="rounded-xl mb-3"
-          style="padding: 16px 18px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
-          <h3 class="text-base font-semibold mb-3" style="color: #1e293b;">새 대학 추가</h3>
-          <div class="space-y-3">
-            <div>
-              <label class="block text-base font-medium mb-1.5" style="color: #64748b;">대학명</label>
-              <input v-model="univForm.univ_name" type="text"
-                class="w-full text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
-                style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 12px; box-sizing: border-box;"
-                placeholder="예) 한국대학교" />
+        <div v-else-if="filteredRegionalRecs.length === 0" class="text-center py-12 px-5">
+          <div class="max-w-md mx-auto flex flex-col items-center justify-center">
+            <div class="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 border border-blue-100 shadow-sm" style="width: 64px; height: 64px; border-radius: 16px; background: #eff6ff; color: #2563eb; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <path d="M12 18v-6"/>
+                <path d="m9 15 3-3 3 3"/>
+              </svg>
             </div>
-            <div>
-              <label class="block text-base font-medium mb-1.5" style="color: #64748b;">전체 정원</label>
-              <QuotaInput v-model:unlimited="univForm.unlimited" v-model:quota="univForm.total_quota" />
-            </div>
-            <div class="flex items-center gap-2">
-              <input v-model="univForm.prioritize_enrolled" type="checkbox" id="add-univ-pe" class="accent-blue-600 w-4 h-4" />
-              <label for="add-univ-pe" class="text-base" style="color: #475569;">재학생 우선</label>
-            </div>
-          </div>
-          <div class="flex gap-2 mt-4">
-            <button
-              class="text-base font-semibold rounded-lg disabled:opacity-40"
-              style="padding: 8px 18px; border: none; background: #2563eb; color: white; cursor: pointer;"
-              :disabled="saving || !univForm.univ_name.trim()"
-              @click="saveAddUniv"
-            >{{ saving ? '저장 중…' : '저장' }}</button>
-            <button
-              class="text-base rounded-lg"
-              style="padding: 8px 18px; border: 1px solid #e2e8f0; background: white; color: #64748b; cursor: pointer;"
-              :disabled="saving"
-              @click="addingUniv = false"
-            >취소</button>
+            <h3 class="text-lg font-bold mb-1" style="color: #1e293b; margin: 0 0 6px;">등록된 학교장추천전형 정보가 없습니다</h3>
+            <p class="text-xs mb-0" style="color: #64748b; line-height: 1.6;">
+              상단 파란색 <strong>[추천전형 엑셀 가져오기]</strong> 버튼으로 엑셀 파일(.xlsx)을 등록해 주세요.
+            </p>
           </div>
         </div>
 
-        <!-- 대학 카드 목록 -->
-        <div class="overflow-y-auto flex-1 space-y-2">
-          <div
-            v-for="u in univs"
-            :key="u.id"
-            class="rounded-xl transition-all"
-            :style="{
-              background: selectedUnivId === u.id ? '#eff6ff' : 'white',
-              border: selectedUnivId === u.id ? '1px solid #93c5fd' : '1px solid #e2e8f0',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
-            }"
-          >
-            <template v-if="editingUnivId !== u.id">
-              <div class="cursor-pointer" style="padding: 14px 16px;" @click="selectUniv(u.id)">
-                <p class="text-lg font-semibold" style="color: #1e293b; margin: 0;">{{ u.univ_name }}</p>
-                <p class="text-base" style="margin: 4px 0 0; color: #64748b;">
-                  대학 정원: <span class="font-medium">{{ u.total_quota != null ? u.total_quota + '명' : '무제한' }}</span>
-                  &nbsp;·&nbsp;재학생 우선: {{ u.prioritize_enrolled ? '○' : '-' }}
-                </p>
-                <div class="flex gap-3">
-                  <button class="text-base font-medium disabled:opacity-40"
-                          style="color: #2563eb; background: none; border: none; cursor: pointer; padding: 0;"
-                          :disabled="saving" @click.stop="startEditUniv(u)">편집</button>
-                  <button class="text-base font-medium disabled:opacity-40"
-                          style="color: #ef4444; background: none; border: none; cursor: pointer; padding: 0;"
-                          :disabled="saving" @click.stop="removeUniv(u.id)">삭제</button>
-                </div>
-              </div>
-            </template>
-
-            <template v-else>
-              <div style="padding: 14px 16px; background: #fefce8; border-radius: 10px;">
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-base font-medium mb-1.5" style="color: #64748b;">대학명</label>
-                    <input v-model="univForm.univ_name" type="text"
-                      class="w-full text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 12px; box-sizing: border-box;" />
-                  </div>
-                  <div>
-                    <label class="block text-base font-medium mb-1.5" style="color: #64748b;">전체 정원</label>
-                    <QuotaInput v-model:unlimited="univForm.unlimited" v-model:quota="univForm.total_quota" />
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <input v-model="univForm.prioritize_enrolled" type="checkbox"
-                      :id="`edit-univ-pe-${u.id}`" class="accent-blue-600 w-4 h-4" />
-                    <label :for="`edit-univ-pe-${u.id}`" class="text-base" style="color: #475569;">재학생 우선</label>
-                  </div>
-                </div>
-                <div class="flex gap-2 mt-4">
-                  <button
-                    class="text-base font-semibold rounded-lg disabled:opacity-40"
-                    style="padding: 8px 18px; border: none; background: #2563eb; color: white; cursor: pointer;"
-                    :disabled="saving || !univForm.univ_name.trim()"
-                    @click="saveEditUniv(u.id)"
-                  >{{ saving ? '저장 중…' : '저장' }}</button>
-                  <button class="text-base rounded-lg"
-                    style="padding: 8px 18px; border: 1px solid #e2e8f0; background: white; color: #64748b; cursor: pointer;"
-                    :disabled="saving" @click="editingUnivId = null">취소</button>
-                </div>
-              </div>
-            </template>
-          </div>
-
-          <div v-if="univs.length === 0 && !addingUniv"
-            class="text-base text-center" style="padding: 48px 0; color: #94a3b8;">
-            등록된 대학이 없습니다.
+        <div v-else class="flex-1 min-h-0 flex flex-col overflow-x-auto rounded-xl border border-slate-200 shadow-sm" style="background: white;">
+          <div class="flex-1 min-h-0 overflow-y-auto">
+            <table class="w-full text-left" style="border-collapse: separate; border-spacing: 0; min-width: 2200px;">
+              <thead class="sticky top-0 z-30" style="background: #f8fafc;">
+                <tr>
+                  <th style="position: sticky; left: 0; top: 0; z-index: 30; background: #f8fafc; padding: 12px 14px; width: 60px; min-width: 60px; max-width: 60px; text-align: center; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">No</th>
+                  <th style="position: sticky; left: 60px; top: 0; z-index: 30; background: #f8fafc; padding: 12px 14px; width: 80px; min-width: 80px; max-width: 80px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">지역</th>
+                  <th style="position: sticky; left: 140px; top: 0; z-index: 30; background: #f8fafc; padding: 12px 14px; width: 150px; min-width: 150px; max-width: 150px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">대학명</th>
+                  <th style="padding: 12px 14px; width: 90px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">모집정원</th>
+                  <th style="padding: 12px 14px; width: 150px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">전형명</th>
+                  <th style="padding: 12px 14px; width: 120px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">인원제한</th>
+                  <th style="padding: 12px 14px; width: 180px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">대상</th>
+                  <th style="padding: 12px 14px; width: 150px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">졸업생조건</th>
+                  <th style="padding: 12px 14px; width: 240px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">수능최저학력기준</th>
+                  <th style="padding: 12px 14px; width: 220px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">전형방법</th>
+                  <th style="padding: 12px 14px; width: 160px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">반영교과</th>
+                  <th style="padding: 12px 14px; width: 140px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">반영지표</th>
+                  <th style="padding: 12px 14px; width: 130px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">이수단위 반영</th>
+                  <th style="padding: 12px 14px; width: 140px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">학년별 반영비율</th>
+                  <th style="padding: 12px 14px; width: 140px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">졸업생 반영학기</th>
+                  <th style="padding: 12px 14px; width: 200px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">진로선택과목 반영방법</th>
+                  <th style="padding: 12px 14px; width: 180px; color: #475569; border-bottom: 2px solid #cbd5e1;">비고</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="r in filteredRegionalRecs"
+                  :key="r.id || r.seq_no"
+                  class="hover:bg-slate-50 transition-colors group"
+                >
+                  <td class="text-center font-medium bg-white group-hover:!bg-slate-50" style="position: sticky; left: 0; z-index: 20; padding: 12px 14px; width: 60px; min-width: 60px; max-width: 60px; color: #64748b; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.seq_no }}</td>
+                  <td class="bg-white group-hover:!bg-slate-50" style="position: sticky; left: 60px; z-index: 20; padding: 12px 14px; width: 80px; min-width: 80px; max-width: 80px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.region }}</td>
+                  <td class="font-bold bg-white group-hover:!bg-slate-50 cursor-pointer text-blue-600 hover:underline" style="position: sticky; left: 140px; z-index: 20; padding: 12px 14px; width: 150px; min-width: 150px; max-width: 150px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;" @click="openEditRegionalModal(r)">{{ r.univ_name }}</td>
+                  <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.recruitment_quota }}</td>
+                  <td class="font-medium" style="padding: 12px 14px; color: #2563eb; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.track_name }}</td>
+                  <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ formatQuotaLimit(r.quota_limit) }}</td>
+                  <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.target_students }}</td>
+                  <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.grad_condition }}</td>
+                  <td style="padding: 12px 14px; color: #1e293b; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;" class="font-medium">{{ r.csat_min }}</td>
+                  <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.evaluation_method }}</td>
+                  <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.reflected_subjects }}</td>
+                  <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.reflected_indicators }}</td>
+                  <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.course_unit_reflection }}</td>
+                  <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.grade_ratio }}</td>
+                  <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.grad_semesters }}</td>
+                  <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.career_elective_method }}</td>
+                  <td style="padding: 12px 14px; color: #64748b; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0;">{{ r.remarks }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
-      <!-- ── 우측: 모집단위 ───────────────────────────────────── -->
-      <div class="flex-1 min-w-0">
-        <div v-if="!selectedUniv" class="flex items-center justify-center" style="height: 300px;">
-          <p class="text-base" style="color: #94a3b8;">왼쪽에서 대학을 선택하면 모집단위를 관리할 수 있습니다.</p>
-        </div>
-
-        <template v-else>
-          <!-- 헤더 -->
-          <div class="flex items-start justify-between mb-4 flex-wrap gap-2">
-            <div>
-              <h2 class="text-lg font-semibold" style="color: #1e293b; margin: 0;">
-                {{ selectedUniv.univ_name }} — 모집단위
-              </h2>
-              <p class="text-base" style="color: #64748b; margin: 4px 0 0;">
-                대학 전체 정원:
-                <span class="font-medium" style="color: #1e293b;">
-                  {{ selectedUniv.total_quota != null ? selectedUniv.total_quota + '명' : '무제한' }}
-                </span>
-                <template v-if="selectedUnivStats">
-                  &nbsp;·&nbsp;대학 전체 추천인원:
-                  <span class="font-medium" style="color: #1e293b;">{{ selectedUnivStats.total_used }}명</span>
-                  &nbsp;·&nbsp;대학 전체 잔여인원:
-                  <span class="font-medium"
-                    :style="{ color: selectedUniv.total_quota != null && selectedUnivStats.total_used >= selectedUniv.total_quota ? '#ef4444' : '#1e293b' }">
-                    {{ remainingLabel(selectedUnivStats.total_used, selectedUniv.total_quota) }}
-                  </span>
-                </template>
-              </p>
-            </div>
-            <div class="flex gap-2">
-              <button
-                class="text-base font-medium rounded-lg disabled:opacity-40"
-                style="padding: 8px 16px; border: none; background: #16a34a; color: white; cursor: pointer;"
-                :disabled="downloading"
-                @click="doExportQuotaStats(false)"
-              >이 대학 명단·정원 현황</button>
-              <button
-                class="text-base font-medium rounded-lg disabled:opacity-40"
-                style="padding: 8px 16px; border: none; background: #2563eb; color: white; cursor: pointer;"
-                :disabled="saving"
-                @click="startAddTrack"
-              >+ 모집단위 추가</button>
-            </div>
-          </div>
-
-          <!-- 모집단위 테이블 -->
-          <div class="rounded-xl overflow-hidden"
-            style="background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
-            <div class="overflow-x-auto">
-              <table style="border-collapse: collapse; table-layout: fixed; width: 100%; min-width: 780px;">
-                <colgroup>
-                  <col>
-                  <col style="width: 110px;">
-                  <col style="width: 100px;">
-                  <col style="width: 100px;">
-                  <col style="width: 130px;">
-                  <col style="width: 160px;">
-                </colgroup>
-                <thead>
-                  <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                    <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">모집단위명</th>
-                    <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">제한인원</th>
-                    <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">추천인원</th>
-                    <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">잔여인원</th>
-                    <th class="text-base font-semibold text-center" style="padding: 14px 20px; color: #475569;">재학생 우선</th>
-                    <th style="padding: 14px 20px;"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <!-- 추가 행 -->
-                  <tr v-if="addingTrack" style="background: #eff6ff; border-bottom: 1px solid #bfdbfe;">
-                    <td style="padding: 10px 16px;">
-                      <input v-model="trackForm.track_name" type="text"
-                        class="text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        style="width: 100%; border: 1px solid #93c5fd; border-radius: 6px; padding: 8px 10px; box-sizing: border-box;"
-                        placeholder="예) 자연계열" />
-                    </td>
-                    <td style="padding: 10px 16px;">
-                      <QuotaInput v-model:unlimited="trackForm.unlimited" v-model:quota="trackForm.unit_quota" />
-                    </td>
-                    <td class="text-base" style="padding: 10px 16px; color: #94a3b8;">—</td>
-                    <td class="text-base" style="padding: 10px 16px; color: #94a3b8;">—</td>
-                    <td class="text-center" style="padding: 10px 16px;">
-                      <input v-model="trackForm.prioritize_enrolled" type="checkbox" class="accent-blue-600 w-4 h-4" :disabled="univPrioritize" />
-                    </td>
-                    <td style="padding: 10px 16px;">
-                      <div class="flex gap-2">
-                        <button
-                          class="text-base font-semibold rounded-lg disabled:opacity-40"
-                          style="padding: 7px 14px; border: none; background: #2563eb; color: white; cursor: pointer;"
-                          :disabled="saving || !trackForm.track_name.trim()"
-                          @click="saveAddTrack"
-                        >{{ saving ? '저장 중…' : '저장' }}</button>
-                        <button class="text-base rounded-lg"
-                          style="padding: 7px 14px; border: 1px solid #e2e8f0; background: white; color: #64748b; cursor: pointer;"
-                          :disabled="saving" @click="addingTrack = false">취소</button>
-                      </div>
-                    </td>
-                  </tr>
-
-                  <template v-for="t in tracksWithStats" :key="t.id">
-                    <!-- 보기 행 -->
-                    <tr v-if="editingTrackId !== t.id"
-                      class="hover:bg-slate-50"
-                      style="border-bottom: 1px solid #f1f5f9; transition: background 0.1s;">
-                      <td class="text-base" style="padding: 14px 20px; color: #1e293b;">{{ t.track_name }}</td>
-                      <td class="text-base" style="padding: 14px 20px; color: #1e293b;">
-                        {{ t.unit_quota != null ? t.unit_quota + '명' : '무제한' }}
-                      </td>
-                      <td style="padding: 14px 20px;">
-                        <button
-                          class="text-base font-medium underline"
-                          style="color: #2563eb; background: none; border: none; cursor: pointer; padding: 0;"
-                          @click="openRecommendedModal(t)"
-                        >{{ t.unit_used }}명</button>
-                      </td>
-                      <td class="text-base font-medium" style="padding: 14px 20px;"
-                        :style="{ color: t.unit_quota != null && t.unit_used >= t.unit_quota ? '#ef4444' : '#1e293b' }">
-                        {{ remainingLabel(t.unit_used, t.unit_quota) }}
-                      </td>
-                      <td class="text-base text-center" style="padding: 14px 20px; color: #1e293b;">
-                        {{ t.prioritize_enrolled ? '○' : '-' }}
-                      </td>
-                      <td style="padding: 14px 20px;">
-                        <div class="flex gap-3">
-                          <button class="text-base font-medium disabled:opacity-40"
-                            style="color: #2563eb; background: none; border: none; cursor: pointer; padding: 0;"
-                            :disabled="saving" @click="startEditTrack(t)">편집</button>
-                          <button class="text-base font-medium disabled:opacity-40"
-                            style="color: #ef4444; background: none; border: none; cursor: pointer; padding: 0;"
-                            :disabled="saving" @click="removeTrack(t.id)">삭제</button>
-                        </div>
-                      </td>
-                    </tr>
-                    <!-- 편집 행 -->
-                    <tr v-else style="background: #fefce8; border-bottom: 1px solid #fde68a;">
-                      <td style="padding: 10px 16px;">
-                        <input v-model="trackForm.track_name" type="text"
-                          class="text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          style="width: 100%; border: 1px solid #fbbf24; border-radius: 6px; padding: 8px 10px; box-sizing: border-box;" />
-                      </td>
-                      <td style="padding: 10px 16px;">
-                        <QuotaInput v-model:unlimited="trackForm.unlimited" v-model:quota="trackForm.unit_quota" />
-                      </td>
-                      <td class="text-base" style="padding: 10px 16px; color: #94a3b8;">—</td>
-                      <td class="text-base" style="padding: 10px 16px; color: #94a3b8;">—</td>
-                      <td class="text-center" style="padding: 10px 16px;">
-                        <input v-model="trackForm.prioritize_enrolled" type="checkbox" class="accent-blue-600 w-4 h-4" :disabled="univPrioritize" />
-                      </td>
-                      <td style="padding: 10px 16px;">
-                        <div class="flex gap-2">
-                          <button
-                            class="text-base font-semibold rounded-lg disabled:opacity-40"
-                            style="padding: 7px 14px; border: none; background: #2563eb; color: white; cursor: pointer;"
-                            :disabled="saving || !trackForm.track_name.trim()"
-                            @click="saveEditTrack(t.id)"
-                          >{{ saving ? '저장 중…' : '저장' }}</button>
-                          <button class="text-base rounded-lg"
-                            style="padding: 7px 14px; border: 1px solid #e2e8f0; background: white; color: #64748b; cursor: pointer;"
-                            :disabled="saving" @click="editingTrackId = null">취소</button>
-                        </div>
-                      </td>
-                    </tr>
-                  </template>
-
-                  <tr v-if="tracks.length === 0 && !addingTrack">
-                    <td colspan="6" class="text-base text-center" style="padding: 48px 20px; color: #94a3b8;">
-                      등록된 모집단위가 없습니다.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </template>
-      </div>
-    </div>
-  </template>
-  </div>
-
-  <!-- ── 추천 확정 목록 모달 ──────────────────────────────────── -->
-  <div v-if="modal.open"
-    class="fixed inset-0 flex items-center justify-center z-50"
-    style="background: rgba(0,0,0,0.35);"
-    @click.self="modal.open = false"
-    @keydown.escape.window="modal.open = false"
-  >
-    <div class="bg-white flex flex-col" style="border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); width: 85vw; height: 85vh; margin: 0 16px;">
-      <!-- 모달 헤더 -->
-      <div class="flex items-center justify-between flex-shrink-0" style="padding: 18px 22px; border-bottom: 1px solid #f1f5f9;">
-        <div>
-          <h3 class="text-lg font-semibold" style="color: #1e293b; margin: 0;">{{ modal.trackName }} 추천 확정 목록</h3>
-          <p class="text-base" style="color: #94a3b8; margin: 2px 0 0;">총 {{ modal.entries.length }}명</p>
-        </div>
-        <button
-          class="text-xl leading-none"
-          style="background: none; border: none; cursor: pointer; color: #94a3b8;"
-          @click="modal.open = false">✕</button>
-      </div>
-
-      <!-- 모달 본문 -->
-      <div class="overflow-y-auto flex-1" style="padding: 18px 22px;">
-        <div v-if="modal.loading" class="text-base text-center" style="padding: 48px 0; color: #94a3b8;">로딩 중…</div>
-        <div v-else-if="modal.entries.length === 0" class="text-base text-center" style="padding: 48px 0; color: #94a3b8;">
-          추천 확정된 학생이 없습니다.
-        </div>
-        <template v-else>
-          <div v-for="group in groupedByRound" :key="group.round_id" class="mb-6">
-            <h4 class="text-base font-semibold mb-3" style="color: #64748b; letter-spacing: 0.04em; text-transform: uppercase;">
-              {{ group.round_id }}차 ({{ group.entries.length }}명)
-            </h4>
-            <div class="rounded-xl overflow-hidden"
-              style="border: 1px solid #e2e8f0;">
-              <table class="w-full" style="border-collapse: collapse; table-layout: fixed; min-width: 400px;">
-                <colgroup>
-                  <col style="width: 50px;">
-                  <col>
-                  <col style="width: 150px;">
-                  <col style="width: 70px;">
-                  <col style="width: 70px;">
-                </colgroup>
-                <thead>
-                  <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                    <th class="text-base font-semibold text-left" style="padding: 10px 14px; color: #475569;">순위</th>
-                    <th class="text-base font-semibold text-left" style="padding: 10px 14px; color: #475569;">이름</th>
-                    <th class="text-base font-semibold text-left" style="padding: 10px 14px; color: #475569;">학번</th>
-                    <th class="text-base font-semibold text-center" style="padding: 10px 14px; color: #475569;">구분</th>
-                    <th class="text-base font-semibold text-center" style="padding: 10px 14px; color: #475569;">상태</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="e in group.entries"
-                    :key="e.student_id"
-                    :style="{
-                      background: e.abandoned ? '#fef2f2' : '#f0fdf4',
-                      borderBottom: '1px solid #f1f5f9',
-                      textDecoration: e.abandoned ? 'line-through' : 'none',
-                    }"
-                  >
-                    <td class="text-base text-center" style="padding: 11px 14px; color: #475569;">{{ e.ranking ?? '—' }}</td>
-                    <td class="text-base" style="padding: 11px 14px; color: #1e293b;">{{ e.name }}</td>
-                    <td class="text-base font-mono" style="padding: 11px 14px; color: #475569;">{{ e.student_code }}</td>
-                    <td class="text-base text-center" style="padding: 11px 14px; color: #475569;">{{ e.is_enrolled ? '재학' : '졸업' }}</td>
-                    <td class="text-base text-center font-medium" style="padding: 11px 14px;">
-                      <span v-if="e.abandoned" style="color: #ef4444; text-decoration: none;">포기</span>
-                      <span v-else style="color: #16a34a;">확정</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </template>
-      </div>
-
-      <div class="flex justify-end flex-shrink-0" style="padding: 14px 22px; border-top: 1px solid #f1f5f9;">
-        <button
-          class="text-base rounded-lg"
-          style="padding: 9px 20px; border: 1px solid #e2e8f0; background: white; color: #64748b; cursor: pointer;"
-          @click="modal.open = false">닫기</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── 설정 가져오기 미리보기(diff) 모달 ──────────────────────── -->
-  <div v-if="settings.open"
-    class="fixed inset-0 flex items-center justify-center z-50"
-    style="background: rgba(0,0,0,0.4);"
-    @keydown.escape.window="closeSettings"
-  >
-    <div class="bg-white flex flex-col"
-      style="border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); width: 85vw; height: 85vh;">
+  <!-- ── 1단계 추천전형 상세 보기 / 수정 모달 ────────────────────────────── -->
+  <div v-if="editRegionalModal.open" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0,0,0,0.4);" @click.self="editRegionalModal.open = false">
+    <div class="bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden" style="width: 720px; max-height: 88vh;">
+      
       <!-- 헤더 -->
-      <div class="flex items-center justify-between flex-shrink-0" style="padding: 18px 24px; border-bottom: 1px solid #f1f5f9;">
-        <div>
-          <h3 class="text-lg font-semibold" style="color: #1e293b; margin: 0;">대학 설정 가져오기 — 변경 내용 확인</h3>
-          <p class="text-base" style="color: #94a3b8; margin: 3px 0 0;">
-            파일: {{ settings.fileName }}
-            <span v-if="!settings.loading">
-              &nbsp;·&nbsp;변경 {{ settings.changes.length }}건, 유지 {{ settings.unchangedCount }}건
-            </span>
-          </p>
+      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center gap-3">
+          <span class="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-bold">{{ editRegionalModal.form.region || '기타' }}</span>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900" style="margin: 0;">{{ editRegionalModal.form.univ_name }}</h3>
+            <p class="text-xs text-blue-600 font-semibold mt-0.5" style="margin: 2px 0 0;">{{ editRegionalModal.form.track_name }}</p>
+          </div>
         </div>
-        <button class="text-xl leading-none"
-          style="background: none; border: none; cursor: pointer; color: #94a3b8;"
-          @click="closeSettings">✕</button>
+        <button @click="editRegionalModal.open = false" class="text-slate-400 hover:text-slate-600 border-none bg-none text-xl cursor-pointer">✕</button>
       </div>
 
-      <!-- 본문 -->
-      <div class="overflow-y-auto flex-1" style="padding: 20px 24px;">
-        <div v-if="settings.loading" class="text-base text-center" style="padding: 60px 0; color: #94a3b8;">
-          파일을 분석하는 중…
+      <!-- 모달 본문: [1] 상세보기 모드 -->
+      <div v-if="!editRegionalModal.isEditing" class="p-6 overflow-y-auto flex-1 space-y-4 text-xs">
+        <!-- 핵심 요약 카운터 카드 -->
+        <div class="grid grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <div>
+            <span class="text-slate-500 block mb-0.5 font-medium">모집정원</span>
+            <span class="text-sm font-bold text-slate-800">{{ editRegionalModal.form.recruitment_quota || '미지정' }}</span>
+          </div>
+          <div>
+            <span class="text-slate-500 block mb-0.5 font-medium">인원제한</span>
+            <span class="text-sm font-bold text-blue-600">{{ formatQuotaLimit(editRegionalModal.form.quota_limit) || '없음' }}</span>
+          </div>
+          <div>
+            <span class="text-slate-500 block mb-0.5 font-medium">졸업생 조건</span>
+            <span class="text-sm font-bold text-emerald-600">{{ editRegionalModal.form.grad_condition || '제한없음' }}</span>
+          </div>
         </div>
 
-        <template v-else>
-          <!-- 오류 -->
-          <div v-if="settings.errors.length" class="rounded-xl mb-4"
-            style="padding: 16px 20px; border: 1px solid #fca5a5; background: #fef2f2;">
-            <p class="text-base font-semibold mb-2" style="color: #991b1b;">
-              오류 {{ settings.errors.length }}건 — 이대로는 적용할 수 없습니다. 파일을 고쳐 다시 가져오세요.
-            </p>
-            <ul class="list-disc list-inside space-y-1">
-              <li v-for="(e, i) in settings.errors" :key="i" class="text-base" style="color: #991b1b;">{{ e }}</li>
-            </ul>
+        <div class="space-y-3 pt-1">
+          <div class="p-3 bg-blue-50/60 rounded-xl border border-blue-100">
+            <span class="block font-bold text-blue-900 mb-1">🎯 지원 자격 대상</span>
+            <p class="text-blue-950 font-medium whitespace-pre-line leading-relaxed m-0">{{ editRegionalModal.form.target_students || '-' }}</p>
           </div>
 
-          <!-- 마감 라운드 차단 경고 -->
-          <div v-else-if="settings.hasBlocked" class="rounded-xl mb-4"
-            style="padding: 16px 20px; border: 1px solid #fca5a5; background: #fef2f2;">
-            <p class="text-base font-semibold" style="color: #991b1b;">
-              마감된 라운드({{ settings.closedLabels.join(', ') }})가 있어 아래 붉게 표시된 재학생 우선 변경을 적용할 수 없습니다.
-            </p>
-            <p class="text-base" style="color: #991b1b; margin: 4px 0 0;">
-              정원만 바꾸려면 파일에서 재학생 우선 값을 원래대로 되돌린 뒤 다시 가져오세요. 재학생 우선을 바꾸려면 라운드를 다시 열고 설정을 고친 뒤 다시 마감하세요.
-            </p>
+          <div class="p-3 bg-amber-50/70 rounded-xl border border-amber-200">
+            <span class="block font-bold text-amber-900 mb-1">⚡ 수능최저학력기준</span>
+            <p class="text-amber-950 font-semibold whitespace-pre-line leading-relaxed m-0">{{ editRegionalModal.form.csat_min || '없음' }}</p>
           </div>
 
-          <!-- 상시 안내 -->
-          <p v-if="!settings.errors.length" class="text-base mb-4"
-            style="padding: 12px 16px; border-radius: 10px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e;">
-            이 파일에 없는 대학·모집단위는 그대로 유지됩니다(삭제되지 않습니다). 아래 변경 내용을 확인한 뒤 "확인하고 적용"을 누르세요.
-          </p>
-
-          <!-- 변경 없음 -->
-          <div v-if="!settings.errors.length && settings.changes.length === 0"
-            class="text-base text-center" style="padding: 48px 0; color: #94a3b8;">
-            현재 설정과 달라지는 항목이 없습니다.
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <span class="block font-bold text-slate-700 mb-1">📝 전형방법</span>
+            <p class="text-slate-800 whitespace-pre-line leading-relaxed m-0">{{ editRegionalModal.form.evaluation_method || '-' }}</p>
           </div>
 
-          <!-- 대학별 diff 그룹 -->
-          <div v-for="grp in settingsGrouped" :key="grp.univ_name" class="mb-5">
-            <h4 class="text-base font-semibold mb-2" style="color: #1e293b;">{{ grp.univ_name }}</h4>
-            <div class="rounded-xl overflow-hidden" style="border: 1px solid #e2e8f0;">
-              <table class="w-full" style="border-collapse: collapse; table-layout: fixed;">
-                <!-- 대학마다 표가 달라도 열 위치가 어긋나지 않도록 너비를 고정한다 -->
-                <colgroup>
-                  <col style="width: 84px;" />
-                  <col style="width: 280px;" />
-                  <col />
-                </colgroup>
-                <tbody>
-                  <tr v-for="(c, i) in grp.rows" :key="i"
-                    :style="{
-                      borderBottom: '1px solid #f1f5f9',
-                      background: c.blocked ? '#fef2f2' : (c.op === 'create' ? '#f0fdf4' : '#fffbeb'),
-                    }">
-                    <td class="text-base" style="padding: 10px 16px; vertical-align: top;">
-                      <span class="text-base font-semibold" :style="{ color: badgeColor(c) }">{{ badgeLabel(c) }}</span>
-                    </td>
-                    <td class="text-base" style="padding: 10px 16px; vertical-align: top; color: #1e293b; overflow-wrap: anywhere;">
-                      <span v-if="c.track_name">모집단위 · {{ c.track_name }}</span>
-                      <span v-else>대학 설정</span>
-                    </td>
-                    <td class="text-base" style="padding: 10px 16px; vertical-align: top; color: #475569; overflow-wrap: anywhere;">
-                      <div v-for="(f, j) in c.fields" :key="j">
-                        {{ f.field }}: <span style="color: #94a3b8;">{{ f.old }}</span>
-                        <span style="color: #94a3b8;"> → </span>
-                        <span class="font-medium" style="color: #1e293b;">{{ f.new }}</span>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <span class="block font-bold text-slate-700 mb-1">📚 반영교과</span>
+              <p class="text-slate-800 m-0">{{ editRegionalModal.form.reflected_subjects || '-' }}</p>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <span class="block font-bold text-slate-700 mb-1">📊 반영지표</span>
+              <p class="text-slate-800 m-0">{{ editRegionalModal.form.reflected_indicators || '-' }}</p>
             </div>
           </div>
-        </template>
+
+          <div class="grid grid-cols-3 gap-3">
+            <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+              <span class="block text-slate-500 mb-0.5">이수단위 반영</span>
+              <p class="text-slate-800 font-medium m-0">{{ editRegionalModal.form.course_unit_reflection || '-' }}</p>
+            </div>
+            <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+              <span class="block text-slate-500 mb-0.5">학년별 비율</span>
+              <p class="text-slate-800 font-medium m-0">{{ editRegionalModal.form.grade_ratio || '-' }}</p>
+            </div>
+            <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+              <span class="block text-slate-500 mb-0.5">졸업생 반영학기</span>
+              <p class="text-slate-800 font-medium m-0">{{ editRegionalModal.form.grad_semesters || '-' }}</p>
+            </div>
+          </div>
+
+          <div v-if="editRegionalModal.form.career_elective_method" class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <span class="block font-bold text-slate-700 mb-1">🎓 진로선택과목 반영방법</span>
+            <p class="text-slate-800 whitespace-pre-line leading-relaxed m-0">{{ editRegionalModal.form.career_elective_method }}</p>
+          </div>
+
+          <div v-if="editRegionalModal.form.remarks" class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <span class="block font-bold text-slate-500 mb-1">💬 비고</span>
+            <p class="text-slate-600 whitespace-pre-line m-0">{{ editRegionalModal.form.remarks }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 모달 본문: [2] 수정하기 모드 -->
+      <div v-else class="p-6 overflow-y-auto flex-1 space-y-4 text-xs">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">지역</label>
+            <input v-model="editRegionalModal.form.region" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">대학명</label>
+            <input v-model="editRegionalModal.form.univ_name" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm font-bold text-slate-900" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">모집정원</label>
+            <input v-model="editRegionalModal.form.recruitment_quota" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">전형명</label>
+            <input v-model="editRegionalModal.form.track_name" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm font-bold text-blue-600" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">인원제한</label>
+            <input v-model="editRegionalModal.form.quota_limit" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">대상 (지원자격)</label>
+            <input v-model="editRegionalModal.form.target_students" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">졸업생 조건</label>
+            <input v-model="editRegionalModal.form.grad_condition" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">반영지표</label>
+            <input v-model="editRegionalModal.form.reflected_indicators" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">수능최저학력기준</label>
+          <textarea v-model="editRegionalModal.form.csat_min" rows="2" class="w-full p-2 border border-slate-300 rounded-lg text-sm font-medium"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">전형방법</label>
+          <textarea v-model="editRegionalModal.form.evaluation_method" rows="2" class="w-full p-2 border border-slate-300 rounded-lg text-sm"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">반영교과</label>
+          <input v-model="editRegionalModal.form.reflected_subjects" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">진로선택과목 반영방법</label>
+          <textarea v-model="editRegionalModal.form.career_elective_method" rows="2" class="w-full p-2 border border-slate-300 rounded-lg text-sm"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">비고</label>
+          <input v-model="editRegionalModal.form.remarks" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
+        </div>
       </div>
 
       <!-- 푸터 -->
-      <div class="flex items-center justify-between flex-shrink-0" style="padding: 14px 24px; border-top: 1px solid #f1f5f9;">
-        <p v-if="settings.applyError" class="text-base" style="color: #ef4444; margin: 0;">{{ settings.applyError }}</p>
-        <span v-else></span>
-        <div class="flex gap-2">
-          <button class="text-base rounded-lg"
-            style="padding: 9px 20px; border: 1px solid #e2e8f0; background: white; color: #64748b; cursor: pointer;"
-            :disabled="settings.applying"
-            @click="closeSettings">취소</button>
-          <button class="text-base font-semibold rounded-lg disabled:opacity-40"
-            style="padding: 9px 20px; border: none; background: #2563eb; color: white; cursor: pointer;"
-            :disabled="!canApplySettings"
-            @click="applySettings"
-          >{{ settings.applying ? '적용 중…' : '확인하고 적용' }}</button>
-        </div>
+      <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-shrink-0">
+        <template v-if="!editRegionalModal.isEditing">
+          <button @click="editRegionalModal.open = false" class="px-5 py-2 border border-slate-300 bg-white text-slate-700 rounded-xl text-xs font-bold cursor-pointer">닫기</button>
+          <button @click="editRegionalModal.isEditing = true" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer border-none flex items-center gap-1.5 shadow-sm">
+            <span>✏️ 요강 정보 수정</span>
+          </button>
+        </template>
+        <template v-else>
+          <button @click="deleteRegionalRow" class="px-3.5 py-2 text-red-600 hover:bg-red-50 rounded-lg text-xs font-bold border border-red-200 cursor-pointer">🗑️ 이 항목 삭제</button>
+          <div class="flex gap-2">
+            <button @click="editRegionalModal.isEditing = false" class="px-4 py-2 border border-slate-300 bg-white text-slate-600 rounded-lg text-xs font-bold cursor-pointer">취소</button>
+            <button @click="saveEditRegionalRow" :disabled="editRegionalModal.saving" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold cursor-pointer border-none">
+              {{ editRegionalModal.saving ? '저장 중…' : '💾 변경사항 저장' }}
+            </button>
+          </div>
+        </template>
       </div>
+
     </div>
   </div>
+</div>
 </template>
 
 <script setup>
@@ -704,7 +319,9 @@ import {
   getQuotaStats, exportQuotaStats, getTrackRecommendedList,
   downloadUnivSettingsTemplate, exportUnivSettings, previewUnivSettings, importUnivSettings,
   blobErrMsg,
-  getRegionalRecommendations, deleteRegionalRecommendations, importRegionalRecommendations,
+  getRegionalRecommendations, deleteRegionalRecommendations, importRegionalRecommendations, syncRegionalToUniversities,
+  updateRegionalRecommendation, deleteSingleRegionalRecommendation,
+  getDisclosureCount,
 } from '../../api/admin.js'
 import HelpBox from '../common/HelpBox.vue'
 import { dialog } from '../common/dialog.js'
@@ -720,6 +337,7 @@ const HELP = {
     '라운드가 마감된 동안에는 "재학생 우선"을 바꿀 수 없습니다. 저장된 순위가 마감 시점 기준이라 설정만 바꾸면 순위와 어긋나기 때문입니다. 바꾸려면 라운드를 다시 열고 설정을 고친 뒤 다시 마감하세요. 정원 변경은 마감 중에도 가능합니다.',
     '표의 추천인원 숫자를 누르면 지금까지 그 모집단위로 추천 확정된 학생 목록을 볼 수 있습니다.',
     '"전형요소 - 기초 데이터"에서 "석차연명부" 버튼을 누르면 자동으로 대학별 모집단위도 추가됩니다.',
+    '지역별 추천 전형 데이터를 바탕으로 대학 모집단위를 동기화하려면 "지역 전형 동기화" 버튼을 누르세요.',
   ],
 }
 
@@ -756,11 +374,48 @@ const QuotaInput = defineComponent({
 })
 
 // ── 상태 ──────────────────────────────────────────────────────
-const univs        = ref([])
-const tracks       = ref([])
-const error        = ref('')
-const saving       = ref(false)
-const downloading  = ref(false)
+const univs           = ref([])
+const tracks          = ref([])
+const error           = ref('')
+const saving          = ref(false)
+const downloading     = ref(false)
+const disclosureCount = ref(null)  // 정보공시 재학생 수 (% 인원제한 환산용)
+
+/**
+ * quota_limit 값을 표시용 문자열로 변환합니다.
+ * - % 형태 ("3%", "0.03") → disclosureCount 설정 시: "10명 (3%)"
+ *                         → 미설정 시: "3%" (원문 그대로)
+ * - 일반 숫자/텍스트 → 그대로 반환
+ */
+function formatQuotaLimit(rawVal) {
+  if (rawVal == null || rawVal === '') return ''
+  const str = String(rawVal).trim()
+  if (!str) return ''
+
+  const num = parseFloat(str)
+  let pct = null
+
+  // 퍼센트 판별: 0 < n < 1 소수(엑셀 raw) OR 명시적 % 기호
+  if (!isNaN(num) && num > 0 && num < 1) {
+    pct = num * 100  // 0.03 → 3
+  } else {
+    const pctMatch = str.match(/^(\d+(?:\.\d+)?)\s*%$/)
+    if (pctMatch) pct = parseFloat(pctMatch[1])  // "3%" → 3
+  }
+
+  if (pct !== null) {
+    const pctClean = parseFloat(pct.toPrecision(10))
+    if (disclosureCount.value != null && disclosureCount.value > 0) {
+      const count = Math.ceil(disclosureCount.value * pct / 100)
+      return `${count} (${pctClean}%)`
+    }
+    // 정보공시 미설정: % 원문 그대로 표시
+    return `${pctClean}%`
+  }
+
+  // 일반 텍스트 ("없음", "12명", "5" 등)
+  return str
+}
 
 const selectedUnivId  = ref(null)
 const addingUniv      = ref(false)
@@ -808,6 +463,7 @@ const tracksWithStats = computed(() => {
   return tracks.value.map(t => ({
     ...t,
     unit_used: statMap[t.id]?.unit_used ?? 0,
+    raw_quota_limit: statMap[t.id]?.raw_quota_limit ?? null,  // 원본 % 텍스트
     by_round:  statMap[t.id]?.by_round  ?? [],
   }))
 })
@@ -1139,7 +795,7 @@ async function onRegionalFile(evt) {
     await loadRegionalRecs()
     await dialog.alert({
       title: '업로드 완료',
-      message: `총 ${res.count}건의 수도권 학교장추천전형 정보가 성공적으로 등록되었습니다.`,
+      message: `총 ${res.count}건의 학교장추천전형 정보가 성공적으로 등록되었습니다.`,
     })
   } catch (e) {
     error.value = e.message || '엑셀 가져오기 중 오류가 발생했습니다.'
@@ -1148,10 +804,39 @@ async function onRegionalFile(evt) {
   }
 }
 
+async function doSyncRegionalToUnivs() {
+  saving.value = true
+  error.value = ''
+  try {
+    const res = await syncRegionalToUniversities()
+    await loadUnivs()
+
+    let msg = `1단계 엑셀 요강 데이터(인원제한, 지원대상, 졸업생 조건)를 바탕으로 총 ${res.count}개 대학/전형 정원 정보가 2단계 추천 목록에 성공적으로 생성 및 동기화되었습니다.`
+
+    if (res.updatedCount > 0) {
+      msg += `\n✅ 기존 항목 중 % 인원제한 또는 0명으로 잘못 저장된 ${res.updatedCount}건의 정원이 현재 정보공시 재학생 수 기준으로 재계산되어 업데이트되었습니다.`
+    }
+
+    if (res.percentWarnings && res.percentWarnings.length > 0) {
+      msg += `\n\n⚠️ 인원제한이 %로 표시된 항목 ${res.percentWarnings.length}건이 무제한으로 처리되었습니다.\n환경설정에서 [정보공시 재학생 수]를 입력한 후 다시 동기화하면 정확한 인원이 산정됩니다.\n\n해당 항목:\n` + res.percentWarnings.join('\n')
+    }
+
+    await dialog.alert({
+      title: '자동 생성 완료',
+      message: msg,
+    })
+  } catch (e) {
+    error.value = e.message || '동기화 중 오류가 발생했습니다.'
+  } finally {
+    saving.value = false
+  }
+}
+
+
 async function clearRegionalRecs() {
   if (!(await dialog.confirm({
     title: '전형 정보 전체 삭제',
-    message: '등록된 수도권 학교장추천전형 엑셀 정보(16개 컬럼)를 전체 삭제하시겠습니까?',
+    message: '등록된 학교장추천전형 엑셀 정보(16개 컬럼)를 전체 삭제하시겠습니까?',
     confirmText: '삭제',
     level: 'danger',
   }))) return
@@ -1166,6 +851,99 @@ async function clearRegionalRecs() {
   }
 }
 
+// ── 1단계 요강 정보 수동 수정 모달 ──────────────────────────────
+const editRegionalModal = ref({
+  open: false,
+  isEditing: false,
+  saving: false,
+  form: {
+    id: '',
+    region: '',
+    univ_name: '',
+    recruitment_quota: '',
+    track_name: '',
+    quota_limit: '',
+    target_students: '',
+    grad_condition: '',
+    csat_min: '',
+    evaluation_method: '',
+    reflected_subjects: '',
+    reflected_indicators: '',
+    course_unit_reflection: '',
+    grade_ratio: '',
+    grad_semesters: '',
+    career_elective_method: '',
+    remarks: '',
+  }
+})
+
+function openEditRegionalModal(r) {
+  editRegionalModal.value = {
+    open: true,
+    isEditing: false,
+    saving: false,
+    form: {
+      id: r.id,
+      region: r.region || '',
+      univ_name: r.univ_name || '',
+      recruitment_quota: r.recruitment_quota || '',
+      track_name: r.track_name || '',
+      quota_limit: r.quota_limit || '',
+      target_students: r.target_students || '',
+      grad_condition: r.grad_condition || '',
+      csat_min: r.csat_min || '',
+      evaluation_method: r.evaluation_method || '',
+      reflected_subjects: r.reflected_subjects || '',
+      reflected_indicators: r.reflected_indicators || '',
+      course_unit_reflection: r.course_unit_reflection || '',
+      grade_ratio: r.grade_ratio || '',
+      grad_semesters: r.grad_semesters || '',
+      career_elective_method: r.career_elective_method || '',
+      remarks: r.remarks || '',
+    }
+  }
+}
+
+async function saveEditRegionalRow() {
+  const f = editRegionalModal.value.form
+  if (!f.univ_name || !f.track_name) {
+    await dialog.alert({ title: '입력 오류', message: '대학명과 전형명은 필수 입력 항목입니다.' })
+    return
+  }
+  editRegionalModal.value.saving = true
+  try {
+    await updateRegionalRecommendation(f.id, f)
+    await loadRegionalRecs()
+    editRegionalModal.value.isEditing = false
+    await dialog.alert({ title: '수정 완료', message: `${f.univ_name} (${f.track_name}) 정보가 성공적으로 수정되었습니다.` })
+  } catch (e) {
+    await dialog.alert({ title: '수정 실패', message: e.message || '정보 수정 중 오류가 발생했습니다. DB 권한을 확인해 주세요.' })
+  } finally {
+    editRegionalModal.value.saving = false
+  }
+}
+
+async function deleteRegionalRow() {
+  const f = editRegionalModal.value.form
+  if (!(await dialog.confirm({
+    title: '항목 삭제',
+    message: `${f.univ_name} (${f.track_name}) 항목을 삭제하시겠습니까?`,
+    confirmText: '삭제',
+    level: 'danger'
+  }))) return
+
+  editRegionalModal.value.saving = true
+  try {
+    await deleteSingleRegionalRecommendation(f.id)
+    await loadRegionalRecs()
+    editRegionalModal.value.open = false
+  } catch (e) {
+    await dialog.alert({ title: '삭제 실패', message: e.message || '항목 삭제 중 오류가 발생했습니다.' })
+  } finally {
+    editRegionalModal.value.saving = false
+  }
+}
+
 const filteredRegionalRecs = computed(() => {
   if (!regionalSearch.value.trim()) return regionalRecs.value
   const kw = regionalSearch.value.trim().toLowerCase()
@@ -1176,5 +954,10 @@ const filteredRegionalRecs = computed(() => {
   )
 })
 
-onMounted(() => { loadUnivs(); loadQuotaStats(); loadRegionalRecs() })
+onMounted(async () => {
+  loadUnivs()
+  loadQuotaStats()
+  loadRegionalRecs()
+  disclosureCount.value = await getDisclosureCount()
+})
 </script>

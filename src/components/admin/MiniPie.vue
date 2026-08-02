@@ -2,7 +2,7 @@
   <svg :width="size" :height="size" :viewBox="`0 0 ${size} ${size}`">
     <circle :cx="cx" :cy="cy" :r="R" fill="none" stroke="#e2e8f0" stroke-width="6" />
     <circle
-      v-if="filled > 0"
+      v-if="numFilled > 0"
       :cx="cx"
       :cy="cy"
       :r="R"
@@ -20,8 +20,8 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  filled: { type: Number, required: true },
-  total:  { type: Number, required: true },
+  filled: { default: 0 },
+  total:  { default: 0 },
   size:   { type: Number, default: 40 },
 })
 
@@ -29,6 +29,8 @@ const R    = 14
 const cx   = computed(() => props.size / 2)
 const cy   = computed(() => props.size / 2)
 const circ = computed(() => 2 * Math.PI * R)
-const arc  = computed(() => (props.total > 0 ? props.filled / props.total : 0) * circ.value)
-const isFull = computed(() => props.filled >= props.total)
+const numFilled = computed(() => Number(props.filled) || 0)
+const numTotal  = computed(() => Number(props.total) || 0)
+const arc  = computed(() => (numTotal.value > 0 ? numFilled.value / numTotal.value : 0) * circ.value)
+const isFull = computed(() => numFilled.value >= numTotal.value && numTotal.value > 0)
 </script>

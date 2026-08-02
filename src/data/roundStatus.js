@@ -9,6 +9,7 @@
  * 매뉴얼도 함께 고쳐야 한다.
  */
 export const ROUND_STATUS_LABELS = {
+  DRAFT:     '대기중',
   OPEN:      '진행중',
   CLOSED:    '종료',
   FINALIZED: '마감',

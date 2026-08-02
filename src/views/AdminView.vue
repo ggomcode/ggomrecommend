@@ -171,12 +171,12 @@
 
     <!-- 메인 콘텐츠 -->
     <main
-        class="flex-1 overflow-y-auto"
+        class="flex-1 flex flex-col min-h-0 overflow-y-auto"
         style="scrollbar-gutter: stable;"
     >
       <!-- 탭 전환 페이드. key를 active로 잡아야 탭이 바뀔 때 트랜지션이 걸린다 -->
       <Transition name="tab-fade" mode="out-in">
-        <div :key="active">
+        <div :key="active" class="flex-1 flex flex-col min-h-0">
           <Suspense v-if="currentTab">
             <component :is="currentTab" />
           </Suspense>
@@ -244,43 +244,47 @@
 </template>
 
 <script setup>
-import { ref, computed, defineAsyncComponent, onMounted, provide } from 'vue'
+import { ref, computed, onMounted, provide } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { changeAdminPassword, getCurrentRound } from '../api/admin.js'
 import { dialog } from '../components/common/dialog.js'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig.js'
+import { safeAsyncComponent } from '../utils/asyncComponent.js'
 import {
-  Home, Trophy, LayoutGrid, Users, SlidersHorizontal,
-  Building2, BookOpen, RefreshCw, ChevronRight, LogOut, KeyRound, Menu, ScrollText, Settings, UserCheck
+  Home, Trophy, LayoutGrid, Users, SlidersHorizontal, FileSpreadsheet,
+  Building2, BookOpen, RefreshCw, ChevronRight, LogOut, KeyRound, Menu, ScrollText, Settings, UserCheck, School
 } from 'lucide-vue-next'
 
 const router = useRouter()
 const auth = useAuthStore()
 
 // ── 탭 컴포넌트 ──────────────────────────────────────────────
-const OverviewTab = defineAsyncComponent(() => import('../components/admin/OverviewTab.vue'))
-const ApprovalTab = defineAsyncComponent(() => import('../components/teacher/ApprovalTab.vue'))
-const RoundsTab   = defineAsyncComponent(() => import('../components/admin/RoundsTab.vue'))
-const ClassesTab  = defineAsyncComponent(() => import('../components/admin/ClassesTab.vue'))
-const StudentsTab = defineAsyncComponent(() => import('../components/admin/StudentsTab.vue'))
-const AreasTab    = defineAsyncComponent(() => import('../components/admin/AreasTab.vue'))
-const UnivTab     = defineAsyncComponent(() => import('../components/admin/UniversitiesTab.vue'))
-const SettingsTab = defineAsyncComponent(() => import('../components/admin/SettingsTab.vue'))
-const ManualTab   = defineAsyncComponent(() => import('../components/admin/ManualTab.vue'))
-const AuditTab    = defineAsyncComponent(() => import('../components/admin/AuditTab.vue'))
+const OverviewTab = safeAsyncComponent(() => import('../components/admin/OverviewTab.vue'))
+const ApprovalTab = safeAsyncComponent(() => import('../components/teacher/ApprovalTab.vue'))
+const RoundsTab   = safeAsyncComponent(() => import('../components/admin/RoundsTab.vue'))
+const ClassesTab  = safeAsyncComponent(() => import('../components/admin/ClassesTab.vue'))
+const StudentsTab = safeAsyncComponent(() => import('../components/admin/StudentsTab.vue'))
+const GradesTab   = safeAsyncComponent(() => import('../components/admin/GradesTab.vue'))
+const AreasTab    = safeAsyncComponent(() => import('../components/admin/AreasTab.vue'))
+const UnivTab     = safeAsyncComponent(() => import('../components/admin/UniversitiesTab.vue'))
+const ReportsTab  = safeAsyncComponent(() => import('../components/admin/ReportsTab.vue'))
+const SettingsTab = safeAsyncComponent(() => import('../components/admin/SettingsTab.vue'))
+const ManualTab   = safeAsyncComponent(() => import('../components/admin/ManualTab.vue'))
+const AuditTab    = safeAsyncComponent(() => import('../components/admin/AuditTab.vue'))
 
 // ── 메뉴 정의 ────────────────────────────────────────────────
 const mainMenus = [
   { key: 'home',     label: '개요',          icon: Home },
-  { key: 'classes',  label: '학급 관리',     icon: LayoutGrid },
+  { key: 'classes',  label: '학급 현황',     icon: School },
   { key: 'approval', label: '가입 승인',     icon: UserCheck },
   { key: 'students', label: '학생 관리',     icon: Users },
   { key: 'univs',    label: '대학 설정',     icon: Building2 },
-  { key: 'areas',    label: '전형요소 설정', icon: SlidersHorizontal },
-  { key: 'rounds',   label: '라운드 관리',   icon: Trophy },
-  { key: 'audit',    label: '감사 기록',     icon: ScrollText },
+  { key: 'areas',    label: '추천순위 기준 설정', icon: SlidersHorizontal },
+  { key: 'rounds',   label: '선발일정 관리', icon: Trophy },
+  { key: 'reports',  label: '결과 보고서',   icon: ScrollText },
+  { key: 'audit',    label: '감사 기록',     icon: BookOpen },
 ]
 
 const hasUpdate = ref(false)
@@ -303,6 +307,7 @@ const currentTab = computed(() => {
   if (active.value === 'areas')    return AreasTab
   if (active.value === 'univs')    return UnivTab
   if (active.value === 'rounds')   return RoundsTab
+  if (active.value === 'reports')  return ReportsTab
   if (active.value === 'update')   return SettingsTab
   if (active.value === 'manual')   return ManualTab
   if (active.value === 'audit')    return AuditTab

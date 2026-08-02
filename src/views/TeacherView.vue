@@ -259,7 +259,8 @@
 </template>
 
 <script setup>
-import { ref, computed, defineAsyncComponent, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { safeAsyncComponent } from '../utils/asyncComponent.js'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { teacherChangePassword, getCurrentRound } from '../api/teacher.js'
@@ -332,9 +333,8 @@ async function fetchClasses() {
     }
 
     const { data, error: err } = await supabase
-      .from('profiles')
+      .from('enrolled_students')
       .select('grade, class_no')
-      .eq('role', 'student')
       .eq('is_enrolled', true)
 
     if (err) throw err
@@ -380,9 +380,9 @@ watch([selectedGrade, selectedClassNo], ([g, c]) => {
 }, { immediate: true })
 
 // ── 탭 컴포넌트 ──────────────────────────────────────────────
-const ClassTab       = defineAsyncComponent(() => import('../components/teacher/ClassTab.vue'))
-const ApplicationTab = defineAsyncComponent(() => import('../components/teacher/ApplicationTab.vue'))
-const ResultsTab     = defineAsyncComponent(() => import('../components/teacher/ResultsTab.vue'))
+const ClassTab       = safeAsyncComponent(() => import('../components/teacher/ClassTab.vue'))
+const ApplicationTab = safeAsyncComponent(() => import('../components/teacher/ApplicationTab.vue'))
+const ResultsTab     = safeAsyncComponent(() => import('../components/teacher/ResultsTab.vue'))
 
 // ── 메뉴 정의 ────────────────────────────────────────────────
 const sidebarMenus = [

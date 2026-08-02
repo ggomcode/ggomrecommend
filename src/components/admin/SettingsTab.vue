@@ -64,7 +64,65 @@
         </form>
       </div>
 
-      <!-- 2. 학생 가입 설정 -->
+      <!-- 1-2. 정보공시 재학생 수 설정 -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+        <h2 class="text-base font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
+          <span class="w-1 h-3 bg-blue-600 rounded-full"></span>
+          정보공시 재학생 수 (% 인원제한 환산 기준)
+        </h2>
+        <p class="text-xs text-slate-400 mb-4">
+          4월 1일 기준 학교 재학생 수(정보공시 자료)를 입력합니다.
+          대학별 인원제한이 <strong>3%</strong>, <strong>11%</strong>처럼 퍼센트로 표시된 경우, 이 인원을 기준으로 계산합니다.<br>
+          예: 재학생 수 325명, 인원제한 3% → 325 × 3% = 9.75 → <strong>10명</strong> (소수점 올림)
+        </p>
+
+        <form @submit.prevent="saveDisclosureCount" class="flex gap-3 max-w-sm">
+          <div class="flex items-center gap-2 flex-1">
+            <input
+              v-model.number="disclosureCount"
+              type="number"
+              min="1"
+              max="9999"
+              placeholder="예: 325"
+              class="w-full text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white"
+            />
+            <span class="text-sm text-slate-600 dark:text-slate-300 font-bold whitespace-nowrap">명</span>
+          </div>
+          <button
+            type="submit"
+            :disabled="disclosureCountLoading"
+            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap"
+          >
+            {{ disclosureCountLoading ? '저장 중…' : '저장' }}
+          </button>
+        </form>
+        <p v-if="disclosureCount" class="text-xs text-slate-500 mt-2">
+          현재 설정: <strong class="text-blue-600">{{ disclosureCount }}명</strong>
+        </p>
+        <p v-else class="text-xs text-amber-600 mt-2">
+          ⚠️ 미설정 상태입니다. % 인원제한이 있는 경우 무제한으로 처리됩니다.
+        </p>
+
+        <!-- % 인원 동기화 버튼 -->
+        <div class="mt-4 pt-4 border-t border-slate-100">
+          <p class="text-xs text-slate-500 mb-2">
+            재학생 수를 저장한 후, 아래 버튼으로 <strong>대학별 % 인원을 실제 명수로 재계산</strong>하여
+            대학 설정 탭과 결과 보고서에 <strong>10명 (3%)</strong> 형식으로 표시됩니다.
+          </p>
+          <button
+            type="button"
+            :disabled="syncLoading || !disclosureCount"
+            @click="doSyncPercentQuotas"
+            class="text-xs font-bold text-white border-none rounded-lg px-4 py-2 cursor-pointer transition-colors"
+            :class="syncLoading || !disclosureCount ? 'bg-slate-300 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'"
+          >
+            {{ syncLoading ? '재계산 중…' : '🔄 % 인원 재계산 동기화' }}
+          </button>
+          <p v-if="syncResult" class="text-xs mt-2 whitespace-pre-line" :class="syncResult.startsWith('❌') ? 'text-red-600' : 'text-emerald-700'">{{ syncResult }}</p>
+        </div>
+      </div>
+
+
       <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
         <h2 class="text-base font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
           <span class="w-1 h-3 bg-blue-600 rounded-full"></span>
@@ -115,6 +173,33 @@
           </button>
         </form>
       </div>
+
+      <!-- 4. 전형요소 등록 후 세부 수정 허용 (테스트/수정 모드) -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-800 dark:text-white mb-1 flex items-center gap-2">
+              <span class="w-1 h-3 bg-blue-600 rounded-full"></span>
+              전형요소 등록 후 세부 수정 허용 (테스트/수정 모드)
+            </h2>
+            <p class="text-xs text-slate-400">
+              전형요소를 생성한 후에도 이름, 만점 배점, 산출 방식, 탐색 방향 등 세부 옵션을 자유롭게 수정할 수 있도록 허용합니다. (테스트 기간 권장)
+            </p>
+          </div>
+          <button
+            type="button"
+            @click="toggleAllowAreaEdit"
+            :disabled="areaEditLoading"
+            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+            :class="allowAreaEdit ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'"
+          >
+            <span
+              class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+              :class="allowAreaEdit ? 'translate-x-5' : 'translate-x-0'"
+            />
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -123,6 +208,7 @@
 import { ref, onMounted } from 'vue'
 import { supabase } from '../../utils/supabaseClient'
 import { fetchSchoolName, setSchoolNameConfig } from '../../utils/schoolConfig'
+import { getDisclosureCount, setDisclosureCount, syncRegionalToUniversities } from '../../api/admin.js'
 
 const inputSchoolName = ref('')
 const schoolNameLoading = ref(false)
@@ -130,14 +216,26 @@ const schoolNameLoading = ref(false)
 const classCount = ref(11)
 const classCountLoading = ref(false)
 
+const disclosureCount = ref(null)
+const disclosureCountLoading = ref(false)
+const syncLoading = ref(false)
+const syncResult = ref('')
+
 const regCode = ref('')
 const regCodeLoading = ref(false)
 
 const openaiKey = ref('')
 const openaiLoading = ref(false)
 
+const allowAreaEdit = ref(false)
+const areaEditLoading = ref(false)
+
 async function loadConfig() {
   inputSchoolName.value = await fetchSchoolName()
+  const localEdit = localStorage.getItem('pcm_allow_area_edit') === 'true'
+  allowAreaEdit.value = localEdit
+  // 정보공시 재학생 수 로드
+  disclosureCount.value = await getDisclosureCount()
   if (!supabase) return
   try {
     const { data: countData } = await supabase
@@ -166,8 +264,37 @@ async function loadConfig() {
     if (keyData && keyData.value) {
       openaiKey.value = keyData.value
     }
+
+    const { data: editData } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', 'allow_area_edit')
+      .maybeSingle()
+    if (editData && editData.value) {
+      allowAreaEdit.value = editData.value === 'true'
+      localStorage.setItem('pcm_allow_area_edit', editData.value)
+    }
   } catch (e) {
     console.error('Error loading config:', e)
+  }
+}
+
+async function toggleAllowAreaEdit() {
+  allowAreaEdit.value = !allowAreaEdit.value
+  areaEditLoading.value = true
+  localStorage.setItem('pcm_allow_area_edit', String(allowAreaEdit.value))
+  if (supabase) {
+    try {
+      await supabase
+        .from('config')
+        .upsert({ key: 'allow_area_edit', value: String(allowAreaEdit.value) })
+    } catch (e) {
+      console.error(e)
+    } finally {
+      areaEditLoading.value = false
+    }
+  } else {
+    areaEditLoading.value = false
   }
 }
 
@@ -176,7 +303,7 @@ async function saveSchoolName() {
   try {
     const finalName = await setSchoolNameConfig(inputSchoolName.value)
     inputSchoolName.value = finalName
-    alert(`학교 이름이 '${finalName}'(으)로 설정되었습니다.`)
+    alert('학교 이름이 \'' + finalName + '\'(으)로 설정되었습니다.')
   } catch (e) {
     console.error(e)
     alert('학교 이름 저장 도중 오류가 발생했습니다.')
@@ -195,7 +322,7 @@ async function saveClassCount() {
 
     if (error) throw error
     localStorage.setItem('pcm_class_count', String(classCount.value))
-    alert(`3학년 학급 수가 ${classCount.value}반으로 변경되었습니다.`)
+    alert('3학년 학급 수가 ' + classCount.value + '반으로 변경되었습니다.')
   } catch (e) {
     console.error(e)
     alert('학급 수 변경 도중 오류가 발생했습니다.')
@@ -204,6 +331,49 @@ async function saveClassCount() {
   }
 }
 
+async function saveDisclosureCount() {
+  if (!disclosureCount.value || disclosureCount.value < 1) {
+    alert('재학생 수를 1명 이상으로 입력해 주세요.')
+    return
+  }
+  disclosureCountLoading.value = true
+  try {
+    await setDisclosureCount(disclosureCount.value)
+    syncResult.value = ''
+    alert(`정보공시 재학생 수가 ${disclosureCount.value}명으로 저장되었습니다.`)
+  } catch (e) {
+    console.error(e)
+    alert('저장 도중 오류가 발생했습니다.')
+  } finally {
+    disclosureCountLoading.value = false
+  }
+}
+
+async function doSyncPercentQuotas() {
+  if (!disclosureCount.value || disclosureCount.value < 1) {
+    alert('먼저 정보공시 재학생 수를 저장해 주세요.')
+    return
+  }
+  syncLoading.value = true
+  syncResult.value = ''
+  try {
+    const res = await syncRegionalToUniversities()
+    const updated = res.updatedCount || 0
+    const created = res.count || 0
+    if (updated > 0 || created > 0) {
+      syncResult.value = '✅ 완료: 신규 ' + created + '건 등록, 기존 ' + updated + '건 업데이트.\n대학 설정 탭과 결과 보고서를 새로고침하면 적용됩니다.'
+    } else {
+      syncResult.value = '업데이트할 항목이 없습니다. (엑셀 데이터가 없거나 이미 최신 상태)'
+    }
+    if (res.percentWarnings && res.percentWarnings.length > 0) {
+      syncResult.value += '\n⚠️ 처리 안된 항목:\n' + res.percentWarnings.join('\n')
+    }
+  } catch (e) {
+    syncResult.value = '❌ 오류: ' + (e.message || '동기화 중 오류 발생')
+  } finally {
+    syncLoading.value = false
+  }
+}
 async function saveRegCode() {
   if (!supabase) return
   regCodeLoading.value = true

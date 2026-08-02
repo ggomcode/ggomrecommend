@@ -62,8 +62,18 @@ export const teacherGetStudents = async () => {
     grade: s.grade,
     class_no: s.class_no,
     seq_no: s.student_no || s.seq_no,
-    phone_last4: s.student_phone_last4 || '0000',
-    status: s.status || 'approved'
+    phone_last4: s.student_phone_hash ? '****' : '0000',
+    status: s.status || 'approved',
+    gpa_1_1: s.gpa_1_1 || null,
+    gpa_1_2: s.gpa_1_2 || null,
+    gpa_1_all: s.gpa_1_all || null,
+    gpa_2_1: s.gpa_2_1 || null,
+    gpa_2_2: s.gpa_2_2 || null,
+    gpa_2_all: s.gpa_2_all || null,
+    gpa_3_1: s.gpa_3_1 || null,
+    gpa_3_2: s.gpa_3_2 || null,
+    gpa_3_all: s.gpa_3_all || null,
+    gpa_overall: s.gpa_overall != null ? s.gpa_overall : null
   })))
 }
 

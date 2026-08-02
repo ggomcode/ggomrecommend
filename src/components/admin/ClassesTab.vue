@@ -5,24 +5,9 @@
     <div class="flex items-end justify-between flex-wrap gap-3 mb-5">
       <div>
         <p class="text-base mb-1" style="color: #94a3b8;">관리자</p>
-        <h1 class="text-2xl font-semibold" style="color: #1e293b; margin: 0;">학급 관리</h1>
+        <h1 class="text-2xl font-semibold" style="color: #1e293b; margin: 0;">학급 현황</h1>
       </div>
       <div class="flex flex-wrap items-center gap-2">
-        <button
-            class="flex items-center gap-1.5 text-base font-medium rounded-lg disabled:opacity-40"
-            style="padding: 9px 16px; border: 1px solid #e2e8f0; background: white; color: #475569; cursor: pointer;"
-            :disabled="uploading || downloading"
-            @click="dlTemplate"
-        >양식 다운로드</button>
-        <label
-            class="flex items-center gap-1.5 text-base font-medium rounded-lg cursor-pointer"
-            :class="uploading ? 'opacity-60' : ''"
-            style="padding: 9px 16px; background: #2563eb; color: white;"
-        >
-          {{ uploading ? '가져오는 중…' : '가져오기' }}
-          <input type="file" accept=".xlsx,.csv" class="hidden" :disabled="uploading" @change="onFileChange" />
-        </label>
-        <span style="color: #cbd5e1; user-select: none;">|</span>
         <button
             class="flex items-center gap-1.5 text-base font-medium rounded-lg disabled:opacity-40"
             style="padding: 9px 16px; border: none; background: #16a34a; color: white; cursor: pointer;"
@@ -245,13 +230,18 @@ function startEdit(row) {
 }
 
 async function saveEdit(row) {
-  const body = {}
-  if (editTeacherName.value !== (row.teacher_name ?? '')) body.teacher_name = editTeacherName.value
-  if (editPassword.value) body.password = editPassword.value
+  const teacherNameInput = editTeacherName.value.trim()
+  if (!teacherNameInput) {
+    error.value = '담임명을 입력해주세요.'
+    return
+  }
   saving.value = true
   error.value = ''
   try {
-    await upsertClass(row.grade, row.class_no, body)
+    await upsertClass(row.grade, row.class_no, {
+      teacher_name: teacherNameInput,
+      password: editPassword.value.trim() || undefined
+    })
     editing.value = null
     await load()
   } catch (e) {

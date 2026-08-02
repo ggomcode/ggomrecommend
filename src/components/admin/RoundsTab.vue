@@ -2,105 +2,151 @@
   <div class="py-8 px-4 sm:px-10">
 
     <!-- 페이지 헤더 -->
-    <div class="mb-5">
-      <p class="text-base mb-1" style="color: #94a3b8;">관리자</p>
-      <h1 class="text-2xl font-semibold" style="color: #1e293b; margin: 0;">라운드 관리</h1>
+    <div class="mb-5 flex items-center justify-between">
+      <div>
+        <p class="text-base mb-1" style="color: #94a3b8;">관리자</p>
+        <h1 @click="selected = null" class="text-2xl font-semibold cursor-pointer hover:text-blue-600 transition-colors" style="color: #1e293b; margin: 0;">선발일정 관리</h1>
+      </div>
+      <button
+        v-if="selected"
+        @click="selected = null"
+        class="text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-sm flex items-center gap-1.5 cursor-pointer hover:bg-slate-50 transition-all"
+      >
+        📅 전체 선발일정 목록보기
+      </button>
     </div>
 
-    <HelpBox
-      v-if="rounds.length === 0"
-      class="mb-5"
-      storage-key="rounds-empty"
-      :title="HELP_EMPTY.title"
-      :intro="HELP_EMPTY.intro"
-      :items="HELP_EMPTY.items"
-    />
 
-    <div class="flex flex-col lg:flex-row lg:items-start gap-6">
 
-      <!-- ── 좌측: 라운드 목록 ────────────────────────────────── -->
-      <div class="flex-shrink-0 flex flex-col w-full lg:w-[300px]">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold" style="color: #1e293b;">라운드 목록</h2>
-          <button
-            class="text-base font-medium rounded-lg whitespace-nowrap disabled:opacity-40"
-            style="padding: 7px 14px; border: none; background: #2563eb; color: white; cursor: pointer;"
-            :disabled="hasOpenRound || loading"
-            @click="handleOpenRound"
-          >+ 라운드 열기</button>
+    <div class="w-full">
+      <!-- 1) 기본 화면: 차수별 선발일정 전체 관리 대시보드 -->
+      <div v-if="!selected" class="space-y-5">
+        <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h2 class="text-xl font-bold text-slate-800 m-0 flex items-center gap-2">
+              <span>📅</span> 차수별 선발일정 전체 관리
+            </h2>
+            <p class="text-xs text-slate-500 mt-1 m-0">
+              학교장 추천전형 차수별(1차, 2차, 3차...) 접수기간, 심사일정, 결과 공지일을 등록 및 수정할 수 있으며, <strong>Supabase DB (config 테이블)</strong>에 안전하게 동기화됩니다.
+            </p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button
+              class="text-xs font-bold px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm transition-colors cursor-pointer disabled:opacity-40"
+              :disabled="loading"
+              @click="handleOpenRound"
+            >+ 차수 추가</button>
+            <button @click="saveAllSchedules" class="text-xs font-bold px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm transition-colors cursor-pointer">
+              💾 전체 일정 DB 저장
+            </button>
+          </div>
         </div>
 
-        <div class="flex flex-col gap-2">
-          <div
-            v-for="r in rounds"
-            :key="r.id"
-            class="rounded-xl transition-all"
-            :style="{
-              background: 'white',
-              border: selected?.id === r.id ? '1px solid #93c5fd' : '1px solid #e2e8f0',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
-            }"
-          >
-            <!-- 클릭 영역 -->
-            <div class="cursor-pointer" style="padding: 14px 16px;" @click="selectRound(r)">
-              <p class="text-lg font-semibold" style="color: #1e293b; margin: 0;">{{ r.id }}차 라운드</p>
-
-              <div class="mt-1.5 flex items-center justify-start gap-2">
-                <span
-                  class="text-base font-medium"
-                  style="padding: 2px 10px; border-radius: 999px; white-space: nowrap;"
-                  :style="{
-                    background: r.status === 'OPEN' ? '#dcfce7' : r.status === 'CLOSED' ? '#dbeafe' : '#f3e8ff',
-                    color:      r.status === 'OPEN' ? '#15803d' : r.status === 'CLOSED' ? '#1d4ed8' : '#7c3aed',
-                  }"
+          <!-- 차수별 일정 입력 카드 목록 -->
+          <div class="grid grid-cols-1 gap-4">
+            <div v-for="r in rounds" :key="r.id" class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:border-blue-300 transition-all space-y-4">
+              <div class="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-3 flex-wrap">
+                  <span class="text-base font-bold text-slate-900">{{ r.id }}차 선발일정</span>
+                  <!-- 진행 상태 배지 (자동 동기화) -->
+                  <div class="flex items-center gap-1.5">
+                    <label class="text-xs text-slate-400 font-semibold">진행 상태:</label>
+                    <span
+                      class="text-xs font-bold px-3 py-1 rounded-full border shadow-sm transition-all flex items-center gap-1"
+                      :style="getStatusStyle(getDisplayStatus(r))"
+                    >
+                      <span v-if="getDisplayStatus(r) === 'DRAFT'">⏳ 대기중</span>
+                      <span v-else-if="getDisplayStatus(r) === 'OPEN'">🟢 진행중</span>
+                      <span v-else-if="getDisplayStatus(r) === 'CLOSED'">🔵 종료</span>
+                      <span v-else-if="getDisplayStatus(r) === 'FINALIZED'">🟣 마감</span>
+                    </span>
+                  </div>
+                </div>
+                <button
+                  @click="selectRound(r)"
+                  class="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer border border-blue-200 flex items-center gap-1"
                 >
-                  {{ roundStatusLabel(r.status) }}
-                </span>
+                  🔍 지원 현황 및 추천 확정 보기 ➔
+                </button>
+              </div>
 
-                <span class="text-base" style="color: #94a3b8;">
-                  <template v-if="r.status === 'OPEN'">{{ fmtDt(r.opened_at) }}</template>
-                  <template v-else-if="r.status === 'CLOSED'">{{ fmtDt(r.closed_at) }}</template>
-                  <template v-else-if="r.status === 'FINALIZED'">{{ fmtDt(r.finalized_at) }}</template>
-                </span>
+              <!-- 달력(Datepicker) 입력 구역 -->
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- 📅 희망자 접수 기간 -->
+                <div class="space-y-1">
+                  <label class="block text-xs font-bold text-slate-700">📅 희망자 접수 기간</label>
+                  <div class="flex items-center gap-1.5">
+                    <input
+                      type="date"
+                      v-model="getSchedule(r.id).apply_start"
+                      class="w-full text-xs font-semibold border border-slate-200 rounded-xl px-2.5 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 text-slate-800"
+                    />
+                    <span class="text-slate-400 font-bold text-xs">~</span>
+                    <input
+                      type="date"
+                      v-model="getSchedule(r.id).apply_end"
+                      class="w-full text-xs font-semibold border border-slate-200 rounded-xl px-2.5 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 text-slate-800"
+                    />
+                  </div>
+                  <p class="text-[11px] font-bold text-blue-600 m-0 pt-1">
+                    📌 {{ formatKoreanPeriod(getSchedule(r.id).apply_start, getSchedule(r.id).apply_end) }}
+                  </p>
+                </div>
 
+                <!-- 🤝 대상자 선정 협의일 -->
+                <div class="space-y-1">
+                  <label class="block text-xs font-bold text-slate-700">🤝 대상자 선정 협의일</label>
+                  <input
+                    type="date"
+                    v-model="getSchedule(r.id).eval_date"
+                    class="w-full text-xs font-semibold border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 text-slate-800"
+                  />
+                  <p class="text-[11px] font-bold text-blue-600 m-0 pt-1">
+                    📌 {{ formatKoreanDate(getSchedule(r.id).eval_date) }}
+                  </p>
+                </div>
+
+                <!-- 📢 선정 결과 공지일 -->
+                <div class="space-y-1">
+                  <label class="block text-xs font-bold text-slate-700">📢 선정 결과 공지일</label>
+                  <input
+                    type="date"
+                    v-model="getSchedule(r.id).announce_date"
+                    class="w-full text-xs font-semibold border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 text-slate-800"
+                  />
+                  <p class="text-[11px] font-bold text-blue-600 m-0 pt-1">
+                    📌 {{ formatKoreanDate(getSchedule(r.id).announce_date) }}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-
-          <!-- 로드 오류 — 서버 오류를 "라운드 없음" 빈 상태로 위장하지 않는다 -->
-          <div v-if="roundsLoadError" class="text-base text-center" style="padding: 32px 12px; color: #991b1b;">
-            라운드 목록을 불러오지 못했습니다:<br>{{ roundsLoadError }}
-          </div>
-          <div v-else-if="rounds.length === 0" class="text-base text-center" style="padding: 32px 0; color: #94a3b8;">
-            라운드 없음
-          </div>
-        </div>
-      </div>
-
-      <!-- ── 우측: 라운드 상세 ──────────────────────────────────── -->
-      <div class="flex-1 min-w-0">
-        <div v-if="!selected" class="flex items-center justify-center" style="height: 240px;">
-          <p class="text-base" style="color: #94a3b8;">라운드를 선택하거나 새 라운드를 열어주세요</p>
         </div>
 
+        <!-- 2) 차수 선택 시: 지원자 현황 및 추천 확정 관리 화면 -->
         <template v-else>
+          <div class="mb-4 flex items-center justify-between">
+            <button
+              @click="selected = null"
+              class="text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-sm flex items-center gap-1.5 cursor-pointer hover:bg-slate-50 transition-all"
+            >
+              ⬅️ 전체 선발일정 관리로 돌아가기
+            </button>
+          </div>
+
           <div class="rounded-xl mb-5"
             style="padding: 18px 22px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
             <div class="flex items-center gap-3 flex-wrap">
-              <span class="text-xl font-bold" style="color: #1e293b;">{{ selected.id }}차 라운드</span>
+              <span class="text-xl font-bold" style="color: #1e293b;">{{ selected.id }}차 선발 현황</span>
               <span
-                  class="text-base font-semibold"
+                  class="text-base font-semibold transition-all"
                   style="padding: 4px 14px; border: 1px solid; border-radius: 999px;"
-                  :style="{
-                    background:  selected.status === 'OPEN' ? '#dcfce7' : selected.status === 'CLOSED' ? '#dbeafe' : '#f3e8ff',
-                    color:       selected.status === 'OPEN' ? '#15803d' : selected.status === 'CLOSED' ? '#1d4ed8' : '#7c3aed',
-                    borderColor: selected.status === 'OPEN' ? '#bbf7d0' : selected.status === 'CLOSED' ? '#bfdbfe' : '#e9d5ff'
-                  }"
+                  :style="getStatusStyle(getDisplayStatus(selected))"
               >
-                {{ roundStatusLabel(selected.status) }}</span>
+                {{ roundStatusLabel(getDisplayStatus(selected)) }}</span>
 
               <!-- 상태 액션 버튼 -->
-              <template v-if="selected.status === 'OPEN'">
+              <template v-if="getDisplayStatus(selected) === 'OPEN'">
                 <button
                   class="text-base font-medium rounded-lg whitespace-nowrap disabled:opacity-40"
                   style="padding: 4px 14px; border: 1px solid #fca5a5; background: white; color: #ef4444; cursor: pointer;"
@@ -108,7 +154,7 @@
                   @click="handleCloseRound(selected.id)"
                 >종료하기</button>
               </template>
-              <template v-else-if="selected.status === 'CLOSED'">
+              <template v-else-if="getDisplayStatus(selected) === 'CLOSED'">
                 <button
                   class="text-base font-medium rounded-lg whitespace-nowrap disabled:opacity-40"
                   style="padding: 4px 14px; border: 1px solid #e2e8f0; background: white; color: #64748b; cursor: pointer;"
@@ -123,18 +169,51 @@
                 >마감하기</button>
               </template>
 
-              <!-- 날짜 -->
-              <div class="w-full flex gap-1 items-center flex-wrap">
-              <span class="text-base" style="color: #94a3b8;">{{ fmtDt(selected.opened_at) }} 개시</span>
-              <span v-if="selected.closed_at" class="text-base" style="color: #94a3b8;">→ {{ fmtDt(selected.closed_at) }} 입력 종료</span>
-              <span v-if="selected.finalized_at" class="text-base" style="color: #94a3b8;">→ {{ fmtDt(selected.finalized_at) }} 최종 마감</span>
+              <!-- 날짜 정보 (대기중일 때는 숨김) -->
+              <div v-if="getDisplayStatus(selected) !== 'DRAFT'" class="w-full flex gap-1.5 items-center flex-wrap text-sm text-slate-400 mt-2 font-medium">
+                <span>
+                  🟢 접수 개시: {{ fmtDt(selected.opened_at) }}
+                </span>
+                <span v-if="selected.closed_at">
+                  • 🔵 입력 종료: {{ fmtDt(selected.closed_at) }}
+                </span>
+                <span v-if="selected.finalized_at">
+                  • 🟣 최종 마감: {{ fmtDt(selected.finalized_at) }}
+                </span>
+              </div>
+
+              <!-- 📅 차수별 상세 선발 일정 편집 카드 -->
+              <div class="w-full mt-3 pt-4 border-t border-slate-100">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-base font-semibold text-slate-800">📅 {{ selected.id }}차 선발 세부 일정 설정</span>
+                  <button @click="saveSchedule" class="text-xs font-semibold px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+                    일정 저장
+                  </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">희망자 접수 기간</label>
+                    <input type="text" v-model="curSchedule.apply_period" placeholder="예: 2026.08.19.(수)~08.20.(목) 1차 희망자 접수"
+                      class="w-full text-base border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 font-medium text-slate-800" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">대상자 선정 협의일</label>
+                    <input type="text" v-model="curSchedule.eval_date" placeholder="예: 2026.08.21.(금) 1차 대상자 선정 협의"
+                      class="w-full text-base border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 font-medium text-slate-800" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">선정 결과 공지일</label>
+                    <input type="text" v-model="curSchedule.announce_date" placeholder="예: 2026.08.24.(월) 1차 대상자 선정 결과 공지"
+                      class="w-full text-base border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 font-medium text-slate-800" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- OPEN 라운드 담임 확정 현황 -->
           <div
-            v-if="selected.status === 'OPEN' && confirmationStatus"
+            v-if="getDisplayStatus(selected) === 'OPEN' && confirmationStatus"
             class="rounded-xl mb-5"
             style="padding: 18px 22px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);"
           >
@@ -537,7 +616,6 @@
         </template>
       </div>
     </div>
-  </div>
 
   <!-- 미선발 처리 모달 -->
   <Teleport to="body">
@@ -643,9 +721,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, inject } from 'vue'
+import { ref, computed, watch, onMounted, inject } from 'vue'
+import { supabase } from '../../utils/supabaseClient.js'
 import {
   getRounds, openRound, closeRound, reopenRound, finalizeRound,
+  updateRoundStatus,
   calculateScores, getResults, recommendResult, unrecommendResult,
   getApplications, abandonApplication,
   excludeApplication, clearApplicationExclusion,
@@ -664,12 +744,12 @@ import { roundStatusLabel } from '../../data/roundStatus.js'
 import { formatScore } from '../../utils/scorePreviewShared.js'
 
 const HELP_EMPTY = {
-  title: '도움말 — 첫 라운드 열기 전 확인하세요',
-  intro: '라운드는 한 번의 추천 진행 단위입니다. 라운드를 열면 담임교사가 지원자를 등록할 수 있게 됩니다.',
+  title: '도움말 — 첫 선발 차수 추가 전 확인하세요',
+  intro: '선발 차수는 한 번의 추천 진행 단위입니다. 차수를 추가하면 담임교사가 지원자를 등록할 수 있게 됩니다.',
   items: [
-    '라운드를 열기 전에 학급, 학생 명단, 전형요소, 대학 설정이 모두 끝났는지 확인하세요.',
-    { text: '특히 전형요소는 라운드가 종료된 뒤에는 수정할 수 없으니 반드시 먼저 완성하세요.', warn: true },
-    '준비가 끝났으면 "+ 라운드 열기"를 누르세요.',
+    '선발 차수를 추가하기 전에 학급, 학생 명단, 전형요소, 대학 설정이 모두 끝났는지 확인하세요.',
+    { text: '특히 전형요소는 선발 차수가 종료된 뒤에는 수정할 수 없으니 반드시 먼저 완성하세요.', warn: true },
+    '준비가 끝났으면 "+ 차수 추가"를 누르세요.',
   ],
 }
 
@@ -684,8 +764,182 @@ const refreshSidebarRound = inject('refreshRound', () => {})
 
 const rounds  = ref([])
 const selected = ref(null)
-const view    = ref('apps')
 const loading = ref(false)
+const view = ref('apps')
+
+const DEFAULT_SCHEDULES = {
+  1: {
+    apply_start: '2026-08-19',
+    apply_end: '2026-08-20',
+    eval_date: '2026-08-21',
+    announce_date: '2026-08-24'
+  },
+  2: {
+    apply_start: '2026-08-26',
+    apply_end: '2026-08-27',
+    eval_date: '2026-08-28',
+    announce_date: '2026-08-31'
+  },
+  3: {
+    apply_start: '2026-09-02',
+    apply_end: '2026-09-03',
+    eval_date: '2026-09-04',
+    announce_date: '2026-09-04'
+  }
+}
+
+function formatKoreanDate(dateStr) {
+  if (!dateStr) return '날짜 미선택'
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return dateStr
+    const days = ['일', '월', '화', '수', '목', '금', '토']
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const date = String(d.getDate()).padStart(2, '0')
+    const day = days[d.getDay()]
+    return `${year}.${month}.${date}.(${day})`
+  } catch {
+    return dateStr
+  }
+}
+
+function formatKoreanPeriod(startStr, endStr) {
+  if (!startStr && !endStr) return '접수 기간 미선택'
+  const startFmt = formatKoreanDate(startStr)
+  const endFmt = formatKoreanDate(endStr)
+  if (startStr && endStr) return `${startFmt} ~ ${endFmt}`
+  return startFmt || endFmt
+}
+
+function getStatusStyle(status) {
+  if (status === 'OPEN') return { background: '#dcfce7', color: '#15803d', borderColor: '#bbf7d0' }
+  if (status === 'CLOSED') return { background: '#dbeafe', color: '#1d4ed8', borderColor: '#bfdbfe' }
+  if (status === 'FINALIZED') return { background: '#f3e8ff', color: '#7c3aed', borderColor: '#e9d5ff' }
+  return { background: '#f1f5f9', color: '#64748b', borderColor: '#cbd5e1' }
+}
+
+
+async function onRoundStatusChange(r, newStatus) {
+  let dbStatus = newStatus
+  if (newStatus === 'DRAFT') {
+    dbStatus = 'OPEN'
+  }
+  try {
+    await updateRoundStatus(r.id, dbStatus)
+    r.status = dbStatus
+    await loadRounds()
+    await refreshSidebarRound()
+    await dialog.alert({ title: '상태 변경 완료', message: `${r.id}차 선발 상태가 [${roundStatusLabel(newStatus)}] (으)로 변경되었습니다.`, level: 'success' })
+  } catch (e) {
+    await dialog.alert({ title: '상태 변경 실패', message: e.message, level: 'error' })
+  }
+}
+
+const schedulesMap = ref({})
+const curSchedule = ref({ apply_start: '', apply_end: '', eval_date: '', announce_date: '' })
+
+async function loadSchedules() {
+  let map = {}
+  let existsInDb = false
+  if (supabase) {
+    try {
+      const { data } = await supabase.from('config').select('value').eq('key', 'round_schedules_map').maybeSingle()
+      if (data && data.value) {
+        try {
+          map = JSON.parse(data.value)
+          existsInDb = true
+        } catch {}
+      }
+    } catch {}
+  }
+  if (!existsInDb) {
+    const local = localStorage.getItem('round_schedules_map')
+    if (local) {
+      try {
+        map = JSON.parse(local)
+        existsInDb = true
+      } catch {}
+    }
+  }
+
+  // 만약 DB와 로컬 스토리지에 둘 다 데이터가 없는 상태라면 DEFAULT_SCHEDULES로 자동 생성
+  if (!existsInDb && supabase) {
+    try {
+      await supabase.from('config').upsert({
+        key: 'round_schedules_map',
+        value: JSON.stringify(DEFAULT_SCHEDULES)
+      })
+    } catch (e) {
+      console.error('Failed to auto-initialize round_schedules_map:', e)
+    }
+  }
+
+  schedulesMap.value = { ...DEFAULT_SCHEDULES, ...map }
+  updateCurSchedule()
+}
+
+function updateCurSchedule() {
+  if (!selected.value) return
+  const id = selected.value.id
+  const exist = schedulesMap.value[id] || DEFAULT_SCHEDULES[id]
+  if (exist) {
+    curSchedule.value = { ...exist }
+  } else {
+    curSchedule.value = {
+      apply_start: '',
+      apply_end: '',
+      eval_date: '',
+      announce_date: ''
+    }
+  }
+}
+
+watch(() => selected.value?.id, () => {
+  updateCurSchedule()
+})
+
+function getSchedule(id) {
+  if (!schedulesMap.value[id]) {
+    const exist = DEFAULT_SCHEDULES[id] || {
+      apply_start: '',
+      apply_end: '',
+      eval_date: '',
+      announce_date: ''
+    }
+    schedulesMap.value[id] = { ...exist }
+  }
+  return schedulesMap.value[id]
+}
+
+async function saveAllSchedules() {
+  localStorage.setItem('round_schedules_map', JSON.stringify(schedulesMap.value))
+  if (supabase) {
+    try {
+      await supabase.from('config').upsert({
+        key: 'round_schedules_map',
+        value: JSON.stringify(schedulesMap.value)
+      })
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  // 일정을 저장한 후 각 차수의 진행 상태를 날짜 기준에 맞게 강제 업데이트
+  if (rounds.value.length > 0) {
+    rounds.value = await syncRoundStatuses(rounds.value)
+    await refreshSidebarRound()
+  }
+
+  await dialog.alert({ title: 'DB 저장 완료', message: '모든 선발 차수 일정과 실시간 진행 상태가 DB에 정상 저장 및 동기화되었습니다.', level: 'success' })
+}
+
+async function saveSchedule() {
+  if (!selected.value) return
+  const id = selected.value.id
+  schedulesMap.value[id] = { ...curSchedule.value }
+  await saveAllSchedules()
+}
 
 const apps    = ref([])
 const results = ref([])
@@ -727,9 +981,22 @@ const subTabs = [
 
 const hasOpenRound = computed(() => rounds.value.some(r => r.status === 'OPEN' || r.status === 'CLOSED'))
 
+const canAddRound = computed(() => true)
+
 const helpBox = computed(() => {
   if (!selected.value) return null
-  const s = selected.value.status
+  const s = getDisplayStatus(selected.value)
+  if (s === 'DRAFT') {
+    return {
+      key: 'rounds-draft',
+      title: '도움말 — 접수 시작 전 (대기 중)',
+      intro: '현재 선발 차수의 접수 시작 전 단계입니다.',
+      items: [
+        '설정된 희망자 접수 기간이 되면 자동으로 접수가 시작되어 담임교사가 지원자를 등록할 수 있게 됩니다.',
+        '필요한 경우 세부 일정(접수 기간, 협의일, 공지일)을 확인하고 조율하세요.',
+      ],
+    }
+  }
   if (s === 'OPEN') {
     return {
       key: 'rounds-open',
@@ -931,10 +1198,76 @@ function getAreaScore(r, areaId) {
   }
 }
 
+function getDisplayStatus(r) {
+  if (r.status === 'CLOSED') return 'CLOSED'
+  if (r.status === 'FINALIZED') return 'FINALIZED'
+
+  const sched = schedulesMap.value[r.id] || DEFAULT_SCHEDULES[r.id]
+  if (!sched || !sched.apply_start || !sched.apply_end) return r.status
+
+  // 한국 시간(KST) 기준 오늘 날짜 YYYY-MM-DD 생성
+  const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
+
+  if (todayStr < sched.apply_start) {
+    return 'DRAFT' // UI 수준에서만 대기중으로 표시
+  } else if (todayStr > sched.apply_end) {
+    return 'CLOSED' // 접수 종료
+  } else {
+    return 'OPEN' // 진행중
+  }
+}
+
+async function syncRoundStatuses(roundsList) {
+  if (!supabase || !roundsList || roundsList.length === 0) return roundsList
+
+  // 한국 시간(KST) 기준 오늘 날짜 YYYY-MM-DD 생성
+  const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
+  
+  const updatedList = []
+  for (const r of roundsList) {
+    // 이미 최종 마감(FINALIZED)된 라운드는 건드리지 않음
+    if (r.status === 'FINALIZED') {
+      updatedList.push(r)
+      continue
+    }
+
+    const sched = schedulesMap.value[r.id] || DEFAULT_SCHEDULES[r.id]
+    if (!sched || !sched.apply_start || !sched.apply_end) {
+      updatedList.push(r)
+      continue
+    }
+
+    let targetStatus = r.status
+    if (todayStr < sched.apply_start) {
+      targetStatus = 'OPEN' // DB check constraint를 우회하기 위해 DB상에는 OPEN으로 저장하되, UI에서 DRAFT로 표시
+    } else if (todayStr > sched.apply_end) {
+      // 종료(CLOSED) 상태로 자동 이관
+      targetStatus = 'CLOSED' 
+    } else {
+      // 진행중(OPEN) 상태
+      targetStatus = 'OPEN' 
+    }
+
+    if (r.status !== targetStatus) {
+      try {
+        await updateRoundStatus(r.id, targetStatus)
+        updatedList.push({ ...r, status: targetStatus })
+      } catch (e) {
+        console.error(`차수 ${r.id} 진행상태 자동 동기화 실패:`, e)
+        updatedList.push(r)
+      }
+    } else {
+      updatedList.push(r)
+    }
+  }
+  return updatedList
+}
+
 async function loadRounds() {
   roundsLoadError.value = ''
   try {
-    rounds.value = await getRounds()
+    const raw = await getRounds()
+    rounds.value = await syncRoundStatuses(raw)
   } catch (e) {
     rounds.value = []
     roundsLoadError.value = e.response?.data ?? e.message ?? '오류가 발생했습니다'
@@ -948,7 +1281,7 @@ function classLabel(c) {
 }
 
 async function loadConfirmationStatus() {
-  if (!selected.value || selected.value.status !== 'OPEN') {
+  if (!selected.value || getDisplayStatus(selected.value) !== 'OPEN') {
     confirmationStatus.value = null
     return
   }
@@ -1004,9 +1337,9 @@ async function loadAreas() {
 
 async function handleOpenRound() {
   if (!(await dialog.confirm({
-    title: '라운드 열기',
-    message: '새 라운드를 열겠습니까?\n라운드를 열면 담임교사의 지원 입력이 시작됩니다.',
-    confirmText: '라운드 열기',
+    title: '선발 차수 추가',
+    message: '새 선발 차수를 추가하시겠습니까?\n차수를 추가하면 담임교사의 지원 입력이 시작됩니다.',
+    confirmText: '차수 추가',
   }))) return
   loading.value = true
   try {
@@ -1026,7 +1359,7 @@ async function handleCloseRound(id) {
   if (roundActing.value) return
 
   // 미확정 학급 조회
-  let closeMsg = '라운드를 종료하시겠습니까?\n담임교사의 입력이 차단되고, 모든 지원자의 점수가 계산됩니다.\n필요하면 "다시 열기"로 되돌릴 수 있습니다.'
+  let closeMsg = '선발 차수를 종료하시겠습니까?\n담임교사의 입력이 차단되고, 모든 지원자의 점수가 계산됩니다.\n필요하면 "다시 열기"로 되돌릴 수 있습니다.'
   try {
     const status = await getRoundConfirmationStatus(id)
     const unconfirmed = status.classes.filter(c => !c.confirmed)
@@ -1040,7 +1373,7 @@ async function handleCloseRound(id) {
   }
 
   if (!(await dialog.confirm({
-    title: '라운드 종료',
+    title: '선발 차수 종료',
     message: closeMsg,
     confirmText: '종료하기',
     level: 'warn',
@@ -1065,8 +1398,8 @@ async function handleCloseRound(id) {
 async function handleReopenRound(id) {
   if (roundActing.value) return
   if (!(await dialog.confirm({
-    title: '라운드 다시 열기',
-    message: '라운드를 다시 여시겠습니까?\n지금까지 확정한 추천 표시가 모두 초기화됩니다.',
+    title: '선발 차수 다시 열기',
+    message: '선발 차수를 다시 여시겠습니까?\n지금까지 확정한 추천 표시가 모두 초기화됩니다.',
     confirmText: '다시 열기',
     level: 'warn',
   }))) return
@@ -1090,11 +1423,11 @@ async function handleReopenRound(id) {
 async function handleFinalizeRound(id) {
   if (roundActing.value) return
   if (!(await dialog.confirm({
-    title: '라운드 마감',
-    message: '라운드를 마감하시겠습니까?\n추천 확정이 고정되고, 결과가 담임교사에게 공개됩니다.',
+    title: '선발 차수 마감',
+    message: '선발 차수를 마감하시겠습니까?\n추천 확정이 고정되고, 결과가 담임교사에게 공개됩니다.',
     confirmText: '마감하기',
     level: 'danger',
-    dangerNotice: '한번 마감된 라운드는 절대로 되돌릴 수 없습니다.',
+    dangerNotice: '한번 마감된 선발 차수는 절대로 되돌릴 수 없습니다.',
     finalConfirmText: '마감 확정',
   }))) return
   roundActing.value = true
@@ -1327,5 +1660,8 @@ async function handleUnrecommend(r) {
   }
 }
 
-onMounted(loadRounds)
+onMounted(async () => {
+  await loadSchedules()
+  await loadRounds()
+})
 </script>
