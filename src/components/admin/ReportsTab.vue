@@ -40,15 +40,25 @@
       <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
         <div>
           <span class="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">{{ schoolName }}</span>
-          <h2 class="text-xl font-black text-slate-900" style="margin: 0;">학교장추천전형 추천 명단 및 정원 소진 종합 보고서</h2>
-          <p class="text-xs text-slate-500 mt-1" style="margin: 2px 0 0;">출력일시: {{ currentDate }}</p>
+          <h2 class="text-xl font-black text-slate-900" style="margin: 0;">학교장추천전형 추천 명단</h2>
         </div>
         <!-- 결재란 (인쇄용) -->
-        <div class="hidden print:flex items-center border border-slate-300 rounded text-center text-xs">
-          <div class="p-2 border-r border-slate-300 bg-slate-50 font-bold">결<br>재</div>
-          <div class="p-2 border-r border-slate-300 w-16">담당자</div>
-          <div class="p-2 border-r border-slate-300 w-16">부장</div>
-          <div class="p-2 w-16">교장</div>
+        <div class="hidden print:block">
+          <table style="border-collapse: collapse; text-align: center; font-size: 11px; margin: 0; width: auto; border: 1px solid #cbd5e1;">
+            <tr>
+              <th rowspan="2" style="padding: 4px 8px; border: 1px solid #cbd5e1; background: #f8fafc; font-weight: bold; font-size: 11px; line-height: 1.2; width: 28px;">결<br>재</th>
+              <td style="padding: 4px 12px; border: 1px solid #cbd5e1; background: #f8fafc; font-weight: bold; width: 60px; font-size: 11px;">계</td>
+              <td style="padding: 4px 12px; border: 1px solid #cbd5e1; background: #f8fafc; font-weight: bold; width: 60px; font-size: 11px;">부장</td>
+              <td style="padding: 4px 12px; border: 1px solid #cbd5e1; background: #f8fafc; font-weight: bold; width: 60px; font-size: 11px;">교감</td>
+              <td style="padding: 4px 12px; border: 1px solid #cbd5e1; background: #f8fafc; font-weight: bold; width: 60px; font-size: 11px;">교장</td>
+            </tr>
+            <tr>
+              <td style="height: 48px; border: 1px solid #cbd5e1; min-width: 60px;"></td>
+              <td style="height: 48px; border: 1px solid #cbd5e1; min-width: 60px;"></td>
+              <td style="height: 48px; border: 1px solid #cbd5e1; min-width: 60px;"></td>
+              <td style="height: 48px; border: 1px solid #cbd5e1; min-width: 60px;"></td>
+            </tr>
+          </table>
         </div>
       </div>
 
@@ -66,28 +76,23 @@
         <table class="w-full text-left border-collapse text-xs">
           <thead>
             <tr class="bg-slate-100 text-slate-700 border-b-2 border-slate-300">
-              <th class="p-3 font-bold w-12 text-center">No</th>
-              <th class="p-3 font-bold">대학명</th>
-              <th class="p-3 font-bold">모집단위 (학과)</th>
-              <th class="p-3 font-bold text-center w-28">추천 제한 정원</th>
-              <th class="p-3 font-bold text-center w-24">추천 확정 인원</th>
-              <th class="p-3 font-bold text-center w-20">(재학생)</th>
-              <th class="p-3 font-bold text-center w-20">(졸업생)</th>
-              <th class="p-3 font-bold text-center w-24">잔여 추천 정원</th>
+              <th class="p-3 font-bold w-10 text-center">No</th>
+              <th class="p-3 font-bold whitespace-nowrap w-28">대학명</th>
+              <th class="p-3 font-bold whitespace-nowrap">모집단위 (학과)</th>
+              <th class="p-3 font-bold text-center w-24 whitespace-nowrap">추천 제한 정원</th>
+              <th class="p-3 font-bold text-center w-22 whitespace-nowrap">추천 확정 인원</th>
+              <th class="p-3 font-bold text-center w-14 whitespace-nowrap">(재학생)</th>
+              <th class="p-3 font-bold text-center w-14 whitespace-nowrap">(졸업생)</th>
+              <th class="p-3 font-bold text-left whitespace-nowrap" style="min-width: 260px;">추천 학생 (학번/성명)</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
             <tr v-for="item in flatStats" :key="item.no" class="hover:bg-slate-50/80 text-slate-700 transition-colors">
               <td class="p-3 text-center text-slate-500 font-medium">{{ item.no }}</td>
-              <td class="p-3 font-bold text-slate-900">
-                <div class="flex items-center gap-2">
-                  <span class="text-sm font-extrabold text-blue-950">{{ item.univ_name }}</span>
-                  <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                    {{ item.region || '그외' }}
-                  </span>
-                </div>
+              <td class="p-3 font-bold text-slate-900 whitespace-nowrap w-28">
+                <span class="text-sm font-extrabold text-blue-950">{{ item.univ_name }}</span>
               </td>
-              <td class="p-3 font-bold text-slate-800 text-sm">{{ item.track_name }}</td>
+              <td class="p-3 font-bold text-slate-800 text-sm whitespace-nowrap">{{ item.track_name }}</td>
               <td class="p-3 text-center font-semibold text-slate-700">
                 {{ formatQuotaDisplay(item.unit_quota, item.raw_quota_limit) }}
               </td>
@@ -100,11 +105,13 @@
               <td class="p-3 text-center font-semibold text-slate-700">
                 {{ item.grad_used > 0 ? item.grad_used + '명' : '-' }}
               </td>
-              <td
-                class="p-3 text-center font-bold"
-                :class="item.unit_quota != null && item.unit_used >= item.unit_quota ? 'text-red-600' : 'text-emerald-600'"
-              >
-                {{ item.unit_quota != null ? item.remaining_quota + '명' : '무제한' }}
+              <td class="p-3 text-left font-medium text-slate-800 whitespace-nowrap" style="min-width: 260px;">
+                <div v-if="item.students && item.students.length > 0" class="flex flex-col gap-0.5">
+                  <div v-for="std in item.students" :key="std.student_code" class="whitespace-nowrap">
+                    {{ std.student_code }} {{ std.name }} <span class="text-slate-500 font-normal text-[11px]">{{ std.suffix }}</span>
+                  </div>
+                </div>
+                <span v-else class="text-slate-400">-</span>
               </td>
             </tr>
           </tbody>
@@ -119,11 +126,16 @@ import { ref, onMounted, computed } from 'vue'
 import { getQuotaStats, exportQuotaStats, getDisclosureCount } from '../../api/admin.js'
 import { schoolName } from '../../utils/schoolConfig.js'
 import { dialog } from '../common/dialog.js'
+import { supabase } from '../../utils/supabaseClient.js'
+import { decryptText } from '../../utils/cryptoUtils.js'
+import { formatScore } from '../../utils/scorePreviewShared.js'
 
 const loading = ref(false)
 const downloading = ref(false)
 const stats = ref([])
 const disclosureCount = ref(null)
+const recommendedList = ref([])
+const studentMap = ref({})
 
 /**
  * 표시용 인원 포맷 함수
@@ -163,17 +175,40 @@ const flatStats = computed(() => {
   let index = 1
   for (const u of stats.value) {
     for (const t of (u.tracks || [])) {
+      const trackApps = recommendedList.value.filter(ap => ap.univ_id === t.track_id)
+      
+      const hasQuota = t.unit_quota != null
+      
+      // 정원제한이 있는 경우 순위 오름차순, 없는 경우 학번 오름차순
+      trackApps.sort((a, b) => {
+        if (hasQuota) {
+          return a.rank - b.rank
+        } else {
+          return a.student_code.localeCompare(b.student_code)
+        }
+      })
+
+      const studentsArray = trackApps.map(ap => {
+        return {
+          student_code: ap.student_code,
+          name: ap.name,
+          suffix: hasQuota ? `(${ap.rank}위, ${ap.score_text})` : ''
+        }
+      })
+
       list.push({
         no: index++,
         univ_name: u.univ_name,
         region: u.region,
         track_name: t.track_name,
+        track_id: t.track_id,
         unit_quota: t.unit_quota,
         raw_quota_limit: t.raw_quota_limit ?? null,
         unit_used: t.unit_used || 0,
         enrolled_used: t.enrolled_used || 0,
         grad_used: t.grad_used || 0,
         remaining_quota: t.unit_quota != null ? Math.max(0, t.unit_quota - (t.unit_used || 0)) : null,
+        students: studentsArray
       })
     }
   }
@@ -189,6 +224,90 @@ async function loadData() {
   loading.value = true
   try {
     stats.value = await getQuotaStats()
+    if (supabase) {
+      // 1. 순위 계산을 위해 포기하지 않은 모든 지원서 및 학생 데이터 로드
+      const [{ data: allApps }, { data: students }] = await Promise.all([
+        supabase.from('applications').select('*').eq('is_abandoned', false),
+        supabase.from('enrolled_students').select('id, name, student_code, gpa_overall')
+      ])
+
+      const studentMapLocal = {}
+      for (const s of (students || [])) {
+        const decName = await decryptText(s.name)
+        studentMapLocal[s.id] = {
+          id: s.id,
+          name: decName,
+          student_code: s.student_code,
+          gpa_overall: s.gpa_overall
+        }
+      }
+      studentMap.value = studentMapLocal
+
+      // 2. 각 라운드별 & 대학(univ_id)별 지원서를 그룹화하여 석차 계산
+      const grouped = {}
+      allApps?.forEach(ap => {
+        const key = `${ap.univ_id}-${ap.round}`
+        if (!grouped[key]) grouped[key] = []
+        grouped[key].push(ap)
+      })
+
+      const rankMap = {}
+      Object.keys(grouped).forEach(key => {
+        const list = grouped[key]
+        list.sort((a, b) => {
+          const stA = studentMapLocal[a.student_id] || {}
+          const stB = studentMapLocal[b.student_id] || {}
+
+          const scoreA = a.univ_calc_score != null ? Number(a.univ_calc_score) : (a.manual_score != null ? Number(a.manual_score) : null)
+          const scoreB = b.univ_calc_score != null ? Number(b.univ_calc_score) : (b.manual_score != null ? Number(b.manual_score) : null)
+
+          if (scoreA !== null && scoreB !== null && scoreA !== scoreB) {
+            return scoreB - scoreA
+          }
+
+          const gpaA = stA.gpa_overall != null ? Number(stA.gpa_overall) : 99
+          const gpaB = stB.gpa_overall != null ? Number(stB.gpa_overall) : 99
+
+          if (gpaA !== gpaB) {
+            return gpaA - gpaB
+          }
+
+          return 0
+        })
+
+        list.forEach((ap, idx) => {
+          rankMap[ap.id] = idx + 1
+        })
+      })
+
+      // 3. 추천 확정된 지원서 목록만 필터링하여 순위 및 환산점수/석차등급 텍스트 세팅
+      const recommendedApps = allApps?.filter(ap => ap.is_recommended) || []
+      recommendedList.value = recommendedApps.map(ap => {
+        const s = studentMapLocal[ap.student_id] || {}
+        const rank = rankMap[ap.id] || 1
+
+        const scoreVal = ap.univ_calc_score != null ? ap.univ_calc_score : ap.manual_score
+        let scoreText = ''
+        if (scoreVal != null && Number(scoreVal) > 0) {
+          scoreText = `${formatScore(scoreVal)}점`
+        } else if (s.gpa_overall != null && Number(s.gpa_overall) > 0) {
+          scoreText = `${Number(s.gpa_overall).toFixed(2)}등급`
+        } else {
+          scoreText = '-'
+        }
+
+        return {
+          id: ap.id,
+          student_id: ap.student_id,
+          univ_id: ap.univ_id,
+          round: ap.round,
+          student_code: s.student_code || '',
+          name: s.name || '',
+          rank: rank,
+          score_text: scoreText
+        }
+      })
+    }
   } catch (e) {
     await dialog.alert({ title: '데이터 조회 실패', message: e.message || '보고서 데이터 조회 중 오류가 발생했습니다.' })
   } finally {
@@ -225,6 +344,10 @@ onMounted(async () => {
 
 <style scoped>
 @media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
   body * {
     visibility: hidden;
   }

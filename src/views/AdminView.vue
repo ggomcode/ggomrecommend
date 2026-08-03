@@ -127,13 +127,13 @@
           <div class="flex items-center gap-2 pb-2" style="border-bottom: 1px solid #e8e5e2;">
             <div
               class="rounded-full flex-shrink-0"
-              :style="{ width: '8px', height: '8px', background: currentRound ? '#22c55e' : '#94a3b8' }"
+              :style="{ width: '8px', height: '8px', background: getRoundStatusColor() }"
             />
             <span
               class="text-base font-medium whitespace-nowrap"
-              :style="{ color: currentRound ? '#15803d' : '#64748b' }"
+              :style="{ color: getRoundStatusTextColor() }"
             >
-              {{ currentRound ? `${currentRound.id}차 라운드 진행 중` : '진행 중인 라운드 없음' }}
+              {{ getRoundStatusText() }}
             </span>
           </div>
           <!-- 사용자 정보 -->
@@ -150,13 +150,7 @@
             >
               <Home :size="14" /> 포털이동
             </button>
-            <button
-              @click="showPwModal = true"
-              class="flex items-center gap-1 text-base"
-              style="background: none; border: none; cursor: pointer; color: #94a3b8; padding: 0;"
-            >
-              <KeyRound :size="14" /> 비번변경
-            </button>
+
             <button
               @click="logout"
               class="flex items-center gap-1 text-base"
@@ -245,6 +239,7 @@
 
 <script setup>
 import { ref, computed, onMounted, provide } from 'vue'
+import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../utils/roundSchedule.js'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
@@ -254,7 +249,7 @@ import { schoolName, fetchSchoolName } from '../utils/schoolConfig.js'
 import { safeAsyncComponent } from '../utils/asyncComponent.js'
 import {
   Home, Trophy, LayoutGrid, Users, SlidersHorizontal, FileSpreadsheet,
-  Building2, BookOpen, RefreshCw, ChevronRight, LogOut, KeyRound, Menu, ScrollText, Settings, UserCheck, School
+  Building2, BookOpen, RefreshCw, ChevronRight, LogOut, Menu, ScrollText, Settings, UserCheck, School
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -282,7 +277,7 @@ const mainMenus = [
   { key: 'students', label: '학생 관리',     icon: Users },
   { key: 'univs',    label: '대학 설정',     icon: Building2 },
   { key: 'areas',    label: '추천순위 기준 설정', icon: SlidersHorizontal },
-  { key: 'rounds',   label: '선발일정 관리', icon: Trophy },
+  { key: 'rounds',   label: '학교장 추천 선발', icon: Trophy },
   { key: 'reports',  label: '결과 보고서',   icon: ScrollText },
   { key: 'audit',    label: '감사 기록',     icon: BookOpen },
 ]
@@ -322,8 +317,64 @@ const collapsed = ref(false)
 // ── 현재 라운드 ───────────────────────────────────────────────
 const currentRound = ref(null)
 
+const schedulesMap = ref({})
+
+const getEffectiveStatus = () => {
+  if (!currentRound.value) return 'DRAFT'
+  const sched = schedulesMap.value[currentRound.value.id]
+  return computeRoundDisplayStatus(currentRound.value, sched)
+}
+
+const getRoundStatusText = () => {
+  if (!currentRound.value) return '진행 중인 추천 선발 없음'
+  const statusLabels = {
+    DRAFT: '접수 전',
+    OPEN: '접수 진행중',
+    CLOSED: '심사 진행중',
+    FINALIZED: '최종 마감'
+  }
+  const status = getEffectiveStatus()
+  const label = statusLabels[status] || '진행중'
+  return getTotalRoundsCount() === 1 ? `추천 선발 (${label})` : `${currentRound.value.id}차 추천 선발 (${label})`
+}
+
+const getRoundStatusColor = () => {
+  if (!currentRound.value) return '#94a3b8'
+  const colors = {
+    DRAFT: '#eab308',
+    OPEN: '#22c55e',
+    CLOSED: '#3b82f6',
+    FINALIZED: '#64748b'
+  }
+  const status = getEffectiveStatus()
+  return colors[status] || '#22c55e'
+}
+
+const getRoundStatusTextColor = () => {
+  if (!currentRound.value) return '#64748b'
+  const colors = {
+    DRAFT: '#b45309',
+    OPEN: '#15803d',
+    CLOSED: '#1d4ed8',
+    FINALIZED: '#475569'
+  }
+  const status = getEffectiveStatus()
+  return colors[status] || '#15803d'
+}
+
+const getTotalRoundsCount = () => {
+  const local = localStorage.getItem('total_rounds')
+  if (local) {
+    const n = parseInt(local, 10)
+    if (n >= 1 && n <= 5) return n
+  }
+  return 3
+}
+
+
 async function refreshRound() {
   try {
+    schedulesMap.value = await fetchRoundSchedulesMap()
     currentRound.value = await getCurrentRound()
   } catch {
     currentRound.value = null

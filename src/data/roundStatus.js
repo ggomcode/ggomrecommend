@@ -9,10 +9,10 @@
  * 매뉴얼도 함께 고쳐야 한다.
  */
 export const ROUND_STATUS_LABELS = {
-  DRAFT:     '대기중',
-  OPEN:      '진행중',
-  CLOSED:    '종료',
-  FINALIZED: '마감',
+  DRAFT:     '접수 전',
+  OPEN:      '접수 진행중',
+  CLOSED:    '심사 진행중',
+  FINALIZED: '최종 마감',
 }
 
 /**

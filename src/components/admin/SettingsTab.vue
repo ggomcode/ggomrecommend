@@ -200,6 +200,54 @@
           </button>
         </div>
       </div>
+      <!-- 5. 데이터 초기화 설정 -->
+      <div class="bg-white dark:bg-slate-800 border border-red-200 dark:border-red-950/40 rounded-xl p-6 shadow-sm">
+        <h2 class="text-base font-bold text-rose-600 dark:text-rose-400 mb-2 flex items-center gap-2">
+          <span class="w-1 h-3 bg-rose-600 rounded-full"></span>
+          ⚠️ 시스템 데이터 초기화 관리
+        </h2>
+        <p class="text-xs text-slate-400 mb-6">
+          선택한 범위에 따라 데이터베이스 정보를 초기화합니다. 작업 완료 후에는 되돌릴 수 없으므로 신중히 진행해 주세요.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-4">
+          <!-- 지원 현황만 초기화 -->
+          <div class="flex-1 border border-slate-100 dark:border-slate-700/60 rounded-lg p-4 bg-slate-50/50 dark:bg-slate-900/10 flex flex-col justify-between">
+            <div>
+              <h3 class="text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">지원 현황만 초기화</h3>
+              <p class="text-[11px] text-slate-400 mb-4 leading-relaxed">
+                학생들이 제출한 모든 지원 희망원 정보(추천 신청서, 업로드된 학생/보호자 서명 및 포기원 요청 등)만 깨끗이 삭제합니다. 대학 설정, 학생 기본 명부 등은 유지됩니다.
+              </p>
+            </div>
+            <button
+              type="button"
+              :disabled="resetAppLoading"
+              @click="resetApplicationsOnly"
+              class="w-full text-xs font-bold text-rose-600 hover:text-white bg-white hover:bg-rose-600 border border-rose-200 hover:border-rose-600 rounded-lg py-2.5 cursor-pointer transition-colors shadow-sm disabled:opacity-50"
+            >
+              {{ resetAppLoading ? '초기화 진행 중…' : '지원의사 현황 초기화' }}
+            </button>
+          </div>
+
+          <!-- 전체 데이터 초기화 -->
+          <div class="flex-1 border border-red-100 dark:border-red-950/40 rounded-lg p-4 bg-red-50/10 dark:bg-red-950/5 flex flex-col justify-between">
+            <div>
+              <h3 class="text-xs font-bold text-red-700 dark:text-red-300 mb-1">모든 설정 및 정보 초기화</h3>
+              <p class="text-[11px] text-slate-400 mb-4 leading-relaxed">
+                지원 현황(희망원)을 포함하여 등록된 전체 대학 설정, 지역 추천 정원 요강, 정보공시 재학생 수, 학생 명부 데이터베이스를 공장 출하 상태로 완전히 초기화합니다.
+              </p>
+            </div>
+            <button
+              type="button"
+              :disabled="resetAllLoading"
+              @click="resetAllSystemData"
+              class="w-full text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 border-none rounded-lg py-2.5 cursor-pointer transition-colors shadow-sm disabled:opacity-50"
+            >
+              {{ resetAllLoading ? '전체 초기화 진행 중…' : '모든 데이터 전체 초기화' }}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -209,9 +257,13 @@ import { ref, onMounted } from 'vue'
 import { supabase } from '../../utils/supabaseClient'
 import { fetchSchoolName, setSchoolNameConfig } from '../../utils/schoolConfig'
 import { getDisclosureCount, setDisclosureCount, syncRegionalToUniversities } from '../../api/admin.js'
+import { dialog } from '../common/dialog.js'
 
 const inputSchoolName = ref('')
 const schoolNameLoading = ref(false)
+
+const resetAppLoading = ref(false)
+const resetAllLoading = ref(false)
 
 const classCount = ref(11)
 const classCountLoading = ref(false)
@@ -407,6 +459,94 @@ async function saveOpenAIKey() {
     alert('OpenAI Key 저장 도중 오류가 발생했습니다.')
   } finally {
     openaiLoading.value = false
+  }
+}
+
+async function resetApplicationsOnly() {
+  if (!supabase) return
+  if (!(await dialog.confirm({
+    title: '⚠️ 지원 현황 초기화 경고',
+    message: '학생들이 제출한 모든 대입 학교장추천 희망서와 서명, 추천 확정 및 포기원 데이터가 영구 삭제됩니다. 계속하시겠습니까?',
+    confirmText: '지원 현황만 초기화',
+    level: 'danger',
+    dangerNotice: '이 작업은 취소할 수 없습니다. 모든 학급의 학생 신청 목록이 비워집니다.',
+    finalConfirmText: '확인 및 삭제'
+  }))) return
+
+  resetAppLoading.value = true
+  try {
+    const { error: appErr } = await supabase
+      .from('applications')
+      .delete()
+      .gt('created_at', '1970-01-01')
+
+    if (appErr) throw appErr
+
+    await supabase.from('timeline_rounds').update({ status: 'DRAFT' }).gt('id', 0)
+
+    try {
+      const userRes = await supabase.auth.getUser()
+      if (userRes?.data?.user) {
+        await supabase.from('audit_logs').insert({
+          actor_id: userRes.data.user.id,
+          action: 'RESET_APPLICATIONS_ONLY',
+          details: { message: '교사용/학생용 지원 현황 데이터 일괄 삭제 초기화' }
+        })
+      }
+    } catch {}
+
+    alert('학생들의 지원 현황이 성공적으로 초기화되었습니다.')
+  } catch (e) {
+    console.error(e)
+    alert(e.message || '지원 현황 초기화 작업 중 오류가 발생했습니다.')
+  } finally {
+    resetAppLoading.value = false
+  }
+}
+
+async function resetAllSystemData() {
+  if (!supabase) return
+  if (!(await dialog.confirm({
+    title: '🚨 시스템 전체 초기화 경고',
+    message: '지원 현황을 포함한 대학 목록, 지역 정원 요강, 정보공시 재학생 설정 및 학생 마스터 DB 등 모든 데이터가 완전히 소멸됩니다. 정말로 공장 초기화를 진행하시겠습니까?',
+    confirmText: '모든 데이터 초기화',
+    level: 'danger',
+    dangerNotice: '모든 데이터베이스 테이블이 완전히 초기화됩니다. 이 작업은 즉각 반영되며 절대 취소할 수 없습니다.',
+    finalConfirmText: '공장 초기화 최종 확정'
+  }))) return
+
+  resetAllLoading.value = true
+  try {
+    await supabase.from('applications').delete().gt('created_at', '1970-01-01')
+    await supabase.from('universities').delete().gt('id', 0)
+    await supabase.from('regional_recommendations').delete().gt('seq_no', 0)
+    await supabase.from('enrolled_students').delete().gt('id', 0)
+    await supabase.from('config').delete().neq('key', 'openai_api_key')
+    await supabase.from('timeline_rounds').update({ status: 'DRAFT' }).gt('id', 0)
+    await supabase.from('audit_logs').delete().gt('id', 0)
+
+    try {
+      const userRes = await supabase.auth.getUser()
+      if (userRes?.data?.user) {
+        await supabase.from('audit_logs').insert({
+          actor_id: userRes.data.user.id,
+          action: 'RESET_ALL_SYSTEM_DATA',
+          details: { message: '시스템 전체 데이터 공장 초기화 완료' }
+        })
+      }
+    } catch {}
+
+    disclosureCount.value = null
+    classCount.value = 11
+    inputSchoolName.value = '우리학교'
+    
+    alert('시스템의 모든 설정 및 데이터베이스 초기화가 완료되었습니다.')
+    window.location.reload()
+  } catch (e) {
+    console.error(e)
+    alert(e.message || '시스템 데이터 전체 초기화 작업 중 오류가 발생했습니다.')
+  } finally {
+    resetAllLoading.value = false
   }
 }
 

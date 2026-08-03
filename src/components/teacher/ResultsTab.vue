@@ -2,11 +2,9 @@
   <div class="py-8 px-4 sm:px-10">
 
     <!-- 페이지 헤더 -->
-    <div class="flex items-start justify-between flex-wrap gap-3 mb-5">
-      <div>
-        <p class="text-base mb-1" style="color: #94a3b8;">담임 교사</p>
-        <h1 class="text-2xl font-semibold" style="color: #1e293b; margin: 0;">라운드 결과</h1>
-      </div>
+    <div class="mb-5">
+      <p class="text-base mb-1" style="color: #94a3b8;">담임 교사</p>
+      <h1 class="text-2xl font-semibold" style="color: #1e293b; margin: 0;">추천 결과</h1>
     </div>
 
     <HelpBox
@@ -28,7 +26,7 @@
       <p class="text-base" style="color: #94a3b8;">불러오는 중...</p>
     </div>
 
-    <!-- 로드 오류 — 서버 오류를 "라운드 없음" 빈 상태로 위장하지 않는다 -->
+    <!-- 로드 오류 -->
     <div
       v-else-if="loadError"
       class="rounded-xl flex items-center justify-center"
@@ -43,36 +41,11 @@
       class="rounded-xl flex items-center justify-center"
       style="background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04); height: 240px;"
     >
-      <p class="text-base" style="color: #94a3b8;">아직 개설된 라운드가 없습니다.</p>
+      <p class="text-base" style="color: #94a3b8;">아직 개설된 선발 차수가 없습니다.</p>
     </div>
 
-    <!-- 라운드별 결과 카드 -->
+    <!-- 차수별 결과 카드 -->
     <div v-else class="flex flex-col gap-6">
-      <!-- 순위 보기 토글 -->
-      <div v-if="results.length > 0" class="flex gap-2">
-        <button
-          class="text-base font-medium rounded-lg"
-          :style="{
-            padding: '6px 14px', cursor: 'pointer',
-            border: '1px solid',
-            borderColor: rankView === 'track' ? '#2563eb' : '#e2e8f0',
-            background: rankView === 'track' ? '#2563eb' : 'white',
-            color: rankView === 'track' ? 'white' : '#475569',
-          }"
-          @click="rankView = 'track'"
-        >모집단위별 순위</button>
-        <button
-          class="text-base font-medium rounded-lg"
-          :style="{
-            padding: '6px 14px', cursor: 'pointer',
-            border: '1px solid',
-            borderColor: rankView === 'univ' ? '#2563eb' : '#e2e8f0',
-            background: rankView === 'univ' ? '#2563eb' : 'white',
-            color: rankView === 'univ' ? 'white' : '#475569',
-          }"
-          @click="rankView = 'univ'"
-        >대학 전체 순위</button>
-      </div>
       <div
         v-for="round in rounds"
         :key="round.id"
@@ -82,19 +55,20 @@
         <!-- 카드 헤더 -->
         <div class="flex items-center gap-3 px-6 py-4" style="border-bottom: 1px solid #f1f5f9;">
           <h2 class="text-base font-semibold" style="color: #1e293b; margin: 0;">
-            <template v-if="auth.grade === 0">졸업생 — {{ round.id }}라운드 결과</template>
-            <template v-else>{{ auth.grade }}학년 {{ auth.classNo }}반 — {{ round.id }}라운드 결과</template>
+            <template v-if="auth.grade === 0">졸업생 — {{ round.id }}차 결과</template>
+            <template v-else>3학년 {{ auth.classNo ? auth.classNo + '반' : '전체 학급' }} — {{ round.id }}차 결과</template>
           </h2>
           <span
-            class="text-base font-semibold"
-            style="padding: 3px 12px; border-radius: 999px;"
-            :style="round.status === 'FINALIZED'
-              ? { background: '#f3e8ff', color: '#7c3aed' }
-              : round.status === 'CLOSED'
-                ? { background: '#dbeafe', color: '#1d4ed8' }
-                : { background: '#dcfce7', color: '#15803d' }"
-          >{{ roundStatusLabel(round.status) }}</span>
-          
+            class="text-xs font-bold px-3 py-1 rounded-full border bg-slate-100 text-slate-700 border-slate-200"
+            :class="{
+              'bg-emerald-50 text-emerald-700 border-emerald-200': round.status === 'FINALIZED',
+              'bg-amber-50 text-amber-700 border-amber-200': round.status === 'CLOSED',
+              'bg-blue-50 text-blue-700 border-blue-200': round.status === 'OPEN',
+            }"
+          >
+            {{ roundStatusLabel(round.status) }}
+          </span>
+
           <button
             v-if="round.status === 'FINALIZED'"
             @click="printReport(round.id)"
@@ -104,88 +78,110 @@
           </button>
         </div>
 
-        <!-- 진행중/종료 -->
-        <div v-if="round.status === 'OPEN'" class="flex items-center justify-center" style="height: 120px;">
-          <p class="text-base" style="color: #94a3b8;">현재 진행중인 라운드입니다.</p>
-        </div>
-        <div v-else-if="round.status === 'CLOSED'" class="flex items-center justify-center" style="height: 120px;">
-          <p class="text-base" style="color: #94a3b8;">접수가 종료되어 관리자가 결과를 확정하는 중입니다.</p>
+        <!-- DRAFT (접수 전) 안내 -->
+        <div v-if="round.status === 'DRAFT'" class="flex items-center justify-center text-center px-4" style="height: 120px;">
+          <p class="text-base" style="color: #64748b;">📅 아직 학생 지원서 접수가 시작되지 않은 차수입니다. (희망자 접수 기간: {{ formatPeriod(round.schedule) }})</p>
         </div>
 
-        <!-- FINALIZED 결과 -->
+        <!-- OPEN / CLOSED / FINALIZED 지원 현황 및 결과 -->
         <template v-else>
-          <div
-            v-for="student in studentsByRound[round.id] ?? []"
-            :key="student.student_id"
-            style="border-bottom: 1px solid #f1f5f9;"
-          >
-            <!-- 학생 행 헤더 -->
-            <div class="flex items-center gap-3 px-6 py-3" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-              <span class="text-base font-semibold" style="color: #1e293b;">{{ student.name }}</span>
-              <span class="text-base" style="color: #64748b;">{{ student.student_code }}</span>
-              <span v-if="auth.grade !== 0" class="text-base" style="color: #94a3b8;">{{ student.seq_no }}번</span>
-            </div>
-
-            <!-- 결과 테이블 -->
-            <div class="overflow-x-auto">
-              <table style="border-collapse: collapse; table-layout: fixed; width: 100%; min-width: 940px;">
-                <colgroup>
-                  <col style="width: 160px;">
-                  <col style="width: 190px;">
-                  <col style="width: 160px;">
-                  <col style="width: 100px;">
-                  <col style="width: 100px;">
-                  <col style="width: 110px;">
-                  <col style="width: 120px;">
-                </colgroup>
-                <thead>
-                  <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                    <th class="text-base font-semibold text-left" style="padding: 12px 20px; color: #475569;">대학명</th>
-                    <th class="text-base font-semibold text-left" style="padding: 12px 16px; color: #475569;">모집단위</th>
-                    <th class="text-base font-semibold text-left" style="padding: 12px 16px; color: #475569;">지원 학과</th>
-                    <th class="text-base font-semibold text-center" style="padding: 12px 16px; color: #475569;">{{ rankView === 'track' ? '모집단위 순위' : '대학 순위' }}</th>
-                    <th class="text-base font-semibold text-left" style="padding: 12px 20px; color: #475569;">총점</th>
-                    <th class="text-base font-semibold text-center" style="padding: 12px 16px; color: #475569;">상태</th>
-                    <th class="text-base font-semibold text-center" style="padding: 12px 16px; color: #475569;">비고</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="r in student.results"
-                    :key="r.track_id"
-                    :style="{
-                      borderBottom: '1px solid #f1f5f9',
-                      background:
-                        r.recommended && !r.abandoned ? '#f0fdf4' :
-                        tieSet.has(`${r.student_id}-${r.track_id}-${round.id}`) ? '#fffbeb' :
-                        '#fff1f2',
-                    }"
-                  >
-                    <td class="text-base" style="padding: 12px 20px; color: #1e293b;">{{ r.univ_name }}</td>
-                    <td class="text-base" style="padding: 12px 16px; color: #1e293b;">{{ r.track_name }}</td>
-                    <td class="text-base" style="padding: 12px 16px; color: #475569;">{{ r.department_name }}</td>
-                    <td class="text-base text-center" style="padding: 12px 16px; color: #64748b;">{{ rankView === 'track' ? (r.track_rank ?? '-') : (r.ranking ?? '-') }}</td>
-                    <td class="text-base text-left font-semibold" style="padding: 12px 20px; color: #1e293b;">
-                      {{ formatScore(r.total_score) }}
-                    </td>
-                    <td class="text-center" style="padding: 12px 16px;">
-                      <span v-if="r.abandoned" class="text-base font-semibold" style="color: #ef4444;">포기됨</span>
-                      <span v-else-if="r.recommended" class="text-base font-semibold" style="color: #16a34a;">추천 확정</span>
-                      <span v-else class="text-base font-semibold" style="color: #ef4444;">미선발</span>
-                    </td>
-                    <td class="text-center" style="padding: 12px 16px;">
-                      <button
-                        v-if="r.recommended && !r.abandoned"
-                        class="text-base whitespace-nowrap"
-                        style="padding: 6px 12px; border: 1px solid #fca5a5; border-radius: 6px; background: white; color: #ef4444; cursor: pointer;"
-                        @click="handleAbandon(r)"
-                      >추천 포기</button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <!-- OPEN 안내 띠 -->
+          <div v-if="round.status === 'OPEN'" class="px-6 py-3 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
+            <span class="text-base">📝</span>
+            <span class="text-sm font-medium text-blue-700">현재 학생 지원서 접수가 진행 중입니다. (마감 전 실시간 지원 현황입니다)</span>
           </div>
+          <!-- CLOSED 안내 띠 -->
+          <div v-else-if="round.status === 'CLOSED'" class="px-6 py-3 bg-orange-50 border-b border-orange-100 flex items-center gap-2">
+            <span class="text-base">⏳</span>
+            <span class="text-sm font-medium text-orange-700">접수가 마감되어 관리자가 선발 및 심사를 진행하고 있습니다.</span>
+          </div>
+
+          <!-- 지원 학생 목록이 없는 경우 -->
+          <div v-if="!studentsByRound[round.id] || studentsByRound[round.id].length === 0" class="flex items-center justify-center py-10" style="height: 120px;">
+            <p class="text-base" style="color: #94a3b8;">
+              {{ round.status === 'OPEN' ? '📝 아직 등록된 지원서가 없습니다.' : round.status === 'CLOSED' ? '⏳ 등록된 지원서 없이 마감되었습니다.' : '등록된 지원 결과가 없습니다.' }}
+            </p>
+          </div>
+
+          <!-- 지원 학생 목록이 있는 경우 -->
+          <template v-else>
+            <div
+              v-for="student in studentsByRound[round.id]"
+              :key="student.student_id"
+              style="border-bottom: 1px solid #f1f5f9;"
+            >
+              <!-- 학생 행 헤더 -->
+              <div class="flex items-center gap-3 px-6 py-3" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                <span class="text-base font-semibold" style="color: #1e293b;">{{ student.name }}</span>
+                <span class="text-base" style="color: #64748b;">{{ student.student_code }}</span>
+                <span v-if="auth.grade !== 0" class="text-base" style="color: #94a3b8;">{{ student.seq_no }}번</span>
+              </div>
+
+              <!-- 결과 테이블 -->
+              <div class="overflow-x-auto">
+                <table style="border-collapse: collapse; table-layout: fixed; width: 100%; min-width: 940px;">
+                  <colgroup>
+                    <col style="width: 150px;">
+                    <col style="width: 190px;">
+                    <col style="width: 150px;">
+                    <col style="width: 110px;">
+                    <col style="width: 180px;">
+                    <col style="width: 100px;">
+                    <col style="width: 110px;">
+                  </colgroup>
+                  <thead>
+                    <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                      <th class="text-base font-semibold text-left" style="padding: 12px 20px; color: #475569;">대학명</th>
+                      <th class="text-base font-semibold text-left" style="padding: 12px 16px; color: #475569;">모집단위 (전형)</th>
+                      <th class="text-base font-semibold text-left" style="padding: 12px 16px; color: #475569;">지원 학과</th>
+                      <th class="text-base font-semibold text-center" style="padding: 12px 16px; color: #475569;">지원 순위 (석차)</th>
+                      <th class="text-base font-semibold text-left" style="padding: 12px 20px; color: #475569;">총점 (석차등급/환산점수)</th>
+                      <th class="text-base font-semibold text-center" style="padding: 12px 16px; color: #475569;">상태</th>
+                      <th class="text-base font-semibold text-center" style="padding: 12px 16px; color: #475569;">추천 포기</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="r in student.results"
+                      :key="r.track_id"
+                      :style="{
+                        borderBottom: '1px solid #f1f5f9',
+                        background:
+                          r.recommended && !r.abandoned ? '#f0fdf4' :
+                          tieSet.has(`${r.student_id}-${r.track_id}-${round.id}`) ? '#fffbeb' :
+                          round.status === 'FINALIZED' ? '#fff1f2' : 'white',
+                      }"
+                    >
+                      <td class="text-base" style="padding: 12px 20px; color: #1e293b;">{{ r.univ_name }}</td>
+                      <td class="text-base" style="padding: 12px 16px; color: #1e293b;">{{ r.track_name }}</td>
+                      <td class="text-base" style="padding: 12px 16px; color: #475569;">{{ r.department_name }}</td>
+                      <td class="text-base text-center font-bold" style="padding: 12px 16px; color: #1e293b;">
+                        {{ r.ranking ?? '-' }}위
+                      </td>
+                      <td class="text-base text-left font-semibold" style="padding: 12px 20px; color: #1e293b;">
+                        {{ r.score_text || formatScore(r.total_score) }}
+                      </td>
+                      <td class="text-center" style="padding: 12px 16px;">
+                        <span v-if="r.abandoned" class="text-base font-semibold" style="color: #ef4444;">포기됨</span>
+                        <span v-else-if="r.recommended" class="text-base font-semibold" style="color: #16a34a;">추천 확정</span>
+                        <span v-else-if="round.status === 'FINALIZED'" class="text-base font-semibold" style="color: #ef4444;">미선발</span>
+                        <span v-else class="text-base font-semibold" style="color: #2563eb;">접수 완료</span>
+                      </td>
+                      <td class="text-center" style="padding: 12px 16px;">
+                        <button
+                          v-if="round.status === 'FINALIZED' && r.recommended && !r.abandoned"
+                          class="text-base whitespace-nowrap"
+                          style="padding: 6px 12px; border: 1px solid #fca5a5; border-radius: 6px; background: white; color: #ef4444; cursor: pointer;"
+                          @click="handleAbandon(r)"
+                        >추천 포기</button>
+                        <span v-else class="text-slate-400 text-sm">-</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </template>
         </template>
       </div>
     </div>
@@ -208,7 +204,30 @@ const rounds    = ref([])
 const results   = ref([])
 const loading   = ref(false)
 const loadError = ref('')
-const rankView  = ref('track')
+
+function formatKoreanDate(dateStr) {
+  if (!dateStr) return ''
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return dateStr
+    const days = ['일', '월', '화', '수', '목', '금', '토']
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const date = String(d.getDate()).padStart(2, '0')
+    const day = days[d.getDay()]
+    return `${year}.${month}.${date}.(${day})`
+  } catch {
+    return dateStr
+  }
+}
+
+function formatPeriod(sched) {
+  if (!sched || (!sched.apply_start && !sched.apply_end)) return '접수 기간 미선택'
+  const startFmt = formatKoreanDate(sched.apply_start)
+  const endFmt = formatKoreanDate(sched.apply_end)
+  if (startFmt && endFmt) return `${startFmt} ~ ${endFmt}`
+  return startFmt || endFmt
+}
 
 const hasFinalized = computed(() => rounds.value.some(r => r.status === 'FINALIZED'))
 
@@ -217,12 +236,12 @@ const helpBox = computed(() => {
     return {
       key: 'results-final',
       title: '도움말 — 결과 보는 방법',
-      intro: '마감된 라운드의 우리 반 학생 결과입니다.',
+      intro: '마감된 차수의 우리 반 학생 결과입니다.',
       items: [
-        '초록색 배경의 "추천 확정"은 학교장추천 대상으로 확정된 것이고, 붉은색 배경의 "미선발"은 이번 라운드에서 추천되지 않은 것입니다.',
+        '초록색 배경의 "추천 확정"은 학교장추천 대상으로 확정된 것이고, 붉은색 배경의 "미선발"은 이번 차수에서 추천되지 않은 것입니다.',
         '추천이 확정된 학생이 추천을 포기하려면 "추천 포기"를 누르세요.',
-        { text: '포기는 되돌릴 수 없습니다. 반드시 학생·학부모와 확인한 뒤 처리하세요. 다시 추천받으려면 다음 라운드에서 재지원해야 합니다.', warn: true },
-        '"미선발"된 학생은 다음 라운드가 열리면 다시 지원할 수 있습니다.',
+        { text: '포기는 되돌릴 수 없습니다. 반드시 학생·학부모와 확인한 뒤 처리하세요. 다시 추천받으려면 다음 차수에서 재지원해야 합니다.', warn: true },
+        '"미선발"된 학생은 다음 차수가 열리면 다시 지원할 수 있습니다.',
       ],
     }
   }
@@ -230,46 +249,36 @@ const helpBox = computed(() => {
     return {
       key: 'results-none',
       title: '도움말 — 결과는 마감 후 공개됩니다',
-      intro: '아직 라운드가 열리지 않았습니다.',
+      intro: '아직 차수가 개설되지 않았습니다.',
       items: [
-        '관리자가 라운드를 열면 지원자 등록이 시작되고, 라운드가 마감되면 이 화면에 우리 반 학생들의 순위·총점·추천 여부가 표시됩니다.',
+        '관리자가 차수를 개설하면 지원자 등록이 시작되고, 마감되면 이 화면에 우리 반 학생들의 순위·총점·추천 여부가 표시됩니다.',
       ],
     }
   }
   return {
     key: 'results-waiting',
-    title: '도움말 — 결과는 마감 후 공개됩니다',
-    intro: '라운드 결과는 관리자가 라운드를 "마감"한 뒤에만 표시됩니다.',
+    title: '도움말 — 지원 현황 및 결과 안내',
+    intro: '우리 반 학생들의 지원 현황을 실시간으로 확인할 수 있습니다.',
     items: [
-      '"진행중" 또는 "종료"로 표시된 라운드는 아직 결과가 공개되지 않은 것입니다.',
-      '마감되면 이 화면에 우리 반 학생들의 순위·총점·추천 여부가 표시됩니다.',
+      '"접수 진행중": 학생이 지원서를 제출하는 기간입니다. 제출된 지원서를 실시간으로 조회할 수 있습니다.',
+      '"심사 진행중": 접수가 마감되어 관리자가 선발 처리를 진행 중입니다. 지원 현황은 계속 확인할 수 있습니다.',
+      { text: '순위·총점·추천 여부(추천 확정/미선발)는 관리자가 "최종 마감" 처리를 완료한 후에 확정되어 표시됩니다.', warn: true },
     ],
   }
 })
 
 const tieSet = computed(() => {
   const set = new Set()
-  if (rankView.value === 'track') {
-    const counts = {}
-    for (const r of results.value) {
-      if (r.track_rank == null) continue
-      const k = `${r.track_id}-${r.round_id}-${r.track_rank}`
-      if (!counts[k]) counts[k] = []
-      counts[k].push(r)
-    }
-    for (const rows of Object.values(counts)) {
-      if (rows.length > 1) for (const r of rows) set.add(`${r.student_id}-${r.track_id}-${r.round_id}`)
-    }
-  } else {
-    const counts = {}
-    for (const r of results.value) {
-      if (r.ranking == null) continue
-      const k = `${r.univ_name}-${r.round_id}-${r.ranking}`
-      if (!counts[k]) counts[k] = []
-      counts[k].push(r)
-    }
-    for (const rows of Object.values(counts)) {
-      if (rows.length > 1) for (const r of rows) set.add(`${r.student_id}-${r.track_id}-${r.round_id}`)
+  const counts = {}
+  for (const r of results.value) {
+    if (r.ranking == null) continue
+    const k = `${r.track_id}-${r.round_id}-${r.ranking}`
+    if (!counts[k]) counts[k] = []
+    counts[k].push(r)
+  }
+  for (const rows of Object.values(counts)) {
+    if (rows.length > 1) {
+      for (const r of rows) set.add(`${r.student_id}-${r.track_id}-${r.round_id}`)
     }
   }
   return set
@@ -297,7 +306,7 @@ const studentsByRound = computed(() => {
   for (const [roundId, studentMap] of Object.entries(map)) {
     out[roundId] = [...studentMap.values()].sort((a, b) =>
       auth.grade === 0
-        ? a.student_code.localeCompare(b.student_code)
+        ? (a.student_code || '').localeCompare(b.student_code || '')
         : (a.seq_no ?? 999) - (b.seq_no ?? 999)
     )
   }
@@ -331,7 +340,7 @@ async function handleAbandon(r) {
     message: `${r.name} 학생의 ${r.univ_name} ${r.track_name} 지원을 포기 처리하시겠습니까?`,
     confirmText: '포기 처리',
     level: 'danger',
-    dangerNotice: '한 번 포기하면 다시 되돌릴 수 없습니다. 재추천을 희망하면 다음 라운드에서 재지원해야 합니다.',
+    dangerNotice: '한 번 포기하면 다시 되돌릴 수 없습니다. 재추천을 희망하면 다음 차수에서 재지원해야 합니다.',
     finalConfirmText: '포기 확정',
   }))) return
   try {

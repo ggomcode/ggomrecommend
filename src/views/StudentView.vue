@@ -50,35 +50,35 @@
               <h3 class="text-base font-bold text-slate-900 dark:text-white m-0">학교장 추천전형 지원 안내 및 전략 가이드</h3>
             </div>
             <span class="text-xs font-extrabold text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/60 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-800">
-              ★ 1차 라운드 적극 지원 유효
+              ★ 1차 추천 선발 적극 지원 유효
             </span>
           </div>
 
           <div class="p-3.5 rounded-xl bg-white/90 dark:bg-slate-900/80 border border-blue-100 dark:border-slate-700/60 text-xs text-slate-700 dark:text-slate-300 space-y-2">
             <p class="font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5 text-xs m-0">
-              <span class="text-sm">🎯</span> 1차 라운드 적극 지원의 법칙 (가장 중요)
+              <span class="text-sm">🎯</span> 1차 추천 선발 적극 지원의 법칙 (가장 중요)
             </p>
             <p class="leading-relaxed pl-5 text-slate-600 dark:text-slate-300 m-0">
-              <strong>1차 라운드에 희망하는 대학을 빠짐없이 미리 신청하시는 것이 가장 유리합니다!</strong><br />
-              1차 라운드에서 <strong>[추천 확정](합격)</strong>을 받은 학생의 자리는 2차 라운드가 열려 성적이 더 우수한 학생이 추가 지원하더라도 <strong>절대로 박탈되거나 취소되지 않으며 100% 안전하게 보호</strong>됩니다.
+              <strong>1차 추천 선발에 희망하는 대학을 빠짐없이 미리 신청하시는 것이 가장 유리합니다!</strong><br />
+              1차 라운드에서 <strong>[추천 확정](합격)</strong>을 받은 학생의 자리는 2차 추천 선발이 열려 성적이 더 우수한 학생이 추가 지원하더라도 <strong>절대로 박탈되거나 취소되지 않으며 100% 안전하게 보호</strong>됩니다.
             </p>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">
             <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
-              <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">1️⃣ 1차 라운드 (메인 선발)</p>
+              <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">1️⃣ 1차 추천 선발 (메인 선발)</p>
               <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
                 주요 대학 추천 희망자 접수 및 1차 추천자 확정 (합격자 기득권 완전 보장)
               </p>
             </div>
             <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
-              <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">2️⃣ 2차 라운드 (잔여 정원)</p>
+              <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">2️⃣ 2차 추천 선발 (잔여 정원)</p>
               <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
                 1차 합격자를 제외한 <strong>남은 정원(잔여 T/O)</strong>에 대해서만 2차 신청자 간 성적순 경쟁
               </p>
             </div>
             <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
-              <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">3️⃣ 3차 라운드 (최종 미달)</p>
+              <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">3️⃣ 3차 추천 선발 (최종 미달)</p>
               <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
                 추가 모집 및 잔여 미달 모집단위 최종 접수 및 마무리 선발
               </p>
@@ -109,7 +109,21 @@
             <p class="text-xs mt-1 text-slate-400">우측 폼을 작성하여 추천 선정을 신청해 주세요.</p>
           </div>
 
-          <div v-else class="flex flex-col gap-4">
+          <!-- 통합 인쇄 버튼 (신청 내역이 있을 때만 표시) -->
+          <div v-if="myApplications.length > 0" class="flex items-start justify-between gap-3 p-3 mb-3 bg-blue-50 dark:bg-blue-950/20 rounded-xl border border-blue-200 dark:border-blue-900/30">
+            <div class="text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
+              <strong>📄 신청서 인쇄 안내</strong><br>
+              모든 추천 전형 신청을 완료한 후, 아래 버튼을 눌러 신청서를 1장으로 인쇄하여 제출하세요.
+            </div>
+            <button
+              @click="handlePrint()"
+              class="shrink-0 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-lg cursor-pointer border-none transition-all whitespace-nowrap"
+            >🖨️ 신청서 인쇄</button>
+          </div>
+
+          <div v-else-if="!loading" class="py-0"></div>
+
+          <div v-if="myApplications.length > 0" class="flex flex-col gap-4">
             <!-- 3회 추천 제한 안내 경고배너 -->
             <div v-if="myApplications.filter(ap => ap.is_recommended).length >= 3" class="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 text-amber-800 dark:text-amber-300 p-4 rounded-xl text-xs font-semibold leading-relaxed flex gap-2">
               <span class="text-base">⚠️</span>
@@ -145,17 +159,34 @@
                 <div><span class="text-slate-400">내신 총점:</span> <span class="font-semibold text-slate-700 dark:text-slate-300">{{ ap.manual_score ? ap.manual_score + '점' : '미입력' }}</span></div>
                 <div class="text-right flex items-center justify-end gap-2">
                   <a v-if="ap.student_signature_url" :href="ap.student_signature_url" target="_blank" class="text-blue-500 hover:underline font-bold">서명 확인</a>
-                  <button @click="handlePrint(ap)" class="text-blue-500 hover:underline bg-transparent border-none cursor-pointer p-0 text-xs font-bold">신청서 인쇄</button>
                 </div>
               </div>
 
-              <!-- 라운드가 OPEN 인 경우에만 지원 취소(삭제) 가능 -->
+              <!-- 추천 선발 접수 중인 경우에만 지원 취소(삭제) 가능 -->
               <div v-if="ap.round_status === 'OPEN' && !ap.is_recommended" class="flex justify-end mt-3">
                 <button
                   @click="handleCancelApplication(ap.id)"
                   :disabled="submitLoading"
                   class="text-xs font-bold text-rose-500 hover:text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/10 dark:hover:bg-rose-950/20 px-3 py-1.5 rounded-lg border border-rose-100 dark:border-rose-900/30 transition-all cursor-pointer"
                 >희망원 취소 (삭제)</button>
+              </div>
+
+              <!-- 접수 기간 지난 후 추천확정된 건에 대해 포기 신청 지원 -->
+              <div v-if="(ap.round_status === 'CLOSED' || ap.round_status === 'FINALIZED') && ap.is_recommended && !ap.is_abandoned" class="flex justify-end gap-2 mt-3 items-center">
+                <template v-if="getAbandonRequest(ap)">
+                  <span class="text-xs font-semibold text-rose-500 flex items-center gap-1">
+                    ⚠️ 포기 신청 완료 (담임교사 서류 제출 대기)
+                  </span>
+                  <button
+                    @click="printAbandonForm(ap)"
+                    class="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 transition-all cursor-pointer"
+                  >📄 포기원 재출력</button>
+                </template>
+                <button
+                  v-else
+                  @click="openAbandonRequestModal(ap)"
+                  class="text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/10 px-3 py-1.5 rounded-lg border border-rose-100 dark:border-rose-900/30 transition-all cursor-pointer"
+                >🚫 추천 포기 신청</button>
               </div>
             </div>
           </div>
@@ -176,14 +207,14 @@
 
           <div v-else-if="!currentRound" class="bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-rose-800 dark:text-rose-400 p-4 rounded-xl text-xs leading-relaxed text-center">
             🔒 <strong>현재 진행 중인 신청 차수가 없습니다.</strong><br>
-            관리자가 신규 추천 전형 라운드를 개시할 때까지 신청서를 제출할 수 없습니다.
+            관리자가 신규 추천 추천 선발을 개시할 때까지 신청서를 제출할 수 없습니다.
           </div>
 
-          <form v-else @submit.prevent="handleApply" class="flex flex-col gap-4">
+          <form v-else @submit.prevent="prepareApply" class="flex flex-col gap-4">
             <div class="bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 p-3 rounded-lg text-xs font-semibold flex justify-between items-center">
               <span>현재 접수 중: {{ currentRound }}차 추천 신청</span>
               <a
-                href="/data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%99%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%84%A0%EC%A0%95%20%EC%8B%A0%EC%B2%AD%EC%84%9C_%EC%96%91%EC%8B%9D.hwp"
+                href="/ggomrecommend/data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%99%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%84%A0%EC%A0%95%20%EC%8B%A0%EC%B2%AD%EC%84%9C_%EC%96%91%EC%8B%9D.hwp"
                 download
                 class="text-blue-600 dark:text-blue-400 hover:underline font-bold text-[10px] cursor-pointer"
               >
@@ -202,8 +233,8 @@
                 @change="onUnivChange"
               >
                 <option value="">대학 선택</option>
-                <option v-for="u in availableUnivs" :key="u.id" :value="u.id">
-                  {{ u.univ_name }} ({{ u.track_name }}) {{ u.grad_allowed ? '' : '[재학생 전용]' }}
+                <option v-for="u in availableUnivs" :key="u.id" :value="u.id" :disabled="u.is_exhausted">
+                  {{ u.univ_name }} ({{ u.track_name }}) {{ u.grad_allowed ? '' : '[재학생 전용]' }}{{ u.is_exhausted ? ' [⚠️ 추천정원 마감 - 지원 불가]' : '' }}
                 </option>
               </select>
 
@@ -244,6 +275,21 @@
                 placeholder="예: 컴퓨터공학과"
                 class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
                 style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
+              />
+            </div>
+
+            <!-- 졸업생 전용: 대학별 산출점수 입력 -->
+            <div v-if="!auth.isEnrolled" class="p-3 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/40">
+              <label class="block text-xs font-bold mb-1 text-amber-700 dark:text-amber-400">학교별 내신 산출점수 <span class="text-rose-500">*</span></label>
+              <p class="text-[11px] text-amber-700 dark:text-amber-400 mb-2 leading-relaxed">지원하는 대학의 모집요강을 참고하여 대학별 산출점수를 계산한 후 입력해주세요. 단, 학교에서 확인과정을 거친 후, 정정될 수 있습니다.</p>
+              <input
+                v-model="univCalcScore"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="예: 2.75"
+                class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
+                style="border: 1px solid #fcd34d; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
               />
             </div>
 
@@ -408,8 +454,168 @@
         </div>
       </div>
     </div>
+
+    <!-- 📜 학교장추천 대상자 선정 서약 조항 동의 모달 -->
+    <div
+      v-if="showOathModal"
+      class="fixed inset-0 flex items-center justify-center z-50 p-4"
+      style="background: rgba(0,0,0,0.6);"
+      @click.self="showOathModal = false"
+    >
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col">
+        <!-- 헤더 -->
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
+          <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 m-0">
+            📜 학교장추천 대상자 선정 서약 동의
+          </h3>
+          <button @click="showOathModal = false" class="text-slate-400 hover:text-slate-600 text-lg font-bold bg-transparent border-none cursor-pointer">✕</button>
+        </div>
+
+        <!-- 본문 -->
+        <div class="p-6 space-y-4 text-xs text-slate-700 dark:text-slate-300">
+          <div class="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-700 leading-relaxed text-justify space-y-2">
+            <p class="font-bold text-slate-900 dark:text-white text-sm m-0 pb-1 border-b border-slate-200 dark:border-slate-700">
+              ■ 학교장추천 대상자 선정 서약 조항
+            </p>
+            <p class="m-0 pt-1">
+              본인은 2027학년도 대학수학능력시험 및 수시 모집에서 대입 학교장추천을 희망하여 신청서를 제출합니다.
+            </p>
+            <p class="m-0">
+              본인은 학교의 학교장추천 심의위원회 규정을 준수하며, 경합이 발생하는 대학의 전형에 대해서는 학교 선발 우선순위 및 내신 성적 기준에 따른 공정한 심사 결과를 겸허히 수용할 것을 엄숙히 서약합니다.
+            </p>
+            <p class="m-0">
+              아울러 추천이 확정된 이후 정당한 사유 없이 임의 포기하여 타 학생의 기회를 박탈하지 않도록 신중하게 행동할 것을 확인합니다.
+            </p>
+          </div>
+
+          <!-- 동의 체크박스 -->
+          <label class="flex items-start gap-2.5 p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              v-model="agreedOath"
+              class="mt-0.5 w-4 h-4 text-blue-600 rounded focus:ring-blue-400 cursor-pointer"
+            />
+            <span class="text-xs font-bold text-blue-900 dark:text-blue-200">
+              (필수) 위 학교장추천 대상자 선정 서약 조항 내용을 모두 확인하였으며 이에 동의합니다.
+            </span>
+          </label>
+        </div>
+
+        <!-- 하단 버튼 -->
+        <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-2 bg-slate-50 dark:bg-slate-900/50">
+          <button
+            @click="showOathModal = false"
+            class="px-4 py-2 text-xs font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-200 rounded-xl hover:bg-slate-100 cursor-pointer"
+          >
+            취소
+          </button>
+          <button
+            :disabled="!agreedOath || submitLoading"
+            @click="confirmApply"
+            class="px-5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl shadow-sm transition-all cursor-pointer border-none"
+          >
+            {{ submitLoading ? '제출 중…' : '서약 동의 및 최종 제출' }}
+          </button>
+        </div>
+      </div>
+    </div>
       </section>
     </main>
+    <!-- 추천 포기 신청 모달 -->
+    <div v-if="showAbandonModal"
+      class="fixed inset-0 flex items-center justify-center z-50 p-4"
+      style="background: rgba(0,0,0,0.5);"
+    >
+      <div class="bg-white dark:bg-slate-800 flex flex-col rounded-2xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+        <!-- 헤더 -->
+        <div class="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+          <div>
+            <h3 class="text-base font-bold text-slate-800 dark:text-white m-0">🚫 학교장추천전형 추천 포기 신청</h3>
+            <p class="text-xs text-slate-400 mt-0.5 m-0">추천 포기 사유를 작성하고 학생/보호자 연대 서명을 진행하세요.</p>
+          </div>
+          <button @click="closeAbandonModal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold bg-transparent border-none cursor-pointer">✕</button>
+        </div>
+
+        <!-- 본문 -->
+        <div class="p-5 flex flex-col gap-4 overflow-y-auto max-h-[60vh] text-xs">
+          <div class="rounded-xl bg-slate-50 dark:bg-slate-900/50 p-4 border border-slate-200/60 space-y-2 text-xs text-slate-600 dark:text-slate-400">
+            <div class="flex justify-between"><span class="text-slate-400 font-semibold">포기 대상 대학:</span> <span class="font-bold text-slate-800 dark:text-white">{{ abandonTargetApp?.universities.univ_name }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-400 font-semibold">지원 전형:</span> <span class="font-bold text-slate-800 dark:text-white">{{ abandonTargetApp?.universities.track_name }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-400 font-semibold">지원 학과:</span> <span class="font-bold text-slate-800 dark:text-white">{{ abandonTargetApp?.department_name }}</span></div>
+          </div>
+
+          <!-- 포기사유 -->
+          <div class="space-y-1">
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400">포기 사유 (상세)</label>
+            <textarea
+              v-model="abandonReason"
+              required
+              rows="3"
+              placeholder="예: 타 대학(○○대학교 학생부종합전형) 중복 합격으로 인한 등록 포기"
+              class="w-full text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
+              style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
+            ></textarea>
+          </div>
+
+          <!-- 서명 영역 -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400">포기원 연대 서명</label>
+              <button type="button" @click="clearAbandonSignatures" class="text-xs text-rose-500 hover:underline cursor-pointer bg-transparent border-none">서명 초기화</button>
+            </div>
+
+            <!-- 학생 서명 -->
+            <div class="space-y-1">
+              <span class="block text-[11px] text-slate-400">학생 본인 서명</span>
+              <canvas
+                ref="abandonStudentCanvasRef"
+                class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg cursor-crosshair"
+                height="100"
+                @mousedown="startAbandonStudentDraw"
+                @mousemove="abandonStudentDraw"
+                @mouseup="stopAbandonStudentDraw"
+                @mouseleave="stopAbandonStudentDraw"
+                @touchstart="startAbandonStudentTouch"
+                @touchmove="abandonStudentTouch"
+                @touchend="stopAbandonStudentDraw"
+              ></canvas>
+            </div>
+
+            <!-- 학부모 서명 -->
+            <div class="space-y-1">
+              <span class="block text-[11px] text-slate-400">보호자 (학부모) 서명</span>
+              <canvas
+                ref="abandonParentCanvasRef"
+                class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg cursor-crosshair"
+                height="100"
+                @mousedown="startAbandonParentDraw"
+                @mousemove="abandonParentDraw"
+                @mouseup="stopAbandonParentDraw"
+                @mouseleave="stopAbandonParentDraw"
+                @touchstart="startAbandonParentTouch"
+                @touchmove="abandonParentTouch"
+                @touchend="stopAbandonParentDraw"
+              ></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- 푸터 -->
+        <div class="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/20 flex justify-end gap-2">
+          <button
+            @click="closeAbandonModal"
+            class="text-xs font-semibold text-slate-500 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg cursor-pointer px-4 py-2"
+          >취소</button>
+          <button
+            @click="submitAbandonRequest"
+            :disabled="abandonSubmitLoading"
+            class="text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg border-none cursor-pointer px-4 py-2 disabled:opacity-50"
+          >
+            {{ abandonSubmitLoading ? '제출 중...' : '포기 서류 제출 및 출력' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -441,6 +647,11 @@ const selectedUnivId = ref('')
 const departmentName = ref('')
 const parentName = ref('')
 const parentPhone = ref('')
+const univCalcScore = ref('')
+
+// 서약 동의 팝업 모달
+const showOathModal = ref(false)
+const agreedOath = ref(false)
 
 // 학생 서명 캔버스
 const studentCanvasRef = ref(null)
@@ -451,6 +662,28 @@ let studentDrawing = false
 const parentCanvasRef = ref(null)
 let parentCtx = null
 let parentDrawing = false
+
+// 추천 포기 신청 관련 상태 변수
+const showAbandonModal = ref(false)
+const abandonTargetApp = ref(null)
+const abandonReason = ref('')
+const abandonSubmitLoading = ref(false)
+const abandonStudentCanvasRef = ref(null)
+const abandonParentCanvasRef = ref(null)
+
+let abandonStudentCtx = null
+let abandonParentCtx = null
+let abandonStudentDrawing = false
+let abandonParentDrawing = false
+
+function getAbandonRequest(ap) {
+  if (!ap.scanned_doc_url) return null
+  try {
+    const parsed = JSON.parse(ap.scanned_doc_url)
+    if (parsed && parsed.abandon_requested) return parsed
+  } catch {}
+  return null
+}
 
 // 수도권 학교장추천전형 (regional_recommendations) 데이터
 const regionalRecs = ref([])
@@ -544,17 +777,75 @@ async function loadData() {
       }
     }
 
-    // 2. 지원 가능한 대학 목록 로드
+    // 2. 지원 가능한 대학 목록 로드 및 추천인원 마감 여부 집계
     const { data: univs, error: err2 } = await supabase
       .from('universities')
       .select('*')
       .order('univ_name', { ascending: true })
 
-    if (!err2 && univs) {
-      if (!auth.isEnrolled) {
-        availableUnivs.value = univs.filter(u => u.grad_allowed)
+    // 1. 이미 최종 확정(마감)된 라운드 ID 목록 조회
+    const { data: finalizedRounds } = await supabase
+      .from('timeline_rounds')
+      .select('id')
+      .eq('status', 'FINALIZED')
+
+    const finalizedRoundIds = (finalizedRounds || []).map(r => r.id)
+
+    // 2. 최종 확정된 라운드에서 추천 확정된 건수만 조회
+    let recommendedApps = []
+    if (finalizedRoundIds.length > 0) {
+      const { data: apps } = await supabase
+        .from('applications')
+        .select('univ_id')
+        .eq('is_recommended', true)
+        .eq('is_abandoned', false)
+        .in('round', finalizedRoundIds)
+      recommendedApps = apps || []
+    }
+
+    const recCounts = {}
+    recommendedApps.forEach(ap => {
+      recCounts[ap.univ_id] = (recCounts[ap.univ_id] || 0) + 1
+    })
+
+    function getQuotaLimitNumber(u) {
+      if (!u.has_quota || !u.quota_limit) return null
+      const str = String(u.quota_limit).trim()
+      const num = parseFloat(str)
+      let pct = null
+      if (!isNaN(num) && num > 0 && num < 1) {
+        pct = num * 100
       } else {
-        availableUnivs.value = univs
+        const m = str.match(/^(\d+(?:\.\d+)?)\s*%$/)
+        if (m) pct = parseFloat(m[1])
+      }
+      if (pct !== null) {
+        if (disclosureCount.value) {
+          return Math.ceil(disclosureCount.value * pct / 100)
+        }
+        return 9999
+      }
+      const mNum = str.match(/\d+/)
+      return mNum ? parseInt(mNum[0], 10) : null
+    }
+
+    if (!err2 && univs) {
+      const enrichedUnivs = univs.map(u => {
+        const limit = getQuotaLimitNumber(u)
+        const used = recCounts[u.id] || 0
+        const isExhausted = limit !== null && used >= limit
+        return {
+          ...u,
+          is_exhausted: isExhausted,
+          quota_used: used,
+          quota_resolved_limit: limit
+        }
+      })
+
+      if (!auth.isEnrolled) {
+        availableUnivs.value = enrichedUnivs.filter(u => u.grad_allowed)
+      } else {
+        availableUnivs.value = enrichedUnivs
       }
     }
 
@@ -731,8 +1022,8 @@ function isCanvasBlank(canvas) {
   return canvas.toDataURL() === blank.toDataURL()
 }
 
-// 희망원 등록 제출
-async function handleApply() {
+// 희망원 등록 사전 검증 및 서약 모달 오픈
+function prepareApply() {
   formError.value = null
   formSuccess.value = null
 
@@ -743,6 +1034,54 @@ async function handleApply() {
 
   if (isCanvasBlank(studentCanvasRef.value) || isCanvasBlank(parentCanvasRef.value)) {
     formError.value = '학생 서명과 학부모 서명이 모두 필요합니다.'
+    return
+  }
+
+  // 정원 마감 검증
+  const selectedUniv = availableUnivs.value.find(u => u.id === selectedUnivId.value)
+  if (selectedUniv && selectedUniv.is_exhausted) {
+    formError.value = '해당 대학/전형은 추천 제한 정원이 이미 마감되어 더 이상 지원하실 수 없습니다.'
+    return
+  }
+
+  // 중복 신청 체크
+  const isDuplicate = myApplications.value.some(
+    ap => ap.univ_id === selectedUnivId.value && ap.round === currentRound.value && !ap.is_abandoned
+  )
+  if (isDuplicate) {
+    formError.value = '해당 대학/전형에는 이미 접수된 신청서가 존재합니다.'
+    return
+  }
+
+  agreedOath.value = false
+  showOathModal.value = true
+}
+
+async function confirmApply() {
+  if (!agreedOath.value) return
+  showOathModal.value = false
+  await executeApply()
+}
+
+// 희망원 등록 제출 실행
+async function executeApply() {
+  formError.value = null
+  formSuccess.value = null
+
+  if (!selectedUnivId.value) {
+    formError.value = '지원할 대학교를 선택해 주세요.'
+    return
+  }
+
+  if (isCanvasBlank(studentCanvasRef.value) || isCanvasBlank(parentCanvasRef.value)) {
+    formError.value = '학생 서명과 학부모 서명이 모두 필요합니다.'
+    return
+  }
+
+  // 정원 마감 검증
+  const selectedUniv = availableUnivs.value.find(u => u.id === selectedUnivId.value)
+  if (selectedUniv && selectedUniv.is_exhausted) {
+    formError.value = '해당 대학/전형은 추천 제한 정원이 이미 마감되어 더 이상 지원하실 수 없습니다.'
     return
   }
 
@@ -760,44 +1099,74 @@ async function handleApply() {
     const { data: userData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }))
     const userId = userData?.user?.id || (auth.token?.startsWith('student_') ? auth.token.split('_')[1] : 'guest')
 
-    // 1. 서명 파일 Storage 업로드
-    const studentSigBlob = dataURLtoBlob(studentCanvasRef.value.toDataURL('image/png'))
-    const parentSigBlob = dataURLtoBlob(parentCanvasRef.value.toDataURL('image/png'))
+    // 1. 서명 파일 Storage 업로드 시도 (스토리지 버킷 미생성/권한 오류 시 Base64 DataURL 자동 폴백)
+    const studentSigDataUrl = studentCanvasRef.value.toDataURL('image/png')
+    const parentSigDataUrl = parentCanvasRef.value.toDataURL('image/png')
+
+    const studentSigBlob = dataURLtoBlob(studentSigDataUrl)
+    const parentSigBlob = dataURLtoBlob(parentSigDataUrl)
 
     const studentSigPath = `student_${userId}_r${currentRound.value}_u_${selectedUnivId.value}_student.png`
     const parentSigPath = `student_${userId}_r${currentRound.value}_u_${selectedUnivId.value}_parent.png`
 
-    // 업로드 실행
-    const { error: uploadErr1 } = await supabase.storage
-      .from('signatures')
-      .upload(studentSigPath, studentSigBlob, { contentType: 'image/png', upsert: true })
-    if (uploadErr1) throw new Error('학생 서명 업로드에 실패했습니다.')
+    let studentSigUrl = studentSigDataUrl
+    let parentSigUrl = parentSigDataUrl
 
-    const { error: uploadErr2 } = await supabase.storage
-      .from('signatures')
-      .upload(parentSigPath, parentSigBlob, { contentType: 'image/png', upsert: true })
-    if (uploadErr2) throw new Error('학부모 서명 업로드에 실패했습니다.')
+    try {
+      const { error: uploadErr1 } = await supabase.storage
+        .from('signatures')
+        .upload(studentSigPath, studentSigBlob, { contentType: 'image/png', upsert: true })
 
-    // 퍼블릭 URL 획득
-    const studentSigUrl = supabase.storage.from('signatures').getPublicUrl(studentSigPath).data.publicUrl
-    const parentSigUrl = supabase.storage.from('signatures').getPublicUrl(parentSigPath).data.publicUrl
+      if (!uploadErr1) {
+        const publicRes1 = supabase.storage.from('signatures').getPublicUrl(studentSigPath)
+        if (publicRes1?.data?.publicUrl) studentSigUrl = publicRes1.data.publicUrl
+      }
+    } catch (e) {
+      console.warn('학생 서명 스토리지 업로드 실패 (Base64로 대체):', e)
+    }
 
-    // 2. applications 레코드 추가
-    const { error: insertErr } = await supabase
-      .from('applications')
-      .insert({
-        student_id: userId,
-        univ_id: selectedUnivId.value,
-        round: currentRound.value,
-        department_name: departmentName.value,
-        parent_name: parentName.value,
-        parent_phone: parentPhone.value,
-        student_signature_url: studentSigUrl
-      })
+    try {
+      const { error: uploadErr2 } = await supabase.storage
+        .from('signatures')
+        .upload(parentSigPath, parentSigBlob, { contentType: 'image/png', upsert: true })
+
+      if (!uploadErr2) {
+        const publicRes2 = supabase.storage.from('signatures').getPublicUrl(parentSigPath)
+        if (publicRes2?.data?.publicUrl) parentSigUrl = publicRes2.data.publicUrl
+      }
+    } catch (e) {
+      console.warn('학부모 서명 스토리지 업로드 실패 (Base64로 대체):', e)
+    }
+
+    // profiles FK 자동 생성은 학생 가입 시에만 처리 (auth.users가 없으면 FK 위반)
+    // enrolled_students 기반 학생은 별도 profiles 생성 불필요
+
+    // 3. applications 레코드 추가 (parent_signature_url 포함)
+    const payload = {
+      student_id: userId,
+      univ_id: selectedUnivId.value,
+      round: currentRound.value,
+      department_name: departmentName.value,
+      parent_name: parentName.value,
+      parent_phone: parentPhone.value,
+      student_signature_url: studentSigUrl,
+      parent_signature_url: parentSigUrl,
+      ...((!auth.isEnrolled && univCalcScore.value) ? { univ_calc_score: Number(univCalcScore.value) } : {})
+    }
+
+    let insertErr = null
+    const { error: err } = await supabase.from('applications').insert(payload)
+    if (err && err.message?.includes('parent_signature_url')) {
+      delete payload.parent_signature_url
+      const retry = await supabase.from('applications').insert(payload)
+      insertErr = retry.error
+    } else {
+      insertErr = err
+    }
 
     if (insertErr) {
       // 롤백용 스토리지 파일 삭제
-      await supabase.storage.from('signatures').remove([studentSigPath, parentSigPath])
+      await supabase.storage.from('signatures').remove([studentSigPath, parentSigPath]).catch(() => {})
       throw insertErr
     }
 
@@ -833,7 +1202,7 @@ async function handleApply() {
   }
 }
 
-// 신청 희망원 취소 (OPEN 라운드 전용)
+// 신청 희망원 취소 (추천 선발 접수 중 전용)
 async function handleCancelApplication(id) {
   if (!confirm('정말로 이 추천 희망원 신청을 취소하시겠습니까? 신청 내역과 서명 파일이 영구히 삭제됩니다.')) return
   
@@ -885,13 +1254,366 @@ async function handleCancelApplication(id) {
   }
 }
 
-function handlePrint(ap) {
-  const fullApp = {
-    ...ap,
-    name: auth.studentName,
-    student_code: auth.studentCode
+function handlePrint() {
+  // 모든 지원 내역을 한 장에 인쇄
+  const firstAp = myApplications.value[0] || {}
+  const studentInfo = {
+    name: auth.studentName || firstAp.name || '',
+    student_code: auth.studentCode || firstAp.student_code || '',
+    is_enrolled: auth.isEnrolled,
+    grad_year: auth.gradYear || firstAp.grad_year,
+    grade: auth.grade || firstAp.grade,
+    class_no: auth.classNo || firstAp.class_no,
+    seq_no: auth.seqNo || firstAp.seq_no,
+    student_phone: auth.studentPhone || firstAp.student_phone || '',
+    parent_name: firstAp.parent_name || '',
+    parent_phone: firstAp.parent_phone || '',
+    student_signature_url: firstAp.student_signature_url,
+    parent_signature_url: firstAp.parent_signature_url
   }
-  printApplicationForm(fullApp)
+  printApplicationForm(myApplications.value, studentInfo)
+}
+
+function openAbandonRequestModal(ap) {
+  abandonTargetApp.value = ap
+  abandonReason.value = ''
+  showAbandonModal.value = true
+  setTimeout(() => {
+    initAbandonCanvases()
+  }, 200)
+}
+
+function closeAbandonModal() {
+  showAbandonModal.value = false
+  abandonTargetApp.value = null
+  abandonReason.value = ''
+}
+
+function initAbandonCanvases() {
+  if (abandonStudentCanvasRef.value) {
+    abandonStudentCtx = abandonStudentCanvasRef.value.getContext('2d')
+    abandonStudentCtx.strokeStyle = '#0f172a'
+    abandonStudentCtx.lineWidth = 2.5
+    abandonStudentCtx.lineCap = 'round'
+    abandonStudentCtx.lineJoin = 'round'
+  }
+  if (abandonParentCanvasRef.value) {
+    abandonParentCtx = abandonParentCanvasRef.value.getContext('2d')
+    abandonParentCtx.strokeStyle = '#0f172a'
+    abandonParentCtx.lineWidth = 2.5
+    abandonParentCtx.lineCap = 'round'
+    abandonParentCtx.lineJoin = 'round'
+  }
+}
+
+function clearAbandonSignatures() {
+  if (abandonStudentCanvasRef.value && abandonStudentCtx) {
+    abandonStudentCtx.clearRect(0, 0, abandonStudentCanvasRef.value.width, abandonStudentCanvasRef.value.height)
+    abandonStudentCtx.beginPath()
+  }
+  if (abandonParentCanvasRef.value && abandonParentCtx) {
+    abandonParentCtx.clearRect(0, 0, abandonParentCanvasRef.value.width, abandonParentCanvasRef.value.height)
+    abandonParentCtx.beginPath()
+  }
+}
+
+// 학생 드로잉
+function startAbandonStudentDraw(e) {
+  abandonStudentDrawing = true
+  abandonStudentDraw(e)
+}
+function abandonStudentDraw(e) {
+  if (!abandonStudentDrawing) return
+  const canvas = abandonStudentCanvasRef.value
+  const rect = canvas.getBoundingClientRect()
+  const x = (e.clientX - rect.left) * (canvas.width / rect.width)
+  const y = (e.clientY - rect.top) * (canvas.height / rect.height)
+  abandonStudentCtx.lineTo(x, y)
+  abandonStudentCtx.stroke()
+}
+function stopAbandonStudentDraw() {
+  abandonStudentDrawing = false
+  abandonStudentCtx?.beginPath()
+}
+function startAbandonStudentTouch(e) {
+  e.preventDefault()
+  abandonStudentDrawing = true
+  const touch = e.touches[0]
+  const canvas = abandonStudentCanvasRef.value
+  const rect = canvas.getBoundingClientRect()
+  const x = (touch.clientX - rect.left) * (canvas.width / rect.width)
+  const y = (touch.clientY - rect.top) * (canvas.height / rect.height)
+  abandonStudentCtx.moveTo(x, y)
+}
+function abandonStudentTouch(e) {
+  e.preventDefault()
+  if (!abandonStudentDrawing) return
+  const touch = e.touches[0]
+  const canvas = abandonStudentCanvasRef.value
+  const rect = canvas.getBoundingClientRect()
+  const x = (touch.clientX - rect.left) * (canvas.width / rect.width)
+  const y = (touch.clientY - rect.top) * (canvas.height / rect.height)
+  abandonStudentCtx.lineTo(x, y)
+  abandonStudentCtx.stroke()
+}
+
+// 보호자 드로잉
+function startAbandonParentDraw(e) {
+  abandonParentDrawing = true
+  abandonParentDraw(e)
+}
+function abandonParentDraw(e) {
+  if (!abandonParentDrawing) return
+  const canvas = abandonParentCanvasRef.value
+  const rect = canvas.getBoundingClientRect()
+  const x = (e.clientX - rect.left) * (canvas.width / rect.width)
+  const y = (e.clientY - rect.top) * (canvas.height / rect.height)
+  abandonParentCtx.lineTo(x, y)
+  abandonParentCtx.stroke()
+}
+function stopAbandonParentDraw() {
+  abandonParentDrawing = false
+  abandonParentCtx?.beginPath()
+}
+function startAbandonParentTouch(e) {
+  e.preventDefault()
+  abandonParentDrawing = true
+  const touch = e.touches[0]
+  const canvas = abandonParentCanvasRef.value
+  const rect = canvas.getBoundingClientRect()
+  const x = (touch.clientX - rect.left) * (canvas.width / rect.width)
+  const y = (touch.clientY - rect.top) * (canvas.height / rect.height)
+  abandonParentCtx.moveTo(x, y)
+}
+function abandonParentTouch(e) {
+  e.preventDefault()
+  if (!abandonParentDrawing) return
+  const touch = e.touches[0]
+  const canvas = abandonParentCanvasRef.value
+  const rect = canvas.getBoundingClientRect()
+  const x = (touch.clientX - rect.left) * (canvas.width / rect.width)
+  const y = (touch.clientY - rect.top) * (canvas.height / rect.height)
+  abandonParentCtx.lineTo(x, y)
+  abandonParentCtx.stroke()
+}
+
+async function submitAbandonRequest() {
+  if (!abandonReason.value.trim()) {
+    alert('포기 사유를 작성해 주세요.')
+    return
+  }
+  if (isCanvasBlank(abandonStudentCanvasRef.value) || isCanvasBlank(abandonParentCanvasRef.value)) {
+    alert('학생 및 보호자 서명이 모두 필요합니다.')
+    return
+  }
+
+  abandonSubmitLoading.value = true
+  try {
+    const studentId = auth.id
+    const roundId = abandonTargetApp.value.round
+    const univId = abandonTargetApp.value.univ_id
+
+    const studentCanvas = abandonStudentCanvasRef.value
+    const parentCanvas = abandonParentCanvasRef.value
+
+    const studentSigBlob = await new Promise(resolve => studentCanvas.toBlob(resolve, 'image/png'))
+    const parentSigBlob = await new Promise(resolve => parentCanvas.toBlob(resolve, 'image/png'))
+
+    const stPath = `abandon_student_${studentId}_r${roundId}_u_${univId}.png`
+    const paPath = `abandon_parent_${studentId}_r${roundId}_u_${univId}.png`
+
+    await Promise.all([
+      supabase.storage.from('signatures').upload(stPath, studentSigBlob, { contentType: 'image/png', upsert: true }),
+      supabase.storage.from('signatures').upload(paPath, parentSigBlob, { contentType: 'image/png', upsert: true })
+    ])
+
+    const studentSigUrl = supabase.storage.from('signatures').getPublicUrl(stPath).data.publicUrl
+    const parentSigUrl = supabase.storage.from('signatures').getPublicUrl(paPath).data.publicUrl
+
+    const requestJson = {
+      abandon_requested: true,
+      abandon_reason: abandonReason.value,
+      student_signature_url: studentSigUrl,
+      parent_signature_url: parentSigUrl,
+      requested_at: new Date().toISOString()
+    }
+
+    const { error } = await supabase
+      .from('applications')
+      .update({ scanned_doc_url: JSON.stringify(requestJson) })
+      .eq('id', abandonTargetApp.value.id)
+
+    if (error) throw error
+
+    await loadData()
+
+    const printApp = abandonTargetApp.value
+    const printWindow = window.open('', '_blank')
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>학교장추천 전형 지원 포기원</title>
+          <style>
+            body { font-family: sans-serif; padding: 40px; color: #111; line-height: 1.6; }
+            .title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 40px; }
+            .table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+            .table th, .table td { border: 1px solid #000; padding: 12px; text-align: left; font-size: 13px; }
+            .table th { background: #f2f2f2; font-weight: bold; width: 25%; }
+            .section-title { font-weight: bold; font-size: 14px; margin-top: 20px; margin-bottom: 10px; }
+            .reason-box { border: 1px solid #000; padding: 15px; min-height: 120px; margin-bottom: 30px; font-size: 13px; }
+            .signature-area { display: flex; justify-content: space-between; margin-top: 50px; }
+            .sig-box { text-align: center; width: 45%; font-size: 13px; }
+            .sig-img { max-height: 80px; display: block; margin: 10px auto 0; }
+            .footer { text-align: center; margin-top: 60px; font-size: 14px; font-weight: bold; }
+            .date { text-align: center; margin-top: 30px; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="title">학교장추천전형 지원 포기원</div>
+          
+          <div class="section-title">[신청인 인적사항]</div>
+          <table class="table">
+            <tr>
+              <th>학번/학생코드</th>
+              <td>${auth.studentCode}</td>
+              <th>성명</th>
+              <td>${auth.studentName}</td>
+            </tr>
+            <tr>
+              <th>지원 대학</th>
+              <td>${printApp.universities.univ_name}</td>
+              <th>지원 전형</th>
+              <td>${printApp.universities.track_name}</td>
+            </tr>
+            <tr>
+              <th>지원 학과</th>
+              <td colspan="3">${printApp.department_name}</td>
+            </tr>
+          </table>
+          
+          <div class="section-title">[포기 사유]</div>
+          <div class="reason-box">${abandonReason.value}</div>
+          
+          <p style="font-size: 13px; line-height: 1.6;">
+            위 본인은 2027학년도 대입 학교장추천전형 선정과 관련하여 추천이 확정되었으나, 위의 정당한 사유로 인하여 학교장추천전형 지원 권한을 공식적으로 포기하고자 포기원을 제출합니다.
+          </p>
+          
+          <div class="date">${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+          
+          <div class="signature-area">
+            <div class="sig-box">
+              <div>학생 본인: ${auth.studentName} (서명/날인)</div>
+              <img class="sig-img" src="${studentSigUrl}" />
+            </div>
+            <div class="sig-box">
+              <div>보호자(학부모): ${printApp.parent_name} (서명/날인)</div>
+              <img class="sig-img" src="${parentSigUrl}" />
+            </div>
+          </div>
+          
+          <div class="footer">${schoolName.value} 귀하</div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+              window.close();
+            }
+          <\/script>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+
+    closeAbandonModal()
+    alert('포기 신청서 등록이 완료되었습니다. 출력된 포기원을 학교 담임선생님께 제출해 주세요.')
+  } catch (e) {
+    console.error(e)
+    alert(e.message || '포기 신청 도중 오류가 발생했습니다.')
+  } finally {
+    abandonSubmitLoading.value = false
+  }
+}
+
+function printAbandonForm(ap) {
+  const req = getAbandonRequest(ap)
+  if (!req) return
+
+  const printWindow = window.open('', '_blank')
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>학교장추천 전형 지원 포기원</title>
+        <style>
+          body { font-family: sans-serif; padding: 40px; color: #111; line-height: 1.6; }
+          .title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 40px; }
+          .table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+          .table th, .table td { border: 1px solid #000; padding: 12px; text-align: left; font-size: 13px; }
+          .table th { background: #f2f2f2; font-weight: bold; width: 25%; }
+          .section-title { font-weight: bold; font-size: 14px; margin-top: 20px; margin-bottom: 10px; }
+          .reason-box { border: 1px solid #000; padding: 15px; min-height: 120px; margin-bottom: 30px; font-size: 13px; }
+          .signature-area { display: flex; justify-content: space-between; margin-top: 50px; }
+          .sig-box { text-align: center; width: 45%; font-size: 13px; }
+          .sig-img { max-height: 80px; display: block; margin: 10px auto 0; }
+          .footer { text-align: center; margin-top: 60px; font-size: 14px; font-weight: bold; }
+          .date { text-align: center; margin-top: 30px; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="title">학교장추천전형 지원 포기원</div>
+        
+        <div class="section-title">[신청인 인적사항]</div>
+        <table class="table">
+          <tr>
+            <th>학번/학생코드</th>
+            <td>${auth.studentCode}</td>
+            <th>성명</th>
+            <td>${auth.studentName}</td>
+          </tr>
+          <tr>
+            <th>지원 대학</th>
+            <td>${ap.universities.univ_name}</td>
+            <th>지원 전형</th>
+            <td>${ap.universities.track_name}</td>
+          </tr>
+          <tr>
+            <th>지원 학과</th>
+            <td colspan="3">${ap.department_name}</td>
+          </tr>
+        </table>
+        
+        <div class="section-title">[포기 사유]</div>
+        <div class="reason-box">${req.abandon_reason}</div>
+        
+        <p style="font-size: 13px; line-height: 1.6;">
+          위 본인은 2027학년도 대입 학교장추천전형 선정과 관련하여 추천이 확정되었으나, 위의 정당한 사유로 인하여 학교장추천전형 지원 권한을 공식적으로 포기하고자 포기원을 제출합니다.
+          아울러 추천 포기 처리가 완료되면 차순위 대기 학생에게 추천 기회가 승계됨을 확인합니다.
+        </p>
+        
+        <div class="date">${new Date(req.requested_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+        
+        <div class="signature-area">
+          <div class="sig-box">
+            <div>학생 본인: ${auth.studentName} (서명/날인)</div>
+            <img class="sig-img" src="${req.student_signature_url}" />
+          </div>
+          <div class="sig-box">
+            <div>보호자(학부모): ${ap.parent_name} (서명/날인)</div>
+            <img class="sig-img" src="${req.parent_signature_url}" />
+          </div>
+        </div>
+        
+        <div class="footer">${schoolName.value} 귀하</div>
+        
+        <script>
+          window.onload = function() {
+            window.print();
+            window.close();
+          }
+        <\/script>
+      </body>
+    </html>
+  `)
+  printWindow.document.close()
 }
 
 async function handleLogout() {

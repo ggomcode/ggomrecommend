@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS universities (
 -- round: 1, 2, 3... (각 신청 차수)
 CREATE TABLE IF NOT EXISTS applications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    student_id UUID NOT NULL, -- enrolled_students 및 profiles 통합 참조 ID
     univ_id UUID NOT NULL REFERENCES universities(id) ON DELETE CASCADE,
     round INTEGER NOT NULL,
     department_name TEXT NOT NULL DEFAULT '', -- 지원학과
@@ -84,7 +84,8 @@ CREATE TABLE IF NOT EXISTS applications (
     -- 웹 작성 신청서 정보
     parent_name TEXT,
     parent_phone TEXT,
-    student_signature_url TEXT, -- 서명 이미지 Supabase Storage URL
+    student_signature_url TEXT, -- 학생 서명 이미지 Supabase Storage URL
+    parent_signature_url TEXT,  -- 학부모 서명 이미지 Supabase Storage URL
     
     -- 오프라인 서류 업로드 시
     scanned_doc_url TEXT, -- 추천서 스캔파일 Supabase Storage URL
@@ -761,3 +762,57 @@ CREATE POLICY "Anyone can select enrolled_students" ON public.enrolled_students 
 
 DROP POLICY IF EXISTS "Anyone can modify enrolled_students" ON public.enrolled_students;
 CREATE POLICY "Anyone can modify enrolled_students" ON public.enrolled_students FOR ALL USING (true) WITH CHECK (true);
+
+-- 16. APPLICATIONS 테이블 학부모 서명 컬럼 추가
+ALTER TABLE public.applications ADD COLUMN IF NOT EXISTS parent_signature_url TEXT;
+
+-- 17. SUPABASE STORAGE 서명 (signatures) 버킷 생성 및 RLS 정책 설정
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('signatures', 'signatures', true, 5242880, ARRAY['image/png', 'image/jpeg', 'image/webp'])
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Anyone can select signatures" ON storage.objects;
+CREATE POLICY "Anyone can select signatures"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'signatures');
+
+DROP POLICY IF EXISTS "Anyone can insert signatures" ON storage.objects;
+CREATE POLICY "Anyone can insert signatures"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'signatures');
+
+DROP POLICY IF EXISTS "Anyone can update signatures" ON storage.objects;
+CREATE POLICY "Anyone can update signatures"
+ON storage.objects FOR UPDATE
+USING (bucket_id = 'signatures')
+WITH CHECK (bucket_id = 'signatures');
+
+DROP POLICY IF EXISTS "Anyone can delete signatures" ON storage.objects;
+CREATE POLICY "Anyone can delete signatures"
+ON storage.objects FOR DELETE
+USING (bucket_id = 'signatures');
+
+-- 18. 기타 주요 테이블 RLS 통합 정책 설정 (config, timeline_rounds, disciplinary_students, audit_logs)
+ALTER TABLE public.config ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anyone can select config" ON public.config;
+CREATE POLICY "Anyone can select config" ON public.config FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Anyone can modify config" ON public.config;
+CREATE POLICY "Anyone can modify config" ON public.config FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE public.timeline_rounds ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anyone can select timeline_rounds" ON public.timeline_rounds;
+CREATE POLICY "Anyone can select timeline_rounds" ON public.timeline_rounds FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Anyone can modify timeline_rounds" ON public.timeline_rounds;
+CREATE POLICY "Anyone can modify timeline_rounds" ON public.timeline_rounds FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE public.disciplinary_students ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anyone can select disciplinary_students" ON public.disciplinary_students;
+CREATE POLICY "Anyone can select disciplinary_students" ON public.disciplinary_students FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Anyone can modify disciplinary_students" ON public.disciplinary_students;
+CREATE POLICY "Anyone can modify disciplinary_students" ON public.disciplinary_students FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anyone can select audit_logs" ON public.audit_logs;
+CREATE POLICY "Anyone can select audit_logs" ON public.audit_logs FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Anyone can modify audit_logs" ON public.audit_logs;
+CREATE POLICY "Anyone can modify audit_logs" ON public.audit_logs FOR ALL USING (true) WITH CHECK (true);

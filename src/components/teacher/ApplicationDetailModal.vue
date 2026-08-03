@@ -13,10 +13,10 @@
           <h3 class="text-sm font-bold text-slate-800 dark:text-white">
             {{ studentName }} — 전형 지원 정보 상세
           </h3>
-          <p class="text-[10px] text-slate-400 font-medium">신청 내역 검토 및 상태 처리</p>
+          <p class="text-[10px] text-slate-400 font-medium">신청 내역 검토 및 추천 상태 처리</p>
         </div>
         <button
-          class="text-lg leading-none text-slate-450 hover:text-slate-600 bg-transparent border-none cursor-pointer"
+          class="text-lg leading-none text-slate-400 hover:text-slate-600 bg-transparent border-none cursor-pointer"
           @click="$emit('close')"
         >✕</button>
       </div>
@@ -28,38 +28,75 @@
           <div class="flex justify-between"><span class="text-slate-400 font-semibold">지원 대학:</span> <span class="font-bold text-slate-800 dark:text-white">{{ app.univ_name }}</span></div>
           <div class="flex justify-between"><span class="text-slate-400 font-semibold">지원 전형:</span> <span class="font-bold text-slate-800 dark:text-white">{{ app.track_name }}</span></div>
           <div class="flex justify-between"><span class="text-slate-400 font-semibold">지원 학과:</span> <span class="font-bold text-slate-800 dark:text-white">{{ app.department_name }}</span></div>
-          <div class="flex justify-between"><span class="text-slate-400 font-semibold">내신 산출 점수:</span> <span class="font-bold text-blue-600 dark:text-blue-400">{{ app.total_score || app.manual_score || '0' }}점</span></div>
+          <div class="flex justify-between"><span class="text-slate-400 font-semibold">성적 정보:</span> <span class="font-bold text-blue-600 dark:text-blue-400">{{ displayScoreText }}</span></div>
         </div>
 
         <!-- 추천 처리 상태 요약 -->
-        <div class="rounded-xl border p-4 text-xs font-semibold"
-             :class="app.abandoned ? 'bg-rose-50 border-rose-200 text-rose-800' : app.recommended ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-50 border-amber-200 text-amber-800'">
+        <div
+          class="rounded-xl border p-4 text-xs font-semibold"
+          :class="app.abandoned ? 'bg-rose-50 border-rose-200 text-rose-800' : (app.excluded || app.is_excluded) ? 'bg-amber-50 border-amber-200 text-amber-900' : (app.recommended || app.is_recommended) ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-700'"
+        >
           <div v-if="app.abandoned" class="space-y-1.5">
             <p>⚠️ <strong>추천 포기 완료 건:</strong> 이 지원서는 학생/학부모의 추천 포기 서신이 제출되어 반려 및 종료되었습니다.</p>
             <div v-if="docUrl || app.abandoned_doc_url" class="mt-2 text-right">
               <a :href="docUrl || app.abandoned_doc_url" target="_blank" class="text-rose-600 underline font-bold">📄 업로드된 포기원 문서 보기</a>
             </div>
           </div>
-          <div v-else-if="app.recommended">
-            <p>🎉 <strong>추천 확정 상태:</strong> 본 지원은 학교장추천전형 대상자로 추천 확정(선발 완료) 상태입니다.</p>
+          <div v-else-if="app.excluded || app.is_excluded">
+            <p>⛔ <strong>추천 보류 (성적 미달):</strong> 현재 전학급 성적순 {{ app.univ_rank || 1 }}위로 대학교 추천 제한 인원({{ app.quota_limit ? app.quota_limit + '명' : '제한없음' }})을 초과하여 성적순 보류 상태입니다.</p>
+          </div>
+          <div v-else-if="app.recommended || app.is_recommended">
+            <p>🎉 <strong>추천 대상:</strong> 현재 전학급 성적순 {{ app.univ_rank || 1 }}위로 대학교 추천 대상자(정원 {{ app.quota_limit ? app.quota_limit + '명' : '제한없음' }})로 지정되었습니다.</p>
           </div>
           <div v-else>
-            <p>⏱️ <strong>추천 대기 상태:</strong> 라운드 마감 전 점수 산정 및 선발 심의 대기 단계입니다.</p>
+            <p>⏱️ <strong>추천 대기 상태:</strong> 담임교사의 추천 선택 대기 중입니다 (현재 전학급 성적순 {{ app.univ_rank || 1 }}위 / 정원 {{ app.quota_limit ? app.quota_limit + '명' : '제한없음' }}). 추천 대상 등록 시 실시간으로 추천 상태가 반영됩니다.</p>
+          </div>
+        </div>
+
+        <!-- 💡 추천 여부 선택 패널 (추천 / 대기 전환) -->
+        <div v-if="!app.abandoned" class="border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex flex-col gap-3 bg-slate-50/60 dark:bg-slate-900/30">
+          <div>
+            <h4 class="text-xs font-bold text-slate-800 dark:text-white m-0">추천 여부 선택</h4>
+            <p class="text-[10px] text-slate-500 leading-normal mt-0.5 m-0">
+              추천을 선택하면 전학급 대상 대학교별 추천 제한 인원에 따라 성적순(대학환산점수 우선, 석차등급 낮을수록 상위)으로 추천 대상자가 판정됩니다.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 mt-1">
+            <button
+              type="button"
+              @click="handleSetRecommend(true)"
+              :disabled="actionLoading"
+              class="py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border"
+              :class="(app.recommended || app.is_recommended) && !app.is_excluded && !app.excluded ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'"
+            >
+              👍 추천 대상 등록
+            </button>
+
+            <button
+              type="button"
+              @click="handleSetRecommend(false)"
+              :disabled="actionLoading"
+              class="py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border"
+              :class="!app.recommended && !app.is_recommended && !app.is_excluded && !app.excluded ? 'bg-slate-700 text-white border-slate-700 shadow-sm' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'"
+            >
+              ⏳ 대기 상태로 전환
+            </button>
           </div>
         </div>
 
         <!-- 포기 처리 패널 (추천 확정된 상태에서 포기 처리 시 포기서류 PDF 업로드 필수) -->
-        <div v-if="app.recommended && !app.abandoned" class="border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex flex-col gap-3">
+        <div v-if="(app.recommended || app.is_recommended) && !app.abandoned" class="border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex flex-col gap-3">
           <div>
-            <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300">추천 전형 포기 처리</h4>
-            <p class="text-[10px] text-slate-400 leading-normal mt-0.5">학생이 추천을 포기할 경우, 포기원 양식 스캔 파일(PDF)을 필수 업로드하고 포기 처리를 완료하여 공석을 복구해야 합니다.</p>
+            <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300 m-0">추천 전형 포기 처리</h4>
+            <p class="text-[10px] text-slate-400 leading-normal mt-0.5 m-0">학생이 추천을 포기할 경우, 포기원 양식 스캔 파일(PDF)을 필수 업로드하고 포기 처리를 완료하여 공석을 복구해야 합니다.</p>
           </div>
           
           <div>
             <div class="flex items-center justify-between mb-1">
               <label class="block text-[10px] font-bold text-slate-500">포기원 PDF 서류 선택</label>
               <a
-                href="/data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%99%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%A7%80%EC%9B%90%20%ED%8F%AC%EA%B8%B0%EC%9B%90_%EC%96%91%EC%8B%9D.hwp"
+                href="/ggomrecommend/data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%99%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%A7%80%EC%9B%90%20%ED%8F%AC%EA%B8%B0%EC%9B%90_%EC%96%91%EC%8B%9D.hwp"
                 download
                 class="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer"
               >
@@ -109,7 +146,7 @@
         </button>
         <!-- 추천 대기 상태(미확정)인 경우에만 즉시 지원 완전 삭제(취소) 가능 -->
         <button
-          v-if="!app.recommended && !app.abandoned"
+          v-if="!app.recommended && !app.is_recommended && !app.abandoned"
           type="button"
           @click="onDelete"
           :disabled="actionLoading"
@@ -123,9 +160,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../../utils/supabaseClient'
-import { teacherAbandonApplication, teacherDeleteApplication } from '../../api/teacher.js'
+import {
+  teacherAbandonApplication,
+  teacherDeleteApplication,
+  teacherSetRecommendationStatus
+} from '../../api/teacher.js'
+import { promoteNextEligibleStudent } from '../../api/admin.js'
 import { convertPdfToImages, analyzeDocumentWithAI } from '../../utils/ocrParser.js'
 
 const props = defineProps({
@@ -141,8 +183,16 @@ const file = ref(null)
 const docUrl = ref('')
 const openaiKey = ref('')
 
+const displayScoreText = computed(() => {
+  const gpa = props.app.gpa_overall != null ? `${props.app.gpa_overall}등급` : '석차등급 미산출'
+  const calc = props.app.univ_calc_score != null ? props.app.univ_calc_score : props.app.manual_score
+  if (calc != null && calc !== '' && Number(calc) !== Number(props.app.gpa_overall)) {
+    return `${gpa} (대학환산: ${calc}점)`
+  }
+  return gpa
+})
+
 onMounted(async () => {
-  // Config에서 OpenAI API Key 로드
   if (supabase) {
     const { data } = await supabase.from('config').select('value').eq('key', 'openai_api_key').single()
     if (data) {
@@ -150,6 +200,25 @@ onMounted(async () => {
     }
   }
 })
+
+async function handleSetRecommend(isRecommend) {
+  actionLoading.value = true
+  try {
+    await teacherSetRecommendationStatus(
+      props.app.student_id,
+      props.app.track_id,
+      props.app.round_id,
+      isRecommend
+    )
+    emit('deleted')
+    emit('close')
+  } catch (e) {
+    console.error(e)
+    alert(e.message || '추천 상태 변경 도중 오류가 발생했습니다.')
+  } finally {
+    actionLoading.value = false
+  }
+}
 
 async function onFileSelected(e) {
   const selected = e.target.files[0]
@@ -166,7 +235,6 @@ async function onFileSelected(e) {
   }
 }
 
-// AI OCR 판독 및 검증 수행
 async function runOcrAnalysis(selectedFile) {
   ocrLoading.value = true
   ocrWarning.value = ''
@@ -197,13 +265,11 @@ async function runOcrAnalysis(selectedFile) {
     }
   } catch (e) {
     console.error('OCR Validation failure: ', e)
-    // API 장애 시에는 프로세스가 막히지 않도록 무시 처리
   } finally {
     ocrLoading.value = false
   }
 }
 
-// 포기원 처리
 async function handleAbandon() {
   if (!file.value) return
   
@@ -220,7 +286,6 @@ async function handleAbandon() {
     const trackId = props.app.track_id
     const roundId = props.app.round_id
 
-    // Supabase Storage 'documents' 버킷에 포기원 업로드
     const path = `abandoned_${studentId}_r${roundId}_u_${trackId}.pdf`
     const { error: uploadErr } = await supabase.storage
       .from('documents')
@@ -228,14 +293,23 @@ async function handleAbandon() {
 
     if (uploadErr) throw new Error('포기원 PDF 업로드에 실패했습니다: ' + uploadErr.message)
 
-    // 퍼블릭 URL 획득
     const publicUrl = supabase.storage.from('documents').getPublicUrl(path).data.publicUrl
     docUrl.value = publicUrl
 
-    // DB 업데이트
     await teacherAbandonApplication(studentId, trackId, roundId, publicUrl)
 
-    alert('포기 처리가 완료되었습니다.')
+    // 차순위 승계 처리 수행
+    let successionMsg = ''
+    try {
+      const nextStudent = await promoteNextEligibleStudent(trackId, roundId)
+      if (nextStudent) {
+        successionMsg = `\n\n🎉 [차순위 승계 알림]\n- 대학: ${nextStudent.univ_name} ${nextStudent.track_name}\n- 차순위 후보인 ${nextStudent.name} (${nextStudent.student_code}) 학생이 새롭게 추천 후보명단에 자동 등록되었습니다.`
+      }
+    } catch (e) {
+      console.warn('Succession error:', e)
+    }
+
+    alert('포기 처리가 완료되었습니다.' + successionMsg)
     emit('deleted')
     emit('close')
   } catch (e) {
@@ -246,7 +320,6 @@ async function handleAbandon() {
   }
 }
 
-// 지원서 완전 삭제 (추천 대기 상태 전용)
 async function onDelete() {
   if (!confirm('정말로 이 지원 신청을 완전 삭제하시겠습니까?')) return
 

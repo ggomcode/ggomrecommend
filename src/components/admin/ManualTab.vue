@@ -8,7 +8,7 @@
         <h1 class="text-2xl font-semibold" style="color: #1e293b; margin: 0;">매뉴얼</h1>
       </div>
       <a
-        href="/manual.html"
+        href="/ggomrecommend/manual.html"
         target="_blank"
         rel="noopener noreferrer"
         class="inline-flex items-center gap-1.5 text-base font-medium rounded-lg"

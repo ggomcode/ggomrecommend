@@ -40,17 +40,30 @@
             />
           </div>
 
-          <div v-if="/^\d{5}$/.test(loginId.trim())" class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-            <span class="text-xs font-semibold text-slate-600">학생 구분</span>
-            <div class="flex gap-4">
-              <label class="flex items-center gap-1.5 text-xs font-medium cursor-pointer text-slate-700">
-                <input type="radio" v-model="loginIsEnrolled" :value="true" class="accent-blue-600" />
-                재학생
-              </label>
-              <label class="flex items-center gap-1.5 text-xs font-medium cursor-pointer text-slate-700">
-                <input type="radio" v-model="loginIsEnrolled" :value="false" class="accent-blue-600" />
-                졸업생
-              </label>
+          <div v-if="/^\d{5}$/.test(loginId.trim())" class="flex flex-col gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-600">학생 구분</span>
+              <div class="flex gap-4">
+                <label class="flex items-center gap-1.5 text-xs font-medium cursor-pointer text-slate-700">
+                  <input type="radio" v-model="loginIsEnrolled" :value="true" class="accent-blue-600" />
+                  재학생
+                </label>
+                <label class="flex items-center gap-1.5 text-xs font-medium cursor-pointer text-slate-700">
+                  <input type="radio" v-model="loginIsEnrolled" :value="false" class="accent-blue-600" />
+                  졸업생
+                </label>
+              </div>
+            </div>
+            <div v-if="!loginIsEnrolled" class="flex items-center justify-between border-t border-slate-200/60 pt-2.5 mt-1">
+              <label class="text-xs font-semibold text-slate-600">졸업 학년도</label>
+              <input
+                v-model.number="loginGradYear"
+                type="number"
+                required
+                placeholder="예: 2026"
+                class="text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-slate-800"
+                style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; width: 100px; box-sizing: border-box;"
+              />
             </div>
           </div>
 
@@ -138,6 +151,9 @@
               class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-slate-800"
               style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
             />
+            <p class="text-[11px] text-slate-400 mt-1 leading-normal">
+              고3기간이 2025년 3월~2026년 1월이고, 2026년 2월에 졸업한 학생의 졸업학년도는 '2026'입니다.
+            </p>
           </div>
 
           <div>
@@ -315,6 +331,7 @@ const rejectedCode = ref('')
 const loginId = ref('')
 const loginPassword = ref('')
 const loginIsEnrolled = ref(true)
+const loginGradYear = ref(new Date().getFullYear())
 
 // 학생 회원가입 상태
 const signupCode = ref('')
@@ -348,7 +365,14 @@ async function handleLogin() {
       if (!/^\d{5}$/.test(id)) {
         throw new Error('아이디는 admin, teacher 또는 5자리 학번이어야 합니다.')
       }
-      await auth.loginStudent(id, pw, loginIsEnrolled.value)
+      let finalStudentCode = id
+      if (!loginIsEnrolled.value) {
+        if (!loginGradYear.value) {
+          throw new Error('졸업생은 졸업 학년도를 입력해야 합니다.')
+        }
+        finalStudentCode = `${loginGradYear.value}${id}`
+      }
+      await auth.loginStudent(finalStudentCode, pw, loginIsEnrolled.value)
     }
     router.push('/select-system')
   } catch (e) {

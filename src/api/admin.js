@@ -11,9 +11,28 @@ export async function blobErrMsg(e) {
 // 현재 활성화된 라운드 조회
 export const getCurrentRound = async () => {
   if (!supabase) return null
+
+  // 총 선발 회수(total_rounds) 제한값 조회
+  let limit = 3
+  if (typeof window !== 'undefined') {
+    const local = localStorage.getItem('total_rounds')
+    if (local) {
+      const n = parseInt(local, 10)
+      if (n >= 1 && n <= 5) limit = n
+    }
+  }
+  try {
+    const { data: configLimit } = await supabase.from('config').select('value').eq('key', 'total_rounds').maybeSingle()
+    if (configLimit && configLimit.value) {
+      const n = parseInt(configLimit.value, 10)
+      if (n >= 1 && n <= 5) limit = n
+    }
+  } catch {}
+
   const { data, error } = await supabase
     .from('timeline_rounds')
     .select('*')
+    .lte('id', limit)
     .eq('status', 'OPEN')
     .order('id', { ascending: true })
 
@@ -23,15 +42,42 @@ export const getCurrentRound = async () => {
   const { data: closedData } = await supabase
     .from('timeline_rounds')
     .select('*')
+    .lte('id', limit)
     .eq('status', 'CLOSED')
     .order('id', { ascending: true })
 
   if (closedData && closedData.length > 0) return closedData[0]
-  return null
+
+  // 둘 다 없으면 lte(limit) 범위에서 가장 최근 라운드를 반환
+  const { data: latest } = await supabase
+    .from('timeline_rounds')
+    .select('*')
+    .lte('id', limit)
+    .order('id', { ascending: false })
+    .limit(1)
+
+  return latest && latest.length > 0 ? latest[0] : null
 }
 
 export const getOverview = async () => {
   if (!supabase) return null
+
+  // 총 선발 회수(total_rounds) 제한값 조회
+  let limit = 3
+  if (typeof window !== 'undefined') {
+    const local = localStorage.getItem('total_rounds')
+    if (local) {
+      const n = parseInt(local, 10)
+      if (n >= 1 && n <= 5) limit = n
+    }
+  }
+  try {
+    const { data: configLimit } = await supabase.from('config').select('value').eq('key', 'total_rounds').maybeSingle()
+    if (configLimit && configLimit.value) {
+      const n = parseInt(configLimit.value, 10)
+      if (n >= 1 && n <= 5) limit = n
+    }
+  } catch {}
 
   const version = '0.9.99'
   const server_addr = typeof window !== 'undefined' ? window.location.host : 'localhost'
@@ -43,34 +89,31 @@ export const getOverview = async () => {
 
   // [1] 기본 라운드, 학급(교사), 대학, 학생 수, 누적 통계 쿼리를 병렬로 한 번에 실행
   const [
-    activeRoundsRes,
-    closedRoundsRes,
+    allRoundsLimitRes,
     studentCountRes,
     teachersRes,
-    univListRes,
     allRoundsRes,
     totalApplicantsRes,
     confirmedCountRes,
     abandonedCountRes
   ] = await Promise.all([
-    supabase.from('timeline_rounds').select('*').eq('status', 'OPEN').order('id', { ascending: true }),
-    supabase.from('timeline_rounds').select('*').eq('status', 'CLOSED').order('id', { ascending: true }),
+    supabase.from('timeline_rounds').select('*').lte('id', limit).order('id', { ascending: false }),
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student'),
     supabase.from('profiles').select('*').eq('role', 'teacher').order('grade', { ascending: true }).order('class_no', { ascending: true }),
-    supabase.from('universities').select('*').order('univ_name', { ascending: true }),
-    supabase.from('timeline_rounds').select('id'),
-    supabase.from('applications').select('*', { count: 'exact', head: true }),
-    supabase.from('applications').select('*', { count: 'exact', head: true }).eq('is_recommended', true),
-    supabase.from('applications').select('*', { count: 'exact', head: true }).eq('is_abandoned', true)
+    supabase.from('timeline_rounds').select('id').lte('id', limit),
+    supabase.from('applications').select('*', { count: 'exact', head: true }).lte('round', limit),
+    supabase.from('applications').select('*', { count: 'exact', head: true }).eq('is_recommended', true).lte('round', limit),
+    supabase.from('applications').select('*', { count: 'exact', head: true }).eq('is_abandoned', true).lte('round', limit)
   ])
 
-  const activeRounds = activeRoundsRes.data
-  const closedRounds = closedRoundsRes.data
-  const round = (activeRounds && activeRounds.length > 0) ? activeRounds[0] : ((closedRounds && closedRounds.length > 0) ? closedRounds[0] : null)
+  const limitRounds = allRoundsLimitRes.data || []
+  // OPEN인 것이 있으면 우선 쓰고, 없으면 CLOSED, 그것도 없으면 FINALIZED 등 가장 최근 차수를 선택
+  const round = limitRounds.find(r => r.status === 'OPEN') || 
+                limitRounds.find(r => r.status === 'CLOSED') || 
+                limitRounds[0] || null
 
   const studentCount = studentCountRes.count || 0
   const teachers = teachersRes.data || []
-  const univList = univListRes.data || []
   const totalRounds = allRoundsRes.data ? allRoundsRes.data.length : 0
   const totalApplicants = totalApplicantsRes.count || 0
   const confirmedCount = confirmedCountRes.count || 0
@@ -82,8 +125,8 @@ export const getOverview = async () => {
 
   if (round) {
     const [appsRes, studentsRes] = await Promise.all([
-      supabase.from('applications').select('univ_id, student_id').eq('round', round.id),
-      supabase.from('profiles').select('id, grade, class_no').eq('role', 'student').eq('is_enrolled', true)
+      supabase.from('applications').select('univ_id, student_id').lte('round', round.id),
+      supabase.from('enrolled_students').select('id, grade, class_no').eq('is_enrolled', true)
     ])
     const roundApps = appsRes.data || []
     const students = studentsRes.data || []
@@ -121,26 +164,24 @@ export const getOverview = async () => {
     }
   }))
 
-  // [4] 대학/모집단위 배열 생성
-  const univMap = new Map()
-  for (const u of univList) {
-    if (!univMap.has(u.univ_name)) {
-      univMap.set(u.univ_name, {
-        univ_id: u.id,
-        univ_name: u.univ_name,
-        total_quota: u.total_quota,
-        tracks: []
+  // [4] 대학/모집단위 배열 생성 (정원 계산 헬퍼 getQuotaStats와 연동하여 정밀한 정원 계산 반영)
+  const quotaStats = await getQuotaStats()
+  const universities = (quotaStats || []).map(u => {
+    return {
+      univ_id: u.univ_id,
+      univ_name: u.univ_name,
+      total_quota: u.total_quota,
+      tracks: u.tracks.map(t => {
+        const applicants = appCountByUniv.get(t.track_id) || 0
+        return {
+          track_id: t.track_id,
+          track_name: t.track_name,
+          unit_quota: t.unit_quota,
+          applicants
+        }
       })
     }
-    const applicants = appCountByUniv.get(u.id) || 0
-    univMap.get(u.univ_name).tracks.push({
-      track_id: u.id,
-      track_name: u.track_name,
-      unit_quota: u.quota,
-      applicants
-    })
-  }
-  const universities = Array.from(univMap.values())
+  })
 
   return {
     version,
@@ -1556,7 +1597,7 @@ export const finalizeRound = async (id) => {
   // 1. 미결정(추천 확정 혹은 부적합 처리가 되지 않은) 건이 있는지 조회
   const { data: apps, error: err } = await supabase
     .from('applications')
-    .select('*, profiles:student_id(*), universities:univ_id(*)')
+    .select('*, universities:univ_id(*)')
     .eq('round', id)
     .eq('is_recommended', false)
     .eq('is_excluded', false)
@@ -1565,14 +1606,30 @@ export const finalizeRound = async (id) => {
   if (err) throw err
 
   if (apps && apps.length > 0) {
+    const studentIds = apps.map(ap => ap.student_id)
+    const [{ data: studentsData }, { data: profilesData }] = await Promise.all([
+      supabase.from('enrolled_students').select('id, name, student_code, grade, class_no').in('id', studentIds),
+      supabase.from('profiles').select('id, name, student_code, grade, class_no').in('id', studentIds)
+    ])
+
+    const studentMap = new Map((studentsData || []).map(s => [s.id, s]))
+    const profileMap = new Map((profilesData || []).map(p => [p.id, p]))
+
     // 미결정 지원자가 있으므로 차단
-    const undecidedList = apps.map(ap => ({
-      student_code: ap.profiles.student_code,
-      student_name: ap.profiles.name,
-      grade: ap.profiles.grade,
-      class_no: ap.profiles.class_no,
-      univ_name: ap.universities.univ_name,
-      track_name: ap.universities.track_name
+    const undecidedList = await Promise.all(apps.map(async ap => {
+      const stInfo = studentMap.get(ap.student_id) || profileMap.get(ap.student_id) || {}
+      let studentName = stInfo.name || '미명학생'
+      if (studentName.startsWith('enc:')) {
+        try { studentName = await decryptText(studentName) } catch { studentName = '복호화실패' }
+      }
+      return {
+        student_code: stInfo.student_code || '',
+        student_name: studentName,
+        grade: stInfo.grade,
+        class_no: stInfo.class_no,
+        univ_name: ap.universities?.univ_name || '',
+        track_name: ap.universities?.track_name || ''
+      }
     }))
 
     const errorObj = new Error('추천 또는 제외가 결정되지 않은 지원자가 있어 라운드를 마감할 수 없습니다.')
@@ -1643,7 +1700,7 @@ export const getResults = async (roundId, trackId) => {
 
   let query = supabase
     .from('applications')
-    .select('*, profiles:student_id(*), universities:univ_id(*)')
+    .select('*, universities:univ_id(*)')
     .eq('round', roundId)
 
   if (trackId) {
@@ -1652,6 +1709,17 @@ export const getResults = async (roundId, trackId) => {
 
   const { data: apps, error } = await query
   if (error) throw error
+  if (!apps || apps.length === 0) return []
+
+  // enrolled_students & profiles 매핑
+  const studentIds = apps.map(ap => ap.student_id)
+  const [{ data: studentsData }, { data: profilesData }] = await Promise.all([
+    supabase.from('enrolled_students').select('id, name, student_code, grade, class_no, seq_no, is_enrolled').in('id', studentIds),
+    supabase.from('profiles').select('id, name, student_code, grade, class_no, seq_no, is_enrolled').in('id', studentIds)
+  ])
+
+  const studentMap = new Map((studentsData || []).map(s => [s.id, s]))
+  const profileMap = new Map((profilesData || []).map(p => [p.id, p]))
 
   // 대학교(univ_id) & 라운드(round)별로 묶어 랭킹 부여
   const grouped = {}
@@ -1662,18 +1730,36 @@ export const getResults = async (roundId, trackId) => {
   })
 
   const results = []
-  Object.keys(grouped).forEach(key => {
+  
+  for (const key of Object.keys(grouped)) {
     const groupApps = grouped[key]
 
+    // 학생 정보 병합
+    const appsWithStudentInfo = await Promise.all(groupApps.map(async ap => {
+      const stInfo = studentMap.get(ap.student_id) || profileMap.get(ap.student_id) || {}
+      let studentName = stInfo.name || '미명학생'
+      if (studentName.startsWith('enc:')) {
+        try { studentName = await decryptText(studentName) } catch { studentName = '복호화실패' }
+      }
+      return {
+        ...ap,
+        stInfo: {
+          ...stInfo,
+          name: studentName,
+          is_enrolled: stInfo.is_enrolled !== false
+        }
+      }
+    }))
+
     // 정렬: 재학생 우선, 내신 성적 내림차순, 학번 오름차순
-    groupApps.sort((a, b) => {
-      if (a.profiles.is_enrolled !== b.profiles.is_enrolled) {
-        return a.profiles.is_enrolled ? -1 : 1
+    appsWithStudentInfo.sort((a, b) => {
+      if (a.stInfo.is_enrolled !== b.stInfo.is_enrolled) {
+        return a.stInfo.is_enrolled ? -1 : 1
       }
       const scoreA = Number(a.manual_score || 0)
       const scoreB = Number(b.manual_score || 0)
       if (scoreB !== scoreA) return scoreB - scoreA
-      return a.profiles.student_code.localeCompare(b.profiles.student_code)
+      return (a.stInfo.student_code || '').localeCompare(b.stInfo.student_code || '')
     })
 
     // Standard Competition Ranking (1, 1, 3, 4...)
@@ -1682,9 +1768,10 @@ export const getResults = async (roundId, trackId) => {
     let prevScore = null
     let prevEnrolled = null
 
-    groupApps.forEach((ap, idx) => {
+    for (let idx = 0; idx < appsWithStudentInfo.length; idx++) {
+      const ap = appsWithStudentInfo[idx]
       const currentScore = Number(ap.manual_score || 0)
-      const currentEnrolled = ap.profiles.is_enrolled
+      const currentEnrolled = ap.stInfo.is_enrolled
 
       if (idx > 0) {
         if (currentScore === prevScore && currentEnrolled === prevEnrolled) {
@@ -1719,18 +1806,18 @@ export const getResults = async (roundId, trackId) => {
         abandoned: ap.is_abandoned,
         excluded: ap.is_excluded,
         excluded_reason: ap.excluded_reason,
-        student_code: ap.profiles.student_code,
-        name: ap.profiles.name,
-        grade: ap.profiles.grade,
-        class_no: ap.profiles.class_no,
-        seq_no: ap.profiles.seq_no,
-        is_enrolled: ap.profiles.is_enrolled,
-        univ_name: ap.universities.univ_name,
-        track_name: ap.universities.track_name,
+        student_code: ap.stInfo.student_code || '',
+        name: ap.stInfo.name,
+        grade: ap.stInfo.grade,
+        class_no: ap.stInfo.class_no,
+        seq_no: ap.stInfo.seq_no,
+        is_enrolled: ap.stInfo.is_enrolled,
+        univ_name: ap.universities?.univ_name || '',
+        track_name: ap.universities?.track_name || '',
         department_name: ap.department_name
       })
-    })
-  })
+    }
+  }
 
   return results
 }
@@ -1782,38 +1869,87 @@ export const unrecommendResult = async (sid, tid, rid) => {
 // 22. 지원서 목록 조회 (라운드별)
 export const getApplications = async (roundId, trackId) => {
   if (!supabase) return []
+  
+  // 1. 지원서 조회
   let query = supabase
     .from('applications')
-    .select('*, profiles:student_id(*), universities:univ_id(*)')
+    .select('*, universities:univ_id(*)')
     .eq('round', roundId)
 
   if (trackId) {
     query = query.eq('univ_id', trackId)
   }
 
-  const { data, error } = await query
-  if (error) throw error
+  const { data: appsData, error: appsErr } = await query
+  if (appsErr) throw appsErr
+  if (!appsData || appsData.length === 0) return []
 
-  return data.map(ap => ({
-    student_id: ap.student_id,
-    track_id: ap.univ_id,
-    round_id: ap.round,
-    abandoned: ap.is_abandoned,
-    excluded: ap.is_excluded,
-    excluded_reason: ap.excluded_reason,
-    department_name: ap.department_name,
-    student_code: ap.profiles.student_code,
-    name: ap.profiles.name,
-    grade: ap.profiles.grade,
-    class_no: ap.profiles.class_no,
-    seq_no: ap.profiles.seq_no,
-    is_enrolled: ap.profiles.is_enrolled,
-    univ_id: ap.univ_id,
-    univ_name: ap.universities.univ_name,
-    track_name: ap.universities.track_name,
-    recommended: ap.is_recommended,
-    round_status: 'CLOSED'
+  // 2. enrolled_students 마스터 데이터 전체 조회 및 인덱스 맵 생성
+  const studentIds = appsData.map(ap => ap.student_id)
+  const { data: studentsData, error: stErr } = await supabase
+    .from('enrolled_students')
+    .select('id, name, student_code, grade, class_no, seq_no, is_enrolled')
+    .in('id', studentIds)
+
+  if (stErr) throw stErr
+
+  const studentMap = new Map()
+  if (studentsData) {
+    for (const s of studentsData) {
+      studentMap.set(s.id, s)
+    }
+  }
+
+  // 3. profiles 데이터도 fallback 대비하여 전체 패치
+  const { data: profilesData } = await supabase
+    .from('profiles')
+    .select('id, name, student_code, grade, class_no, seq_no, is_enrolled')
+    .in('id', studentIds)
+
+  const profileMap = new Map()
+  if (profilesData) {
+    for (const p of profilesData) {
+      profileMap.set(p.id, p)
+    }
+  }
+
+  // 4. 데이터 가드 매핑 및 암호화 해제
+  const mapped = await Promise.all(appsData.map(async ap => {
+    const stInfo = studentMap.get(ap.student_id) || profileMap.get(ap.student_id) || {}
+    
+    // 이름 복호화
+    let studentName = stInfo.name || '미명학생'
+    if (studentName.startsWith('enc:')) {
+      try {
+        studentName = await decryptText(studentName)
+      } catch {
+        studentName = '복호화실패'
+      }
+    }
+
+    return {
+      student_id: ap.student_id,
+      track_id: ap.univ_id,
+      round_id: ap.round,
+      abandoned: ap.is_abandoned,
+      excluded: ap.is_excluded,
+      excluded_reason: ap.excluded_reason,
+      department_name: ap.department_name,
+      student_code: stInfo.student_code || '',
+      name: studentName,
+      grade: stInfo.grade,
+      class_no: stInfo.class_no,
+      seq_no: stInfo.seq_no,
+      is_enrolled: stInfo.is_enrolled !== false,
+      univ_id: ap.univ_id,
+      univ_name: ap.universities?.univ_name || '',
+      track_name: ap.universities?.track_name || '',
+      recommended: ap.is_recommended,
+      round_status: 'CLOSED'
+    }
   }))
+
+  return mapped
 }
 
 // 23. 지원 포기 (관리자)
@@ -2211,24 +2347,42 @@ export const exportQuotaStats = async () => {
 
 export const getTrackRecommendedList = async (trackId) => {
   if (!supabase) return []
-  const { data, error } = await supabase
+  const { data: appsData, error } = await supabase
     .from('applications')
-    .select('*, profiles:student_id(*)')
+    .select('*')
     .eq('univ_id', trackId)
     .eq('is_recommended', true)
     .eq('is_abandoned', false)
 
   if (error) throw error
+  if (!appsData || appsData.length === 0) return []
 
-  // Format matching expected array
-  return data.map((ap, index) => ({
-    student_id: ap.student_id,
-    name: ap.profiles.name,
-    student_code: ap.profiles.student_code,
-    is_enrolled: ap.profiles.is_enrolled,
-    abandoned: ap.is_abandoned,
-    ranking: index + 1
+  const studentIds = appsData.map(ap => ap.student_id)
+  const [{ data: studentsData }, { data: profilesData }] = await Promise.all([
+    supabase.from('enrolled_students').select('id, name, student_code, is_enrolled').in('id', studentIds),
+    supabase.from('profiles').select('id, name, student_code, is_enrolled').in('id', studentIds)
+  ])
+
+  const studentMap = new Map((studentsData || []).map(s => [s.id, s]))
+  const profileMap = new Map((profilesData || []).map(p => [p.id, p]))
+
+  const mapped = await Promise.all(appsData.map(async (ap, index) => {
+    const stInfo = studentMap.get(ap.student_id) || profileMap.get(ap.student_id) || {}
+    let studentName = stInfo.name || '미명학생'
+    if (studentName.startsWith('enc:')) {
+      try { studentName = await decryptText(studentName) } catch { studentName = '복호화실패' }
+    }
+    return {
+      student_id: ap.student_id,
+      name: studentName,
+      student_code: stInfo.student_code || '',
+      is_enrolled: stInfo.is_enrolled !== false,
+      abandoned: ap.is_abandoned,
+      ranking: index + 1
+    }
   }))
+
+  return mapped
 }
 
 export const downloadUnivSettingsTemplate = async () => {
@@ -3397,4 +3551,175 @@ export const setDisclosureCount = async (count) => {
     .from('config')
     .upsert({ key: 'disclosure_student_count', value: String(count) })
   if (error) throw error
+}
+
+// DB 저장 데이터를 업로드 가능한 동일 형식 엑셀로 백업 내려받기
+export const exportRegionalRecommendations = async () => {
+  const XLSX = await import('xlsx')
+  const rows = await getRegionalRecommendations()
+
+  // 인원제한 백업 복원 헬퍼:
+  // DB에 '10 (3%)' 또는 '10명 (3%)' 형태로 저장된 경우 → '3%' 로 복원
+  // '3%' 또는 '0.03' 등 이미 원본 형태면 그대로 반환
+  function restoreQuotaLimitRaw(val) {
+    if (val == null) return ''
+    const str = String(val).trim()
+    // 패턴: "10 (3%)" / "10명 (3%)" / "10(3%)" → "3%" 추출
+    const m = str.match(/^\d+명?\s*\((\d+(?:\.\d+)?%)\)$/)
+    if (m) return m[1]
+    return str
+  }
+
+  // 업로드 시 사용하는 헤더명과 1:1 매핑 (importRegionalRecommendations와 동일 순서)
+  const HEADERS = [
+    '지역', '대학명', '모집정원', '전형명', '인원제한',
+    '대상', '졸업생조건', '수능최저학력기준', '전형방법',
+    '반영교과', '반영지표', '이수단위 반영', '학년별 반영비율',
+    '졸업생 반영학기', '진로선택과목 반영방법', '비고'
+  ]
+
+  const dataRows = rows.map(r => [
+    r.region || '',
+    r.univ_name || '',
+    r.recruitment_quota || '',
+    r.track_name || '',
+    restoreQuotaLimitRaw(r.quota_limit),   // '10 (3%)' → '3%' 복원
+    r.target_students || '',
+    r.grad_condition || '',
+    r.csat_min || '',
+    r.evaluation_method || '',
+    r.reflected_subjects || '',
+    r.reflected_indicators || '',
+    r.course_unit_reflection || '',
+    r.grade_ratio || '',
+    r.grad_semesters || '',
+    r.career_elective_method || '',
+    r.remarks || '',
+  ])
+
+  const worksheet = XLSX.utils.aoa_to_sheet([HEADERS, ...dataRows])
+
+  // 컬럼 너비 자동 조정 (최소 12, 최대 50)
+  const colWidths = HEADERS.map((h, ci) => {
+    const maxLen = dataRows.reduce((acc, row) => {
+      const cellLen = String(row[ci] || '').length
+      return Math.max(acc, cellLen)
+    }, h.length)
+    return { wch: Math.min(Math.max(maxLen + 2, 12), 50) }
+  })
+  worksheet['!cols'] = colWidths
+
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, '학교장추천전형요강')
+
+  const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+  return new Blob([wbout], { type: 'application/octet-stream' })
+}
+
+export const promoteNextEligibleStudent = async (univId, roundId) => {
+  if (!supabase) return null
+
+  // 1. 대학 정보 조회 (인원 제한 여부 및 제한 인원 확인)
+  const { data: univ } = await supabase
+    .from('universities')
+    .select('*')
+    .eq('id', univId)
+    .single()
+
+  if (!univ || !univ.has_quota || !univ.quota_limit) {
+    return null
+  }
+
+  // 2. 해당 대학 및 라운드의 활성 지원서(포기하지 않은 사람) 조회
+  const { data: apps, error: err1 } = await supabase
+    .from('applications')
+    .select('*')
+    .eq('univ_id', univId)
+    .eq('round', roundId)
+    .eq('is_abandoned', false)
+
+  if (err1 || !apps || apps.length === 0) return null
+
+  // 3. 현재 이미 추천된(추천 확정) 학생 수 계산
+  const recommendedCount = apps.filter(ap => ap.is_recommended).length
+  if (recommendedCount >= univ.quota_limit) {
+    // 이미 정원이 다 차있다면 다음 후보 승계를 진행하지 않음
+    return null
+  }
+
+  // 4. 추천 대기 상태인 후보군 필터링 (추천 확정되지 않았으며, RLS/부적합 등으로 제외되지 않은 대상)
+  const candidates = apps.filter(ap => !ap.is_recommended)
+  if (candidates.length === 0) return null
+
+  // 5. 학생 마스터 데이터 조회 (평균 석차등급 gpa_overall 결합용)
+  const { data: students, error: err2 } = await supabase
+    .from('enrolled_students')
+    .select('id, name, student_code, gpa_overall')
+
+  if (err2 || !students) return null
+
+  const studentMap = {}
+  students.forEach(s => {
+    studentMap[s.id] = s
+  })
+
+  // 6. 대학 성정 정렬 규정에 맞게 차순위 후보자 정렬
+  // (1) 대학 환산점수(수동 입력) 높은 점수 우선 (2) 석차등급 낮은 순(상위 성적) 우선
+  candidates.sort((a, b) => {
+    const stA = studentMap[a.student_id] || {}
+    const stB = studentMap[b.student_id] || {}
+
+    const scoreA = a.univ_calc_score != null ? Number(a.univ_calc_score) : (a.manual_score != null ? Number(a.manual_score) : null)
+    const scoreB = b.univ_calc_score != null ? Number(b.univ_calc_score) : (b.manual_score != null ? Number(b.manual_score) : null)
+
+    if (scoreA !== null && scoreB !== null && scoreA !== scoreB) {
+      return scoreB - scoreA
+    }
+
+    const gpaA = stA.gpa_overall != null ? Number(stA.gpa_overall) : 99
+    const gpaB = stB.gpa_overall != null ? Number(stB.gpa_overall) : 99
+
+    if (gpaA !== gpaB) {
+      return gpaA - gpaB
+    }
+
+    return 0
+  })
+
+  // 7. 최상위 후보자 1명을 추천명단에 등재 (승계)
+  const nextStudent = candidates[0]
+  const stInfo = studentMap[nextStudent.student_id] || {}
+
+  const { error: updateErr } = await supabase
+    .from('applications')
+    .update({
+      is_recommended: true,
+      is_excluded: false,
+      excluded_reason: null
+    })
+    .eq('id', nextStudent.id)
+
+  if (updateErr) throw updateErr
+
+  // 감사로그 추가
+  try {
+    const userRes = await supabase.auth.getUser()
+    if (userRes?.data?.user) {
+      await supabase.from('audit_logs').insert({
+        actor_id: userRes.data.user.id,
+        action: 'SUCCESSION',
+        details: { student_id: nextStudent.student_id, univ_id: univId, round: roundId, name: stInfo.name }
+      })
+    }
+  } catch (e) {
+    console.warn('감사 로그 작성 실패:', e)
+  }
+
+  return {
+    name: stInfo.name || '미명 학생',
+    student_code: stInfo.student_code || '',
+    univ_name: univ.univ_name,
+    track_name: univ.track_name,
+    department_name: nextStudent.department_name
+  }
 }

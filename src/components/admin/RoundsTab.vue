@@ -5,14 +5,14 @@
     <div class="mb-5 flex items-center justify-between">
       <div>
         <p class="text-base mb-1" style="color: #94a3b8;">관리자</p>
-        <h1 @click="selected = null" class="text-2xl font-semibold cursor-pointer hover:text-blue-600 transition-colors" style="color: #1e293b; margin: 0;">선발일정 관리</h1>
+        <h1 @click="selected = null" class="text-2xl font-semibold cursor-pointer hover:text-blue-600 transition-colors" style="color: #1e293b; margin: 0;">학교장 추천 선발</h1>
       </div>
       <button
         v-if="selected"
         @click="selected = null"
         class="text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-sm flex items-center gap-1.5 cursor-pointer hover:bg-slate-50 transition-all"
       >
-        📅 전체 선발일정 목록보기
+        📅 전체 선발 목록보기
       </button>
     </div>
 
@@ -30,7 +30,23 @@
               학교장 추천전형 차수별(1차, 2차, 3차...) 접수기간, 심사일정, 결과 공지일을 등록 및 수정할 수 있으며, <strong>Supabase DB (config 테이블)</strong>에 안전하게 동기화됩니다.
             </p>
           </div>
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 flex-wrap">
+            <!-- 총 선발 회수 설정 -->
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-semibold text-slate-500 whitespace-nowrap">총 선발 회수</label>
+              <select
+                v-model.number="totalRounds"
+                @change="saveTotalRounds"
+                class="text-xs font-bold border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
+                style="min-width: 110px;"
+              >
+                <option :value="1">1회 (단일)</option>
+                <option :value="2">최대 2차</option>
+                <option :value="3">최대 3차</option>
+                <option :value="4">최대 4차</option>
+                <option :value="5">최대 5차</option>
+              </select>
+            </div>
             <button
               class="text-xs font-bold px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm transition-colors cursor-pointer disabled:opacity-40"
               :disabled="loading"
@@ -47,7 +63,7 @@
             <div v-for="r in rounds" :key="r.id" class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:border-blue-300 transition-all space-y-4">
               <div class="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-100">
                 <div class="flex items-center gap-3 flex-wrap">
-                  <span class="text-base font-bold text-slate-900">{{ r.id }}차 선발일정</span>
+                  <span class="text-base font-bold text-slate-900">{{ totalRounds === 1 ? '선발일정' : `${r.id}차 선발일정` }}</span>
                   <!-- 진행 상태 배지 (자동 동기화) -->
                   <div class="flex items-center gap-1.5">
                     <label class="text-xs text-slate-400 font-semibold">진행 상태:</label>
@@ -130,14 +146,14 @@
               @click="selected = null"
               class="text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-sm flex items-center gap-1.5 cursor-pointer hover:bg-slate-50 transition-all"
             >
-              ⬅️ 전체 선발일정 관리로 돌아가기
+              ⬅️ 전체 선발 목록으로 돌아가기
             </button>
           </div>
 
           <div class="rounded-xl mb-5"
             style="padding: 18px 22px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
             <div class="flex items-center gap-3 flex-wrap">
-              <span class="text-xl font-bold" style="color: #1e293b;">{{ selected.id }}차 선발 현황</span>
+              <span class="text-xl font-bold" style="color: #1e293b;">{{ totalRounds === 1 ? '선발 현황' : `${selected.id}차 선발 현황` }}</span>
               <span
                   class="text-base font-semibold transition-all"
                   style="padding: 4px 14px; border: 1px solid; border-radius: 999px;"
@@ -185,7 +201,7 @@
               <!-- 📅 차수별 상세 선발 일정 편집 카드 -->
               <div class="w-full mt-3 pt-4 border-t border-slate-100">
                 <div class="flex items-center justify-between mb-2">
-                  <span class="text-base font-semibold text-slate-800">📅 {{ selected.id }}차 선발 세부 일정 설정</span>
+                  <span class="text-base font-semibold text-slate-800">📅 {{ totalRounds === 1 ? '선발 세부 일정 설정' : `${selected.id}차 선발 세부 일정 설정` }}</span>
                   <button @click="saveSchedule" class="text-xs font-semibold px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
                     일정 저장
                   </button>
@@ -193,46 +209,38 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <label class="block text-xs font-medium text-slate-500 mb-1">희망자 접수 기간</label>
-                    <input type="text" v-model="curSchedule.apply_period" placeholder="예: 2026.08.19.(수)~08.20.(목) 1차 희망자 접수"
-                      class="w-full text-base border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 font-medium text-slate-800" />
+                    <div class="flex items-center gap-1.5">
+                      <input type="date" v-model="curSchedule.apply_start"
+                        class="w-full text-base border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 font-medium text-slate-800" />
+                      <span class="text-slate-400 font-bold text-xs">~</span>
+                      <input type="date" v-model="curSchedule.apply_end"
+                        class="w-full text-base border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 font-medium text-slate-800" />
+                    </div>
+                    <p class="text-[10px] font-bold text-blue-600 m-0 pt-1">
+                      📌 {{ formatKoreanPeriod(curSchedule.apply_start, curSchedule.apply_end) }}
+                    </p>
                   </div>
                   <div>
                     <label class="block text-xs font-medium text-slate-500 mb-1">대상자 선정 협의일</label>
-                    <input type="text" v-model="curSchedule.eval_date" placeholder="예: 2026.08.21.(금) 1차 대상자 선정 협의"
+                    <input type="date" v-model="curSchedule.eval_date"
                       class="w-full text-base border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 font-medium text-slate-800" />
+                    <p class="text-[10px] font-bold text-blue-600 m-0 pt-1">
+                      📌 {{ formatKoreanDate(curSchedule.eval_date) }}
+                    </p>
                   </div>
                   <div>
                     <label class="block text-xs font-medium text-slate-500 mb-1">선정 결과 공지일</label>
-                    <input type="text" v-model="curSchedule.announce_date" placeholder="예: 2026.08.24.(월) 1차 대상자 선정 결과 공지"
+                    <input type="date" v-model="curSchedule.announce_date"
                       class="w-full text-base border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 font-medium text-slate-800" />
+                    <p class="text-[10px] font-bold text-blue-600 m-0 pt-1">
+                      📌 {{ formatKoreanDate(curSchedule.announce_date) }}
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- OPEN 라운드 담임 확정 현황 -->
-          <div
-            v-if="getDisplayStatus(selected) === 'OPEN' && confirmationStatus"
-            class="rounded-xl mb-5"
-            style="padding: 18px 22px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);"
-          >
-            <p class="text-base font-semibold mb-3" style="color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">담임 입력 확정 현황</p>
-            <template v-if="confirmationStatus.classes.filter(c => !c.confirmed).length === 0">
-              <p class="text-base font-semibold" style="color: #15803d;">✓ 모든 학급이 입력을 확정했습니다</p>
-            </template>
-            <template v-else>
-              <p class="text-base mb-2" style="color: #475569;">
-                확정:
-                <span class="font-semibold" style="color: #1e293b;">
-                  {{ confirmationStatus.classes.filter(c => c.confirmed).length }} / {{ confirmationStatus.classes.length }} 학급
-                </span>
-              </p>
-              <p class="text-base" style="color: #d97706;">
-                미확정: {{ confirmationStatus.classes.filter(c => !c.confirmed).map(classLabel).join(', ') }}
-              </p>
-            </template>
-          </div>
 
           <HelpBox
             v-if="helpBox"
@@ -264,8 +272,9 @@
           <div v-if="view === 'apps'">
             <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
               <span class="text-base" style="color: #64748b;">총 {{ apps.length }}건</span>
-              <div v-if="selected.status === 'CLOSED'" class="flex items-center gap-3">
-                <span v-if="calcMsg" class="text-base font-medium"
+              <!-- 나중에 과목별 내신 데이터 입력 기능 연동 시 복원 예정 -->
+              <!-- <div v-if="selected.status === 'CLOSED'" class="flex items-center gap-3">
+                <span v-if="calcMsg" class="text-base font-semibold"
                   :style="{ color: calcMsg.ok ? '#16a34a' : '#ef4444' }">{{ calcMsg.text }}</span>
                 <button
                   class="text-base font-semibold rounded-lg whitespace-nowrap disabled:opacity-40"
@@ -273,7 +282,7 @@
                   :disabled="calcLoading || apps.length === 0"
                   @click="handleCalculate"
                 >{{ calcLoading ? '계산 중…' : '점수 전체 재계산' }}</button>
-              </div>
+              </div> -->
             </div>
 
             <div v-if="apps.length === 0" class="text-base text-center" style="padding: 48px 0; color: #94a3b8;">
@@ -387,39 +396,16 @@
                   style="padding: 9px 16px; border: none; background: #059669; color: white; cursor: pointer;"
                   :disabled="results.length === 0 || downloading"
                   @click="downloadExcel"
-                >이 라운드 지원자 명단</button>
+                >이 추천 선발 지원자 명단</button>
                 <button
                   class="text-base font-medium rounded-lg whitespace-nowrap disabled:opacity-40"
                   style="padding: 9px 16px; border: none; background: #2563eb; color: white; cursor: pointer;"
                   :disabled="selected.status !== 'FINALIZED' || downloadingSummary"
                   @click="downloadSummary"
-                >이 라운드 선발 현황</button>
+                >이 추천 선발 현황</button>
               </div>
 
-              <div v-if="results.length > 0" class="flex gap-2">
-                <button
-                  class="text-base font-medium rounded-lg whitespace-nowrap"
-                  :style="{
-                    padding: '6px 14px', cursor: 'pointer',
-                    border: '1px solid',
-                    borderColor: rankView === 'track' ? '#2563eb' : '#e2e8f0',
-                    background: rankView === 'track' ? '#2563eb' : 'white',
-                    color: rankView === 'track' ? 'white' : '#475569',
-                  }"
-                  @click="rankView = 'track'"
-                >모집단위별 순위</button>
-                <button
-                  class="text-base font-medium rounded-lg whitespace-nowrap"
-                  :style="{
-                    padding: '6px 14px', cursor: 'pointer',
-                    border: '1px solid',
-                    borderColor: rankView === 'univ' ? '#2563eb' : '#e2e8f0',
-                    background: rankView === 'univ' ? '#2563eb' : 'white',
-                    color: rankView === 'univ' ? 'white' : '#475569',
-                  }"
-                  @click="rankView = 'univ'"
-                >대학 전체 순위</button>
-              </div>
+
             </div>
 
             <!-- 자동 추천 확정 결과 표시 -->
@@ -453,13 +439,6 @@
                     대학 정원 {{ group.totalQuota }}명 / 잔여 {{ group.univRemaining }}석
                   </template>
                   <template v-else>대학 정원 무제한</template>
-                  <template v-if="rankView === 'track'">
-                    <span style="margin: 0 6px; color: #e2e8f0;">|</span>
-                    <template v-if="group.unitQuota != null">
-                      모집단위 정원 {{ group.unitQuota }}명 / 잔여 {{ group.remaining }}석
-                    </template>
-                    <template v-else>모집단위 정원 무제한</template>
-                  </template>
                 </span>
                 <button
                   v-if="selected.status === 'CLOSED' && univAutoButtonKeys.has(key)"
@@ -536,8 +515,9 @@
                             <span v-else class="text-base" style="color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;">{{ r.department_name }}</span>
                           </td>
                           <td class="text-base text-left font-semibold" style="padding: 12px 18px; color: #1e293b;">
-                            {{ formatScore(r.total_score) }}
-                          </td>
+                             {{ r.ranking != null ? `${r.ranking}위` : '-' }}
+                             ({{ r.manual_score != null && Number(r.manual_score) > 0 ? `${formatScore(r.manual_score)}점` : (r.gpa_overall != null ? `${Number(r.gpa_overall).toFixed(2)}등급` : '-') }})
+                           </td>
                           <td class="text-center" style="padding: 12px 18px;" @click.stop>
                             <div class="flex flex-col items-center gap-1">
                             <span v-if="r.abandoned" class="text-base font-semibold" style="color: #ef4444;">포기됨</span>
@@ -633,7 +613,7 @@
       >
         <h2 class="text-lg font-semibold mb-1" style="margin: 0; color: #92400e;">미선발 처리</h2>
         <p class="text-base mb-4" style="color: #475569;">
-          <span class="font-semibold" style="color: #1e293b;">{{ excludeTarget?.name }}</span> 학생을 이번 라운드에서 미선발 처리합니다.
+          <span class="font-semibold" style="color: #1e293b;">{{ excludeTarget?.name }}</span> 학생을 이번 추천 선발에서 미선발 처리합니다.
         </p>
         <label class="block text-base font-medium mb-1.5" style="color: #64748b;">미선발 사유 <span style="color: #ef4444;">*</span></label>
         <input
@@ -718,6 +698,87 @@
       </div>
     </div>
   </Teleport>
+  <!-- 추천 포기 처리 모달 (스캔본 업로드 및 OCR 기능 지원) -->
+  <Teleport to="body">
+    <div
+      v-if="showAdminAbandonModal"
+      class="fixed inset-0 flex items-center justify-center bg-black/40"
+      style="z-index: 60; backdrop-filter: blur(2px);"
+      role="dialog"
+      aria-modal="true"
+      @keydown.escape="showAdminAbandonModal = false"
+    >
+      <div
+        class="bg-white flex flex-col"
+        style="border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); width: 100%; max-width: 480px; margin: 0 16px; padding: 1.5rem 1.75rem;"
+      >
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-slate-800 m-0">추천 전형 포기 처리</h3>
+            <p class="text-[10px] text-slate-400 font-medium m-0 mt-0.5">포기원 PDF 서류를 등록하고 공석을 즉시 반환합니다.</p>
+          </div>
+          <button
+            class="text-lg leading-none text-slate-400 hover:text-slate-600 bg-transparent border-none cursor-pointer"
+            @click="showAdminAbandonModal = false"
+          >✕</button>
+        </div>
+
+        <div class="space-y-4 text-xs font-semibold text-slate-700">
+          <div class="rounded-xl bg-slate-50 p-4 border border-slate-200/60 space-y-2 text-xs">
+            <div class="flex justify-between"><span class="text-slate-400 font-semibold">학생 이름:</span> <span class="font-bold text-slate-800">{{ abandonTarget?.name }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-400 font-semibold">지원 대학:</span> <span class="font-bold text-slate-800">{{ abandonTarget?.univ_name }}</span></div>
+            <div class="flex justify-between"><span class="text-slate-400 font-semibold">지원 전형:</span> <span class="font-bold text-slate-800">{{ abandonTarget?.track_name }}</span></div>
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-[10px] font-bold text-slate-500">포기원 PDF 서류 선택 (필수)</label>
+              <a
+                href="/ggomrecommend/data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%99%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%A7%80%EC%9B%90%20%ED%8F%AC%EA%B8%B0%EC%9B%90_%EC%96%91%EC%8B%9D.hwp"
+                download
+                class="text-[10px] text-blue-600 hover:underline font-bold cursor-pointer"
+              >
+                📝 포기원 양식 (HWP)
+              </a>
+            </div>
+            <input
+              type="file"
+              accept=".pdf"
+              @change="onAbandonFileSelected"
+              class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+          </div>
+
+          <!-- AI OCR 판독 알림 배너 -->
+          <div v-if="abandonOcrLoading" class="text-[10px] text-blue-600 font-semibold flex items-center gap-1.5 bg-blue-50 p-2 rounded-lg border border-blue-100">
+            <span class="animate-spin inline-block w-3.5 h-3.5 border-2 border-blue-600/20 border-t-blue-600 rounded-full"></span>
+            AI OCR 실시간 문서 정밀 판독 및 서명 확인 중…
+          </div>
+          <div v-else-if="abandonOcrWarning" class="bg-amber-50 border border-amber-200 text-amber-800 p-2.5 rounded-lg text-[10px] leading-relaxed whitespace-pre-line font-medium">
+            ⚠️ <strong>AI OCR 판독 경고 (서류 불일치 가능성):</strong><br>
+            {{ abandonOcrWarning }}
+          </div>
+          <div v-else-if="abandonFile" class="text-[10px] text-emerald-600 font-semibold bg-emerald-50 p-2 rounded-lg border border-emerald-100">
+            ✓ AI OCR 판독 완료: 해당 학생의 서명이 날인된 정상 포기원 문서임이 자동 확인되었습니다.
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-5 border-t border-slate-100 pt-3">
+          <button
+            class="text-base rounded-lg whitespace-nowrap"
+            style="padding: 9px 18px; border: 1px solid #e2e8f0; background: white; color: #64748b; cursor: pointer;"
+            @click="showAdminAbandonModal = false"
+          >취소</button>
+          <button
+            class="text-base font-semibold rounded-lg whitespace-nowrap disabled:opacity-40"
+            style="padding: 9px 18px; border: none; background: #e11d48; color: white; cursor: pointer;"
+            :disabled="!abandonFile || resultActing || abandonOcrLoading"
+            @click="confirmAbandon"
+          >{{ resultActing ? '처리 중...' : '포기원 제출 및 확정' }}</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -737,15 +798,17 @@ import {
   autoRecommendUniv,
   blobErrMsg,
   getRoundConfirmationStatus,
+  promoteNextEligibleStudent,
 } from '../../api/admin.js'
 import HelpBox from '../common/HelpBox.vue'
 import { dialog } from '../common/dialog.js'
 import { roundStatusLabel } from '../../data/roundStatus.js'
 import { formatScore } from '../../utils/scorePreviewShared.js'
+import { convertPdfToImages, analyzeDocumentWithAI } from '../../utils/ocrParser.js'
 
 const HELP_EMPTY = {
   title: '도움말 — 첫 선발 차수 추가 전 확인하세요',
-  intro: '선발 차수는 한 번의 추천 진행 단위입니다. 차수를 추가하면 담임교사가 지원자를 등록할 수 있게 됩니다.',
+  intro: '선발 차수는 한 번의 추천 진행 단위입니다. 추천 선발을 추가하면 담임교사가 지원자를 등록할 수 있게 됩니다.',
   items: [
     '선발 차수를 추가하기 전에 학급, 학생 명단, 전형요소, 대학 설정이 모두 끝났는지 확인하세요.',
     { text: '특히 전형요소는 선발 차수가 종료된 뒤에는 수정할 수 없으니 반드시 먼저 완성하세요.', warn: true },
@@ -762,10 +825,11 @@ function fmtDt(s) {
 
 const refreshSidebarRound = inject('refreshRound', () => {})
 
-const rounds  = ref([])
-const selected = ref(null)
-const loading = ref(false)
-const view = ref('apps')
+const rounds   = ref([])
+const selected  = ref(null)
+const loading   = ref(false)
+const view      = ref('apps')
+const totalRounds = ref(3) // 1~5, default 3
 
 const DEFAULT_SCHEDULES = {
   1: {
@@ -879,6 +943,34 @@ async function loadSchedules() {
   updateCurSchedule()
 }
 
+// ── 총 선발 회수 로드/저장 ─────────────────────────────
+async function loadTotalRounds() {
+  if (supabase) {
+    try {
+      const { data } = await supabase.from('config').select('value').eq('key', 'total_rounds').maybeSingle()
+      if (data && data.value) {
+        const n = parseInt(data.value, 10)
+        if (n >= 1 && n <= 5) totalRounds.value = n
+      }
+    } catch {}
+  }
+  const local = localStorage.getItem('total_rounds')
+  if (local) {
+    const n = parseInt(local, 10)
+    if (n >= 1 && n <= 5) totalRounds.value = n
+  }
+}
+
+async function saveTotalRounds() {
+  localStorage.setItem('total_rounds', String(totalRounds.value))
+  if (supabase) {
+    try {
+      await supabase.from('config').upsert({ key: 'total_rounds', value: String(totalRounds.value) })
+    } catch (e) { console.warn('total_rounds 저장 실패:', e) }
+  }
+  await loadRounds()
+}
+
 function updateCurSchedule() {
   if (!selected.value) return
   const id = selected.value.id
@@ -972,6 +1064,13 @@ const excludeReasonDraft = ref('')
 const showUndecidedModal = ref(false)
 const undecidedList      = ref([])
 
+const showAdminAbandonModal = ref(false)
+const abandonTarget      = ref(null)
+const abandonFile        = ref(null)
+const abandonOcrLoading  = ref(false)
+const abandonOcrWarning  = ref('')
+const openaiKey          = ref('')
+
 function rowKey(r) { return `${r.student_id}-${r.track_id}` }
 
 const subTabs = [
@@ -1000,12 +1099,12 @@ const helpBox = computed(() => {
   if (s === 'OPEN') {
     return {
       key: 'rounds-open',
-      title: '도움말 — 라운드 진행 중',
+      title: '도움말 — 추천 선발 진행 중',
       intro: '담임교사들이 지원자를 등록하고 있는 단계입니다.',
       items: [
-        '모든 담임의 입력이 끝나면 "종료하기"를 눌러 라운드를 종료하세요.',
-        '라운드를 종료하면 담임 입력이 차단되고 모든 지원자의 점수가 자동 계산됩니다.',
-        '라운드 종료할 때 기초 데이터가 누락되어 점수 계산을 할 수 없는 학생이 있으면 오류 목록이 표시되고 종료되지 않습니다. 해당 학생의 데이터를 채운 뒤 다시 시도하세요.',
+        '모든 담임의 입력이 끝나면 "종료하기"를 눌러 추천 선발을 종료하세요.',
+        '추천 선발을 종료하면 담임 입력이 차단되고 모든 지원자의 점수가 자동 계산됩니다.',
+        '추천 선발 종료할 때 기초 데이터가 누락되어 점수 계산을 할 수 없는 학생이 있으면 오류 목록이 표시되고 종료되지 않습니다. 해당 학생의 데이터를 채운 뒤 다시 시도하세요.',
       ],
     }
   }
@@ -1014,10 +1113,10 @@ const helpBox = computed(() => {
       return {
         key: 'rounds-closed-apps',
         title: '도움말 — 지원 현황 확인',
-        intro: '라운드 종료 시 모든 지원자의 점수가 자동 계산되어 있습니다.',
+        intro: '추천 선발 종료 시 모든 지원자의 점수가 자동 계산되어 있습니다.',
         items: [
-          '총점이 비어 있거나("-") 이상하면 "점수 전체 재계산"을 눌러 다시 계산하세요.',
-          '종료 후에 기초 데이터를 수정했다면 반드시 "점수 전체 재계산"을 눌러 변경 내용을 반영하세요.',
+          '환산점수나 내신 등급이 등록되면 순위와 총점이 실시간으로 자동 반영됩니다.',
+          '학생 정보나 성적이 수정되었을 경우, 변경 사항이 즉시 화면에 자동 계산되어 적용됩니다.',
           '점수 확인이 끝나면 [결과] 탭으로 이동해 추천을 확정하세요.',
         ],
       }
@@ -1036,12 +1135,12 @@ const helpBox = computed(() => {
   }
   return {
     key: 'rounds-finalized',
-    title: '도움말 — 마감된 라운드',
-    intro: '이 라운드는 마감되어 결과가 확정되었고 담임교사에게 공개되었습니다.',
+    title: '도움말 — 마감된 추천 선발',
+    intro: '이 추천 선발은 마감되어 결과가 확정되었고 담임교사에게 공개되었습니다.',
     items: [
-      '[결과] 탭에서 "이 라운드 지원자 명단"(지원 학생 전원의 결과)과 "이 라운드 선발 현황"(모집단위별 지원·추천·포기·잔여석)을 엑셀로 내려받을 수 있습니다.',
+      '[결과] 탭에서 "이 추천 선발 지원자 명단"(지원 학생 전원의 결과)과 "이 추천 선발 현황"(모집단위별 지원·추천·포기·잔여석)을 엑셀로 내려받을 수 있습니다.',
       { text: '추천 확정 학생이 추천을 포기하면 "포기하기"를 눌러 처리하세요. 포기는 되돌릴 수 없습니다.', warn: true },
-      '학생의 지원 포기 등으로 빈자리가 생겨 추가 추천이 필요하면 "+ 라운드 열기"로 다음 차수를 시작하세요.',
+      '학생의 지원 포기 등으로 빈자리가 생겨 추가 추천이 필요하면 "+ 추천 선발 추가"로 다음 추천 선발을 시작하세요.',
     ],
   }
 })
@@ -1066,7 +1165,19 @@ const appsByUniv = computed(() => {
 
 function appTotalScore(app) {
   const r = results.value.find(r => r.student_id === app.student_id && r.track_id === app.track_id)
-  return r ? formatScore(r.total_score) : '-'
+  if (!r) return '-'
+  
+  const rankText = r.ranking != null ? `${r.ranking}위` : '-'
+  let scoreText = ''
+  if (r.manual_score != null && Number(r.manual_score) > 0) {
+    scoreText = `${formatScore(r.manual_score)}점`
+  } else if (r.gpa_overall != null) {
+    scoreText = `${Number(r.gpa_overall).toFixed(2)}등급`
+  } else {
+    scoreText = '-'
+  }
+  
+  return `${rankText} (${scoreText})`
 }
 
 const tracksInRound = computed(() => allTracksInRound.value)
@@ -1267,7 +1378,9 @@ async function loadRounds() {
   roundsLoadError.value = ''
   try {
     const raw = await getRounds()
-    rounds.value = await syncRoundStatuses(raw)
+    const synced = await syncRoundStatuses(raw)
+    // 총 선발 회수(totalRounds.value) 범위 내의 차수만 표시하도록 필터링
+    rounds.value = synced.filter(r => r.id <= totalRounds.value)
   } catch (e) {
     rounds.value = []
     roundsLoadError.value = e.response?.data ?? e.message ?? '오류가 발생했습니다'
@@ -1358,19 +1471,7 @@ async function handleOpenRound() {
 async function handleCloseRound(id) {
   if (roundActing.value) return
 
-  // 미확정 학급 조회
-  let closeMsg = '선발 차수를 종료하시겠습니까?\n담임교사의 입력이 차단되고, 모든 지원자의 점수가 계산됩니다.\n필요하면 "다시 열기"로 되돌릴 수 있습니다.'
-  try {
-    const status = await getRoundConfirmationStatus(id)
-    const unconfirmed = status.classes.filter(c => !c.confirmed)
-    if (unconfirmed.length > 0) {
-      const labels = unconfirmed.slice(0, 10).map(classLabel)
-      const extra = unconfirmed.length > 10 ? `\n외 ${unconfirmed.length - 10}곳` : ''
-      closeMsg += `\n\n⚠ 아직 입력을 확정하지 않은 학급이 있습니다:\n${labels.join(', ')}${extra}`
-    }
-  } catch {
-    closeMsg += '\n\n확정 현황을 불러오지 못했습니다'
-  }
+  const closeMsg = '선발 차수를 종료하시겠습니까?\n담임교사의 입력이 차단되고, 모든 지원자의 점수가 계산됩니다.\n필요하면 "다시 열기"로 되돌릴 수 있습니다.'
 
   if (!(await dialog.confirm({
     title: '선발 차수 종료',
@@ -1489,20 +1590,115 @@ async function handleCalculate() {
   }
 }
 
-async function handleAbandon(app) {
-  if (!(await dialog.confirm({
-    title: '지원 포기 처리',
-    message: `${app.name} 학생의 지원을 포기 처리하시겠습니까?`,
-    confirmText: '포기 처리',
-    level: 'danger',
-    dangerNotice: '한 번 포기하면 다시 되돌릴 수 없습니다. 재추천을 희망하면 다음 라운드에서 재지원해야 합니다.',
-    finalConfirmText: '포기 확정',
-  }))) return
+function handleAbandon(app) {
+  abandonTarget.value = app
+  abandonFile.value = null
+  abandonOcrWarning.value = ''
+  abandonOcrLoading.value = false
+  showAdminAbandonModal.value = true
+}
+
+async function onAbandonFileSelected(e) {
+  const selectedFile = e.target.files[0]
+  if (selectedFile && selectedFile.type === 'application/pdf') {
+    abandonFile.value = selectedFile
+    if (openaiKey.value) {
+      await runAdminAbandonOcr(selectedFile)
+    }
+  } else {
+    await dialog.alert({ title: '오류', message: 'PDF 형식의 포기원 스캔 파일만 선택 가능합니다.', level: 'error' })
+    e.target.value = ''
+    abandonFile.value = null
+    abandonOcrWarning.value = ''
+  }
+}
+
+async function runAdminAbandonOcr(selectedFile) {
+  abandonOcrLoading.value = true
+  abandonOcrWarning.value = ''
   try {
-    await abandonApplication(app.student_id, app.track_id, app.round_id)
-    await Promise.all([loadApps(), loadResults()])
+    const images = await convertPdfToImages(selectedFile)
+    const analysis = await analyzeDocumentWithAI(images, openaiKey.value)
+
+    const nameMatch = analysis.student_name ? analysis.student_name.includes(abandonTarget.value.name) : false
+    const codeMatch = analysis.student_code ? String(analysis.student_code).includes(abandonTarget.value.student_code) : false
+    const isAbandonForm = analysis.document_type === '포기원'
+
+    const warnings = []
+    if (!isAbandonForm) {
+      warnings.push('- 업로드된 문서가 "포기원" 양식이 아닌 것으로 판독되었습니다.')
+    }
+    if (!nameMatch) {
+      warnings.push(`- 문서의 학생 이름(${analysis.student_name || '인식불가'})이 신청자 이름(${abandonTarget.value.name})과 일치하지 않습니다.`)
+    }
+    if (!codeMatch) {
+      warnings.push(`- 문서의 학번(${analysis.student_code || '인식불가'})이 신청자 학번(${abandonTarget.value.student_code})과 일치하지 않습니다.`)
+    }
+    if (analysis.is_signed === false) {
+      warnings.push('- 문서 내에 날인 혹은 자필 서명이 확인되지 않았습니다.')
+    }
+
+    if (warnings.length > 0) {
+      abandonOcrWarning.value = warnings.join('\n')
+    }
   } catch (e) {
-    await dialog.alert({ title: '오류', message: e.response?.data || e.message, level: 'error' })
+    console.error('OCR Validation failure: ', e)
+  } finally {
+    abandonOcrLoading.value = false
+  }
+}
+
+async function confirmAbandon() {
+  if (resultActing.value) return
+  if (!abandonFile.value || !abandonTarget.value) return
+
+  let confirmMsg = '정말로 이 지원자의 학교장추천 선정을 포기 처리하시겠습니까? 제출된 포기원 서류가 보관되고 정원 공석은 즉시 반환됩니다.'
+  if (abandonOcrWarning.value) {
+    confirmMsg = `⚠️ AI 판독 경고가 존재합니다:\n${abandonOcrWarning.value}\n\n정말로 이 파일로 포기 처리를 강행하시겠습니까?`
+  }
+  
+  if (!(await dialog.confirm({
+    title: '지원 포기 확정',
+    message: confirmMsg,
+    confirmText: '포기 확정',
+    level: 'danger'
+  }))) return
+
+  resultActing.value = true
+  try {
+    const studentId = abandonTarget.value.student_id
+    const trackId = abandonTarget.value.track_id
+    const roundId = abandonTarget.value.round_id
+
+    const path = `abandoned_${studentId}_r${roundId}_u_${trackId}.pdf`
+    const { error: uploadErr } = await supabase.storage
+      .from('documents')
+      .upload(path, abandonFile.value, { contentType: 'application/pdf', upsert: true })
+
+    if (uploadErr) throw new Error('포기원 PDF 업로드에 실패했습니다: ' + uploadErr.message)
+
+    const publicUrl = supabase.storage.from('documents').getPublicUrl(path).data.publicUrl
+
+    await abandonApplication(studentId, trackId, roundId, publicUrl)
+
+    // 차순위 승계 처리 수행
+    let successionMsg = ''
+    try {
+      const nextStudent = await promoteNextEligibleStudent(trackId, roundId)
+      if (nextStudent) {
+        successionMsg = `\n\n🎉 [차순위 승계 알림]\n- 대학: ${nextStudent.univ_name} ${nextStudent.track_name}\n- 차순위 후보인 ${nextStudent.name} (${nextStudent.student_code}) 학생이 새롭게 추천 후보명단에 자동 등록되었습니다.`
+      }
+    } catch (e) {
+      console.warn('Succession error:', e)
+    }
+
+    showAdminAbandonModal.value = false
+    await Promise.all([loadApps(), loadResults()])
+    await dialog.alert({ title: '성공', message: '포기 처리가 완료되었습니다.' + successionMsg, level: 'success' })
+  } catch (e) {
+    await dialog.alert({ title: '오류', message: e.message || '포기 처리 도중 오류가 발생했습니다.', level: 'error' })
+  } finally {
+    resultActing.value = false
   }
 }
 
@@ -1662,6 +1858,15 @@ async function handleUnrecommend(r) {
 
 onMounted(async () => {
   await loadSchedules()
+  await loadTotalRounds()
   await loadRounds()
+  if (supabase) {
+    try {
+      const { data } = await supabase.from('config').select('value').eq('key', 'openai_api_key').single()
+      if (data) {
+        openaiKey.value = data.value
+      }
+    } catch (e) {}
+  }
 })
 </script>

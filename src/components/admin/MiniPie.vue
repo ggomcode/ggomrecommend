@@ -1,11 +1,11 @@
 <template>
-  <svg :width="size" :height="size" :viewBox="`0 0 ${size} ${size}`">
-    <circle :cx="cx" :cy="cy" :r="R" fill="none" stroke="#e2e8f0" stroke-width="6" />
+  <svg :width="size" :height="size" viewBox="0 0 40 40" style="display: inline-block; vertical-align: middle;">
+    <circle cx="20" cy="20" r="17" fill="none" stroke="#e2e8f0" stroke-width="6" />
     <circle
       v-if="numFilled > 0"
-      :cx="cx"
-      :cy="cy"
-      :r="R"
+      cx="20"
+      cy="20"
+      r="17"
       fill="none"
       :stroke="isFull ? '#ef4444' : '#2563eb'"
       stroke-width="6"
@@ -25,12 +25,11 @@ const props = defineProps({
   size:   { type: Number, default: 40 },
 })
 
-const R    = 14
-const cx   = computed(() => props.size / 2)
-const cy   = computed(() => props.size / 2)
-const circ = computed(() => 2 * Math.PI * R)
+const R    = 17
+const circ = 2 * Math.PI * R
 const numFilled = computed(() => Number(props.filled) || 0)
 const numTotal  = computed(() => Number(props.total) || 0)
-const arc  = computed(() => (numTotal.value > 0 ? numFilled.value / numTotal.value : 0) * circ.value)
+const arc  = computed(() => (numTotal.value > 0 ? numFilled.value / numTotal.value : 0) * circ)
 const isFull = computed(() => numFilled.value >= numTotal.value && numTotal.value > 0)
 </script>
+

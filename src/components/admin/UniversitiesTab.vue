@@ -48,6 +48,15 @@
           <button
             v-if="regionalRecs.length > 0"
             class="text-base font-medium rounded-lg"
+            style="padding: 7px 16px; border: 1px solid #86efac; background: #f0fdf4; color: #16a34a; cursor: pointer;"
+            :disabled="saving"
+            @click="downloadRegionalBackup"
+          >
+            📥 현재 데이터 백업 (엑셀)
+          </button>
+          <button
+            v-if="regionalRecs.length > 0"
+            class="text-base font-medium rounded-lg"
             style="padding: 7px 16px; border: 1px solid #fca5a5; background: #fef2f2; color: #dc2626; cursor: pointer;"
             :disabled="saving"
             @click="clearRegionalRecs"
@@ -319,7 +328,7 @@ import {
   getQuotaStats, exportQuotaStats, getTrackRecommendedList,
   downloadUnivSettingsTemplate, exportUnivSettings, previewUnivSettings, importUnivSettings,
   blobErrMsg,
-  getRegionalRecommendations, deleteRegionalRecommendations, importRegionalRecommendations, syncRegionalToUniversities,
+  getRegionalRecommendations, exportRegionalRecommendations, deleteRegionalRecommendations, importRegionalRecommendations, syncRegionalToUniversities,
   updateRegionalRecommendation, deleteSingleRegionalRecommendation,
   getDisclosureCount,
 } from '../../api/admin.js'
@@ -784,6 +793,25 @@ async function loadRegionalRecs() {
   }
 }
 
+async function downloadRegionalBackup() {
+  saving.value = true
+  error.value = ''
+  try {
+    const blob = await exportRegionalRecommendations()
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `학교장추천전형요강_백업_${today}.xlsx`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    error.value = e.message || '백업 파일 생성 중 오류가 발생했습니다.'
+  } finally {
+    saving.value = false
+  }
+}
+
 async function onRegionalFile(evt) {
   const file = evt.target.files?.[0]
   evt.target.value = ''
@@ -793,10 +821,17 @@ async function onRegionalFile(evt) {
   try {
     const res = await importRegionalRecommendations(file)
     await loadRegionalRecs()
-    await dialog.alert({
-      title: '업로드 완료',
-      message: `총 ${res.count}건의 학교장추천전형 정보가 성공적으로 등록되었습니다.`,
-    })
+
+    // 엑셀 업로드 후 universities 테이블 자동 동기화 (결과 보고서 연동)
+    let syncRes = null
+    try { syncRes = await syncRegionalToUniversities() } catch (_) {}
+    await loadUnivs()
+
+    let msg = `총 ${res.count}건의 학교장추천전형 정보가 성공적으로 등록되었습니다.`
+    if (syncRes) {
+      msg += `\n\n✅ 대학 설정 및 결과 보고서가 자동으로 동기화되었습니다. (${syncRes.count}개 대학/전형)`
+    }
+    await dialog.alert({ title: '업로드 완료', message: msg })
   } catch (e) {
     error.value = e.message || '엑셀 가져오기 중 오류가 발생했습니다.'
   } finally {
@@ -836,14 +871,15 @@ async function doSyncRegionalToUnivs() {
 async function clearRegionalRecs() {
   if (!(await dialog.confirm({
     title: '전형 정보 전체 삭제',
-    message: '등록된 학교장추천전형 엑셀 정보(16개 컬럼)를 전체 삭제하시겠습니까?',
-    confirmText: '삭제',
+    message: '등록된 학교장추천전형 엑셀 정보 및 대학 설정, 결과 보고서 데이터를 모두 초기화하시겠습니까?',
+    confirmText: '전체 삭제',
     level: 'danger',
   }))) return
   saving.value = true
   try {
     await deleteRegionalRecommendations()
     await loadRegionalRecs()
+    await loadUnivs()  // universities 테이블도 초기화됐으므로 대학 설정 목록 갱신
   } catch (e) {
     error.value = e.message || '삭제 중 오류가 발생했습니다.'
   } finally {

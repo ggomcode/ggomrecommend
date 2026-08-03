@@ -45,21 +45,29 @@
         <label class="block text-xs font-semibold text-slate-400">조회 학급 선택</label>
         <div style="display: flex; gap: 6px;">
           <select
-            v-model.number="selectedGrade"
+            v-model="selectedGrade"
             class="flex-1 text-sm bg-slate-50 border border-slate-200 rounded-md p-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white"
             @change="onGradeChange"
           >
-            <option :value="''">학년</option>
-            <option v-for="g in availableGrades" :key="g" :value="g">{{ g === 0 ? '졸업생' : g + '학년' }}</option>
+            <option value="all">전체</option>
+            <option :value="3">3학년</option>
+            <option :value="0">졸업생</option>
           </select>
           <select
-            v-if="selectedGrade !== 0"
             v-model.number="selectedClassNo"
-            :disabled="!selectedGrade"
+            :disabled="selectedGrade === '' || selectedGrade === 'all'"
             class="flex-1 text-sm bg-slate-50 border border-slate-200 rounded-md p-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50 bg-white"
           >
-            <option :value="0">전체반</option>
-            <option v-for="c in availableClassNos" :key="c" :value="c">{{ c }}반</option>
+            <template v-if="selectedGrade === 'all'">
+              <option :value="0">전체반</option>
+            </template>
+            <template v-else-if="Number(selectedGrade) === 0">
+              <option :value="0">졸업생 학급</option>
+            </template>
+            <template v-else>
+              <option :value="0">전체반</option>
+              <option v-for="c in availableClassNos" :key="c" :value="c">{{ c }}반</option>
+            </template>
           </select>
         </div>
       </div>
@@ -94,7 +102,7 @@
         <div style="margin: 8px 0; border-top: 1px solid #f1f5f9;" />
 
         <a
-          href="/manual.html"
+          href="/ggomrecommend/manual.html"
           target="_blank"
           rel="noopener noreferrer"
           title="매뉴얼 (새 창)"
@@ -142,13 +150,13 @@
           <div class="flex items-center gap-2 pb-2" style="border-bottom: 1px solid #e8e5e2;">
             <div
               class="rounded-full flex-shrink-0"
-              :style="{ width: '8px', height: '8px', background: currentRound ? '#22c55e' : '#94a3b8' }"
+              :style="{ width: '8px', height: '8px', background: getRoundStatusColor() }"
             />
             <span
               class="text-base font-medium whitespace-nowrap"
-              :style="{ color: currentRound ? '#15803d' : '#64748b' }"
+              :style="{ color: getRoundStatusTextColor() }"
             >
-              {{ currentRound ? `${currentRound.id}차 라운드 진행 중` : '진행 중인 라운드 없음' }}
+              {{ getRoundStatusText() }}
             </span>
           </div>
           <!-- 사용자 정보 -->
@@ -167,14 +175,7 @@
             >
               <Home :size="14" /> 포털이동
             </button>
-            <button
-              v-if="selectedGrade !== 0"
-              @click="showPwModal = true"
-              class="flex items-center gap-1 text-base"
-              style="background: none; border: none; cursor: pointer; color: #94a3b8; padding: 0;"
-            >
-              <KeyRound :size="14" /> 비번변경
-            </button>
+
             <button
               @click="logout"
               class="flex items-center gap-1 text-base"
@@ -265,9 +266,10 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { teacherChangePassword, getCurrentRound } from '../api/teacher.js'
 import { dialog } from '../components/common/dialog.js'
-import { LayoutGrid, UserPlus, Trophy, ChevronRight, LogOut, KeyRound, Menu, BookOpen, ExternalLink, UserCheck, Home } from 'lucide-vue-next'
+import { LayoutGrid, UserPlus, Trophy, ChevronRight, LogOut, Menu, BookOpen, ExternalLink, UserCheck, Home } from 'lucide-vue-next'
 import { supabase } from '../utils/supabaseClient'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
+import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../utils/roundSchedule.js'
 
 const router = useRouter()
 const auth   = useAuthStore()
@@ -276,24 +278,32 @@ const auth   = useAuthStore()
 const LS_GRADE = 'teacher_selected_grade'
 const LS_CLASS = 'teacher_selected_class'
 
-// 최초 접속 시 무조건 3학년 전체반(classNo = 0)이 디폴트로 선택되도록 초기화
-const selectedGrade = ref(3)
-const selectedClassNo = ref(0)
+const savedGrade = localStorage.getItem(LS_GRADE)
+const savedClass = localStorage.getItem(LS_CLASS)
 
-localStorage.setItem(LS_GRADE, '3')
-localStorage.setItem(LS_CLASS, '0')
+const parseGrade = (val) => {
+  if (val === 'all') return 'all'
+  if (val !== null && val !== '' && !isNaN(val)) return Number(val)
+  return null
+}
+
+const initGrade = parseGrade(savedGrade) ?? parseGrade(auth.grade) ?? 'all'
+const initClass = savedClass !== null && savedClass !== '' ? Number(savedClass) : (auth.classNo !== null ? auth.classNo : 0)
+
+const selectedGrade = ref(initGrade)
+const selectedClassNo = ref(initClass)
 
 const classes = ref([])
 const classesLoading = ref(false)
 const maxClassCount = ref(Number(localStorage.getItem('pcm_class_count')) || 11)
 
-// 3학년(디폴트)과 졸업생(0)만 드롭다운에 노출
-const availableGrades = computed(() => [3, 0])
+// 전체, 3학년, 졸업생(0) 드롭다운에 노출
+const availableGrades = computed(() => ['all', 3, 0])
 
-const isGraduated = computed(() => selectedGrade.value === 0)
+const isGraduated = computed(() => Number(selectedGrade.value) === 0)
 
 const availableClassNos = computed(() => {
-  if (selectedGrade.value === '' || isGraduated.value) return []
+  if (selectedGrade.value === '' || selectedGrade.value === 'all' || isGraduated.value) return []
   const found = classes.value
     .filter(c => c.grade === selectedGrade.value)
     .map(c => c.class_no)
@@ -388,7 +398,7 @@ const ResultsTab     = safeAsyncComponent(() => import('../components/teacher/Re
 const sidebarMenus = [
   { key: 'class',       label: '학급 관리',   icon: LayoutGrid },
   { key: 'application', label: '지원자 등록', icon: UserPlus },
-  { key: 'results',     label: '라운드 결과', icon: Trophy },
+  { key: 'results',     label: '추천 결과', icon: Trophy },
 ]
 
 // ── 활성 탭 ──────────────────────────────────────────────────
@@ -407,14 +417,70 @@ const collapsed = ref(false)
 
 // ── 역할 레이블 ───────────────────────────────────────────────
 const roleLabel = computed(() => {
-  if (selectedGrade.value === 0) return '졸업생 담당'
+  if (selectedGrade.value === 'all') return '전체 학급 조회'
+  if (Number(selectedGrade.value) === 0) return '졸업생 학급 담임'
   if (selectedGrade.value === '') return '학급 미선택'
-  if (selectedClassNo.value === 0 || !selectedClassNo.value) return '3학년 전체 학급'
+  if (Number(selectedClassNo.value) === 0 || !selectedClassNo.value) return `${selectedGrade.value}학년 전체 학급`
   return `${selectedGrade.value}학년 ${selectedClassNo.value}반 담임`
 })
 
 // ── 현재 라운드 ───────────────────────────────────────────────
 const currentRound = ref(null)
+
+const schedulesMap = ref({})
+
+const getEffectiveStatus = () => {
+  if (!currentRound.value) return 'DRAFT'
+  const sched = schedulesMap.value[currentRound.value.id]
+  return computeRoundDisplayStatus(currentRound.value, sched)
+}
+
+const getRoundStatusText = () => {
+  if (!currentRound.value) return '진행 중인 추천 선발 없음'
+  const statusLabels = {
+    DRAFT: '접수 전',
+    OPEN: '접수 진행중',
+    CLOSED: '심사 진행중',
+    FINALIZED: '최종 마감'
+  }
+  const status = getEffectiveStatus()
+  const label = statusLabels[status] || '진행중'
+  return getTotalRoundsCount() === 1 ? `추천 선발 (${label})` : `${currentRound.value.id}차 추천 선발 (${label})`
+}
+
+const getRoundStatusColor = () => {
+  if (!currentRound.value) return '#94a3b8'
+  const colors = {
+    DRAFT: '#eab308',
+    OPEN: '#22c55e',
+    CLOSED: '#3b82f6',
+    FINALIZED: '#64748b'
+  }
+  const status = getEffectiveStatus()
+  return colors[status] || '#22c55e'
+}
+
+const getRoundStatusTextColor = () => {
+  if (!currentRound.value) return '#64748b'
+  const colors = {
+    DRAFT: '#b45309',
+    OPEN: '#15803d',
+    CLOSED: '#1d4ed8',
+    FINALIZED: '#475569'
+  }
+  const status = getEffectiveStatus()
+  return colors[status] || '#15803d'
+}
+
+const getTotalRoundsCount = () => {
+  const local = localStorage.getItem('total_rounds')
+  if (local) {
+    const n = parseInt(local, 10)
+    if (n >= 1 && n <= 5) return n
+  }
+  return 3
+}
+
 
 onMounted(async () => {
   fetchSchoolName()

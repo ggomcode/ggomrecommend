@@ -39,7 +39,7 @@
       <!-- 라운드 시작 전 준비 체크리스트 -->
       <div v-if="!data.round && checklist" class="rounded-xl"
            style="padding: 20px 24px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
-        <SectionLabel title="첫 번째 라운드 시작 전 준비 체크리스트" />
+        <SectionLabel title="첫 번째 추천 선발 시작 전 준비 체크리스트" />
 
         <div class="flex flex-col gap-2">
           <div
@@ -78,13 +78,13 @@
         <div v-if="allReady" class="flex items-center gap-3 rounded-lg mt-3 flex-wrap"
              style="padding: 12px 16px; background: #eff6ff; border: 1px solid #bfdbfe;">
           <p class="text-base font-semibold" style="margin: 0; color: #1d4ed8;">
-            모든 준비가 끝났습니다. 이제 첫 번째 라운드를 열어 담임교사의 입력을 시작할 수 있습니다.
+            모든 준비가 끝났습니다. 이제 첫 번째 추천 선발을 개시하여 담임교사의 입력을 시작할 수 있습니다.
           </p>
           <button
               class="flex items-center gap-1 text-base font-semibold rounded-lg ml-auto flex-shrink-0"
               style="padding: 7px 14px; border: none; background: #2563eb; color: white; cursor: pointer;"
               @click="setActiveTab('rounds')"
-          >라운드 관리로 이동 <ArrowRight :size="15" /></button>
+          >추천 선발 관리로 이동 <ArrowRight :size="15" /></button>
         </div>
       </div>
 
@@ -99,9 +99,9 @@
 
       <!-- ③ 현재 라운드 -->
       <div class="rounded-xl" style="padding: 20px 24px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
-        <SectionLabel title="현재 라운드" />
+        <SectionLabel title="현재 추천 선발" />
         <div v-if="data.round" class="flex items-center gap-3 flex-wrap">
-          <span class="text-3xl font-bold" style="color: #1e293b;">{{ data.round.id }}차 라운드</span>
+          <span class="text-3xl font-bold" style="color: #1e293b;">{{ totalRounds === 1 ? '추천 선발' : `${data.round.id}차 추천 선발` }}</span>
           <span
             class="text-base font-semibold"
             style="padding: 4px 14px; border-radius: 999px;"
@@ -111,10 +111,10 @@
           >
             {{ roundStatusLabel(data.round.status) }}
           </span>
-          <span class="text-base ml-auto" style="color: #94a3b8;">개시일 {{ data.round.opened_at ? data.round.opened_at.slice(0, 10) : '—' }}</span>
+          <span v-if="data.round.opened_at" class="text-base ml-auto" style="color: #94a3b8;">접수 시작일 {{ data.round.opened_at.slice(0, 10) }}</span>
         </div>
         <div v-else class="flex items-center justify-between">
-          <p class="text-base" style="color: #94a3b8;">현재 진행 중인 라운드가 없습니다.</p>
+          <p class="text-base" style="color: #94a3b8;">현재 진행 중인 추천 선발이 없습니다.</p>
         </div>
       </div>
 
@@ -122,7 +122,7 @@
       <template v-if="data.round">
         <div class="rounded-xl overflow-hidden flex flex-col" style="min-height: 200px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
           <div style="padding: 20px 24px 0;">
-            <SectionLabel title="이번 라운드 · 학급별 지원자 현황" />
+            <SectionLabel :title="totalRounds === 1 ? '학급별 지원자 현황' : '이번 추천 선발 · 학급별 지원자 현황'" />
           </div>
 
           <div v-if="data.classes.length === 0" class="flex-1 flex items-center justify-center text-base" style="color: #94a3b8;">
@@ -148,18 +148,6 @@
                   미입력 학급
                 </p>
               </div>
-              <div class="flex-1 lg:flex-none rounded-xl text-center"
-                :style="unconfirmedCount > 0
-                  ? { padding: '16px', background: '#fffbeb' }
-                  : { padding: '16px', background: '#f0fdf4' }"
-              >
-                <p class="text-2xl font-bold" :style="unconfirmedCount > 0 ? { color: '#d97706' } : { color: '#16a34a' }">
-                  {{ unconfirmedCount > 0 ? `${unconfirmedCount}개` : '모두 확정' }}
-                </p>
-                <p class="text-base mt-0.5" :style="unconfirmedCount > 0 ? { color: '#d97706' } : { color: '#4ade80' }">
-                  미확정 학급
-                </p>
-              </div>
             </div>
 
             <!-- 테이블 -->
@@ -171,7 +159,6 @@
                     <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">학급</th>
                     <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">담임</th>
                     <th class="text-base font-semibold text-right" style="padding: 14px 20px; color: #475569;">지원자 수</th>
-                    <th class="text-base font-semibold text-center" style="padding: 14px 20px; color: #475569;">입력 확정</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -195,17 +182,6 @@
                       </span>
                       <span v-else class="font-semibold" style="color: #1e293b;">{{ c.submitted }}명</span>
                     </td>
-                    <td class="text-base text-center" style="padding: 14px 20px;">
-                      <span v-if="c.confirmed"
-                        class="font-semibold"
-                        style="padding: 3px 10px; border-radius: 999px; background: #f0fdf4; color: #16a34a;">
-                        ✓ 확정
-                      </span>
-                      <span v-else
-                        style="padding: 3px 10px; border-radius: 999px; background: #fffbeb; color: #d97706;">
-                        미확정
-                      </span>
-                    </td>
                   </tr>
                   <!-- 졸업생 행 -->
                   <tr
@@ -223,17 +199,6 @@
                       </span>
                       <span v-else class="font-semibold" style="color: #1e293b;">{{ data.graduated.submitted }}명</span>
                     </td>
-                    <td class="text-base text-center" style="padding: 14px 20px;">
-                      <span v-if="data.graduated.confirmed"
-                        class="font-semibold"
-                        style="padding: 3px 10px; border-radius: 999px; background: #f0fdf4; color: #16a34a;">
-                        ✓ 확정
-                      </span>
-                      <span v-else
-                        style="padding: 3px 10px; border-radius: 999px; background: #fffbeb; color: #d97706;">
-                        미확정
-                      </span>
-                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -245,7 +210,7 @@
         <!-- ⑤ 모집단위별 지원 현황 -->
         <div class="rounded-xl overflow-hidden flex flex-col" style="min-height: 200px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
           <div style="padding: 20px 24px 0;">
-            <SectionLabel title="이번 라운드 · 모집단위별 지원 현황" />
+            <SectionLabel :title="totalRounds === 1 ? '모집단위별 지원 현황' : '이번 추천 선발 · 모집단위별 지원 현황'" />
           </div>
 
           <div v-if="!data.universities || data.universities.length === 0" class="flex-1 flex items-center justify-center text-base" style="color: #94a3b8;">
@@ -290,7 +255,7 @@
                         v-if="track.unit_quota != null"
                         :filled="track.applicants || 0"
                         :total="track.unit_quota || 0"
-                        :size="40"
+                        :size="20"
                       />
                       <span v-else class="text-base font-semibold" style="color: #94a3b8;">∞</span>
                     </td>
@@ -359,6 +324,7 @@
 
 <script setup>
 import { ref, computed, onMounted, inject, h } from 'vue'
+import { supabase } from '../../utils/supabaseClient.js'
 import { Copy, Check, AlertTriangle, CheckCircle2, XCircle, ArrowRight } from 'lucide-vue-next'
 import { getOverview, getClasses, getStudents, getAreas, getUniversities } from '../../api/admin.js'
 import { roundStatusLabel } from '../../data/roundStatus.js'
@@ -386,6 +352,24 @@ const copied  = ref(false)
 
 // null = 아직 로드 전 또는 로드 실패(카드 숨김)
 const readiness = ref(null)
+const totalRounds = ref(3)
+
+async function loadTotalRounds() {
+  const local = localStorage.getItem('total_rounds')
+  if (local) {
+    const n = parseInt(local, 10)
+    if (n >= 1 && n <= 5) totalRounds.value = n
+  }
+  if (supabase) {
+    try {
+      const { data: configLimit } = await supabase.from('config').select('value').eq('key', 'total_rounds').maybeSingle()
+      if (configLimit && configLimit.value) {
+        const n = parseInt(configLimit.value, 10)
+        if (n >= 1 && n <= 5) totalRounds.value = n
+      }
+    } catch {}
+  }
+}
 
 async function loadReadiness() {
   try {
@@ -444,33 +428,33 @@ const helpBox = computed(() => {
       return {
         key: 'overview-first',
         title: '도움말 — 처음 시작하기',
-        intro: '이 화면은 시스템의 전체 현황을 한눈에 보여줍니다. 아직 진행 중인 라운드가 없습니다.',
+        intro: '이 화면은 시스템의 전체 현황을 한눈에 보여줍니다. 아직 진행 중인 추천 선발이 없습니다.',
         items: [
           '처음 사용하신다면 왼쪽 메뉴에서 [학급 관리] → [학생 관리] → [추천순위 기준 설정] → [대학 설정] 순서로 기초 정보를 먼저 입력하세요.',
-          '준비가 끝나면 [라운드 관리]에서 "+ 라운드 열기"를 눌러 담임교사의 입력을 시작할 수 있습니다.',
+          '준비가 끝나면 [추천 선발 관리]에서 "+ 추천 선발 추가"를 눌러 담임교사의 입력을 시작할 수 있습니다.',
           '자세한 사용 방법은 왼쪽 아래 [매뉴얼] 메뉴에서 볼 수 있습니다.',
         ],
       }
     }
     return {
       key: 'overview-idle',
-      title: '도움말 — 진행 중인 라운드 없음',
-      intro: '이전 라운드는 모두 마감되었고, 지금은 진행 중인 라운드가 없습니다.',
+      title: '도움말 — 진행 중인 추천 선발 없음',
+      intro: '이전 추천 선발은 모두 마감되었고, 지금은 진행 중인 추천 선발이 없습니다.',
       items: [
-        '추가 추천이 필요하면 [라운드 관리]에서 "+ 라운드 열기"로 다음 차수를 시작하세요.',
-        '이전 라운드의 결과는 [라운드 관리]에서 해당 라운드를 선택해 다시 확인하거나 내려받을 수 있습니다.',
+        '추가 추천이 필요하면 [추천 선발 관리]에서 "+ 추천 선발 추가"로 다음 차수를 시작하세요.',
+        '이전 추천 선발의 결과는 [추천 선발 관리]에서 해당 차수를 선택해 다시 확인하거나 내려받을 수 있습니다.',
       ],
     }
   }
   if (round.status === 'OPEN') {
     return {
       key: 'overview-open',
-      title: '도움말 — 라운드 진행 중',
+      title: '도움말 — 추천 선발 진행 중',
       intro: '지금은 담임교사들이 지원자를 등록하는 기간입니다.',
       items: [
         '아래 "학급별 지원자 현황"에서 학급별 입력 상황을 확인하세요. 빨간색으로 표시된 학급은 아직 지원자를 한 명도 등록하지 않은 학급입니다.',
         '담임교사들에게 웹 접속 주소를 안내해 주세요. 교사는 해당 주소로 접속하여 로그인합니다.',
-        '모든 담임교사의 입력이 끝나면 [라운드 관리]에서 "종료하기"를 눌러 입력을 마감하세요.',
+        '모든 담임교사의 입력이 끝나면 [추천 선발 관리]에서 "종료하기"를 눌러 입력을 마감하세요.',
       ],
     }
   }
@@ -479,7 +463,7 @@ const helpBox = computed(() => {
     title: '도움말 — 입력 종료, 추천 확정 단계',
     intro: '담임교사 입력이 종료되었습니다. 이제 관리자가 추천자를 확정할 차례입니다.',
     items: [
-      '[라운드 관리]에서 이 라운드를 선택한 뒤 [결과] 탭에서 "자동 추천 확정"을 누르거나 학생별로 "추천 확정"을 누르세요.',
+      '[추천 선발 관리]에서 이 차수를 선택한 뒤 [결과] 탭에서 "자동 추천 확정"을 누르거나 학생별로 "추천 확정"을 누르세요.',
       '추천 확정이 모두 끝나면 "마감하기"를 눌러 결과를 담임교사에게 공개하세요.',
       '입력을 다시 받아야 하면 "다시 열기"를 누르면 됩니다.',
     ],
@@ -490,7 +474,7 @@ const allTimeStats = computed(() => {
   if (!data.value) return []
   const t = data.value.all_time || {}
   return [
-    { label: '진행된 라운드 차수',  value: `${t.total_rounds ?? 0}차` },
+    { label: '진행된 추천 선발',  value: totalRounds.value === 1 ? '완료' : `${t.total_rounds ?? 0}차` },
     { label: '누적 지원자',  value: `${t.total_applicants ?? 0}명` },
     { label: '확정 추천자',  value: `${t.confirmed ?? 0}명` },
     { label: '포기자',       value: `${t.abandoned ?? 0}명` },
@@ -499,6 +483,7 @@ const allTimeStats = computed(() => {
 
 // ── 데이터 로드 ───────────────────────────────────────────────
 onMounted(async () => {
+  await loadTotalRounds()
   loadReadiness() // 개요 로드와 병렬 실행 — 실패해도 체크리스트 카드만 숨겨진다
   try {
     data.value = await getOverview()

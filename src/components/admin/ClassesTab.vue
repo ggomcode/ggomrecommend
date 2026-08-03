@@ -51,17 +51,25 @@
       <div class="flex gap-4 items-end flex-wrap">
         <div>
           <label class="block text-base font-medium mb-1.5" style="color: #64748b;">학년</label>
-          <input v-model.number="newGrade" type="number" min="1" max="3"
-            class="text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
-            style="width: 72px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 12px;"
-            placeholder="3" />
+          <select v-model.number="newGrade" @change="onNewGradeChange"
+            class="text-base focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+            style="width: 100px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 12px;">
+            <option :value="3">3학년</option>
+            <option :value="0">졸업생</option>
+          </select>
         </div>
-        <div>
+        <div v-if="newGrade !== 0">
           <label class="block text-base font-medium mb-1.5" style="color: #64748b;">반</label>
           <input v-model.number="newClassNo" type="number" min="1"
             class="text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
             style="width: 72px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 12px;"
             placeholder="1" />
+        </div>
+        <div v-else>
+          <label class="block text-base font-medium mb-1.5" style="color: #64748b;">반</label>
+          <input type="text" value="졸업생" disabled readonly
+            class="text-base bg-slate-100 font-bold text-slate-500 cursor-not-allowed"
+            style="width: 90px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px 12px;" />
         </div>
         <div>
           <label class="block text-base font-medium mb-1.5" style="color: #64748b;">담임명</label>
@@ -108,8 +116,8 @@
       <div class="overflow-x-auto">
         <table style="border-collapse: collapse; table-layout: fixed; width: 100%; min-width: 660px;">
           <colgroup>
+            <col style="width: 90px;">
             <col style="width: 80px;">
-            <col style="width: 70px;">
             <col style="width: 160px;">
             <col>
           </colgroup>
@@ -127,8 +135,8 @@
               <tr v-if="editing?.grade !== row.grade || editing?.class_no !== row.class_no"
                 style="border-bottom: 1px solid #f1f5f9; transition: background 0.1s;"
                 class="hover:bg-slate-50">
-                <td class="text-base" style="padding: 14px 20px; color: #1e293b;">{{ row.grade }}</td>
-                <td class="text-base" style="padding: 14px 20px; color: #1e293b;">{{ row.class_no }}</td>
+                <td class="text-base font-bold text-slate-800" style="padding: 14px 20px;">{{ row.grade === 0 ? '졸업생' : row.grade + '학년' }}</td>
+                <td class="text-base font-bold text-slate-800" style="padding: 14px 20px;">{{ row.class_no === 0 ? '졸업생' : row.class_no + '반' }}</td>
                 <td class="text-base" style="padding: 14px 20px; color: #1e293b;">{{ row.teacher_name ?? '-' }}</td>
                 <td style="padding: 14px 20px;">
                   <div class="flex gap-3">
@@ -143,8 +151,8 @@
               </tr>
               <!-- 편집 행 -->
               <tr v-else style="background: #eff6ff; border-bottom: 1px solid #bfdbfe;">
-                <td class="text-base" style="padding: 14px 20px; color: #1e293b;">{{ row.grade }}</td>
-                <td class="text-base" style="padding: 14px 20px; color: #1e293b;">{{ row.class_no }}</td>
+                <td class="text-base font-bold text-slate-800" style="padding: 14px 20px;">{{ row.grade === 0 ? '졸업생' : row.grade + '학년' }}</td>
+                <td class="text-base font-bold text-slate-800" style="padding: 14px 20px;">{{ row.class_no === 0 ? '졸업생' : row.class_no + '반' }}</td>
                 <td style="padding: 10px 20px;">
                   <input v-model="editTeacherName" type="text"
                     class="text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -215,9 +223,17 @@ const newClassNo = ref(1)
 const newTeacherName = ref('')
 const newPassword = ref('')
 
+function onNewGradeChange() {
+  if (newGrade.value === 0) {
+    newClassNo.value = 0
+  } else if (!newClassNo.value) {
+    newClassNo.value = 1
+  }
+}
+
 async function load() {
   try {
-    classes.value = (await getClasses()).filter(r => !(r.grade === 0 && r.class_no === 0))
+    classes.value = await getClasses()
   } catch (e) {
     error.value = e.response?.data ?? e.message
   }
@@ -252,7 +268,7 @@ async function saveEdit(row) {
 }
 
 async function addRow() {
-  if (!newGrade.value || !newClassNo.value) { error.value = '학년과 반을 입력하세요.'; return }
+  if (newGrade.value == null || newClassNo.value == null) { error.value = '학년과 반을 입력하세요.'; return }
   if (!newPassword.value) { error.value = '비밀번호를 설정해야 합니다.'; return }
   const body = {}
   if (newTeacherName.value) body.teacher_name = newTeacherName.value
@@ -271,9 +287,10 @@ async function addRow() {
 }
 
 async function remove(row) {
+  const label = row.grade === 0 ? '졸업생' : `${row.grade}학년 ${row.class_no}반`
   if (!(await dialog.confirm({
     title: '학급 삭제',
-    message: `${row.grade}학년 ${row.class_no}반을 삭제하시겠습니까?\n해당 학급의 담임교사 로그인 계정도 함께 삭제됩니다.`,
+    message: `${label}을 삭제하시겠습니까?\n해당 학급의 담임교사 로그인 계정도 함께 삭제됩니다.`,
     confirmText: '삭제',
     level: 'danger',
     dangerNotice: '삭제된 학급과 계정 정보는 복구할 수 없습니다.',
@@ -293,7 +310,7 @@ async function remove(row) {
 
 function cancelAdd() {
   showAddForm.value = false
-  newGrade.value = 1
+  newGrade.value = 3
   newClassNo.value = 1
   newTeacherName.value = ''
   newPassword.value = ''

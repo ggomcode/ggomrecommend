@@ -12,6 +12,21 @@ export function normalizeSchoolName(input) {
   return name
 }
 
+export function formatSchoolPrincipalTitle(rawInput) {
+  let name = String(rawInput || '').trim()
+  if (!name || name === '우리학교' || name === '우리고등학교') {
+    return '우리고등학교장 귀하'
+  }
+
+  if (name.endsWith('귀하')) return name
+  if (name.endsWith('고등학교장')) return `${name} 귀하`
+  if (name.endsWith('고등학교')) return `${name}장 귀하`
+  if (name.endsWith('고')) return `${name.slice(0, -1)}고등학교장 귀하`
+  if (name.endsWith('학교')) return `${name}장 귀하`
+
+  return `${name}고등학교장 귀하`
+}
+
 export async function fetchSchoolName() {
   const cached = localStorage.getItem('pcm_school_name')
   if (cached) {

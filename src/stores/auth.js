@@ -24,6 +24,8 @@ export const useAuthStore = defineStore('auth', () => {
   // 학생 전용 상태
   const studentCode = ref(localStorage.getItem('pcm_student_code') || null)
   const studentName = ref(localStorage.getItem('pcm_student_name') || null)
+  const studentPhone = ref(localStorage.getItem('pcm_student_phone') || null)
+  const gpaOverall = ref(localStorage.getItem('pcm_gpa_overall') || null)
   const phoneLast4 = ref(localStorage.getItem('pcm_phone_last4') || null)
   const seqNo = ref(localStorage.getItem('pcm_seq_no') != null ? Number(localStorage.getItem('pcm_seq_no')) : null)
   const isEnrolled = ref(localStorage.getItem('pcm_is_enrolled') != null ? localStorage.getItem('pcm_is_enrolled') === 'true' : true)
@@ -84,8 +86,8 @@ export const useAuthStore = defineStore('auth', () => {
       } else {
         const { data: { user } } = await supabase.auth.getUser()
         const meta = user?.user_metadata || {}
-        grade.value = Number(meta.grade) || null
-        classNo.value = Number(meta.class_no) || null
+        grade.value = meta.grade != null ? Number(meta.grade) : null
+        classNo.value = meta.class_no != null ? Number(meta.class_no) : null
         teacherName.value = adminTeacherData.name === '관리자' ? '관리자' : await decryptText(adminTeacherData.name)
       }
       _persist()
@@ -121,6 +123,7 @@ export const useAuthStore = defineStore('auth', () => {
       status.value = studentData.status || 'approved'
       studentCode.value = studentData.student_code
       studentName.value = await decryptText(studentData.name)
+      if (studentData.gpa_overall != null) gpaOverall.value = String(studentData.gpa_overall)
       phoneLast4.value = '****'
       isEnrolled.value = studentData.is_enrolled !== false
       gradYear.value = studentData.grad_year
@@ -189,6 +192,12 @@ export const useAuthStore = defineStore('auth', () => {
     if (studentName.value) localStorage.setItem('pcm_student_name', studentName.value)
     else localStorage.removeItem('pcm_student_name')
 
+    if (studentPhone.value) localStorage.setItem('pcm_student_phone', studentPhone.value)
+    else localStorage.removeItem('pcm_student_phone')
+
+    if (gpaOverall.value) localStorage.setItem('pcm_gpa_overall', gpaOverall.value)
+    else localStorage.removeItem('pcm_gpa_overall')
+
     if (phoneLast4.value) localStorage.setItem('pcm_phone_last4', phoneLast4.value)
     else localStorage.removeItem('pcm_phone_last4')
 
@@ -215,6 +224,8 @@ export const useAuthStore = defineStore('auth', () => {
     teacherName.value = null
     studentCode.value = null
     studentName.value = null
+    studentPhone.value = null
+    gpaOverall.value = null
     phoneLast4.value = null
     seqNo.value = null
     isEnrolled.value = true
@@ -357,7 +368,9 @@ export const useAuthStore = defineStore('auth', () => {
     seqNo.value = pSeq
     studentCode.value = cleanCode
     studentName.value = await decryptText(targetRow.name)
-    phoneLast4.value = '****'
+    studentPhone.value = cleanPasswordDigits
+    if (targetRow.gpa_overall != null) gpaOverall.value = String(targetRow.gpa_overall)
+    phoneLast4.value = cleanPasswordDigits.slice(-4)
     isEnrolled.value = targetRow.is_enrolled !== false
     gradYear.value = targetRow.grad_year
     hasDisciplinary.value = targetRow.has_disciplinary || false
@@ -498,7 +511,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     token, role, status, grade, classNo, teacherName,
-    studentCode, studentName, phoneLast4, seqNo, isEnrolled, gradYear, hasDisciplinary,
+    studentCode, studentName, studentPhone, gpaOverall, phoneLast4, seqNo, isEnrolled, gradYear, hasDisciplinary,
     initialized, isAdmin, isTeacher, isStudent,
     checkStatus, loginAdmin, loginTeacher, loginStudent, signUpStudent, logout
   }

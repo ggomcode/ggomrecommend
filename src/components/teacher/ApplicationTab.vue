@@ -10,11 +10,11 @@
 
     <!-- HWP 양식 다운로드 바 -->
     <div class="px-4 sm:px-10 pb-4 flex gap-4 text-xs border-b border-slate-100 dark:border-slate-800 mb-2">
-      <a href="/data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%99%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%84%A0%EC%A0%95%20%EC%8B%A0%EC%B2%AD%EC%84%9C_%EC%96%91%EC%8B%9D.hwp" download class="text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer">
+      <a href="/ggomrecommend/data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%99%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%84%A0%EC%A0%95%20%EC%8B%A0%EC%B2%AD%EC%84%9C_%EC%96%91%EC%8B%9D.hwp" download class="text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer">
         📝 신청서 한글 양식 다운로드 (HWP)
       </a>
       <span class="text-slate-300 dark:text-slate-700">|</span>
-      <a href="/data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%90%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%A7%80%EC%9B%90%20%ED%8F%AC%EA%B8%B0%EC%9B%90_%EC%96%91%EC%8B%9D.hwp" download class="text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer">
+      <a href="/ggomrecommend/data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%99%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%A7%80%EC%9B%90%20%ED%8F%AC%EA%B8%B0%EC%9B%90_%EC%96%91%EC%8B%9D.hwp" download class="text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer">
         📝 포기원 한글 양식 다운로드 (HWP)
       </a>
     </div>
@@ -27,35 +27,35 @@
           <h3 class="text-base font-bold text-slate-900 dark:text-white m-0">학교장 추천전형 지원 안내 및 전략 가이드</h3>
         </div>
         <span class="text-xs font-extrabold text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/60 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-800">
-          ★ 1차 라운드 적극 지원 유효
+          ★ 1차 추천 선발 적극 지원 유효
         </span>
       </div>
 
       <div class="p-3.5 rounded-xl bg-white/90 dark:bg-slate-900/80 border border-blue-100 dark:border-slate-700/60 text-xs text-slate-700 dark:text-slate-300 space-y-2">
         <p class="font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5 text-xs m-0">
-          <span class="text-sm">🎯</span> 1차 라운드 적극 지원의 법칙 (가장 중요)
+          <span class="text-sm">🎯</span> 1차 추천 선발 적극 지원의 법칙 (가장 중요)
         </p>
         <p class="leading-relaxed pl-5 text-slate-600 dark:text-slate-300 m-0">
-          <strong>1차 라운드에 희망하는 대학을 빠짐없이 미리 신청하도록 지도해 주세요!</strong><br />
-          1차 라운드에서 <strong>[추천 확정](합격)</strong>을 받은 학생의 자리는 2차 라운드가 열려 성적이 더 우수한 학생이 추가 지원하더라도 <strong>절대로 박탈되거나 취소되지 않으며 100% 안전하게 보호</strong>됩니다.
+          <strong>1차 추천 선발에 희망하는 대학을 빠짐없이 미리 신청하도록 지도해 주세요!</strong><br />
+          1차 라운드에서 <strong>[추천 확정](합격)</strong>을 받은 학생의 자리는 2차 추천 선발이 열려 성적이 더 우수한 학생이 추가 지원하더라도 <strong>절대로 박탈되거나 취소되지 않으며 100% 안전하게 보호</strong>됩니다.
         </p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">
         <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
-          <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">1️⃣ 1차 라운드 (메인 선발)</p>
+          <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">1️⃣ 1차 추천 선발 (메인 선발)</p>
           <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
             주요 대학 추천 희망자 접수 및 1차 추천자 확정 (합격자 기득권 완전 보장)
           </p>
         </div>
         <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
-          <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">2️⃣ 2차 라운드 (잔여 정원)</p>
+          <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">2️⃣ 2차 추천 선발 (잔여 정원)</p>
           <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
             1차 합격자를 제외한 <strong>남은 정원(잔여 T/O)</strong>에 대해서만 2차 신청자 간 성적순 경쟁
           </p>
         </div>
         <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
-          <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">3️⃣ 3차 라운드 (최종 미달)</p>
+          <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">3️⃣ 3차 추천 선발 (최종 미달)</p>
           <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
             추가 모집 및 잔여 미달 모집단위 최종 접수 및 마무리 선발
           </p>
@@ -64,28 +64,6 @@
 
       <div class="text-[11px] text-slate-500 dark:text-slate-400 pt-2 flex items-center justify-between border-t border-blue-100 dark:border-slate-700/50">
         <span>🛡️ <strong>포기자 발생 시</strong>: 1차 합격자가 포기서를 제출한 경우에만 해당 빈자리가 다음 차수 잔여 정원으로 이월됩니다.</span>
-      </div>
-    </div>
-
-    <div class="px-4 sm:px-10">
-
-      <!-- 입력 확정 버튼 -->
-      <div v-if="currentRound && loaded" class="flex items-center gap-3 flex-wrap mt-2">
-        <template v-if="!confirmed">
-          <button
-            class="text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white border-none cursor-pointer transition-all px-4 py-2"
-            @click="handleConfirm"
-          >입력 완료 확정</button>
-        </template>
-        <template v-else>
-          <span class="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2 rounded-lg border border-emerald-100 dark:border-emerald-900/30">
-            ✓ 입력 확정됨
-          </span>
-          <button
-            class="text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer px-3 py-2"
-            @click="handleRevokeConfirmation"
-          >확정 취소</button>
-        </template>
       </div>
     </div>
 
@@ -98,7 +76,7 @@
 
     <div v-else-if="!currentRound && loaded" class="px-4 sm:px-10 pb-8">
       <div class="rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 p-12 text-center text-slate-400 dark:text-slate-500">
-        🔓 진행 중인 추천 라운드가 없습니다. 관리자가 새 추천 라운드를 시작해야 지원 등록이 가능합니다.
+        🔓 진행 중인 추천 선발이 없습니다. 관리자가 새 추천 선발을 시작해야 지원 등록이 가능합니다.
       </div>
     </div>
 
@@ -147,7 +125,7 @@
                 <h3 class="text-base font-bold text-slate-800 dark:text-white">
                   {{ selectedStudent.name }} 학생의 추천 신청 내역
                 </h3>
-                <p class="text-xs text-slate-400 font-medium">현재 {{ currentRound.id }}차 라운드 신청 데이터</p>
+                <p class="text-xs text-slate-400 font-medium">현재 {{ currentRound.id }}차 추천 선발 신청 데이터</p>
               </div>
               <button
                 @click="openNewForm"
@@ -159,7 +137,7 @@
             </div>
 
             <div v-if="studentApps.length === 0 && !showForm" class="py-8 text-center text-xs text-slate-400">
-              이번 라운드에 등록된 지원 내역이 없습니다. 우측 상단의 '+ 새 전형 추가' 버튼을 눌러주세요.
+              이번 추천 선발에 등록된 지원 내역이 없습니다. 우측 상단의 '+ 새 전형 추가' 버튼을 눌러주세요.
             </div>
 
             <div v-else class="flex flex-col gap-2.5">
@@ -176,13 +154,16 @@
                   <span class="text-xs text-slate-400 ml-2">({{ app.department_name }})</span>
                 </div>
                 <div class="flex items-center gap-3">
-                  <span class="text-xs font-semibold text-slate-500">
-                    {{ app.total_score ? app.total_score + '점' : '점수 미입력' }}
+                  <span class="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {{ getDisplayScoreText(app) }}
                   </span>
-                  <!-- 추천 배지 -->
-                  <span v-if="app.abandoned" class="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-500">포기</span>
-                  <span v-else-if="app.recommended" class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-500">추천확정</span>
-                  <span v-else class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-500">대기</span>
+                  <!-- 추천 배지 (실시간 전학급 순위 및 정원 표기) -->
+                  <span
+                    class="text-[10px] font-bold px-2.5 py-0.5 rounded border"
+                    :class="getBadgeInfo(app).css"
+                  >
+                    {{ getBadgeInfo(app).text }}
+                  </span>
                   <span class="text-slate-400">›</span>
                 </div>
               </div>
@@ -237,8 +218,8 @@
                 </div>
               </div>
 
-              <!-- 보호자 정보 및 수동 점수 -->
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+              <!-- 보호자 정보 및 점수 입력 (석차등급 기본값 + 대학별 산출점수 수동입력) -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                 <div>
                   <label class="block text-xs font-bold text-slate-400 mb-1">학부모 성명</label>
                   <input
@@ -259,9 +240,28 @@
                     class="w-full text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400"
                   />
                 </div>
+              </div>
+
+              <!-- 성적 구간 (석차등급 기본값 / 대학별 환산점수 입력) -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-700 mt-1">
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 mb-1">
+                    📊 내신 석차등급 (관리자 업로드 기본값)
+                  </label>
+                  <input
+                    :value="selectedStudent?.gpa_overall != null ? selectedStudent.gpa_overall + ' 등급' : '석차등급 미산출 (기본값 없음)'"
+                    readonly
+                    disabled
+                    class="w-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 cursor-not-allowed"
+                  />
+                  <span class="text-[11px] text-slate-400 mt-1 block">관리자가 업로드한 유니브/대교협 석차등급이 기본 적용됩니다.</span>
+                </div>
+
                 <div>
                   <div class="flex items-center justify-between mb-1">
-                    <label class="block text-xs font-bold text-slate-400">내신 산출 점수</label>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-200">
+                      🏫 대학별 내신 산출점수 (수동 수정 가능)
+                    </label>
                     <button
                       type="button"
                       @click="showCalcModal = true"
@@ -271,13 +271,14 @@
                     </button>
                   </div>
                   <input
-                    v-model="form.manualScore"
+                    v-model="form.univCalcScore"
                     type="number"
                     step="0.001"
                     required
-                    placeholder="직접 계산된 내신 총점 입력"
-                    class="w-full text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="대학별 산출/환산 점수 직접 입력"
+                    class="w-full text-sm font-bold bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400"
                   />
+                  <span class="text-[11px] text-blue-600 dark:text-blue-400 mt-1 block">기본 등급 외에 대학별 개별 환산점수를 수동으로 직접 변경할 수 있습니다.</span>
                 </div>
               </div>
 
@@ -371,8 +372,6 @@ const universities = ref([])
 const tracks = ref([])
 const loaded = ref(false)
 const loadError = ref('')
-const confirmed = ref(false)
-
 const selectedStudent = ref(null)
 const showForm = ref(false)
 const saving = ref(false)
@@ -385,7 +384,8 @@ const form = reactive({
   departmentName: '',
   parentName: '',
   parentPhone: '',
-  manualScore: ''
+  manualScore: '',
+  univCalcScore: ''
 })
 
 // ── 모의 계산기 ──
@@ -401,8 +401,47 @@ function runMockCalculation() {
   const avg = (calcGrades.kor + calcGrades.eng + calcGrades.math + calcGrades.sci) / 4
   // 등급 -> 백점 만점 산출 공식
   const score = 100 - ((avg - 1) * 10)
-  form.manualScore = Number(score.toFixed(3))
+  form.univCalcScore = Number(score.toFixed(3))
   showCalcModal.value = false
+}
+
+function getDisplayScoreText(app) {
+  const gpa = app.gpa_overall != null ? `${app.gpa_overall}등급` : '석차등급 미산출'
+  const calcScore = app.univ_calc_score != null ? app.univ_calc_score : app.manual_score
+
+  if (calcScore != null && calcScore !== '' && Number(calcScore) !== Number(app.gpa_overall)) {
+    return `${gpa} (대학환산: ${calcScore}점)`
+  }
+  return gpa
+}
+
+function getBadgeInfo(app) {
+  if (app.abandoned) {
+    return { text: '포기', css: 'bg-rose-50 text-rose-600 border-rose-200' }
+  }
+
+  const rankStr = app.univ_rank
+    ? ` (전학급 ${app.univ_rank}위${app.has_quota && app.quota_limit ? ' / 정원 ' + app.quota_limit + '명' : ''})`
+    : ''
+
+  if (app.excluded || app.is_excluded) {
+    return {
+      text: `추천 보류(성적 미달)${rankStr}`,
+      css: 'bg-amber-50 text-amber-800 border-amber-200'
+    }
+  }
+
+  if (app.recommended || app.is_recommended) {
+    return {
+      text: `추천${rankStr}`,
+      css: 'bg-emerald-50 text-emerald-800 border-emerald-200'
+    }
+  }
+
+  return {
+    text: `대기${rankStr}`,
+    css: 'bg-slate-100 text-slate-700 border-slate-200'
+  }
 }
 
 const studentApps = computed(() =>
@@ -445,9 +484,15 @@ function openNewForm() {
   form.univName = ''
   form.trackId = ''
   form.departmentName = ''
-  form.parentName = ''
+  form.parentName = selectedStudent.value?.parent_name || ''
   form.parentPhone = ''
-  form.manualScore = ''
+
+  const defaultScore = selectedStudent.value?.gpa_overall != null
+    ? selectedStudent.value.gpa_overall
+    : (selectedStudent.value?.gpa_1_all || '')
+
+  form.manualScore = defaultScore
+  form.univCalcScore = defaultScore
 }
 
 function closeForm() {
@@ -475,12 +520,14 @@ async function onUnivChange() {
 async function saveApplication() {
   saving.value = true
   try {
+    const scoreVal = Number(form.univCalcScore || form.manualScore || 0)
     const body = {
       student_id: selectedStudent.value.id,
       track_id: form.trackId,
       round_id: currentRound.value.id,
       department_name: form.departmentName,
-      manual_score: Number(form.manualScore),
+      manual_score: scoreVal,
+      univ_calc_score: scoreVal,
       parent_name: form.parentName,
       parent_phone: form.parentPhone
     }
@@ -503,14 +550,6 @@ function openDetail(app) {
 async function onModalDeleted() {
   detailApp.value = null
   applications.value = await teacherGetApplications(currentRound.value.id)
-}
-
-function handleConfirm() {
-  confirmed.value = true
-}
-
-function handleRevokeConfirmation() {
-  confirmed.value = false
 }
 
 onMounted(loadAll)

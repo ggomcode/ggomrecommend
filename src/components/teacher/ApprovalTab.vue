@@ -41,7 +41,7 @@
               <th class="text-xs font-bold text-slate-500 p-4 text-left">학번</th>
               <th class="text-xs font-bold text-slate-500 p-4 text-left">이름</th>
               <th class="text-xs font-bold text-slate-500 p-4 text-left">연락처 끝 4자리</th>
-              <th class="text-xs font-bold text-slate-500 p-4 text-left">학년/반/번호 (졸업년도)</th>
+              <th class="text-xs font-bold text-slate-500 p-4 text-left">졸업년도</th>
               <th class="text-xs font-bold text-slate-500 p-4 text-center">상태</th>
               <th class="text-xs font-bold text-slate-500 p-4 text-center">가입 처리</th>
             </tr>
@@ -69,7 +69,7 @@
               <td class="p-4 text-sm font-semibold text-slate-800">{{ student.name }}</td>
               <td class="p-4 text-sm font-mono text-slate-500">{{ student.phone_last4 }}</td>
               <td class="p-4 text-sm text-slate-600">
-                {{ student.is_enrolled ? `${student.grade}학년 ${student.class_no}반 ${student.seq_no}번` : `${student.grad_year}년 졸업생` }}
+                {{ student.is_enrolled ? `${student.grade}학년 ${student.class_no}반 ${student.seq_no}번` : `${student.grad_year}년` }}
               </td>
               <td class="p-4 text-center">
                 <span
