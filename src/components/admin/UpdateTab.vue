@@ -55,7 +55,7 @@
         <!-- 최신 버전 -->
         <div v-else-if="isLatest" class="flex items-center gap-4">
           <div
-            class="flex items-center justify-center rounded-full flex-shrink-0"
+            class="flex items-center justify-center rounded-full shrink-0"
             style="width:40px;height:40px;background:#dcfce7;"
           >
             <CheckCircle2 :size="22" style="color:#16a34a;" />
@@ -71,7 +71,7 @@
         <!-- 업데이트 필요 -->
         <div v-else class="flex items-center gap-4">
           <div
-            class="flex items-center justify-center rounded-full flex-shrink-0"
+            class="flex items-center justify-center rounded-full shrink-0"
             style="width:40px;height:40px;background:#fef3c7;"
           >
             <RefreshCw :size="20" style="color:#d97706;" />
@@ -140,14 +140,14 @@
         </div>
         <div class="flex gap-3">
           <span
-              class="flex-shrink-0 flex items-center justify-center rounded-full text-base font-bold"
+              class="shrink-0 flex items-center justify-center rounded-full text-base font-bold"
               style="width:28px;height:28px;background:#dbeafe;color:#1d4ed8;font-size:16px;"
           >1</span>
           <p class="text-base" style="color:#374151;">아래 <strong>백업 파일 다운로드</strong> 버튼을 눌러 데이터를 먼저 백업합니다.</p>
         </div>
         <div class="flex gap-3">
           <span
-              class="flex-shrink-0 flex items-center justify-center rounded-full text-base font-bold"
+              class="shrink-0 flex items-center justify-center rounded-full text-base font-bold"
               style="width:28px;height:28px;background:#dbeafe;color:#1d4ed8;font-size:16px;"
           >2</span>
           <p class="text-base" style="color:#374151;">
@@ -157,21 +157,21 @@
         </div>
         <div class="flex gap-3">
           <span
-              class="flex-shrink-0 flex items-center justify-center rounded-full text-base font-bold"
+              class="shrink-0 flex items-center justify-center rounded-full text-base font-bold"
               style="width:28px;height:28px;background:#dbeafe;color:#1d4ed8;font-size:16px;"
           >3</span>
           <p class="text-base" style="color:#374151;">시스템 트레이 아이콘을 우클릭한 후 <strong>종료</strong>를 선택해 프로그램을 완전히 닫습니다.</p>
         </div>
         <div class="flex gap-3">
           <span
-              class="flex-shrink-0 flex items-center justify-center rounded-full text-base font-bold"
+              class="shrink-0 flex items-center justify-center rounded-full text-base font-bold"
               style="width:28px;height:28px;background:#dbeafe;color:#1d4ed8;font-size:16px;"
           >4</span>
           <p class="text-base" style="color:#374151;">기존 <code class="font-mono px-1 py-0.5 rounded" style="background:#f1f5f9;color:#1e293b;">principal-candidate-manager.exe</code>를 새 파일로 교체합니다. <code class="font-mono px-1 py-0.5 rounded" style="background:#f1f5f9;color:#1e293b;">pcm\</code> 폴더는 그대로 두세요 — 데이터는 그 폴더 안에 있고 실행 파일 교체와는 무관합니다.</p>
         </div>
         <div class="flex gap-3">
           <span
-              class="flex-shrink-0 flex items-center justify-center rounded-full text-base font-bold"
+              class="shrink-0 flex items-center justify-center rounded-full text-base font-bold"
               style="width:28px;height:28px;background:#dbeafe;color:#1d4ed8;font-size:16px;"
           >5</span>
           <p class="text-base" style="color:#374151;">프로그램을 다시 실행하면 업데이트가 적용됩니다.</p>
@@ -303,7 +303,6 @@
         <p class="text-xl font-bold" style="color: #0f172a;">학교장추천전형 시스템</p>
         <div class="flex flex-col gap-2">
           <p class="text-base" style="color:#64748b; line-height:1.6;">
-            <strong>luminousky, murmurgene</strong> · © 2026<br>
             <a
                 href="https://luminousky.com/teacher-utility-kit/principal-candidate-manager/"
                 target="_blank"

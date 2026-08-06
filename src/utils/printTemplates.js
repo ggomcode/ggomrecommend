@@ -2,7 +2,7 @@ import { schoolName, formatSchoolPrincipalTitle } from './schoolConfig.js'
 
 function getFormattedSchoolName(rawInput) {
   let name = String(rawInput || '').trim()
-  if (!name || name === '우리학교') return '우리고등학교'
+  if (!name || name === '우리학교' || name === '우리고등학교') return '우리고등학교'
   if (name.endsWith('고') && !name.endsWith('고등학교')) {
     return name.slice(0, -1) + '고등학교'
   }
@@ -86,19 +86,43 @@ export function printApplicationForm(apps, studentInfo) {
   const univRows = Array.from({ length: MAX_ROWS }, (_, i) => {
     const ap = apps[i]
     if (!ap) {
-      return `<tr><td style="text-align:center;">${i + 1}</td><td></td><td></td><td></td><td style="text-align:center;">유 / 무</td></tr>`
+      return `<tr>
+        <td style="text-align:center;">${i + 1}</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td style="text-align:center;"></td>
+      </tr>`
     }
     const univName  = ap.universities?.univ_name  || ap.univ_name  || ''
     const trackName = ap.universities?.track_name || ap.track_name || ''
     const dept      = ap.department_name || ''
     const ql        = ap.universities?.quota_limit
-    const quota     = (ql != null) ? (Number(ql) > 0 ? '유' : '무') : '유 / 무'
-    return `<tr>
+    const hasQuota  = ap.universities?.has_quota
+
+    let quotaDisplay = '무'
+    if (hasQuota !== false && ql != null && ql !== '' && ql !== '없음' && ql !== '무제한' && ql !== 0 && ql !== '0') {
+      quotaDisplay = '유'
+    }
+
+    // 포기 신청 여부 확인
+    const scanned = ap.scanned_doc_url
+    let isAbandonRequested = false
+    if (scanned) {
+      try {
+        const parsed = typeof scanned === 'string' ? JSON.parse(scanned) : scanned
+        isAbandonRequested = parsed?.abandon_requested === true
+      } catch {}
+    }
+    const rowStyle = isAbandonRequested ? ' class="abandoned-row"' : ''
+    const abandonNote = isAbandonRequested ? ' <span style="font-size:10px;color:#b91c1c;font-weight:bold;">(포기 신청)</span>' : ''
+
+    return `<tr${rowStyle}>
       <td style="text-align:center;">${i + 1}</td>
-      <td>${univName}</td>
+      <td>${univName}${abandonNote}</td>
       <td>${trackName}</td>
       <td>${dept}</td>
-      <td style="text-align:center;">${quota}</td>
+      <td style="text-align:center;font-weight:bold;">${quotaDisplay}</td>
     </tr>`
   }).join('')
 
@@ -127,6 +151,14 @@ td { padding:7px 8px; font-size:13px; vertical-align:middle; }
 .univ-table { border:none; margin:0; }
 .univ-table th, .univ-table td { border:1px solid #444; padding:5px 4px; font-size:12px; }
 
+/* 포기 신청 행 음영 - 인쇄 강제 적용 */
+.abandoned-row td {
+  background:#edc8c8 !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+  color: #111;
+}
+
 /* 서약사항 박스 */
 .oath-container { margin-top:14px; border:1px solid #333; padding:12px 14px; background:#fafafa; border-radius:3px; }
 .oath-title { font-weight:bold; font-size:13px; margin-bottom:6px; color:#111; border-bottom:1px solid #ddd; padding-bottom:4px; }
@@ -146,53 +178,50 @@ td { padding:7px 8px; font-size:13px; vertical-align:middle; }
 <div class="container">
 <div class="top-section">
   <div class="header-title">2027학년도 대입 학교장추천전형 지원 신청서</div>
-  <table>
+  <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
+  <colgroup>
+    <col style="width:12%;" />
+    <col style="width:8%;" />
+    <col style="width:6%;" />
+    <col style="width:26%;" />
+    <col style="width:24%;" />
+    <col style="width:14%;" />
+    <col style="width:10%;" />
+  </colgroup>
   <tbody>
   <tr>
-    <th width="20%">재학생/졸업생</th>
-    <td colspan="2">${enrolledBox} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${graduatedBox}</td>
+    <th colspan="2">재학생/졸업생</th>
+    <td colspan="5">${enrolledBox} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${graduatedBox}</td>
   </tr>
   <tr>
-    <th>학 번</th>
-    <td colspan="2">${studentNumberDisplay} <span style="font-size:11px;color:#555;">&nbsp;&nbsp;(※ 졸업생은 재학 당시의 학번으로 기재)</span></td>
+    <th colspan="2">학 번</th>
+    <td colspan="5">${studentNumberDisplay} <span style="font-size:11px;color:#555;">&nbsp;&nbsp;(※ 졸업생은 재학 당시의 학번으로 기재)</span></td>
   </tr>
   <tr>
-    <th>성 명</th>
-    <td colspan="2" style="font-weight:bold;font-size:15px;">${studentInfo.name || ''}</td>
+    <th colspan="2">성 명</th>
+    <td colspan="5" style="font-weight:bold;font-size:15px;">${studentInfo.name || ''}</td>
   </tr>
   <tr>
-    <th rowspan="2" width="12%">연락처</th>
-    <th style="background:#f8f8f8;font-weight:normal;font-size:12px;width:8%;">학 생</th>
-    <td>${studentPhoneFmt}</td>
+    <th rowspan="2">연락처</th>
+    <th style="background:#f8f8f8;font-weight:normal;font-size:12px;">학 생</th>
+    <td colspan="5">${studentPhoneFmt}</td>
   </tr>
   <tr>
     <th style="background:#f8f8f8;font-weight:normal;font-size:12px;">학부모</th>
-    <td>${parentPhoneFmt}</td>
+    <td colspan="5">${parentPhoneFmt}</td>
   </tr>
-  </tbody>
-  </table>
-  <table style="margin-top:-1px;">
-  <tbody>
   <tr>
-    <th width="20%" style="vertical-align:middle;font-size:12px;padding:6px;line-height:1.6;">
+    <th colspan="2" rowspan="${MAX_ROWS + 1}" style="vertical-align:middle;font-size:12px;padding:6px 4px;line-height:1.5;word-break:keep-all;">
       지원 신청 대학<br>
-      <span style="font-size:10px;font-weight:normal;color:#444;">(추천 인원 제한 없이<br>신청 희망 대학을 모두<br>기재할 것)</span>
+      <span style="font-size:10px;font-weight:normal;color:#444;display:inline-block;margin-top:4px;">(추천 인원 제한 없이<br>신청 희망 대학을 모두<br>기재할 것)</span>
     </th>
-    <td style="padding:0;">
-      <table class="univ-table" style="width:100%;">
-      <thead>
-        <tr>
-          <th width="8%">순위</th>
-          <th width="28%">대학명</th>
-          <th width="26%">전형명</th>
-          <th width="24%">학과명</th>
-          <th width="14%">인원수 제한<br>( ○ 표기)</th>
-        </tr>
-      </thead>
-      <tbody>${univRows}</tbody>
-      </table>
-    </td>
+    <th style="background:#f0f0f0;font-size:12px;">순위</th>
+    <th style="background:#f0f0f0;font-size:12px;">대학명</th>
+    <th style="background:#f0f0f0;font-size:12px;">전형명</th>
+    <th style="background:#f0f0f0;font-size:12px;">학과명</th>
+    <th style="background:#f0f0f0;font-size:12px;">인원제한</th>
   </tr>
+  ${univRows}
   </tbody>
   </table>
 

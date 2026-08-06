@@ -3,7 +3,7 @@
 
     <!-- 사이드바 -->
     <aside
-      class="flex flex-col flex-shrink-0 bg-white overflow-hidden"
+      class="flex flex-col shrink-0 bg-white overflow-hidden"
       :style="{
         width: collapsed ? '64px' : '240px',
         borderRight: '1px solid #d4d0cc',
@@ -12,7 +12,7 @@
     >
       <!-- 로고 + 접기 버튼 -->
       <div
-        class="flex items-center flex-shrink-0"
+        class="flex items-center shrink-0"
         :style="{
           height: '60px',
           borderBottom: '1px solid #f1f5f9',
@@ -46,7 +46,7 @@
         <div style="display: flex; gap: 6px;">
           <select
             v-model="selectedGrade"
-            class="flex-1 text-sm bg-slate-50 border border-slate-200 rounded-md p-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white"
+            class="flex-1 text-sm bg-white border border-slate-200 rounded-md p-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
             @change="onGradeChange"
           >
             <option value="all">전체</option>
@@ -56,7 +56,7 @@
           <select
             v-model.number="selectedClassNo"
             :disabled="selectedGrade === '' || selectedGrade === 'all'"
-            class="flex-1 text-sm bg-slate-50 border border-slate-200 rounded-md p-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50 bg-white"
+            class="flex-1 text-sm bg-white border border-slate-200 rounded-md p-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:opacity-50"
           >
             <template v-if="selectedGrade === 'all'">
               <option :value="0">전체반</option>
@@ -73,10 +73,10 @@
       </div>
 
       <!-- 메뉴 내비게이션 -->
-      <nav class="flex-1 overflow-y-auto" style="padding: 10px 8px; display: flex; flex-direction: column; gap: 2px;">
+      <nav class="flex-1 overflow-y-auto" style="padding: 10px 8px; display: flex; flex-direction: column; gap: 4px;">
         <button
           v-for="item in sidebarMenus"
-          :key="item.key"
+          :key="item.key + (item.isRed ? '_red' : '')"
           @click="active = item.key"
           :title="item.label"
           class="w-full rounded-lg text-base transition-all duration-150"
@@ -86,100 +86,87 @@
             gap: collapsed ? '0' : '12px',
             justifyContent: collapsed ? 'center' : 'flex-start',
             padding: collapsed ? '10px 0' : '10px 14px',
-            border: 'none',
+            border: item.isRed ? '1px solid #fecdd3' : 'none',
             cursor: 'pointer',
-            fontWeight: active === item.key ? '600' : '400',
-            color: active === item.key ? '#1d4ed8' : '#64748b',
-            background: active === item.key ? '#eff6ff' : 'transparent',
+            fontWeight: active === item.key || item.isRed ? '700' : '400',
+            color: item.isRed ? '#e11d48' : (active === item.key ? '#1d4ed8' : '#64748b'),
+            background: item.isRed ? '#fff1f2' : (active === item.key ? '#eff6ff' : 'transparent'),
           }"
         >
-          <span class="relative flex-shrink-0 flex">
-            <component :is="item.icon" :size="20" />
+          <span class="relative shrink-0 flex">
+            <component :is="item.icon" :size="20" :style="{ color: item.isRed ? '#e11d48' : undefined }" />
+            <span
+              v-if="item.isRed && collapsed"
+              class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white shadow"
+            >
+              {{ item.count }}
+            </span>
           </span>
-          <span v-if="!collapsed" class="whitespace-nowrap">{{ item.label }}</span>
+          <span v-if="!collapsed" class="whitespace-nowrap flex items-center justify-between w-full">
+            <span :class="{ 'text-rose-600 font-extrabold': item.isRed }">{{ item.isRed ? '🚨 ' + item.label : item.label }}</span>
+            <span
+              v-if="item.isRed"
+              class="ml-auto text-xs font-extrabold bg-rose-600 text-white px-2 py-0.5 rounded-full shadow-xs"
+            >
+              {{ item.count }}건
+            </span>
+          </span>
         </button>
-
-        <div style="margin: 8px 0; border-top: 1px solid #f1f5f9;" />
-
-        <a
-          href="/ggomrecommend/manual.html"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="매뉴얼 (새 창)"
-          class="w-full rounded-lg text-base transition-all duration-150"
-          :style="{
-            display: 'flex',
-            alignItems: 'center',
-            gap: collapsed ? '0' : '12px',
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            padding: collapsed ? '10px 0' : '10px 14px',
-            border: 'none',
-            cursor: 'pointer',
-            fontWeight: '400',
-            color: '#64748b',
-            background: 'transparent',
-            textDecoration: 'none',
-            boxSizing: 'border-box',
-          }"
-        >
-          <span class="relative flex-shrink-0 flex">
-            <BookOpen :size="20" />
-          </span>
-          <span v-if="!collapsed" class="whitespace-nowrap flex items-center gap-1">
-            매뉴얼
-            <ExternalLink :size="14" />
-          </span>
-        </a>
       </nav>
 
-      <!-- 하단 사용자 카드 -->
-      <div :style="{ padding: collapsed ? '10px 8px' : '10px', flexShrink: 0, borderTop: '1px solid #e8e5e2' }">
+      <!-- 하단 사용자 카드 & 라운드 상태/시스템 전환 -->
+      <div class="p-3 border-t border-slate-200 shrink-0 bg-slate-50/50">
         <!-- 접힘: 아바타 -->
-        <div v-if="collapsed" class="flex justify-center items-center" style="padding: 6px 0;">
-          <div
-            class="flex items-center justify-center rounded-full font-bold"
-            style="width: 36px; height: 36px; background: #dbeafe; color: #1d4ed8; font-size: 16px;"
-          >{{ selectedGrade === 0 ? '졸' : '담' }}</div>
+        <div v-if="collapsed" class="flex justify-center py-1">
+          <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+            {{ (auth.teacherName || '담').substring(0, 1) }}
+          </div>
         </div>
-        <!-- 펼침: 정보 카드 -->
-        <div
-          v-else
-          style="background: #f5f3f0; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;"
-        >
-          <!-- 라운드 상태 -->
-          <div class="flex items-center gap-2 pb-2" style="border-bottom: 1px solid #e8e5e2;">
+        <!-- 펼침 -->
+        <div v-else class="space-y-3">
+          <!-- 라운드 상태 배지 -->
+          <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200/80 shadow-2xs">
             <div
-              class="rounded-full flex-shrink-0"
-              :style="{ width: '8px', height: '8px', background: getRoundStatusColor() }"
+              class="w-2 h-2 rounded-full shrink-0"
+              :style="{ background: getRoundStatusColor() }"
             />
             <span
-              class="text-base font-medium whitespace-nowrap"
+              class="text-xs font-semibold whitespace-nowrap truncate"
               :style="{ color: getRoundStatusTextColor() }"
             >
               {{ getRoundStatusText() }}
             </span>
           </div>
+
           <!-- 사용자 정보 -->
-          <div>
-            <p class="text-base font-semibold whitespace-nowrap" style="margin: 0; color: #1e293b;">
+          <div class="px-0.5">
+            <p class="text-sm font-bold text-slate-900 m-0 leading-tight">
               {{ auth.teacherName ? `${auth.teacherName} 선생님` : '담임교사 선생님' }}
             </p>
-            <p class="text-base whitespace-nowrap" style="margin: 2px 0 0; color: #94a3b8;">{{ roleLabel }}</p>
+            <p class="text-xs text-slate-500 font-medium m-0 mt-0.5">{{ roleLabel }}</p>
           </div>
-          <!-- 액션 버튼 -->
-          <div class="flex gap-3 flex-wrap">
-            <button
-              @click="router.push('/select-system')"
-              class="flex items-center gap-1 text-base font-semibold"
-              style="background: none; border: none; cursor: pointer; color: #2563eb; padding: 0;"
-            >
-              <Home :size="14" /> 포털이동
-            </button>
 
+          <!-- 액션 버튼 -->
+          <div class="pt-2 border-t border-slate-200/80 flex flex-col gap-1.5">
+            <button
+              @click="switchToRuralSystem"
+              class="w-full text-left text-xs font-semibold text-emerald-600 hover:text-emerald-800 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="m9 12 2 2 4-4"/>
+              </svg>
+              농어촌 전형 시스템
+            </button>
+            <button
+              @click="goToPortal"
+              class="w-full text-left text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
+            >
+              <Home :size="14" /> 포털 (시스템 선택)
+            </button>
             <button
               @click="logout"
-              class="flex items-center gap-1 text-base"
-              style="background: none; border: none; cursor: pointer; color: #94a3b8; padding: 0;"
+              class="w-full text-left text-xs font-medium text-rose-600 hover:text-rose-700 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
             >
               <LogOut :size="14" /> 로그아웃
             </button>
@@ -262,16 +249,17 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { safeAsyncComponent } from '../utils/asyncComponent.js'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { teacherChangePassword, getCurrentRound } from '../api/teacher.js'
 import { dialog } from '../components/common/dialog.js'
-import { LayoutGrid, UserPlus, Trophy, ChevronRight, LogOut, Menu, BookOpen, ExternalLink, UserCheck, Home } from 'lucide-vue-next'
+import { LayoutGrid, UserPlus, Trophy, ChevronRight, LogOut, Menu, BookOpen, ExternalLink, UserCheck, Home, FileText, Building2 } from 'lucide-vue-next'
 import { supabase } from '../utils/supabaseClient'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../utils/roundSchedule.js'
 
 const router = useRouter()
+const route  = useRoute()
 const auth   = useAuthStore()
 
 // ── 학급 선택 상태 및 저장 ────────────────────────────────────
@@ -393,13 +381,57 @@ watch([selectedGrade, selectedClassNo], ([g, c]) => {
 const ClassTab       = safeAsyncComponent(() => import('../components/teacher/ClassTab.vue'))
 const ApplicationTab = safeAsyncComponent(() => import('../components/teacher/ApplicationTab.vue'))
 const ResultsTab     = safeAsyncComponent(() => import('../components/teacher/ResultsTab.vue'))
+const ReportsTab     = safeAsyncComponent(() => import('../components/admin/ReportsTab.vue'))
 
 // ── 메뉴 정의 ────────────────────────────────────────────────
-const sidebarMenus = [
-  { key: 'class',       label: '학급 관리',   icon: LayoutGrid },
-  { key: 'application', label: '지원자 등록', icon: UserPlus },
-  { key: 'results',     label: '추천 결과', icon: Trophy },
-]
+const pendingAbandonCount = ref(0)
+
+async function fetchPendingAbandonCount() {
+  if (!supabase) return
+  try {
+    const { data: apps, error } = await supabase
+      .from('applications')
+      .select('id, scanned_doc_url, is_abandoned')
+      .eq('is_abandoned', false)
+      .not('scanned_doc_url', 'is', null)
+
+    if (error || !apps) return
+
+    let count = 0
+    apps.forEach(ap => {
+      if (ap.scanned_doc_url) {
+        try {
+          const parsed = JSON.parse(ap.scanned_doc_url)
+          if (parsed && parsed.abandon_requested === true) {
+            count++
+          }
+        } catch {}
+      }
+    })
+    pendingAbandonCount.value = count
+  } catch (e) {
+    console.error('Error fetching pending abandon count:', e)
+  }
+}
+
+const sidebarMenus = computed(() => {
+  const menus = [
+    { key: 'class',       label: '학급 관리',   icon: LayoutGrid },
+    { key: 'application', label: '지원자 등록', icon: UserPlus },
+    { key: 'results',     label: '추천 결과',   icon: Trophy },
+    { key: 'reports',     label: '결과 보고서', icon: BookOpen },
+  ]
+  if (pendingAbandonCount.value > 0) {
+    menus.splice(2, 0, {
+      key: 'results',
+      label: '포기원 접수확인',
+      icon: FileText,
+      isRed: true,
+      count: pendingAbandonCount.value
+    })
+  }
+  return menus
+})
 
 // ── 활성 탭 ──────────────────────────────────────────────────
 const active = ref('class')
@@ -407,10 +439,11 @@ const active = ref('class')
 const currentTab = computed(() => {
   if (active.value === 'class')       return ClassTab
   if (active.value === 'application') return ApplicationTab
+  if (active.value === 'reports')     return ReportsTab
   return ResultsTab
 })
 
-const currentMenuItem = computed(() => sidebarMenus.find(m => m.key === active.value))
+const currentMenuItem = computed(() => sidebarMenus.value.find(m => m.key === active.value))
 
 // ── 사이드바 접기 ─────────────────────────────────────────────
 const collapsed = ref(false)
@@ -483,12 +516,23 @@ const getTotalRoundsCount = () => {
 
 
 onMounted(async () => {
+  if (route.query.tab) {
+    active.value = route.query.tab
+  }
   fetchSchoolName()
   await fetchClasses()
+  fetchPendingAbandonCount()
   try {
+    schedulesMap.value = await fetchRoundSchedulesMap()
     currentRound.value = await getCurrentRound()
   } catch {
     currentRound.value = null
+  }
+})
+
+watch(() => route.query.tab, (newTab) => {
+  if (newTab) {
+    active.value = newTab
   }
 })
 
@@ -529,6 +573,14 @@ async function changePw() {
   } finally {
     pwLoading.value = false
   }
+}
+
+// 시스템 전환 및 이동
+function goToPortal() {
+  router.push('/select-system')
+}
+function switchToRuralSystem() {
+  router.push('/rural')
 }
 
 // 로그아웃

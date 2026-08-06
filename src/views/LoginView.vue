@@ -19,9 +19,11 @@
             <path d="M6 12v5c3 3 9 3 12 0v-5"/>
           </svg>
         </div>
-        <p class="text-xs font-bold text-blue-600 mb-1 tracking-wide">{{ schoolName }}</p>
-        <h1 class="text-xl font-bold tracking-tight leading-tight text-slate-900 m-0">
-          학교장 추천자 선발 및<br>농어촌 전형 추천자 관리 시스템
+        <p class="text-xs font-extrabold text-blue-600 mb-2 tracking-wide">{{ schoolName }}</p>
+        <h1 class="text-slate-900 m-0 flex flex-col items-center justify-center gap-1 font-extrabold tracking-tight">
+          <span class="text-base text-slate-900">학교장 추천자 선발 시스템</span>
+          <span class="text-xs text-blue-600 font-bold leading-none my-0.5">및</span>
+          <span class="text-base text-slate-900">농어촌(기회균형) 전형 추천 등록 시스템</span>
         </h1>
       </div>
 

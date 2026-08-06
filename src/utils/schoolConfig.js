@@ -1,11 +1,12 @@
 import { ref } from 'vue'
 import { supabase } from './supabaseClient'
 
-export const schoolName = ref(localStorage.getItem('pcm_school_name') || '우리학교')
+const initialCached = localStorage.getItem('pcm_school_name')
+export const schoolName = ref((!initialCached || initialCached === '우리학교') ? '우리고등학교' : initialCached)
 
 export function normalizeSchoolName(input) {
   let name = String(input || '').trim()
-  if (!name) return '우리학교'
+  if (!name || name === '우리학교') return '우리고등학교'
   if (name.endsWith('고') && !name.endsWith('고등학교')) {
     name = name.slice(0, -1) + '고등학교'
   }
@@ -29,8 +30,10 @@ export function formatSchoolPrincipalTitle(rawInput) {
 
 export async function fetchSchoolName() {
   const cached = localStorage.getItem('pcm_school_name')
-  if (cached) {
+  if (cached && cached !== '우리학교') {
     schoolName.value = cached
+  } else {
+    schoolName.value = '우리고등학교'
   }
 
   if (!supabase) return schoolName.value
@@ -46,8 +49,9 @@ export async function fetchSchoolName() {
       const val = normalizeSchoolName(data.value)
       schoolName.value = val
       localStorage.setItem('pcm_school_name', val)
-    } else if (!cached) {
-      schoolName.value = '우리학교'
+    } else if (!cached || cached === '우리학교') {
+      schoolName.value = '우리고등학교'
+      localStorage.setItem('pcm_school_name', '우리고등학교')
     }
   } catch (e) {
     console.warn('Failed to fetch school name config:', e)

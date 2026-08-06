@@ -2,34 +2,37 @@
   <div class="flex flex-col h-full pt-4 pb-4 px-4 sm:px-10 overflow-hidden box-border">
 
     <!-- 페이지 헤더 -->
-    <div class="flex-shrink-0 flex items-start justify-between mb-3 flex-wrap gap-3">
+    <div class="shrink-0 flex items-start justify-between mb-3 flex-wrap gap-3">
       <div>
         <p class="text-base mb-0.5" style="color: #94a3b8;">관리자</p>
         <h1 class="text-2xl font-semibold" style="color: #1e293b; margin: 0;">대학 설정</h1>
         <p class="text-xs mt-0.5" style="color: #64748b;">
-          대학별 전형 요강 엑셀을 업로드하시면 우리 학교 추천 대상 대학과 학과별 모집정원이 백그라운드에서 자동으로 등록·연동됩니다.
+          구글 스프레드시트 동기화를 진행하시면 우리 고등학교 추천 대상 대학과 학과별 모집정원이 백그라운드에서 자동으로 등록·연동됩니다.
         </p>
       </div>
     </div>
 
     <!-- 직관적인 안내 가이드 카드 (고정 영역) -->
-    <div class="flex-shrink-0 mb-3 p-3 rounded-2xl flex items-center justify-between gap-4" style="background: #eff6ff; border: 1px solid #bfdbfe;">
+    <div class="shrink-0 mb-3 p-3 rounded-2xl flex items-center justify-between gap-4" style="background: #eff6ff; border: 1px solid #bfdbfe;">
       <div>
-        <h2 class="text-sm font-bold" style="color: #1e3a8a; margin: 0;">대학별 추천전형 요강 엑셀을 업로드하세요</h2>
+        <h2 class="text-sm font-bold" style="color: #1e3a8a; margin: 0;">대학별 추천전형 요강 구글 스프레드시트 동기화</h2>
         <p class="text-xs mt-0.5" style="color: #2563eb; margin: 2px 0 0;">
-          엑셀(.xlsx) 파일을 올리시면 대학별 모집정원, 전형방법, 수능최저학력기준, 반영교과 정보와 우리 학교 추천 정원이 자동으로 연동됩니다.
+          구글 스프레드시트를 동기화하시면 대학별 모집정원, 전형방법, 수능최저학력기준, 반영교과 정보와 우리 고등학교 추천 정원이 자동으로 연동됩니다.
         </p>
       </div>
-      <div class="flex items-center gap-2 flex-shrink-0">
-        <label class="text-xs font-bold px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl cursor-pointer shadow-sm flex items-center gap-1.5">
-          <span>📥 {{ saving ? '업로드 중…' : '추천전형 엑셀 가져오기 (파일 선택)' }}</span>
-          <input type="file" accept=".xlsx,.csv" class="hidden" :disabled="saving" @change="onRegionalFile" />
-        </label>
+      <div class="flex items-center gap-2 shrink-0">
+        <button
+          @click="handleSyncGoogleSheet"
+          :disabled="syncing"
+          class="text-xs font-bold px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl cursor-pointer shadow-sm border-none flex items-center gap-1.5 disabled:opacity-50"
+        >
+          <span>🔄 {{ syncing ? '동기화 진행 중…' : '추천 전형 동기화' }}</span>
+        </button>
       </div>
     </div>
 
       <!-- 검색바 및 삭제 버튼 (고정 영역) -->
-      <div class="flex-shrink-0 flex items-center justify-between mb-3 flex-wrap gap-3">
+      <div class="shrink-0 flex items-center justify-between mb-3 flex-wrap gap-3">
         <div class="flex items-center gap-3">
           <input
             v-model="regionalSearch"
@@ -66,8 +69,8 @@
         </div>
       </div>
 
-      <p v-if="error" class="flex-shrink-0 text-base mb-2" style="color: #ef4444;">{{ error }}</p>
-
+      <p v-if="error" class="shrink-0 text-base mb-2" style="color: #ef4444;">{{ error }}</p>
+      
       <!-- 엑셀 데이터 테이블 카드가 남은 전체 화면 높이를 100% 차지함 -->
       <div class="flex-1 min-h-0 flex flex-col rounded-xl overflow-hidden shadow-sm mb-1" style="background: white; border: 1px solid #e2e8f0;">
         <div v-if="regionalLoading" class="text-center py-16" style="color: #94a3b8;">
@@ -86,7 +89,7 @@
             </div>
             <h3 class="text-lg font-bold mb-1" style="color: #1e293b; margin: 0 0 6px;">등록된 학교장추천전형 정보가 없습니다</h3>
             <p class="text-xs mb-0" style="color: #64748b; line-height: 1.6;">
-              상단 파란색 <strong>[추천전형 엑셀 가져오기]</strong> 버튼으로 엑셀 파일(.xlsx)을 등록해 주세요.
+              상단 파란색 <strong>[추천 전형 동기화]</strong> 버튼으로 구글 스프레드시트를 동기화해 주세요.
             </p>
           </div>
         </div>
@@ -121,9 +124,9 @@
                   :key="r.id || r.seq_no"
                   class="hover:bg-slate-50 transition-colors group"
                 >
-                  <td class="text-center font-medium bg-white group-hover:!bg-slate-50" style="position: sticky; left: 0; z-index: 20; padding: 12px 14px; width: 60px; min-width: 60px; max-width: 60px; color: #64748b; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.seq_no }}</td>
-                  <td class="bg-white group-hover:!bg-slate-50" style="position: sticky; left: 60px; z-index: 20; padding: 12px 14px; width: 80px; min-width: 80px; max-width: 80px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.region }}</td>
-                  <td class="font-bold bg-white group-hover:!bg-slate-50 cursor-pointer text-blue-600 hover:underline" style="position: sticky; left: 140px; z-index: 20; padding: 12px 14px; width: 150px; min-width: 150px; max-width: 150px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;" @click="openEditRegionalModal(r)">{{ r.univ_name }}</td>
+                  <td class="text-center font-medium bg-white group-hover:bg-slate-50!" style="position: sticky; left: 0; z-index: 20; padding: 12px 14px; width: 60px; min-width: 60px; max-width: 60px; color: #64748b; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.seq_no }}</td>
+                  <td class="bg-white group-hover:bg-slate-50!" style="position: sticky; left: 60px; z-index: 20; padding: 12px 14px; width: 80px; min-width: 80px; max-width: 80px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.region }}</td>
+                  <td class="font-bold bg-white group-hover:bg-slate-50! cursor-pointer text-blue-600 hover:underline" style="position: sticky; left: 140px; z-index: 20; padding: 12px 14px; width: 150px; min-width: 150px; max-width: 150px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;" @click="openEditRegionalModal(r)">{{ r.univ_name }}</td>
                   <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.recruitment_quota }}</td>
                   <td class="font-medium" style="padding: 12px 14px; color: #2563eb; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.track_name }}</td>
                   <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ formatQuotaLimit(r.quota_limit) }}</td>
@@ -150,7 +153,7 @@
     <div class="bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden" style="width: 720px; max-height: 88vh;">
       
       <!-- 헤더 -->
-      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
+      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
         <div class="flex items-center gap-3">
           <span class="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-bold">{{ editRegionalModal.form.region || '기타' }}</span>
           <div>
@@ -297,7 +300,7 @@
       </div>
 
       <!-- 푸터 -->
-      <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-shrink-0">
+      <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
         <template v-if="!editRegionalModal.isEditing">
           <button @click="editRegionalModal.open = false" class="px-5 py-2 border border-slate-300 bg-white text-slate-700 rounded-xl text-xs font-bold cursor-pointer">닫기</button>
           <button @click="editRegionalModal.isEditing = true" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer border-none flex items-center gap-1.5 shadow-sm">
@@ -322,6 +325,7 @@
 
 <script setup>
 import { ref, computed, onMounted, defineComponent, h } from 'vue'
+import { supabase } from '../../utils/supabaseClient.js'
 import {
   getUniversities, createUniversity, updateUniversity, deleteUniversity,
   getUnivTracks, createTrack, updateTrack, deleteTrack,
@@ -331,6 +335,7 @@ import {
   getRegionalRecommendations, exportRegionalRecommendations, deleteRegionalRecommendations, importRegionalRecommendations, syncRegionalToUniversities,
   updateRegionalRecommendation, deleteSingleRegionalRecommendation,
   getDisclosureCount,
+  syncPrincipalUnivsFromGoogleSheet,
 } from '../../api/admin.js'
 import HelpBox from '../common/HelpBox.vue'
 import { dialog } from '../common/dialog.js'
@@ -387,8 +392,47 @@ const univs           = ref([])
 const tracks          = ref([])
 const error           = ref('')
 const saving          = ref(false)
+const syncing         = ref(false)
 const downloading     = ref(false)
 const disclosureCount = ref(null)  // 정보공시 재학생 수 (% 인원제한 환산용)
+
+async function handleSyncGoogleSheet() {
+  syncing.value = true
+  try {
+    let sheetId = ''
+    if (supabase) {
+      const { data } = await supabase
+        .from('config')
+        .select('value')
+        .eq('key', 'google_sheet_principal_id')
+        .maybeSingle()
+      if (data && data.value) sheetId = data.value.trim()
+    }
+
+    if (!sheetId) {
+      await dialog.alert({
+        title: '구글 스프레드시트 ID 필요',
+        message: '학교장 추천전형 구글 스프레드시트 ID가 설정되어 있지 않습니다.\n\n[관리자 설정] 탭에서 "1) 학교장 추천자 선발 전형 구글 시트 ID"를 먼저 저장해 주세요.'
+      })
+      return
+    }
+
+    const res = await syncPrincipalUnivsFromGoogleSheet(sheetId)
+    await dialog.alert({
+      title: '추천 전형 구글 시트 동기화 완료',
+      message: `총 ${res.count}건의 대학별 추천전형 요강 데이터가 DB에 연동되었습니다.`
+    })
+    await loadRegionalData()
+  } catch (err) {
+    console.error('Failed to sync google sheet:', err)
+    await dialog.alert({
+      title: '동기화 실패',
+      message: err.message || '구글 스프레드시트 연동 중 오류가 발생했습니다.'
+    })
+  } finally {
+    syncing.value = false
+  }
+}
 
 /**
  * quota_limit 값을 표시용 문자열로 변환합니다.

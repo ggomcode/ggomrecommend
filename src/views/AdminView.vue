@@ -3,7 +3,7 @@
 
     <!-- 사이드바 -->
     <aside
-      class="flex flex-col flex-shrink-0 bg-white overflow-hidden"
+      class="flex flex-col shrink-0 bg-white overflow-hidden"
       :style="{
         width: collapsed ? '64px' : '240px',
         borderRight: '1px solid #d4d0cc',
@@ -12,7 +12,7 @@
     >
       <!-- 로고 + 접기 버튼 -->
       <div
-        class="flex items-center flex-shrink-0"
+        class="flex items-center shrink-0"
         :style="{
           height: '60px',
           borderBottom: '1px solid #f1f5f9',
@@ -45,8 +45,8 @@
         <!-- 주 메뉴 -->
         <button
           v-for="item in mainMenus"
-          :key="item.key"
-          @click="active = item.key"
+          :key="item.key + (item.isRed ? '_red' : '')"
+          @click="handleMenuClick(item)"
           :title="item.label"
           class="w-full rounded-lg text-base transition-all duration-150"
           :style="{
@@ -55,17 +55,31 @@
             gap: collapsed ? '0' : '12px',
             justifyContent: collapsed ? 'center' : 'flex-start',
             padding: collapsed ? '10px 0' : '10px 14px',
-            border: 'none',
+            border: item.isRed ? (active === item.key && showAbandonOnly ? '2px solid #ef4444' : '1px solid #fecdd3') : 'none',
             cursor: 'pointer',
-            fontWeight: active === item.key ? '600' : '400',
-            color: active === item.key ? '#1d4ed8' : '#64748b',
-            background: active === item.key ? '#eff6ff' : 'transparent',
+            fontWeight: (active === item.key && (item.key !== 'rounds' || (item.isRed ? showAbandonOnly : !showAbandonOnly))) || item.isRed ? '700' : '400',
+            color: item.isRed ? '#e11d48' : (active === item.key && (item.key !== 'rounds' || !showAbandonOnly) ? '#1d4ed8' : '#64748b'),
+            background: item.isRed ? '#fff1f2' : (active === item.key && (item.key !== 'rounds' || !showAbandonOnly) ? '#eff6ff' : 'transparent'),
           }"
         >
-          <span class="relative flex-shrink-0 flex">
-            <component :is="item.icon" :size="20" />
+          <span class="relative shrink-0 flex">
+            <component :is="item.icon" :size="20" :style="{ color: item.isRed ? '#e11d48' : undefined }" />
+            <span
+              v-if="item.isRed && collapsed"
+              class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white shadow"
+            >
+              {{ item.count }}
+            </span>
           </span>
-          <span v-if="!collapsed" class="whitespace-nowrap">{{ item.label }}</span>
+          <span v-if="!collapsed" class="whitespace-nowrap flex items-center justify-between w-full">
+            <span :class="{ 'text-rose-600 font-extrabold': item.isRed }">{{ item.isRed ? '🚨 ' + item.label : item.label }}</span>
+            <span
+              v-if="item.isRed"
+              class="ml-auto text-xs font-extrabold bg-rose-600 text-white px-2 py-0.5 rounded-full shadow-xs"
+            >
+              {{ item.count }}건
+            </span>
+          </span>
         </button>
 
         <div style="margin: 8px 0; border-top: 1px solid #f1f5f9;" />
@@ -74,7 +88,7 @@
         <button
           v-for="item in subMenus"
           :key="item.key"
-          @click="active = item.key"
+          @click="handleMenuClick(item)"
           :title="item.label"
           class="w-full rounded-lg text-base transition-all duration-150"
           :style="{
@@ -90,7 +104,7 @@
             background: active === item.key ? '#eff6ff' : 'transparent',
           }"
         >
-          <span class="relative flex-shrink-0 flex">
+          <span class="relative shrink-0 flex">
             <component :is="item.icon" :size="20" />
             <span
               v-if="item.badge"
@@ -109,52 +123,57 @@
         </button>
       </nav>
 
-      <!-- 하단 사용자 카드 -->
-      <div :style="{ padding: collapsed ? '10px 8px' : '10px', flexShrink: 0, borderTop: '1px solid #e8e5e2' }">
+      <!-- 하단 사용자 카드 & 라운드 상태/시스템 전환 -->
+      <div class="p-3 border-t border-slate-200 shrink-0 bg-slate-50/50">
         <!-- 접힘: 아바타 -->
-        <div v-if="collapsed" class="flex justify-center items-center" style="padding: 6px 0;">
-          <div
-            class="flex items-center justify-center rounded-full font-bold"
-            style="width: 36px; height: 36px; background: #dbeafe; color: #1d4ed8; font-size: 16px;"
-          >관</div>
+        <div v-if="collapsed" class="flex justify-center py-1">
+          <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+            관
+          </div>
         </div>
-        <!-- 펼침: 정보 카드 -->
-        <div
-          v-else
-          style="background: #f5f3f0; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;"
-        >
-          <!-- 라운드 상태 -->
-          <div class="flex items-center gap-2 pb-2" style="border-bottom: 1px solid #e8e5e2;">
+        <!-- 펼침 -->
+        <div v-else class="space-y-3">
+          <!-- 라운드 상태 배지 -->
+          <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200/80 shadow-2xs">
             <div
-              class="rounded-full flex-shrink-0"
-              :style="{ width: '8px', height: '8px', background: getRoundStatusColor() }"
+              class="w-2 h-2 rounded-full shrink-0"
+              :style="{ background: getRoundStatusColor() }"
             />
             <span
-              class="text-base font-medium whitespace-nowrap"
+              class="text-xs font-semibold whitespace-nowrap truncate"
               :style="{ color: getRoundStatusTextColor() }"
             >
               {{ getRoundStatusText() }}
             </span>
           </div>
-          <!-- 사용자 정보 -->
-          <div>
-            <p class="text-base font-semibold whitespace-nowrap" style="margin: 0; color: #1e293b;">관리자</p>
-            <p class="text-base whitespace-nowrap" style="margin: 2px 0 0; color: #94a3b8;">시스템 관리자</p>
-          </div>
-          <!-- 액션 버튼 -->
-          <div class="flex gap-3 flex-wrap">
-            <button
-              @click="router.push('/select-system')"
-              class="flex items-center gap-1 text-base font-semibold"
-              style="background: none; border: none; cursor: pointer; color: #2563eb; padding: 0;"
-            >
-              <Home :size="14" /> 포털이동
-            </button>
 
+          <!-- 사용자 정보 -->
+          <div class="px-0.5">
+            <p class="text-sm font-bold text-slate-900 m-0 leading-tight">관리자</p>
+            <p class="text-xs text-slate-500 font-medium m-0 mt-0.5">시스템 관리자</p>
+          </div>
+
+          <!-- 액션 버튼 -->
+          <div class="pt-2 border-t border-slate-200/80 flex flex-col gap-1.5">
+            <button
+              @click="switchToRuralSystem"
+              class="w-full text-left text-xs font-semibold text-emerald-600 hover:text-emerald-800 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="m9 12 2 2 4-4"/>
+              </svg>
+              농어촌 전형 시스템
+            </button>
+            <button
+              @click="goToPortal"
+              class="w-full text-left text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
+            >
+              <Home :size="14" /> 포털 (시스템 선택)
+            </button>
             <button
               @click="logout"
-              class="flex items-center gap-1 text-base"
-              style="background: none; border: none; cursor: pointer; color: #94a3b8; padding: 0;"
+              class="w-full text-left text-xs font-medium text-rose-600 hover:text-rose-700 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
             >
               <LogOut :size="14" /> 로그아웃
             </button>
@@ -238,10 +257,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, provide } from 'vue'
+import { ref, computed, onMounted, watch, provide } from 'vue'
 import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../utils/roundSchedule.js'
+import { supabase } from '../utils/supabaseClient'
 import axios from 'axios'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { changeAdminPassword, getCurrentRound } from '../api/admin.js'
 import { dialog } from '../components/common/dialog.js'
@@ -249,10 +269,11 @@ import { schoolName, fetchSchoolName } from '../utils/schoolConfig.js'
 import { safeAsyncComponent } from '../utils/asyncComponent.js'
 import {
   Home, Trophy, LayoutGrid, Users, SlidersHorizontal, FileSpreadsheet,
-  Building2, BookOpen, RefreshCw, ChevronRight, LogOut, Menu, ScrollText, Settings, UserCheck, School
+  Building2, BookOpen, RefreshCw, ChevronRight, LogOut, Menu, ScrollText, Settings, UserCheck, School, FileText
 } from 'lucide-vue-next'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
 // ── 탭 컴포넌트 ──────────────────────────────────────────────
@@ -266,33 +287,86 @@ const AreasTab    = safeAsyncComponent(() => import('../components/admin/AreasTa
 const UnivTab     = safeAsyncComponent(() => import('../components/admin/UniversitiesTab.vue'))
 const ReportsTab  = safeAsyncComponent(() => import('../components/admin/ReportsTab.vue'))
 const SettingsTab = safeAsyncComponent(() => import('../components/admin/SettingsTab.vue'))
-const ManualTab   = safeAsyncComponent(() => import('../components/admin/ManualTab.vue'))
 const AuditTab    = safeAsyncComponent(() => import('../components/admin/AuditTab.vue'))
 
 // ── 메뉴 정의 ────────────────────────────────────────────────
-const mainMenus = [
-  { key: 'home',     label: '개요',          icon: Home },
-  { key: 'classes',  label: '학급 현황',     icon: School },
-  { key: 'approval', label: '가입 승인',     icon: UserCheck },
-  { key: 'students', label: '학생 관리',     icon: Users },
-  { key: 'univs',    label: '대학 설정',     icon: Building2 },
-  { key: 'areas',    label: '추천순위 기준 설정', icon: SlidersHorizontal },
-  { key: 'rounds',   label: '학교장 추천 선발', icon: Trophy },
-  { key: 'reports',  label: '결과 보고서',   icon: ScrollText },
-  { key: 'audit',    label: '감사 기록',     icon: BookOpen },
-]
+const pendingAbandonCount = ref(0)
+
+async function fetchPendingAbandonCount() {
+  if (!supabase) return
+  try {
+    const { data: apps, error } = await supabase
+      .from('applications')
+      .select('id, scanned_doc_url, is_abandoned')
+      .eq('is_abandoned', false)
+      .not('scanned_doc_url', 'is', null)
+
+    if (error || !apps) return
+
+    let count = 0
+    apps.forEach(ap => {
+      if (ap.scanned_doc_url) {
+        try {
+          const parsed = JSON.parse(ap.scanned_doc_url)
+          if (parsed && parsed.abandon_requested === true) {
+            count++
+          }
+        } catch {}
+      }
+    })
+    pendingAbandonCount.value = count
+  } catch (e) {
+    console.error('Error fetching pending abandon count:', e)
+  }
+}
+
+const mainMenus = computed(() => {
+  const menus = [
+    { key: 'home',     label: '개요',          icon: Home },
+    { key: 'classes',  label: '학급 현황',     icon: School },
+    { key: 'approval', label: '가입 승인',     icon: UserCheck },
+    { key: 'students', label: '학생 관리',     icon: Users },
+    { key: 'univs',    label: '대학 설정',     icon: Building2 },
+    { key: 'areas',    label: '추천순위 기준 설정', icon: SlidersHorizontal },
+    { key: 'rounds',   label: '학교장 추천 선발', icon: Trophy },
+  ]
+  if (pendingAbandonCount.value > 0) {
+    menus.splice(6, 0, {
+      key: 'rounds',
+      label: '포기원 접수확인',
+      icon: FileText,
+      isRed: true,
+      count: pendingAbandonCount.value
+    })
+  }
+  menus.push(
+    { key: 'reports',  label: '결과 보고서',   icon: ScrollText },
+    { key: 'audit',    label: '감사 기록',     icon: BookOpen }
+  )
+  return menus
+})
 
 const hasUpdate = ref(false)
 
 const subMenus = computed(() => [
-  { key: 'manual',  label: '매뉴얼',   icon: BookOpen,  badge: false      },
   { key: 'update',  label: '환경 설정', icon: Settings,  badge: false },
 ])
 
-const allMenus = computed(() => [...mainMenus, ...subMenus.value])
+const allMenus = computed(() => [...mainMenus.value, ...subMenus.value])
 
 // ── 활성 탭 ──────────────────────────────────────────────────
 const active = ref('home')
+const showAbandonOnly = ref(false)
+provide('showAbandonOnly', showAbandonOnly)
+
+function handleMenuClick(item) {
+  active.value = item.key
+  if (item.key === 'rounds') {
+    showAbandonOnly.value = item.isRed === true
+  } else {
+    showAbandonOnly.value = false
+  }
+}
 
 const currentTab = computed(() => {
   if (active.value === 'home')     return OverviewTab
@@ -304,7 +378,6 @@ const currentTab = computed(() => {
   if (active.value === 'rounds')   return RoundsTab
   if (active.value === 'reports')  return ReportsTab
   if (active.value === 'update')   return SettingsTab
-  if (active.value === 'manual')   return ManualTab
   if (active.value === 'audit')    return AuditTab
   return null
 })
@@ -373,6 +446,7 @@ const getTotalRoundsCount = () => {
 
 
 async function refreshRound() {
+  fetchPendingAbandonCount()
   try {
     schedulesMap.value = await fetchRoundSchedulesMap()
     currentRound.value = await getCurrentRound()
@@ -389,8 +463,17 @@ function stripV(v) {
 }
 
 onMounted(async () => {
+  if (route.query.tab) {
+    active.value = route.query.tab
+  }
   fetchSchoolName()
   await refreshRound()
+})
+
+watch(() => route.query.tab, (newTab) => {
+  if (newTab) {
+    active.value = newTab
+  }
 })
 
 // ── 비밀번호 변경 ─────────────────────────────────────────────
@@ -430,6 +513,14 @@ async function changePw() {
   } finally {
     pwLoading.value = false
   }
+}
+
+// 시스템 전환 및 이동
+function goToPortal() {
+  router.push('/select-system')
+}
+function switchToRuralSystem() {
+  router.push('/rural')
 }
 
 function logout() {

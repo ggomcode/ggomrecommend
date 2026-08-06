@@ -22,7 +22,7 @@
     <div class="flex flex-col lg:flex-row lg:items-start gap-6">
 
       <!-- ── 좌측: 전형요소 목록 ────────────────────────────────── -->
-      <div class="flex flex-col w-full lg:w-[300px]">
+      <div class="flex flex-col w-full lg:w-75">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold" style="color: #1e293b;">전형요소 목록</h2>
           <button
@@ -205,7 +205,7 @@
 
             <!-- 커스텀 카드 -->
             <div
-              class="template-btn rounded-xl text-left flex flex-col justify-center items-center text-center p-4 border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50 hover:bg-blue-50/50 cursor-pointer transition-all"
+              class="template-btn rounded-xl flex flex-col justify-center items-center text-center p-4 border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50 hover:bg-blue-50/50 cursor-pointer transition-all"
               @click="openCustomForm">
               <span class="text-xl mb-1">➕</span>
               <p class="text-base font-semibold text-slate-800 mb-1">직접 입력 (커스텀)</p>
@@ -248,9 +248,9 @@
           <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
             <div class="flex items-center gap-2 min-w-0 flex-wrap">
               <h3 class="text-lg font-semibold" style="color: #1e293b; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ selected.name }}</h3>
-              <span class="text-base font-medium flex-shrink-0"
+              <span class="text-base font-medium shrink-0"
                 style="padding: 3px 12px; background: #f1f5f9; color: #475569; border-radius: 999px;">{{ calcTypeLabel(selected.calc_type) }}</span>
-              <span class="text-base font-medium flex-shrink-0"
+              <span class="text-base font-medium shrink-0"
                 style="padding: 3px 12px; background: #f1f5f9; color: #475569; border-radius: 999px;">{{ lookupScopeLabel(selected.lookup_scope) }}</span>
             </div>
           </div>
@@ -676,7 +676,7 @@
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]" style="box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
 
         <!-- 모달 헤더 -->
-        <div class="px-6 py-4 flex items-center justify-between flex-shrink-0" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+        <div class="px-6 py-4 flex items-center justify-between shrink-0" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
           <div>
             <h3 class="text-lg font-bold" style="color: #0f172a; margin: 0;">{{ selectedTemplateName ? selectedTemplateName + ' 세부 설정' : '새 전형요소 추가' }}</h3>
             <p class="text-xs mt-0.5" style="color: #64748b; margin: 0;">전형요소 이름 및 점수 산출 세부 옵션을 설정하세요.</p>
@@ -770,7 +770,7 @@
         </div>
 
         <!-- 모달 푸터 -->
-        <div class="px-6 py-4 flex items-center justify-end gap-2 flex-shrink-0" style="background: #f8fafc; border-top: 1px solid #e2e8f0;">
+        <div class="px-6 py-4 flex items-center justify-end gap-2 shrink-0" style="background: #f8fafc; border-top: 1px solid #e2e8f0;">
           <button @click="modalAddModalOpen = false" class="text-base rounded-lg font-medium" style="padding: 8px 18px; border: 1px solid #cbd5e1; background: white; color: #475569; cursor: pointer;">
             취소
           </button>

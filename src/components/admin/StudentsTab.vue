@@ -242,7 +242,7 @@
     <p v-if="error" class="text-base mb-3" style="color: #ef4444;">{{ error }}</p>
 
     <!-- 필터 및 세부 성적 보기 체크박스 -->
-    <div class="rounded-xl mb-4 flex flex-wrap gap-3 items-center p-[14px_18px] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.07),0_0_0_1px_rgba(0,0,0,0.04)]">
+    <div class="rounded-xl mb-4 flex flex-wrap gap-3 items-center px-4.5 py-3.5 bg-white shadow-[0_1px_4px_rgba(0,0,0,0.07),0_0_0_1px_rgba(0,0,0,0.04)]">
 
       <select v-model="filterEnrolled"
               class="text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 border border-slate-200 py-2 pl-3 pr-8 text-slate-800 bg-white">
@@ -267,7 +267,7 @@
       </select>
 
       <button
-          class="text-base font-medium rounded-lg px-[18px] py-2 bg-[#2563eb] text-white hover:bg-blue-700 transition-colors"
+          class="text-base font-medium rounded-lg px-4.5 py-2 bg-[#2563eb] text-white hover:bg-blue-700 transition-colors"
           @click="loadStudents()">조회</button>
 
       <!-- 학기별 성적 세부 보기 체크박스 -->
@@ -499,7 +499,7 @@
                   <input v-model="editModal.gpa_1_2" type="text" class="w-full border border-slate-300 rounded p-1.5 text-center font-mono text-base" />
                 </div>
                 <div>
-                  <label class="block font-medium text-blue-700 font-bold mb-1">1전학기</label>
+                  <label class="block font-bold text-blue-700 mb-1">1전학기</label>
                   <input v-model="editModal.gpa_1_all" type="text" class="w-full border border-blue-300 bg-blue-50/50 rounded p-1.5 text-center font-mono text-base font-bold text-blue-700" />
                 </div>
                 <div>
@@ -511,7 +511,7 @@
                   <input v-model="editModal.gpa_2_2" type="text" class="w-full border border-slate-300 rounded p-1.5 text-center font-mono text-base" />
                 </div>
                 <div>
-                  <label class="block font-medium text-blue-700 font-bold mb-1">2전학기</label>
+                  <label class="block font-bold text-blue-700 mb-1">2전학기</label>
                   <input v-model="editModal.gpa_2_all" type="text" class="w-full border border-blue-300 bg-blue-50/50 rounded p-1.5 text-center font-mono text-base font-bold text-blue-700" />
                 </div>
                 <div>
@@ -523,7 +523,7 @@
                   <input v-model="editModal.gpa_3_2" type="text" class="w-full border border-slate-300 rounded p-1.5 text-center font-mono text-base" />
                 </div>
                 <div>
-                  <label class="block font-medium text-blue-700 font-bold mb-1">3전학기</label>
+                  <label class="block font-bold text-blue-700 mb-1">3전학기</label>
                   <input v-model="editModal.gpa_3_all" type="text" class="w-full border border-blue-300 bg-blue-50/50 rounded p-1.5 text-center font-mono text-base font-bold text-blue-700" />
                 </div>
               </div>

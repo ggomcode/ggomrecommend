@@ -93,22 +93,36 @@
 
         <!-- 카드 2: 농어촌 전형 추천자 관리 시스템 -->
         <div
-          @click="showRuralNotice = true"
-          class="group relative bg-white rounded-3xl p-8 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-emerald-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
+          @click="enterRuralSystem"
+          :class="[
+            'group relative bg-white rounded-3xl p-8 border shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden',
+            (!auth.isStudent || isRuralSystemOpen)
+              ? 'border-slate-200/80 hover:shadow-xl hover:border-emerald-500 cursor-pointer'
+              : 'border-slate-200 opacity-60 bg-slate-50 cursor-not-allowed'
+          ]"
         >
           <div class="absolute -top-20 -right-20 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
 
           <div>
-            <div class="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 shadow-sm border border-emerald-100">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                <path d="m9 12 2 2 4-4"/>
-              </svg>
+            <div class="flex items-center justify-between mb-6">
+              <div class="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 shadow-sm border border-emerald-100">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <path d="m9 12 2 2 4-4"/>
+                </svg>
+              </div>
+              <span
+                :class="[
+                  'px-3 py-1 rounded-full text-xs font-bold shadow-xs',
+                  isRuralSystemOpen ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-slate-200 text-slate-600'
+                ]"
+              >
+                {{ isRuralSystemOpen ? `🟢 접수 진행 중 (${activeRuralTerm})` : '🔒 접수 마감' }}
+              </span>
             </div>
 
             <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-extrabold bg-emerald-100 text-emerald-800 mb-3">
               <span>기회균형 포함</span>
-              <span class="ml-1 text-[10px] bg-emerald-600 text-white px-1.5 py-0.2 rounded">오픈 예정</span>
             </div>
 
             <h3 class="text-2xl font-bold text-slate-900 group-hover:text-emerald-600 transition-colors mb-3">
@@ -121,7 +135,7 @@
           </div>
 
           <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-emerald-600">
-            <span>시스템 안내 보기</span>
+            <span>{{ (!auth.isStudent || isRuralSystemOpen) ? '시스템 바로가기' : '접수 마감 (이용 불가)' }}</span>
             <svg class="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
@@ -133,43 +147,8 @@
 
     <!-- 하단 푸터 -->
     <footer class="py-6 border-t border-slate-200 bg-white text-center text-xs text-slate-500">
-      <p>© {{ new Date().getFullYear() }} {{ schoolName }} 학교장 추천자 선발 및 농어촌 전형 추천자 관리 시스템</p>
+      <p>© {{ new Date().getFullYear() }} {{ schoolName }} 대입 추천 관리 포털</p>
     </footer>
-
-    <!-- 농어촌 전형 시스템 준비 중 모달 -->
-    <div
-      v-if="showRuralNotice"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
-      @click.self="showRuralNotice = false"
-      @keydown.escape.window="showRuralNotice = false"
-    >
-      <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-200 text-center relative overflow-hidden">
-        <div class="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4 border border-amber-200">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="6" width="20" height="12" rx="2"/>
-            <path d="M12 12h.01"/>
-            <path d="M17 12h.01"/>
-            <path d="M7 12h.01"/>
-          </svg>
-        </div>
-
-        <h3 class="text-xl font-bold text-slate-900 mb-2">
-          농어촌 전형 추천자 관리 시스템
-        </h3>
-        
-        <p class="text-sm text-slate-600 leading-relaxed mb-6">
-          기회균형 및 농어촌 특별전형 추천자 관리 기능은 현재 <strong>오픈 준비 중</strong>입니다.<br>
-          학교장 추천자 선발 시스템을 이용하시려면 첫 번째 메뉴를 선택해 주세요.
-        </p>
-
-        <button
-          @click="showRuralNotice = false"
-          class="w-full py-3 px-6 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-colors cursor-pointer border-none"
-        >
-          확인
-        </button>
-      </div>
-    </div>
 
   </div>
 </template>
@@ -179,11 +158,15 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
+import { checkRuralSystemOpenStatus } from '../api/ruralApi'
+import { dialog } from '../components/common/dialog'
 
 const router = useRouter()
 const auth = useAuthStore()
 
-const showRuralNotice = ref(false)
+const isRuralSystemOpen = ref(true)
+const activeRuralTerm = ref('수시')
+const ruralClosedReason = ref('')
 
 const userName = computed(() => {
   if (auth.isAdmin) return '관리자'
@@ -225,12 +208,27 @@ function enterPrincipalSystem() {
   else router.push('/login')
 }
 
+async function enterRuralSystem() {
+  if (auth.isStudent && !isRuralSystemOpen.value) {
+    await dialog.alert({
+      title: '농어촌 전형 시스템 접수 마감',
+      message: `${ruralClosedReason.value || '현재 농어촌 전형 원서접수 기간이 아닙니다.'}\n\n※ 수시 원서 접수 마감일 경과 후에는 시스템 이용이 비활성화됩니다.`
+    })
+    return
+  }
+  router.push('/rural')
+}
+
 async function handleLogout() {
   await auth.logout()
   router.push('/login')
 }
 
-onMounted(() => {
+onMounted(async () => {
   fetchSchoolName()
+  const status = await checkRuralSystemOpenStatus()
+  isRuralSystemOpen.value = status.isOpen
+  activeRuralTerm.value = status.activeTerm
+  ruralClosedReason.value = status.reason
 })
 </script>

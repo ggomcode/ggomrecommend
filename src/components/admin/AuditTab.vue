@@ -48,7 +48,7 @@
       </select>
 
       <button
-        class="text-base font-medium rounded-lg px-[18px] py-2 bg-[#2563eb] text-white hover:bg-blue-700 transition-colors"
+        class="text-base font-medium rounded-lg px-4.5 py-2 bg-[#2563eb] text-white hover:bg-blue-700 transition-colors"
         @click="load()"
       >조회</button>
 

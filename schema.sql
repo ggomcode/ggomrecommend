@@ -12,11 +12,16 @@ CREATE TABLE IF NOT EXISTS config (
 -- 초기 설정 데이터 삽입
 INSERT INTO config (key, value) VALUES ('registration_code', 'school2026!') ON CONFLICT (key) DO NOTHING;
 INSERT INTO config (key, value) VALUES ('openai_api_key', '') ON CONFLICT (key) DO NOTHING;
+INSERT INTO config (key, value) VALUES ('school_info_api_key', '') ON CONFLICT (key) DO NOTHING;
 INSERT INTO config (key, value) VALUES ('class_count', '11') ON CONFLICT (key) DO NOTHING;
-INSERT INTO config (key, value) VALUES ('school_name', '우리학교') ON CONFLICT (key) DO NOTHING;
+INSERT INTO config (key, value) VALUES ('school_name', '우리고등학교') ON CONFLICT (key) DO NOTHING;
 INSERT INTO config (key, value) VALUES ('allow_area_edit', 'false') ON CONFLICT (key) DO NOTHING;
 INSERT INTO config (key, value) VALUES ('eval_areas_store', '[]') ON CONFLICT (key) DO NOTHING;
 INSERT INTO config (key, value) VALUES ('disclosure_student_count', '') ON CONFLICT (key) DO NOTHING;
+INSERT INTO config (key, value) VALUES ('susi_apply_start_date', '') ON CONFLICT (key) DO NOTHING;
+INSERT INTO config (key, value) VALUES ('susi_apply_end_date', '') ON CONFLICT (key) DO NOTHING;
+INSERT INTO config (key, value) VALUES ('google_sheet_principal_id', '') ON CONFLICT (key) DO NOTHING;
+INSERT INTO config (key, value) VALUES ('google_sheet_rural_id', '') ON CONFLICT (key) DO NOTHING;
 INSERT INTO config (key, value) VALUES ('round_schedules_map', '{"1":{"apply_start":"2026-08-19","apply_end":"2026-08-20","eval_date":"2026-08-21","announce_date":"2026-08-24"},"2":{"apply_start":"2026-08-26","apply_end":"2026-08-27","eval_date":"2026-08-28","announce_date":"2026-08-31"},"3":{"apply_start":"2026-09-02","apply_end":"2026-09-03","eval_date":"2026-09-04","announce_date":"2026-09-04"}}') ON CONFLICT (key) DO NOTHING;
 
 -- 2. PROFILES (사용자 프로필 테이블)
@@ -816,3 +821,266 @@ DROP POLICY IF EXISTS "Anyone can select audit_logs" ON public.audit_logs;
 CREATE POLICY "Anyone can select audit_logs" ON public.audit_logs FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Anyone can modify audit_logs" ON public.audit_logs;
 CREATE POLICY "Anyone can modify audit_logs" ON public.audit_logs FOR ALL USING (true) WITH CHECK (true);
+
+-- ================================================================
+-- 19. 농어촌 특별전형 추천자 관리 시스템 스키마 & RLS
+-- ================================================================
+
+-- 1. RURAL_SCHOOL_CACHE (학교알리미 API 캐시 테이블)
+CREATE TABLE IF NOT EXISTS public.rural_school_cache (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    school_name TEXT UNIQUE NOT NULL,       -- 학교명 (예: '포곡중학교')
+    school_kind TEXT,                       -- 학교급 ('03': 중, '04': 고)
+    bjd_code TEXT,                          -- 법정동코드 (ADRCD_ID)
+    address TEXT,                           -- 기본주소 (ADRES_BRKDN)
+    detail_address TEXT,                    -- 상세주소 (DTLAD_BRKDN)
+    road_address TEXT,                      -- 도로명주소 (SCHUL_RDNMA)
+    is_rural BOOLEAN NOT NULL DEFAULT FALSE,-- 읍/면 지역 여부 (주소에 '읍'/'면' 포함 시 TRUE)
+    fetched_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- 2. STUDENT_RURAL_ADDRESSES (학생 주소 이력 테이블 - 인적사항_주소 엑셀 파싱 결과)
+CREATE TABLE IF NOT EXISTS public.student_rural_addresses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID NOT NULL,               -- enrolled_students 및 profiles 통합 참조 ID
+    class_no INT NOT NULL,                  -- 반
+    seq_no INT NOT NULL,                    -- 번호
+    student_name TEXT NOT NULL,             -- 학생 이름
+    raw_address_text TEXT NOT NULL,         -- 엑셀 E열 원본 주소 텍스트
+    parsed_addresses JSONB NOT NULL DEFAULT '[]'::jsonb, -- 파싱된 분리 주소 목록
+    has_rural_address BOOLEAN NOT NULL DEFAULT FALSE,   -- 읍/면/리 주소 포함 여부
+    notes TEXT,                             -- 주소 변동/이상 특이사항
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    UNIQUE(student_id)
+);
+
+-- 3. STUDENT_ACADEMIC_RECORDS (학생 학적 변동 이력 테이블 - 학적사항 엑셀 파싱 결과)
+CREATE TABLE IF NOT EXISTS public.student_academic_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID NOT NULL,               -- enrolled_students 및 profiles 통합 참조 ID
+    class_no INT NOT NULL,                  -- 반
+    seq_no INT NOT NULL,                    -- 번호
+    student_name TEXT NOT NULL,             -- 학생 이름
+    seq_order INT NOT NULL DEFAULT 1,       -- 학적 기록 순서
+    record_date DATE,                       -- 변동 날짜 (중학 졸업일, 고교 입학일, 전입일 등)
+    change_type TEXT NOT NULL,              -- 변동 구획 (입학, 졸업, 전입, 전출 등)
+    school_name TEXT,                       -- 추출된 학교명
+    school_cache_id UUID REFERENCES public.rural_school_cache(id) ON DELETE SET NULL,
+    raw_record_text TEXT,                   -- C/D열 원본 텍스트
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- 4. STUDENT_RURAL_ELIGIBILITY (농어촌 전형 최종 판정 결과 테이블)
+CREATE TABLE IF NOT EXISTS public.student_rural_eligibility (
+    student_id UUID PRIMARY KEY,            -- enrolled_students 및 profiles 통합 참조 ID
+    middle_school_years NUMERIC(3,1) DEFAULT 0.0, -- 읍면 중학교 재학 계산 기간 (년)
+    high_school_years NUMERIC(3,1) DEFAULT 0.0,   -- 읍면 고등학교 재학 계산 기간 (년)
+    total_rural_years NUMERIC(3,1) DEFAULT 0.0,   -- 총 읍면 학교 재학 기간 (년)
+    address_rural_valid BOOLEAN DEFAULT FALSE,    -- 읍면 주소 거주 요건 만족 여부
+    is_eligible BOOLEAN NOT NULL DEFAULT FALSE,   -- 자동 판정 최종 농어촌 자격 여부 (6년 이상 & 주소 만족)
+    is_manual_approved BOOLEAN NOT NULL DEFAULT FALSE, -- 교사/관리자 수동 인정 여부
+    manual_reason TEXT,                           -- 수동 인정/소명 사유
+    evaluation_notes TEXT,                        -- 자동 검증 상세 리포트
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- 인덱스 추가
+CREATE INDEX IF NOT EXISTS idx_academic_student ON public.student_academic_records(student_id);
+CREATE INDEX IF NOT EXISTS idx_rural_address_student ON public.student_rural_addresses(student_id);
+
+-- RLS 활성화
+ALTER TABLE public.rural_school_cache ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_rural_addresses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_academic_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.student_rural_eligibility ENABLE ROW LEVEL SECURITY;
+
+-- ----------------------------------------------------------------
+-- RLS 정책 설정
+-- ----------------------------------------------------------------
+
+DROP POLICY IF EXISTS "Anyone authenticated can view school cache" ON public.rural_school_cache;
+CREATE POLICY "Anyone authenticated can view school cache" ON public.rural_school_cache
+    FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Teachers/Admins can manage school cache" ON public.rural_school_cache;
+CREATE POLICY "Teachers/Admins can manage school cache" ON public.rural_school_cache
+    FOR ALL TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles 
+            WHERE profiles.id = auth.uid() 
+            AND profiles.role IN ('teacher', 'admin') 
+            AND profiles.status = 'approved'
+        )
+    );
+
+DROP POLICY IF EXISTS "Teachers/Admins can manage rural addresses" ON public.student_rural_addresses;
+CREATE POLICY "Teachers/Admins can manage rural addresses" ON public.student_rural_addresses
+    FOR ALL TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles 
+            WHERE profiles.id = auth.uid() 
+            AND profiles.role IN ('teacher', 'admin') 
+            AND profiles.status = 'approved'
+        )
+    );
+
+DROP POLICY IF EXISTS "Students can view own rural addresses" ON public.student_rural_addresses;
+CREATE POLICY "Students can view own rural addresses" ON public.student_rural_addresses
+    FOR SELECT TO authenticated
+    USING (student_id = auth.uid());
+
+DROP POLICY IF EXISTS "Teachers/Admins can manage academic records" ON public.student_academic_records;
+CREATE POLICY "Teachers/Admins can manage academic records" ON public.student_academic_records
+    FOR ALL TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles 
+            WHERE profiles.id = auth.uid() 
+            AND profiles.role IN ('teacher', 'admin') 
+            AND profiles.status = 'approved'
+        )
+    );
+
+DROP POLICY IF EXISTS "Students can view own academic records" ON public.student_academic_records;
+CREATE POLICY "Students can view own academic records" ON public.student_academic_records
+    FOR SELECT TO authenticated
+    USING (student_id = auth.uid());
+
+DROP POLICY IF EXISTS "Teachers/Admins can manage rural eligibility" ON public.student_rural_eligibility;
+CREATE POLICY "Teachers/Admins can manage rural eligibility" ON public.student_rural_eligibility
+    FOR ALL TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles 
+            WHERE profiles.id = auth.uid() 
+            AND profiles.role IN ('teacher', 'admin') 
+            AND profiles.status = 'approved'
+        )
+    );
+
+DROP POLICY IF EXISTS "Students can view own rural eligibility" ON public.student_rural_eligibility;
+CREATE POLICY "Students can view own rural eligibility" ON public.student_rural_eligibility
+    FOR SELECT TO authenticated
+    USING (student_id = auth.uid());
+
+-- ----------------------------------------------------------------
+-- 16. RURAL_TRACKS (농어촌 및 기회균형 전형 정보 마스터 테이블)
+-- ----------------------------------------------------------------
+INSERT INTO config (key, value) VALUES ('jungsi_apply_start_date', '') ON CONFLICT (key) DO NOTHING;
+INSERT INTO config (key, value) VALUES ('jungsi_apply_end_date', '') ON CONFLICT (key) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS public.rural_tracks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    term_type TEXT NOT NULL CHECK (term_type IN ('수시', '정시')), -- A컬럼: 구분
+    medical_type TEXT DEFAULT '없음',                             -- B컬럼: 메디컬 ('의','치','한','약','수','없음')
+    region TEXT,                                                  -- C컬럼: 지역
+    univ_name TEXT NOT NULL,                                      -- D컬럼: 대학 (지역 포함)
+    track_type TEXT NOT NULL,                                     -- E컬럼: 전형 유형 ('교과', '종합', '가', '나', '다')
+    track_name TEXT NOT NULL,                                     -- F컬럼: 전형명
+    recruitment_quota TEXT,                                       -- G컬럼: 모집인원
+    eval_method TEXT,                                             -- H컬럼: 전형방법
+    suneung_minimum TEXT,                                         -- I컬럼: 수능최저
+    remarks TEXT,                                                 -- J컬럼: 비고 (기회균형 구분 또는 기타)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_rural_tracks_term_univ ON public.rural_tracks(term_type, univ_name);
+
+ALTER TABLE public.rural_tracks ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone authenticated can view rural tracks" ON public.rural_tracks;
+CREATE POLICY "Anyone authenticated can view rural tracks" ON public.rural_tracks
+    FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Teachers/Admins can manage rural tracks" ON public.rural_tracks;
+CREATE POLICY "Teachers/Admins can manage rural tracks" ON public.rural_tracks
+    FOR ALL TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles 
+            WHERE profiles.id = auth.uid() 
+            AND profiles.role IN ('teacher', 'admin') 
+            AND profiles.status = 'approved'
+        )
+    );
+
+-- ----------------------------------------------------------------
+-- 17. STUDENT_RURAL_ELIGIBILITY 확장 (유형 I/II 및 보류/사유 컬럼 추가)
+-- ----------------------------------------------------------------
+ALTER TABLE public.student_rural_eligibility ADD COLUMN IF NOT EXISTS rural_type TEXT DEFAULT 'TYPE_1';
+ALTER TABLE public.student_rural_eligibility ADD COLUMN IF NOT EXISTS warning_status TEXT DEFAULT 'OK';
+ALTER TABLE public.student_rural_eligibility ADD COLUMN IF NOT EXISTS ineligible_reason TEXT;
+
+-- ----------------------------------------------------------------
+-- 18. RURAL_APPLICATIONS (학생 농어촌 전형 신청 및 서명 테이블)
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.rural_applications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID NOT NULL,               -- enrolled_students / profiles 통합 ID 참조
+    choice_number INT NOT NULL CHECK (choice_number BETWEEN 1 AND 6), -- 지망 순번 (1 ~ 6)
+    
+    -- 전형 선택 및 직접 입력 학과 정보
+    track_id UUID REFERENCES public.rural_tracks(id) ON DELETE SET NULL,
+    term_type TEXT NOT NULL,                -- 구분 ('수시', '정시')
+    medical_type TEXT DEFAULT '없음',       -- 메디컬 여부
+    region TEXT,                            -- 지역
+    univ_name TEXT NOT NULL,                -- 대학명
+    department TEXT NOT NULL,               -- 학과 (학생 입력)
+    track_type TEXT NOT NULL,               -- 전형 유형 ('교과', '종합', '가', '나', '다')
+    track_name TEXT NOT NULL,               -- 전형명
+    recruitment_quota TEXT,                 -- 모집인원
+    eval_method TEXT,                       -- 전형방법
+    suneung_minimum TEXT,                   -- 수능최저
+    remarks TEXT,                           -- 비고
+    
+    -- 자격 경고 인지 및 서명 정보
+    is_warning_acknowledged BOOLEAN NOT NULL DEFAULT FALSE, -- 자격 경고 확인 및 신청 강행 여부
+    student_signature TEXT,                 -- 학생 서명 (Base64/DataURL)
+    parent_signature TEXT,                  -- 학부모 서명 (Base64/DataURL)
+    signed_at TIMESTAMP WITH TIME ZONE,     -- 서명 제출 일시
+    status TEXT NOT NULL DEFAULT 'submitted' CHECK (status IN ('draft', 'submitted', 'teacher_edited', 'approved', 'rejected')),
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    
+    UNIQUE(student_id, choice_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_rural_applications_student ON public.rural_applications(student_id);
+
+ALTER TABLE public.rural_applications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Students can view own rural applications" ON public.rural_applications;
+CREATE POLICY "Students can view own rural applications" ON public.rural_applications
+    FOR SELECT TO authenticated
+    USING (student_id = auth.uid() OR EXISTS (
+        SELECT 1 FROM public.enrolled_students 
+        WHERE enrolled_students.id = rural_applications.student_id 
+        AND enrolled_students.user_id = auth.uid()
+    ));
+
+DROP POLICY IF EXISTS "Students can manage own rural applications" ON public.rural_applications;
+CREATE POLICY "Students can manage own rural applications" ON public.rural_applications
+    FOR ALL TO authenticated
+    USING (student_id = auth.uid() OR EXISTS (
+        SELECT 1 FROM public.enrolled_students 
+        WHERE enrolled_students.id = rural_applications.student_id 
+        AND enrolled_students.user_id = auth.uid()
+    ));
+
+DROP POLICY IF EXISTS "Teachers/Admins can manage all rural applications" ON public.rural_applications;
+CREATE POLICY "Teachers/Admins can manage all rural applications" ON public.rural_applications
+    FOR ALL TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.profiles 
+            WHERE profiles.id = auth.uid() 
+            AND profiles.role IN ('teacher', 'admin') 
+            AND profiles.status = 'approved'
+        )
+    );
+
+

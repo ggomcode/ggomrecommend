@@ -1701,7 +1701,10 @@ export const getResults = async (roundId, trackId) => {
   let query = supabase
     .from('applications')
     .select('*, universities:univ_id(*)')
-    .eq('round', roundId)
+
+  if (roundId) {
+    query = query.eq('round', roundId)
+  }
 
   if (trackId) {
     query = query.eq('univ_id', trackId)
@@ -1711,10 +1714,10 @@ export const getResults = async (roundId, trackId) => {
   if (error) throw error
   if (!apps || apps.length === 0) return []
 
-  // enrolled_students & profiles 매핑
+  // enrolled_students & profiles 매핑 (석차등급 gpa_overall 포함)
   const studentIds = apps.map(ap => ap.student_id)
   const [{ data: studentsData }, { data: profilesData }] = await Promise.all([
-    supabase.from('enrolled_students').select('id, name, student_code, grade, class_no, seq_no, is_enrolled').in('id', studentIds),
+    supabase.from('enrolled_students').select('id, name, student_code, grade, class_no, seq_no, is_enrolled, gpa_overall').in('id', studentIds),
     supabase.from('profiles').select('id, name, student_code, grade, class_no, seq_no, is_enrolled').in('id', studentIds)
   ])
 
@@ -1751,14 +1754,19 @@ export const getResults = async (roundId, trackId) => {
       }
     }))
 
-    // 정렬: 재학생 우선, 내신 성적 내림차순, 학번 오름차순
+    // 정렬 규정: (1) 재학생 우선, (2) 대학 환산점수(manual_score) 높은 순, (3) 전체 석차등급(gpa_overall) 낮은 순 (상위 성적: 예 1.20 > 1.85), (4) 학번 오름차순
     appsWithStudentInfo.sort((a, b) => {
       if (a.stInfo.is_enrolled !== b.stInfo.is_enrolled) {
         return a.stInfo.is_enrolled ? -1 : 1
       }
-      const scoreA = Number(a.manual_score || 0)
-      const scoreB = Number(b.manual_score || 0)
-      if (scoreB !== scoreA) return scoreB - scoreA
+      const scoreA = (a.manual_score != null && Number(a.manual_score) > 0) ? Number(a.manual_score) : 0
+      const scoreB = (b.manual_score != null && Number(b.manual_score) > 0) ? Number(b.manual_score) : 0
+      if (scoreA !== scoreB) return scoreB - scoreA
+
+      const gpaA = (a.stInfo.gpa_overall != null && !isNaN(Number(a.stInfo.gpa_overall)) && Number(a.stInfo.gpa_overall) > 0) ? Number(a.stInfo.gpa_overall) : 99
+      const gpaB = (b.stInfo.gpa_overall != null && !isNaN(Number(b.stInfo.gpa_overall)) && Number(b.stInfo.gpa_overall) > 0) ? Number(b.stInfo.gpa_overall) : 99
+      if (gpaA !== gpaB) return gpaA - gpaB
+
       return (a.stInfo.student_code || '').localeCompare(b.stInfo.student_code || '')
     })
 
@@ -1766,15 +1774,17 @@ export const getResults = async (roundId, trackId) => {
     let rank = 1
     let skipCount = 0
     let prevScore = null
+    let prevGpa = null
     let prevEnrolled = null
 
     for (let idx = 0; idx < appsWithStudentInfo.length; idx++) {
       const ap = appsWithStudentInfo[idx]
-      const currentScore = Number(ap.manual_score || 0)
+      const currentScore = (ap.manual_score != null && Number(ap.manual_score) > 0) ? Number(ap.manual_score) : 0
+      const currentGpa = (ap.stInfo.gpa_overall != null && !isNaN(Number(ap.stInfo.gpa_overall)) && Number(ap.stInfo.gpa_overall) > 0) ? Number(ap.stInfo.gpa_overall) : 99
       const currentEnrolled = ap.stInfo.is_enrolled
 
       if (idx > 0) {
-        if (currentScore === prevScore && currentEnrolled === prevEnrolled) {
+        if (currentScore === prevScore && currentGpa === prevGpa && currentEnrolled === prevEnrolled) {
           skipCount++
         } else {
           rank += skipCount + 1
@@ -1783,6 +1793,7 @@ export const getResults = async (roundId, trackId) => {
       }
 
       prevScore = currentScore
+      prevGpa = currentGpa
       prevEnrolled = currentEnrolled
 
       // 부적합 처리가 되었을 경우 원래의 순위를 캐싱하여 대시보드에 정상 출력
@@ -1798,12 +1809,15 @@ export const getResults = async (roundId, trackId) => {
         student_id: ap.student_id,
         track_id: ap.univ_id,
         round_id: ap.round,
-        total_score: currentScore,
+        manual_score: ap.manual_score,
+        gpa_overall: ap.stInfo.gpa_overall != null ? ap.stInfo.gpa_overall : null,
+        total_score: currentScore > 0 ? currentScore : (ap.stInfo.gpa_overall != null ? ap.stInfo.gpa_overall : null),
         score_detail: {},
         ranking: finalRank,
         track_rank: finalRank,
         recommended: ap.is_recommended,
         abandoned: ap.is_abandoned,
+        scanned_doc_url: ap.scanned_doc_url,
         excluded: ap.is_excluded,
         excluded_reason: ap.excluded_reason,
         student_code: ap.stInfo.student_code || '',
@@ -1814,7 +1828,9 @@ export const getResults = async (roundId, trackId) => {
         is_enrolled: ap.stInfo.is_enrolled,
         univ_name: ap.universities?.univ_name || '',
         track_name: ap.universities?.track_name || '',
-        department_name: ap.department_name
+        department_name: ap.department_name,
+        grad_allowed: ap.universities?.grad_allowed,
+        quota_limit: ap.universities?.quota_limit
       })
     }
   }
@@ -1884,11 +1900,11 @@ export const getApplications = async (roundId, trackId) => {
   if (appsErr) throw appsErr
   if (!appsData || appsData.length === 0) return []
 
-  // 2. enrolled_students 마스터 데이터 전체 조회 및 인덱스 맵 생성
+  // 2. enrolled_students 마스터 데이터 전체 조회 및 인덱스 맵 생성 (gpa_overall 포함)
   const studentIds = appsData.map(ap => ap.student_id)
   const { data: studentsData, error: stErr } = await supabase
     .from('enrolled_students')
-    .select('id, name, student_code, grade, class_no, seq_no, is_enrolled')
+    .select('id, name, student_code, grade, class_no, seq_no, is_enrolled, gpa_overall')
     .in('id', studentIds)
 
   if (stErr) throw stErr
@@ -1935,6 +1951,8 @@ export const getApplications = async (roundId, trackId) => {
       excluded: ap.is_excluded,
       excluded_reason: ap.excluded_reason,
       department_name: ap.department_name,
+      manual_score: ap.manual_score,
+      gpa_overall: stInfo.gpa_overall != null ? stInfo.gpa_overall : null,
       student_code: stInfo.student_code || '',
       name: studentName,
       grade: stInfo.grade,
@@ -3077,6 +3095,42 @@ export const importRegionalRecommendations = async (file) => {
   return { count: sortedRows.length }
 }
 
+export const syncPrincipalUnivsFromGoogleSheet = async (sheetId) => {
+  if (!sheetId || !sheetId.trim()) {
+    throw new Error('학교장 추천 전형 구글 스프레드시트 ID가 입력되지 않았습니다.')
+  }
+
+  const cleanId = sheetId.trim()
+  let file = null
+
+  // 1. XLSX 바이너리 내보내기 시도 (구글 시트 사본 및 원본 일괄 대응)
+  try {
+    const xlsxUrl = `https://docs.google.com/spreadsheets/d/${cleanId}/export?format=xlsx`
+    const res = await fetch(xlsxUrl)
+    if (res.ok) {
+      const buffer = await res.arrayBuffer()
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      file = new File([blob], '2027_대입_학교장추천전형.xlsx', { type: blob.type })
+    }
+  } catch (e) {
+    console.warn('XLSX format fetch failed, trying CSV format:', e)
+  }
+
+  // 2. CSV 내보내기 폴백 시도
+  if (!file) {
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${cleanId}/export?format=csv`
+    const res = await fetch(csvUrl)
+    if (!res.ok) {
+      throw new Error(`구글 스프레드시트를 불러올 수 없습니다. (상태 코드: ${res.status}). 구글 시트 공유 설정이 '링크가 있는 모든 사용자에게 공개(웹에 게시 또는 링크 보기 가능)' 상태인지 확인하세요.`)
+    }
+    const csvText = await res.text()
+    const blob = new Blob([csvText], { type: 'text/csv' })
+    file = new File([blob], '2027_대입_학교장추천전형.csv', { type: 'text/csv' })
+  }
+
+  return await importRegionalRecommendations(file)
+}
+
 export const syncRegionalToUniversities = async () => {
   if (!supabase) return { count: 0 }
 
@@ -3715,8 +3769,15 @@ export const promoteNextEligibleStudent = async (univId, roundId) => {
     console.warn('감사 로그 작성 실패:', e)
   }
 
+  let decryptedName = stInfo.name || '미명 학생'
+  if (decryptedName && decryptedName.startsWith('enc:')) {
+    try {
+      decryptedName = await decryptText(decryptedName)
+    } catch {}
+  }
+
   return {
-    name: stInfo.name || '미명 학생',
+    name: decryptedName,
     student_code: stInfo.student_code || '',
     univ_name: univ.univ_name,
     track_name: univ.track_name,

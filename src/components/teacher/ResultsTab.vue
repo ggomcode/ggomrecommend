@@ -147,6 +147,8 @@
                       :style="{
                         borderBottom: '1px solid #f1f5f9',
                         background:
+                          r.abandoned ? '#fef2f2' :
+                          isAbandonRequested(r) ? '#fff1f2' :
                           r.recommended && !r.abandoned ? '#f0fdf4' :
                           tieSet.has(`${r.student_id}-${r.track_id}-${round.id}`) ? '#fffbeb' :
                           round.status === 'FINALIZED' ? '#fff1f2' : 'white',
@@ -163,13 +165,21 @@
                       </td>
                       <td class="text-center" style="padding: 12px 16px;">
                         <span v-if="r.abandoned" class="text-base font-semibold" style="color: #ef4444;">포기됨</span>
+                        <span v-else-if="isAbandonRequested(r)" class="text-base font-semibold text-rose-500" style="color: #f43f5e;">포기 신청중</span>
                         <span v-else-if="r.recommended" class="text-base font-semibold" style="color: #16a34a;">추천 확정</span>
                         <span v-else-if="round.status === 'FINALIZED'" class="text-base font-semibold" style="color: #ef4444;">미선발</span>
                         <span v-else class="text-base font-semibold" style="color: #2563eb;">접수 완료</span>
                       </td>
                       <td class="text-center" style="padding: 12px 16px;">
+                        <span v-if="r.abandoned" class="text-slate-400 text-sm">포기 완료</span>
                         <button
-                          v-if="round.status === 'FINALIZED' && r.recommended && !r.abandoned"
+                          v-else-if="isAbandonRequested(r)"
+                          class="text-base font-semibold rounded-lg whitespace-nowrap"
+                          style="padding: 5px 12px; border: none; background: #e11d48; color: white; cursor: pointer;"
+                          @click="handleApproveAbandon(r)"
+                        >포기 승인</button>
+                        <button
+                          v-else-if="round.status === 'FINALIZED' && r.recommended"
                           class="text-base whitespace-nowrap"
                           style="padding: 6px 12px; border: 1px solid #fca5a5; border-radius: 6px; background: white; color: #ef4444; cursor: pointer;"
                           @click="handleAbandon(r)"
@@ -192,6 +202,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth.js'
 import { teacherGetResults, teacherAbandonApplication } from '../../api/teacher.js'
+import { promoteNextEligibleStudent } from '../../api/admin.js'
 import { roundStatusLabel } from '../../data/roundStatus.js'
 import { printRoundsReport } from '../../utils/printTemplates.js'
 import { dialog } from '../common/dialog.js'
@@ -227,6 +238,16 @@ function formatPeriod(sched) {
   const endFmt = formatKoreanDate(sched.apply_end)
   if (startFmt && endFmt) return `${startFmt} ~ ${endFmt}`
   return startFmt || endFmt
+}
+
+function isAbandonRequested(r) {
+  if (r.abandoned || r.is_abandoned) return false
+  if (!r.scanned_doc_url) return false
+  try {
+    const parsed = typeof r.scanned_doc_url === 'string' ? JSON.parse(r.scanned_doc_url) : r.scanned_doc_url
+    return parsed && parsed.abandon_requested === true
+  } catch {}
+  return false
 }
 
 const hasFinalized = computed(() => rounds.value.some(r => r.status === 'FINALIZED'))
@@ -346,6 +367,47 @@ async function handleAbandon(r) {
   try {
     await teacherAbandonApplication(r.student_id, r.track_id, r.round_id)
     await load()
+  } catch (e) {
+    await dialog.alert({ title: '오류', message: e.response?.data || e.message, level: 'error' })
+  }
+}
+
+async function handleApproveAbandon(r) {
+  let docUrl = null
+  if (r.scanned_doc_url) {
+    try {
+      const parsed = typeof r.scanned_doc_url === 'string' ? JSON.parse(r.scanned_doc_url) : r.scanned_doc_url
+      if (parsed && parsed.doc_url) {
+        docUrl = parsed.doc_url
+      }
+    } catch {}
+  }
+
+  if (!(await dialog.confirm({
+    title: '추천 포기 승인',
+    message: `${r.name} 학생의 ${r.univ_name} ${r.track_name} 추천 포기 신청을 승인하시겠습니까?`,
+    confirmText: '포기 승인',
+    level: 'danger',
+    dangerNotice: '승인하면 해당 추천 기회가 취소되며 공석이 반환됩니다. 이 작업은 되돌릴 수 없습니다.',
+    finalConfirmText: '승인 확정',
+  }))) return
+
+  try {
+    await teacherAbandonApplication(r.student_id, r.track_id, r.round_id, docUrl)
+
+    // 차순위 승계 처리 수행
+    let successionMsg = ''
+    try {
+      const nextStudent = await promoteNextEligibleStudent(r.track_id, r.round_id)
+      if (nextStudent) {
+        successionMsg = `\n\n🎉 [차순위 승계 알림]\n- 대학: ${nextStudent.univ_name} ${nextStudent.track_name}\n- 차순위 후보인 ${nextStudent.name} (${nextStudent.student_code}) 학생이 새롭게 추천 후보명단에 자동 등록되었습니다.`
+      }
+    } catch (e) {
+      console.warn('Succession error:', e)
+    }
+
+    await load()
+    await dialog.alert({ title: '성공', message: '포기 처리가 완료되었습니다.' + successionMsg, level: 'success' })
   } catch (e) {
     await dialog.alert({ title: '오류', message: e.response?.data || e.message, level: 'error' })
   }

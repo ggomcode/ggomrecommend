@@ -14,10 +14,7 @@
           학교 이름 설정
         </h2>
         <p class="text-xs text-slate-400 mb-4">
-          시스템 헤더 및 메인 타이틀 상단에 표시될 학교 이름을 지정합니다. (미입력 시 기본값: '우리학교', '우리고' 입력 시 '우리고등학교'로 자동 변환 저장됩니다)
-        </p>
-
-        <form @submit.prevent="saveSchoolName" class="flex gap-3 max-w-md">
+          시스템 헤더 및 메인 타이틀 상단에 표시될 학        <form @submit.prevent="saveSchoolName" class="flex gap-3 w-full">
           <input
             v-model="inputSchoolName"
             type="text"
@@ -27,7 +24,7 @@
           <button
             type="submit"
             :disabled="schoolNameLoading"
-            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap"
+            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-5 py-2.5 cursor-pointer transition-colors whitespace-nowrap shrink-0"
           >
             {{ schoolNameLoading ? '저장 중…' : '학교 이름 저장' }}
           </button>
@@ -42,7 +39,7 @@
         </h2>
         <p class="text-xs text-slate-400 mb-4">교사 화면의 '조회 학급 선택' 드롭다운에 표시될 3학년 학급 수(반 개수)를 지정합니다.</p>
 
-        <form @submit.prevent="saveClassCount" class="flex gap-3 max-w-sm">
+        <form @submit.prevent="saveClassCount" class="flex gap-3 w-full">
           <div class="flex items-center gap-2 flex-1">
             <input
               v-model.number="classCount"
@@ -57,7 +54,7 @@
           <button
             type="submit"
             :disabled="classCountLoading"
-            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap"
+            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-5 py-2.5 cursor-pointer transition-colors whitespace-nowrap shrink-0"
           >
             {{ classCountLoading ? '저장 중…' : '학급 수 변경' }}
           </button>
@@ -76,7 +73,7 @@
           예: 재학생 수 325명, 인원제한 3% → 325 × 3% = 9.75 → <strong>10명</strong> (소수점 올림)
         </p>
 
-        <form @submit.prevent="saveDisclosureCount" class="flex gap-3 max-w-sm">
+        <form @submit.prevent="saveDisclosureCount" class="flex gap-3 w-full">
           <div class="flex items-center gap-2 flex-1">
             <input
               v-model.number="disclosureCount"
@@ -91,7 +88,7 @@
           <button
             type="submit"
             :disabled="disclosureCountLoading"
-            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap"
+            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-5 py-2.5 cursor-pointer transition-colors whitespace-nowrap shrink-0"
           >
             {{ disclosureCountLoading ? '저장 중…' : '저장' }}
           </button>
@@ -104,8 +101,8 @@
         </p>
 
         <!-- % 인원 동기화 버튼 -->
-        <div class="mt-4 pt-4 border-t border-slate-100">
-          <p class="text-xs text-slate-500 mb-2">
+        <div class="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <p class="text-xs text-slate-500 m-0 flex-1">
             재학생 수를 저장한 후, 아래 버튼으로 <strong>대학별 % 인원을 실제 명수로 재계산</strong>하여
             대학 설정 탭과 결과 보고서에 <strong>10명 (3%)</strong> 형식으로 표시됩니다.
           </p>
@@ -113,13 +110,13 @@
             type="button"
             :disabled="syncLoading || !disclosureCount"
             @click="doSyncPercentQuotas"
-            class="text-xs font-bold text-white border-none rounded-lg px-4 py-2 cursor-pointer transition-colors"
+            class="text-xs font-bold text-white border-none rounded-lg px-5 py-2.5 cursor-pointer transition-colors whitespace-nowrap shrink-0"
             :class="syncLoading || !disclosureCount ? 'bg-slate-300 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'"
           >
             {{ syncLoading ? '재계산 중…' : '🔄 % 인원 재계산 동기화' }}
           </button>
-          <p v-if="syncResult" class="text-xs mt-2 whitespace-pre-line" :class="syncResult.startsWith('❌') ? 'text-red-600' : 'text-emerald-700'">{{ syncResult }}</p>
         </div>
+        <p v-if="syncResult" class="text-xs mt-2 whitespace-pre-line" :class="syncResult.startsWith('❌') ? 'text-red-600' : 'text-emerald-700'">{{ syncResult }}</p>
       </div>
 
 
@@ -130,7 +127,7 @@
         </h2>
         <p class="text-xs text-slate-400 mb-4">학생들이 가입할 때 인증을 위해 필요한 가입코드(registration code)를 지정합니다.</p>
 
-        <form @submit.prevent="saveRegCode" class="flex gap-3 max-w-md">
+        <form @submit.prevent="saveRegCode" class="flex gap-3 w-full">
           <input
             v-model="regCode"
             type="text"
@@ -141,7 +138,7 @@
           <button
             type="submit"
             :disabled="regCodeLoading"
-            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap"
+            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-5 py-2.5 cursor-pointer transition-colors whitespace-nowrap shrink-0"
           >
             {{ regCodeLoading ? '변경 중…' : '변경 적용' }}
           </button>
@@ -156,7 +153,7 @@
         </h2>
         <p class="text-xs text-slate-400 mb-4">제출된 포기원 등 PDF/이미지 양식을 판독할 OpenAI GPT-4o-mini Vision 분석기 API 키를 설정합니다.</p>
 
-        <form @submit.prevent="saveOpenAIKey" class="flex gap-3 max-w-lg">
+        <form @submit.prevent="saveOpenAIKey" class="flex gap-3 w-full">
           <input
             v-model="openaiKey"
             type="password"
@@ -167,11 +164,233 @@
           <button
             type="submit"
             :disabled="openaiLoading"
-            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap"
+            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-5 py-2.5 cursor-pointer transition-colors whitespace-nowrap shrink-0"
           >
             {{ openaiLoading ? '저장 중…' : '저장 적용' }}
           </button>
         </form>
+      </div>
+
+      <!-- 3-2. 학교알리미 Open API 키 설정 -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+        <h2 class="text-base font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
+          <span class="w-1 h-3 bg-blue-600 rounded-full"></span>
+          학교알리미 Open API 키 설정 (고교 주소 및 정보 조회용)
+        </h2>
+        <p class="text-xs text-slate-400 mb-4">고교 주소 및 법정동 자동 조회를 위한 학교알리미 Open API 인증키를 지정합니다.</p>
+
+        <form @submit.prevent="saveSchoolInfoApiKey" class="flex gap-3 w-full">
+          <input
+            v-model="schoolInfoApiKey"
+            type="password"
+            placeholder="학교알리미 API 인증키 입력"
+            class="flex-1 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white font-mono"
+          />
+          <button
+            type="submit"
+            :disabled="schoolInfoApiLoading"
+            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-5 py-2.5 cursor-pointer transition-colors whitespace-nowrap shrink-0"
+          >
+            {{ schoolInfoApiLoading ? '저장 중…' : '저장 적용' }}
+          </button>
+        </form>
+      </div>�� Open API 키 설정 (고교 주소 및 정보 조회용)
+        </h2>
+        <p class="text-xs text-slate-400 mb-4">고교 주소 및 법정동 자동 조회를 위한 학교알리미 Open API 인증키를 지정합니다.</p>
+
+        <form @submit.prevent="saveSchoolInfoApiKey" class="flex gap-3 max-w-lg">
+          <input
+            v-model="schoolInfoApiKey"
+            type="password"
+            placeholder="학교알리미 API 인증키 입력"
+            class="flex-1 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white font-mono"
+          />
+          <button
+            type="submit"
+            :disabled="schoolInfoApiLoading"
+            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap"
+          >
+            {{ schoolInfoApiLoading ? '저장 중…' : '저장 적용' }}
+          </button>
+        </form>
+      </div>
+
+      <!-- 3-3. 수시 원서 접수 마감일 설정 (포기원 제출 마감 기준) -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+        <h2 class="text-base font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
+          <span class="w-1 h-3 bg-blue-600 rounded-full"></span>
+          📅 수시 원서 접수 마감일 설정 (추천 포기원 제출 마감 기준)
+        </h2>
+        <p class="text-xs text-slate-400 mb-4">
+          학생들이 학교장추천전형 포기 신청서(포기원)를 제출할 수 있는 <strong>수시 원서 접수 마감일(마지막 날)</strong>을 지정합니다.<br>
+          설정한 마감일 자정(23:59:59)까지 학생 화면에서 추천 포기 신청 버튼이 활성화됩니다.
+        </p>
+
+        <form @submit.prevent="saveSusiApplyPeriod" class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center max-w-xl">
+          <div class="flex items-center gap-2 flex-1">
+            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">접수 시작일 (선택):</span>
+            <input
+              v-model="susiApplyStartDate"
+              type="date"
+              class="w-full text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white"
+            />
+          </div>
+
+          <span class="text-slate-400 font-bold text-center hidden sm:inline">~</span>
+
+          <div class="flex items-center gap-2 flex-1">
+            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">접수 마감일 (필수):</span>
+            <input
+              v-model="susiApplyEndDate"
+              type="date"
+              required
+              class="w-full text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white"
+            />
+          </div>
+
+          <button
+            type="submit"
+            :disabled="susiPeriodLoading"
+            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-4 py-2.5 cursor-pointer transition-colors whitespace-nowrap"
+          >
+            {{ susiPeriodLoading ? '저장 중…' : '기간 저장' }}
+          </button>
+        </form>
+
+        <p v-if="susiApplyEndDate" class="text-xs text-slate-500 mt-3">
+          현재 설정 마감일: <strong class="text-blue-600 dark:text-blue-400">{{ susiApplyStartDate ? `${susiApplyStartDate} ~ ` : '' }}{{ susiApplyEndDate }}</strong>
+          <span v-if="isSusiPeriodActive" class="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+            🟢 원서접수 진행 중 (마감 전)
+          </span>
+          <span v-else class="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
+            🔒 원서접수 마감 (접수 종료)
+          </span>
+        </p>
+        <p v-else class="text-xs text-amber-600 mt-3">
+          ⚠️ 수시 원서 접수 마감일이 설정되지 않았습니다. (미설정 시 수시접수가 상시 가능합니다)
+        </p>
+      </div>
+
+      <!-- 3-4. 정시 원서 접수 일정 설정 (농어촌 추천 시스템 재오픈 기준) -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+        <h2 class="text-base font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
+          <span class="w-1 h-3 bg-emerald-600 rounded-full"></span>
+          📅 정시 원서 접수 일정 설정 (농어촌 추천 시스템 재오픈 기준)
+        </h2>
+        <p class="text-xs text-slate-400 mb-4">
+          정시 원서 접수 기간을 설정합니다. 설정된 <strong>정시 접수 시작일 15일 전부터 마감일까지</strong> 농어촌 추천 시스템이 자동으로 재오픈됩니다.
+        </p>
+
+        <form @submit.prevent="saveJungsiApplyPeriod" class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center max-w-xl">
+          <div class="flex items-center gap-2 flex-1">
+            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">정시 시작일:</span>
+            <input
+              v-model="jungsiApplyStartDate"
+              type="date"
+              class="w-full text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-slate-800 dark:text-white"
+            />
+          </div>
+
+          <span class="text-slate-400 font-bold text-center hidden sm:inline">~</span>
+
+          <div class="flex items-center gap-2 flex-1">
+            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">정시 마감일:</span>
+            <input
+              v-model="jungsiApplyEndDate"
+              type="date"
+              class="w-full text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-slate-800 dark:text-white"
+            />
+          </div>
+
+          <button
+            type="submit"
+            :disabled="jungsiPeriodLoading"
+            class="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 border-none rounded-lg px-4 py-2.5 cursor-pointer transition-colors whitespace-nowrap"
+          >
+            {{ jungsiPeriodLoading ? '저장 중…' : '기간 저장' }}
+          </button>
+        </form>
+
+        <p v-if="jungsiApplyStartDate && jungsiApplyEndDate" class="text-xs text-slate-500 mt-3">
+          현재 정시 일정: <strong class="text-emerald-600 dark:text-emerald-400">{{ jungsiApplyStartDate }} ~ {{ jungsiApplyEndDate }}</strong>
+          <span class="ml-2 text-slate-400 text-[11px]">
+            (시작일 15일 전인 {{ calculate15DaysBefore(jungsiApplyStartDate) }}부터 자동 오픈)
+          </span>
+        </p>
+      </div>
+
+      <!-- 3-5. 구글 스프레드시트 DB 연동 설정 -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+        <h2 class="text-base font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
+          <span class="w-1 h-3 bg-emerald-600 rounded-full"></span>
+          구글 스프레드시트 DB 연동 설정
+        </h2>
+        <p class="text-xs text-slate-400 mb-4">
+          구글 스프레드시트의 <strong>시트 ID</strong>(URL 중 <code>/d/<b>[시트ID]</b>/edit</code> 부분)를 등록하면, 엑셀 파일 없이도 구글 시트 데이터로 DB를 실시간 구성/동기화할 수 있습니다.<br>
+          ※ 구글 시트 공유 설정이 <strong>'링크가 있는 모든 사용자에게 공개 (웹에 게시 또는 링크 보기 가능)'</strong>로 되어 있어야 합니다.
+        </p>
+
+        <div class="space-y-4">
+          <!-- 1. 학교장 추천 전형 구글 시트 ID -->
+          <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-700 space-y-3">
+            <label class="block text-xs font-bold text-slate-800 dark:text-slate-200">
+              1) 학교장 추천자 선발 전형 구글 시트 ID (<code>2027 대입 학교장추천전형.xlsx</code> 대응)
+            </label>
+            <div class="flex gap-2">
+              <input
+                v-model="googleSheetPrincipalId"
+                type="text"
+                placeholder="예: 1BxiMVs0XRnt3kgZbA0VpD1-m67F-..."
+                class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-slate-800 dark:text-white"
+              />
+              <button
+                @click="saveGoogleSheetPrincipalId"
+                :disabled="googleSheetPrincipalLoading"
+                class="text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg px-3.5 cursor-pointer transition-colors whitespace-nowrap"
+              >
+                {{ googleSheetPrincipalLoading ? '저장 중…' : 'ID 저장' }}
+              </button>
+              <button
+                @click="syncGoogleSheetPrincipal"
+                :disabled="syncPrincipalLoading || !googleSheetPrincipalId"
+                class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1"
+              >
+                <span>🔄</span>
+                <span>{{ syncPrincipalLoading ? '동기화 중…' : '학교장 전형 DB 동기화' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. 농어촌 및 기회균형 구글 시트 ID -->
+          <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-700 space-y-3">
+            <label class="block text-xs font-bold text-slate-800 dark:text-slate-200">
+              2) 농어촌 및 기회균형 전형 구글 시트 ID (<code>2027 농어촌 및 기회균형(농어촌).xlsx</code> 대응)
+            </label>
+            <div class="flex gap-2">
+              <input
+                v-model="googleSheetRuralId"
+                type="text"
+                placeholder="예: 1CyiNWs0XRnt3kgZbA0VpD2-k78G-..."
+                class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-slate-800 dark:text-white"
+              />
+              <button
+                @click="saveGoogleSheetRuralId"
+                :disabled="googleSheetRuralLoading"
+                class="text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg px-3.5 cursor-pointer transition-colors whitespace-nowrap"
+              >
+                {{ googleSheetRuralLoading ? '저장 중…' : 'ID 저장' }}
+              </button>
+              <button
+                @click="syncGoogleSheetRural"
+                :disabled="syncRuralLoading || !googleSheetRuralId"
+                class="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1"
+              >
+                <span>🔄</span>
+                <span>{{ syncRuralLoading ? '동기화 중…' : '농어촌 전형 DB 동기화' }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 4. 전형요소 등록 후 세부 수정 허용 (테스트/수정 모드) -->
@@ -190,7 +409,7 @@
             type="button"
             @click="toggleAllowAreaEdit"
             :disabled="areaEditLoading"
-            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+            class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
             :class="allowAreaEdit ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'"
           >
             <span
@@ -253,11 +472,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../../utils/supabaseClient'
 import { fetchSchoolName, setSchoolNameConfig } from '../../utils/schoolConfig'
-import { getDisclosureCount, setDisclosureCount, syncRegionalToUniversities } from '../../api/admin.js'
+import { getDisclosureCount, setDisclosureCount, syncRegionalToUniversities, syncPrincipalUnivsFromGoogleSheet } from '../../api/admin.js'
+import { syncRuralTracksFromGoogleSheet } from '../../api/ruralApi.js'
 import { dialog } from '../common/dialog.js'
+
+const googleSheetPrincipalId = ref('')
+const googleSheetPrincipalLoading = ref(false)
+const syncPrincipalLoading = ref(false)
+
+const googleSheetRuralId = ref('')
+const googleSheetRuralLoading = ref(false)
+const syncRuralLoading = ref(false)
 
 const inputSchoolName = ref('')
 const schoolNameLoading = ref(false)
@@ -281,6 +509,28 @@ const openaiLoading = ref(false)
 
 const allowAreaEdit = ref(false)
 const areaEditLoading = ref(false)
+
+const susiApplyStartDate = ref('')
+const susiApplyEndDate = ref('')
+const susiPeriodLoading = ref(false)
+
+const jungsiApplyStartDate = ref('')
+const jungsiApplyEndDate = ref('')
+const jungsiPeriodLoading = ref(false)
+
+function calculate15DaysBefore(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(`${dateStr}T00:00:00`)
+  if (isNaN(d.getTime())) return ''
+  d.setDate(d.getDate() - 15)
+  return d.toISOString().split('T')[0]
+}
+
+const isSusiPeriodActive = computed(() => {
+  if (!susiApplyEndDate.value) return true
+  const today = new Date().toISOString().split('T')[0]
+  return today <= susiApplyEndDate.value
+})
 
 async function loadConfig() {
   inputSchoolName.value = await fetchSchoolName()
@@ -326,8 +576,174 @@ async function loadConfig() {
       allowAreaEdit.value = editData.value === 'true'
       localStorage.setItem('pcm_allow_area_edit', editData.value)
     }
+
+    // 수시 원서 접수 기간 로드
+    const { data: startDateData } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', 'susi_apply_start_date')
+      .maybeSingle()
+    if (startDateData && startDateData.value) {
+      susiApplyStartDate.value = startDateData.value
+    }
+
+    const { data: endDateData } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', 'susi_apply_end_date')
+      .maybeSingle()
+    if (endDateData && endDateData.value) {
+      susiApplyEndDate.value = endDateData.value
+    }
+
+    // 정시 원서 접수 기간 로드
+    const { data: jStartData } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', 'jungsi_apply_start_date')
+      .maybeSingle()
+    if (jStartData && jStartData.value) {
+      jungsiApplyStartDate.value = jStartData.value
+    }
+
+    const { data: jEndData } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', 'jungsi_apply_end_date')
+      .maybeSingle()
+    if (jEndData && jEndData.value) {
+      jungsiApplyEndDate.value = jEndData.value
+    }
+
+    const { data: gPData } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', 'google_sheet_principal_id')
+      .maybeSingle()
+    if (gPData && gPData.value) {
+      googleSheetPrincipalId.value = gPData.value
+    }
+
+    const { data: gRData } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', 'google_sheet_rural_id')
+      .maybeSingle()
+    if (gRData && gRData.value) {
+      googleSheetRuralId.value = gRData.value
+    }
   } catch (e) {
     console.error('Error loading config:', e)
+  }
+}
+
+async function saveGoogleSheetPrincipalId() {
+  googleSheetPrincipalLoading.value = true
+  try {
+    if (supabase) {
+      await supabase.from('config').upsert({ key: 'google_sheet_principal_id', value: googleSheetPrincipalId.value.trim() })
+      alert('학교장 추천전형 구글 스프레드시트 ID가 저장되었습니다.')
+    }
+  } catch (e) {
+    console.error(e)
+    alert('구글 시트 ID 저장 중 오류가 발생했습니다.')
+  } finally {
+    googleSheetPrincipalLoading.value = false
+  }
+}
+
+async function saveGoogleSheetRuralId() {
+  googleSheetRuralLoading.value = true
+  try {
+    if (supabase) {
+      await supabase.from('config').upsert({ key: 'google_sheet_rural_id', value: googleSheetRuralId.value.trim() })
+      alert('농어촌 전형 구글 스프레드시트 ID가 저장되었습니다.')
+    }
+  } catch (e) {
+    console.error(e)
+    alert('구글 시트 ID 저장 중 오류가 발생했습니다.')
+  } finally {
+    googleSheetRuralLoading.value = false
+  }
+}
+
+async function syncGoogleSheetPrincipal() {
+  if (!googleSheetPrincipalId.value.trim()) {
+    alert('구글 스프레드시트 ID를 먼저 입력하고 저장해 주세요.')
+    return
+  }
+  syncPrincipalLoading.value = true
+  try {
+    await saveGoogleSheetPrincipalId()
+    const res = await syncPrincipalUnivsFromGoogleSheet(googleSheetPrincipalId.value)
+    alert(`학교장 추천전형 DB 동기화 완료! (총 ${res.count}건 파싱 및 업데이트됨)`)
+  } catch (e) {
+    console.error('Failed to sync principal sheet:', e)
+    alert(`구글 시트 동기화 실패: ${e.message}`)
+  } finally {
+    syncPrincipalLoading.value = false
+  }
+}
+
+async function syncGoogleSheetRural() {
+  if (!googleSheetRuralId.value.trim()) {
+    alert('구글 스프레드시트 ID를 먼저 입력하고 저장해 주세요.')
+    return
+  }
+  syncRuralLoading.value = true
+  try {
+    await saveGoogleSheetRuralId()
+    const inserted = await syncRuralTracksFromGoogleSheet(googleSheetRuralId.value)
+    alert(`농어촌 및 기회균형 전형 DB 동기화 완료! (총 ${inserted.length}개 전형 저장됨)`)
+  } catch (e) {
+    console.error('Failed to sync rural sheet:', e)
+    alert(`구글 시트 동기화 실패: ${e.message}`)
+  } finally {
+    syncRuralLoading.value = false
+  }
+}
+
+async function saveJungsiApplyPeriod() {
+  if (jungsiApplyStartDate.value && jungsiApplyEndDate.value && jungsiApplyStartDate.value > jungsiApplyEndDate.value) {
+    alert('정시 시작일은 마감일보다 이전이어야 합니다.')
+    return
+  }
+  jungsiPeriodLoading.value = true
+  try {
+    if (supabase) {
+      await Promise.all([
+        supabase.from('config').upsert({ key: 'jungsi_apply_start_date', value: jungsiApplyStartDate.value }),
+        supabase.from('config').upsert({ key: 'jungsi_apply_end_date', value: jungsiApplyEndDate.value })
+      ])
+      alert('정시 원서 접수 일정이 저장되었습니다.')
+    }
+  } catch (e) {
+    console.error(e)
+    alert('정시 일정 저장 중 오류가 발생했습니다.')
+  } finally {
+    jungsiPeriodLoading.value = false
+  }
+}
+
+async function saveSusiApplyPeriod() {
+  if (susiApplyStartDate.value && susiApplyEndDate.value && susiApplyStartDate.value > susiApplyEndDate.value) {
+    alert('시작일은 종료일보다 이전이어야 합니다.')
+    return
+  }
+  susiPeriodLoading.value = true
+  try {
+    if (supabase) {
+      await Promise.all([
+        supabase.from('config').upsert({ key: 'susi_apply_start_date', value: susiApplyStartDate.value }),
+        supabase.from('config').upsert({ key: 'susi_apply_end_date', value: susiApplyEndDate.value })
+      ])
+      alert('수시 원서 접수 기간이 설정되었습니다.')
+    }
+  } catch (e) {
+    console.error(e)
+    alert('기간 저장 중 오류가 발생했습니다.')
+  } finally {
+    susiPeriodLoading.value = false
   }
 }
 
@@ -462,6 +878,24 @@ async function saveOpenAIKey() {
   }
 }
 
+async function saveSchoolInfoApiKey() {
+  if (!supabase) return
+  schoolInfoApiLoading.value = true
+  try {
+    const { error } = await supabase
+      .from('config')
+      .upsert({ key: 'school_info_api_key', value: schoolInfoApiKey.value })
+
+    if (error) throw error
+    alert('학교알리미 Open API 인증키가 저장되었습니다.')
+  } catch (e) {
+    console.error(e)
+    alert('학교알리미 API 키 저장 도중 오류가 발생했습니다.')
+  } finally {
+    schoolInfoApiLoading.value = false
+  }
+}
+
 async function resetApplicationsOnly() {
   if (!supabase) return
   if (!(await dialog.confirm({
@@ -538,7 +972,7 @@ async function resetAllSystemData() {
 
     disclosureCount.value = null
     classCount.value = 11
-    inputSchoolName.value = '우리학교'
+    inputSchoolName.value = '우리고등학교'
     
     alert('시스템의 모든 설정 및 데이터베이스 초기화가 완료되었습니다.')
     window.location.reload()

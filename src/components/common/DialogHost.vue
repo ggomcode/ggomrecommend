@@ -16,7 +16,7 @@
         <div class="flex items-center gap-2 mb-3">
           <AlertTriangle
             v-if="isErrorAlert || (s.kind === 'confirm' && s.level === 'danger')"
-            :size="20" style="color: #ef4444;" class="flex-shrink-0"
+            :size="20" style="color: #ef4444;" class="shrink-0"
           />
           <h2 class="text-lg font-semibold" style="margin: 0;" :style="{ color: isErrorAlert ? '#b91c1c' : '#1e293b' }">
             {{ s.title }}
@@ -33,7 +33,7 @@
           style="padding: 12px 16px; background: #fef2f2; border: 1px solid #fca5a5;"
         >
           <div class="flex items-center gap-2" :class="s.dangerNotice ? 'mb-1' : ''">
-            <AlertTriangle :size="16" style="color: #ef4444;" class="flex-shrink-0" />
+            <AlertTriangle :size="16" style="color: #ef4444;" class="shrink-0" />
             <span class="text-base font-semibold" style="color: #b91c1c;">정말로 진행하시겠습니까?</span>
           </div>
           <p v-if="s.dangerNotice" class="text-base" style="margin: 0; color: #b91c1c; line-height: 1.6; white-space: pre-line;">

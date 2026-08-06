@@ -39,6 +39,11 @@ const routes = [
     component: () => import('../views/StudentView.vue'),
     meta: { requiresStudent: true },
   },
+  {
+    path: '/rural',
+    component: () => import('../views/RuralView.vue'),
+    meta: { requiresAuth: true },
+  },
 ]
 
 const router = createRouter({
@@ -67,4 +72,19 @@ router.beforeEach(async to => {
   if (to.meta.requiresStudent && !auth.isStudent) return '/login'
 })
 
+router.onError((error, to) => {
+  if (error?.message?.includes('Failed to fetch dynamically imported module')) {
+    const key = 'module_import_retry_' + (to?.path || 'app')
+    if (!sessionStorage.getItem(key)) {
+      sessionStorage.setItem(key, '1')
+      window.location.assign(to.fullPath)
+    } else {
+      sessionStorage.removeItem(key)
+      console.error('[Router] Dynamic import failed permanently:', error)
+    }
+  }
+})
+
 export default router
+
+

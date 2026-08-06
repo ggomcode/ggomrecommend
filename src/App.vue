@@ -13,7 +13,7 @@
 
       <h1 class="text-2xl font-bold tracking-tight text-white mb-3">시스템 이용 기간 만료</h1>
       <p class="text-slate-400 leading-relaxed mb-6">
-        본 학교장 추천자 선발 관리 시스템의 운영 기간이 만료되었습니다. 
+        본 학교장 추천자 선발 &amp; 농어촌(기회균형) 추천자 등록 시스템의 운영 기간이 만료되었습니다. 
         이 시스템은 한국 시간 기준 <strong>2026년 12월</strong>까지만 운영하도록 설정되어 있어 현재는 접속할 수 없습니다.
       </p>
 
@@ -28,7 +28,7 @@
     <DialogHost />
 
     <!-- 세션 자동 로그아웃 경고 모달 -->
-    <div v-if="showWarningModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+    <div v-if="showWarningModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-9999 p-4">
       <div class="bg-white dark:bg-slate-800 rounded-3xl p-7 max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-700 text-center relative overflow-hidden animate-in fade-in zoom-in duration-200">
         <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/30 text-amber-500 mb-4 border border-amber-200 dark:border-amber-900/40">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

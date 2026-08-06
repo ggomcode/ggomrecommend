@@ -43,28 +43,46 @@
       <section class="lg:col-span-2 flex flex-col gap-6">
 
         <!-- 💡 학교장 추천전형 지원 안내 및 지원 전략 가이드 -->
-        <div class="bg-gradient-to-br from-blue-50 to-indigo-50/60 dark:from-slate-800 dark:to-slate-800/90 rounded-2xl p-5 border border-blue-200/80 dark:border-blue-900/40 shadow-sm space-y-3">
+        <div class="bg-linear-to-br from-blue-50 to-indigo-50/60 dark:from-slate-800 dark:to-slate-800/90 rounded-2xl p-5 border border-blue-200/80 dark:border-blue-900/40 shadow-sm space-y-3">
           <div class="flex items-center justify-between flex-wrap gap-2">
             <div class="flex items-center gap-2">
               <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white text-sm font-bold shadow-sm">💡</span>
               <h3 class="text-base font-bold text-slate-900 dark:text-white m-0">학교장 추천전형 지원 안내 및 전략 가이드</h3>
             </div>
-            <span class="text-xs font-extrabold text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/60 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-800">
-              ★ 1차 추천 선발 적극 지원 유효
-            </span>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white/90 dark:bg-slate-900/90 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-800">
+                📅 수시 원서 접수 기간: <strong class="text-blue-600 dark:text-blue-400">{{ susiApplyPeriodDisplay }}</strong>
+              </span>
+              <span class="text-xs font-extrabold text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/60 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-800">
+                {{ totalRounds === 1 ? '★ 학교장 추천 선발 안내' : '★ 1차 추천 선발 적극 지원 유효' }}
+              </span>
+            </div>
           </div>
 
           <div class="p-3.5 rounded-xl bg-white/90 dark:bg-slate-900/80 border border-blue-100 dark:border-slate-700/60 text-xs text-slate-700 dark:text-slate-300 space-y-2">
             <p class="font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5 text-xs m-0">
-              <span class="text-sm">🎯</span> 1차 추천 선발 적극 지원의 법칙 (가장 중요)
+              <span class="text-sm">🎯</span> {{ totalRounds === 1 ? '학교장 추천 선발 신청 안내' : '1차 추천 선발 적극 지원의 법칙 (가장 중요)' }}
             </p>
-            <p class="leading-relaxed pl-5 text-slate-600 dark:text-slate-300 m-0">
+            <p v-if="totalRounds === 1" class="leading-relaxed pl-5 text-slate-600 dark:text-slate-300 m-0">
+              <strong>희망하시는 대학을 빠짐없이 미리 신청하시는 것이 가장 유리합니다!</strong><br />
+              교내 심의 및 성적 기준에 따라 <strong>[추천 확정](합격)</strong>을 받은 학생의 자리는 100% 안전하게 확정 보호됩니다.
+            </p>
+            <p v-else class="leading-relaxed pl-5 text-slate-600 dark:text-slate-300 m-0">
               <strong>1차 추천 선발에 희망하는 대학을 빠짐없이 미리 신청하시는 것이 가장 유리합니다!</strong><br />
               1차 라운드에서 <strong>[추천 확정](합격)</strong>을 받은 학생의 자리는 2차 추천 선발이 열려 성적이 더 우수한 학생이 추가 지원하더라도 <strong>절대로 박탈되거나 취소되지 않으며 100% 안전하게 보호</strong>됩니다.
             </p>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">
+          <!-- 단일 선발(1회)인 경우 1개 안내 카드, 다차 선발인 경우 3개 카드 -->
+          <div v-if="totalRounds === 1" class="grid grid-cols-1 gap-2.5 text-xs">
+            <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
+              <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">1️⃣ 추천 희망자 접수 및 최종 선발</p>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
+                주요 대학 추천 희망자 접수 및 교내 추천 심의 기준에 따라 최종 추천자를 확정합니다.
+              </p>
+            </div>
+          </div>
+          <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">
             <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
               <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">1️⃣ 1차 추천 선발 (메인 선발)</p>
               <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
@@ -86,7 +104,8 @@
           </div>
 
           <div class="text-[11px] text-slate-500 dark:text-slate-400 pt-2 flex items-center justify-between border-t border-blue-100 dark:border-slate-700/50">
-            <span>🛡️ <strong>포기자 발생 시</strong>: 1차 합격자가 포기서를 제출한 경우에만 해당 빈자리가 다음 차수 잔여 정원으로 이월됩니다.</span>
+            <span v-if="totalRounds === 1">🛡️ <strong>포기자 발생 시</strong>: 확정된 학생이 포기서를 제출할 경우 수동/추가 조정을 거쳐 공석이 처리됩니다.</span>
+            <span v-else>🛡️ <strong>포기자 발생 시</strong>: 1차 합격자가 포기서를 제출한 경우에만 해당 빈자리가 다음 차수 잔여 정원으로 이월됩니다.</span>
           </div>
         </div>
 
@@ -146,6 +165,7 @@
                 <!-- 추천 상태 배지 -->
                 <div class="flex items-center gap-1.5">
                   <span v-if="ap.is_abandoned" class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-500 dark:bg-rose-950/20 dark:text-rose-400">포기 완료</span>
+                  <span v-else-if="getAbandonRequest(ap)" class="px-2.5 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400">⚠️ 포기 신청 접수중</span>
                   <span v-else-if="ap.is_excluded" class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400" :title="'부적합 사유: ' + ap.excluded_reason">부적합 (원 {{ ap.original_rank }}위)</span>
                   <span v-else-if="ap.is_recommended" class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-500 dark:bg-emerald-950/20 dark:text-emerald-400">추천 확정</span>
                   <span v-else class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-500 dark:bg-amber-950/20 dark:text-amber-400">심의 대기</span>
@@ -174,8 +194,8 @@
               <!-- 접수 기간 지난 후 추천확정된 건에 대해 포기 신청 지원 -->
               <div v-if="(ap.round_status === 'CLOSED' || ap.round_status === 'FINALIZED') && ap.is_recommended && !ap.is_abandoned" class="flex justify-end gap-2 mt-3 items-center">
                 <template v-if="getAbandonRequest(ap)">
-                  <span class="text-xs font-semibold text-rose-500 flex items-center gap-1">
-                    ⚠️ 포기 신청 완료 (담임교사 서류 제출 대기)
+                  <span class="text-xs font-semibold text-rose-600 flex items-center gap-1 leading-tight">
+                    ⚠️ 포기 신청 완료<br /><span class="text-rose-500">(학교 방문 후 인쇄한 포기원 서류를 직접 제출해야 합니다!)</span>
                   </span>
                   <button
                     @click="printAbandonForm(ap)"
@@ -185,8 +205,13 @@
                 <button
                   v-else
                   @click="openAbandonRequestModal(ap)"
-                  class="text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/10 px-3 py-1.5 rounded-lg border border-rose-100 dark:border-rose-900/30 transition-all cursor-pointer"
-                >🚫 추천 포기 신청</button>
+                  :disabled="!isSusiApplyPeriodActive"
+                  :class="isSusiApplyPeriodActive ? 'text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/10 cursor-pointer' : 'text-slate-400 bg-slate-100 opacity-60 cursor-not-allowed dark:bg-slate-800'"
+                  class="text-xs font-bold px-3 py-1.5 rounded-lg border border-rose-100 dark:border-rose-900/30 transition-all"
+                  :title="!isSusiApplyPeriodActive ? `수시 원서 접수 기간(${susiApplyPeriodDisplay})에만 포기원을 신청할 수 있습니다.` : ''"
+                >
+                  {{ isSusiApplyPeriodActive ? '🚫 추천 포기 신청' : '🔒 추천 포기 신청 (접수 마감)' }}
+                </button>
               </div>
             </div>
           </div>
@@ -211,12 +236,32 @@
           </div>
 
           <form v-else @submit.prevent="prepareApply" class="flex flex-col gap-4">
-            <div class="bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 p-3 rounded-lg text-xs font-semibold flex justify-between items-center">
-              <span>현재 접수 중: {{ currentRound }}차 추천 신청</span>
+            <div
+              class="p-3 rounded-lg text-xs font-semibold flex justify-between items-center transition-colors"
+              :class="{
+                'bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30': currentRoundStatus === 'OPEN',
+                'bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900/30': currentRoundStatus === 'CLOSED',
+                'bg-purple-50 dark:bg-purple-950/20 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-900/30': currentRoundStatus === 'FINALIZED',
+                'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800': currentRoundStatus === 'DRAFT'
+              }"
+            >
+              <span v-if="currentRoundStatus === 'OPEN'">
+                🟢 현재 접수 중: {{ totalRounds === 1 ? '학교장 추천' : `${currentRound}차 추천` }} 신청
+              </span>
+              <span v-else-if="currentRoundStatus === 'CLOSED'">
+                🔒 접수 마감: {{ totalRounds === 1 ? '학교장 추천' : `${currentRound}차 추천` }} 신청 접수가 마감되었습니다 (심사 진행 중)
+              </span>
+              <span v-else-if="currentRoundStatus === 'FINALIZED'">
+                🔒 선발 마감: {{ totalRounds === 1 ? '학교장 추천' : `${currentRound}차 추천` }} 선발이 최종 마감되었습니다
+              </span>
+              <span v-else>
+                ⏳ 접수 대기 중: {{ totalRounds === 1 ? '학교장 추천' : `${currentRound}차 추천` }} 신청 시작 전입니다
+              </span>
+
               <a
                 href="/ggomrecommend/data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%99%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%84%A0%EC%A0%95%20%EC%8B%A0%EC%B2%AD%EC%84%9C_%EC%96%91%EC%8B%9D.hwp"
                 download
-                class="text-blue-600 dark:text-blue-400 hover:underline font-bold text-[10px] cursor-pointer"
+                class="text-blue-600 dark:text-blue-400 hover:underline font-bold text-[10px] cursor-pointer whitespace-nowrap ml-2"
               >
                 📝 신청서 양식 (HWP)
               </a>
@@ -227,8 +272,9 @@
               <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">지원 대학</label>
               <select
                 v-model="selectedUnivId"
+                :disabled="!isSubmissionActive"
                 required
-                class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700 bg-white"
+                class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700 bg-white disabled:opacity-60 disabled:cursor-not-allowed"
                 style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
                 @change="onUnivChange"
               >
@@ -247,6 +293,53 @@
                 >
                   📖 2027 학교장추천전형 요강 전체보기
                 </button>
+              </div>
+
+              <!-- 선택한 대학 지원 현황 및 제한 조건 검토 안내 카드 -->
+              <div v-if="selectedUnivInfo" class="mt-3 p-3.5 bg-blue-50/80 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-900/40 text-xs space-y-2.5">
+                <div class="flex items-center justify-between font-bold text-blue-900 dark:text-blue-300 border-b border-blue-200/60 dark:border-blue-900/40 pb-2">
+                  <span class="flex items-center gap-1.5">
+                    <span>📊</span>
+                    <span>실시간 지원 현황 및 제출 요건</span>
+                  </span>
+                  <span class="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[10px] font-extrabold">
+                    접수 진행 가능
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 text-slate-700 dark:text-slate-300">
+                  <!-- 인원 제한 검토 -->
+                  <div class="bg-white/90 dark:bg-slate-900/60 p-2.5 rounded-lg border border-blue-100 dark:border-slate-800">
+                    <span class="block text-[10px] font-bold text-slate-400 mb-0.5">인원 제한 여부</span>
+                    <span class="font-bold text-blue-700 dark:text-blue-400">
+                      {{ (selectedUnivInfo.has_quota || selectedUnivInfo.quota_limit) ? formatQuotaLimit(selectedUnivInfo.quota_limit) : '제한 없음 (무)' }}
+                    </span>
+                  </div>
+
+                  <!-- 졸업생 제한 검토 -->
+                  <div class="bg-white/90 dark:bg-slate-900/60 p-2.5 rounded-lg border border-blue-100 dark:border-slate-800">
+                    <span class="block text-[10px] font-bold text-slate-400 mb-0.5">졸업생 제한 조건</span>
+                    <span class="font-bold text-slate-800 dark:text-slate-200">
+                      {{ selectedUnivGradCondition }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- 실시간 신청 현황 (인원수) -->
+                <div class="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-blue-200/80 dark:border-blue-900/50">
+                  <div class="flex items-center gap-2">
+                    <span class="text-base">👥</span>
+                    <div>
+                      <p class="font-bold text-slate-800 dark:text-white m-0 text-xs">
+                        현재 실시간 신청자 수:
+                        <span class="text-blue-600 dark:text-blue-400 text-sm font-extrabold ml-1">{{ selectedUnivApplicantCount }}명</span>
+                      </p>
+                      <p class="text-[10px] text-slate-400 m-0 mt-0.5">
+                        🔒 개인정보 보호를 위해 신원 정보는 비공개 처리되며 신청 인원수만 제공됩니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- 선택한 대학의 상세 요강 안내 카드 -->
@@ -270,10 +363,11 @@
               <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">지원 모집단위 (학과)</label>
               <input
                 v-model="departmentName"
+                :disabled="!isSubmissionActive"
                 type="text"
                 required
                 placeholder="예: 컴퓨터공학과"
-                class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
+                class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700 disabled:opacity-60 disabled:cursor-not-allowed"
                 style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
               />
             </div>
@@ -284,11 +378,12 @@
               <p class="text-[11px] text-amber-700 dark:text-amber-400 mb-2 leading-relaxed">지원하는 대학의 모집요강을 참고하여 대학별 산출점수를 계산한 후 입력해주세요. 단, 학교에서 확인과정을 거친 후, 정정될 수 있습니다.</p>
               <input
                 v-model="univCalcScore"
+                :disabled="!isSubmissionActive"
                 type="number"
                 step="0.01"
                 min="0"
                 placeholder="예: 2.75"
-                class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
+                class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 dark:bg-slate-900 dark:text-white dark:border-slate-700 disabled:opacity-60 disabled:cursor-not-allowed"
                 style="border: 1px solid #fcd34d; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
               />
             </div>
@@ -299,10 +394,11 @@
                 <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">학부모 이름</label>
                 <input
                   v-model="parentName"
+                  :disabled="!isSubmissionActive"
                   type="text"
                   required
                   placeholder="예: 홍길동"
-                  class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
+                  class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700 disabled:opacity-60 disabled:cursor-not-allowed"
                   style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
                 />
               </div>
@@ -310,10 +406,11 @@
                 <label class="block text-xs font-semibold mb-1 text-slate-500 dark:text-slate-400">학부모 연락처</label>
                 <input
                   v-model="parentPhone"
+                  :disabled="!isSubmissionActive"
                   type="text"
                   required
                   placeholder="010-0000-0000"
-                  class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
+                  class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700 disabled:opacity-60 disabled:cursor-not-allowed"
                   style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
                 />
               </div>
@@ -323,7 +420,7 @@
             <div>
               <div class="flex items-center justify-between mb-1">
                 <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400">본인 및 보호자 연대 서명</label>
-                <button type="button" @click="clearSignatures" class="text-xs text-rose-500 hover:underline cursor-pointer bg-transparent border-none">서명 초기화</button>
+                <button type="button" @click="clearSignatures" :disabled="!isSubmissionActive" class="text-xs text-rose-500 hover:underline cursor-pointer bg-transparent border-none disabled:opacity-50 disabled:cursor-not-allowed">서명 초기화</button>
               </div>
 
               <!-- 학생 서명 -->
@@ -363,10 +460,19 @@
 
             <button
               type="submit"
-              :disabled="submitLoading"
-              class="w-full text-sm font-bold disabled:opacity-40 transition-colors cursor-pointer"
-              style="padding: 12px; border: none; border-radius: 8px; background: #2563eb; color: white; margin-top: 4px;"
-            >{{ submitLoading ? '신청 제출 중…' : '신청서 제출하기' }}</button>
+              :disabled="submitLoading || !isSubmissionActive"
+              class="w-full text-sm font-bold transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              :style="{
+                padding: '12px',
+                border: 'none',
+                borderRadius: '8px',
+                background: isSubmissionActive ? '#2563eb' : '#94a3b8',
+                color: 'white',
+                marginTop: '4px'
+              }"
+            >
+              {{ submitLoading ? '신청 제출 중…' : (isSubmissionActive ? '신청서 제출하기' : '🔒 현재는 추천 희망서 제출 기간이 아닙니다') }}
+            </button>
           </form>
 
           <p v-if="formError" class="text-xs font-semibold text-rose-500 mt-3 bg-rose-50 dark:bg-rose-950/20 p-2 rounded-lg border border-rose-100 dark:border-rose-900/30 text-center">{{ formError }}</p>
@@ -406,19 +512,19 @@
             <table class="w-full text-left text-xs" style="border-collapse: separate; border-spacing: 0; min-width: 1800px;">
             <thead class="sticky top-0 bg-slate-100 z-30 border-b border-slate-200 text-slate-600">
               <tr>
-                <th class="p-2.5 w-12 text-center sticky left-0 top-0 z-30 bg-slate-100 border-b border-slate-200 border-r border-slate-200" style="min-width: 48px; max-width: 48px;">No</th>
-                <th class="p-2.5 w-20 sticky left-[48px] top-0 z-30 bg-slate-100 border-b border-slate-200 border-r border-slate-200" style="min-width: 80px; max-width: 80px;">지역</th>
-                <th class="p-2.5 w-32 sticky left-[128px] top-0 z-30 bg-slate-100 border-b border-slate-200 border-r border-slate-200" style="min-width: 130px; max-width: 130px;">대학명</th>
-                <th class="p-2.5 w-20 border-b border-slate-200 border-r border-slate-200">모집정원</th>
-                <th class="p-2.5 w-32 border-b border-slate-200 border-r border-slate-200">전형명</th>
-                <th class="p-2.5 w-28 border-b border-slate-200 border-r border-slate-200">인원제한</th>
-                <th class="p-2.5 w-40 border-b border-slate-200 border-r border-slate-200">대상</th>
-                <th class="p-2.5 w-32 border-b border-slate-200 border-r border-slate-200">졸업생조건</th>
-                <th class="p-2.5 w-52 border-b border-slate-200 border-r border-slate-200">수능최저학력기준</th>
-                <th class="p-2.5 w-48 border-b border-slate-200 border-r border-slate-200">전형방법</th>
-                <th class="p-2.5 w-36 border-b border-slate-200 border-r border-slate-200">반영교과</th>
-                <th class="p-2.5 w-32 border-b border-slate-200 border-r border-slate-200">반영지표</th>
-                <th class="p-2.5 w-32 border-b border-slate-200 border-r border-slate-200">진로선택과목 반영</th>
+                <th class="p-2.5 w-12 text-center sticky left-0 top-0 z-30 bg-slate-100 border-b border-r border-slate-200" style="min-width: 48px; max-width: 48px;">No</th>
+                <th class="p-2.5 w-20 sticky left-12 top-0 z-30 bg-slate-100 border-b border-r border-slate-200" style="min-width: 80px; max-width: 80px;">지역</th>
+                <th class="p-2.5 w-32 sticky left-32 top-0 z-30 bg-slate-100 border-b border-r border-slate-200" style="min-width: 130px; max-width: 130px;">대학명</th>
+                <th class="p-2.5 w-20 border-b border-r border-slate-200">모집정원</th>
+                <th class="p-2.5 w-32 border-b border-r border-slate-200">전형명</th>
+                <th class="p-2.5 w-28 border-b border-r border-slate-200">인원제한</th>
+                <th class="p-2.5 w-40 border-b border-r border-slate-200">대상</th>
+                <th class="p-2.5 w-32 border-b border-r border-slate-200">졸업생조건</th>
+                <th class="p-2.5 w-52 border-b border-r border-slate-200">수능최저학력기준</th>
+                <th class="p-2.5 w-48 border-b border-r border-slate-200">전형방법</th>
+                <th class="p-2.5 w-36 border-b border-r border-slate-200">반영교과</th>
+                <th class="p-2.5 w-32 border-b border-r border-slate-200">반영지표</th>
+                <th class="p-2.5 w-32 border-b border-r border-slate-200">진로선택과목 반영</th>
                 <th class="p-2.5 w-40 border-b border-slate-200">비고</th>
               </tr>
             </thead>
@@ -429,9 +535,9 @@
                 </td>
               </tr>
               <tr v-else v-for="r in filteredRegionalRecs" :key="r.id || r.seq_no" class="hover:bg-slate-50 group">
-                <td class="p-2.5 text-center font-medium text-slate-400 sticky left-0 z-20 bg-white group-hover:!bg-slate-50 border-b border-slate-100 border-r border-slate-200" style="min-width: 48px; max-width: 48px;">{{ r.seq_no }}</td>
-                <td class="p-2.5 text-slate-500 sticky left-[48px] z-20 bg-white group-hover:!bg-slate-50 border-b border-slate-100 border-r border-slate-200" style="min-width: 80px; max-width: 80px;">{{ r.region }}</td>
-                <td class="p-2.5 font-bold text-slate-800 sticky left-[128px] z-20 bg-white group-hover:!bg-slate-50 border-b border-slate-100 border-r border-slate-200" style="min-width: 130px; max-width: 130px;">{{ r.univ_name }}</td>
+                <td class="p-2.5 text-center font-medium text-slate-400 sticky left-0 z-20 bg-white group-hover:bg-slate-50! border-b border-b-slate-100 border-r border-r-slate-200" style="min-width: 48px; max-width: 48px;">{{ r.seq_no }}</td>
+                <td class="p-2.5 text-slate-500 sticky left-12 z-20 bg-white group-hover:bg-slate-50! border-b border-b-slate-100 border-r border-r-slate-200" style="min-width: 80px; max-width: 80px;">{{ r.region }}</td>
+                <td class="p-2.5 font-bold text-slate-800 sticky left-32 z-20 bg-white group-hover:bg-slate-50! border-b border-b-slate-100 border-r border-r-slate-200" style="min-width: 130px; max-width: 130px;">{{ r.univ_name }}</td>
                 <td class="p-2.5 text-slate-600 dark:text-slate-400">{{ r.recruitment_quota }}</td>
                 <td class="p-2.5 font-semibold text-blue-600 dark:text-blue-400">{{ r.track_name }}</td>
                 <td class="p-2.5 text-slate-600 dark:text-slate-400">{{ formatQuotaLimit(r.quota_limit) }}</td>
@@ -544,14 +650,23 @@
             <div class="flex justify-between"><span class="text-slate-400 font-semibold">지원 학과:</span> <span class="font-bold text-slate-800 dark:text-white">{{ abandonTargetApp?.department_name }}</span></div>
           </div>
 
+          <!-- ⚠️ 재지원 불가 경고 안내 -->
+          <div class="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-700 dark:text-rose-300 font-semibold leading-relaxed flex items-start gap-2.5">
+            <span class="text-sm shrink-0">⚠️</span>
+            <div>
+              <strong class="text-rose-800 dark:text-rose-200">주의 (동일 전형 재지원 불가 안내)</strong><br />
+              추천 포기 신청서를 제출하여 포기 처리되는 경우, <strong class="underline decoration-rose-400 font-extrabold text-rose-900 dark:text-rose-100">동일 대학의 동일 전형에는 다시 재지원할 수 없음</strong>을 유의하여 신청해 주세요.
+            </div>
+          </div>
+
           <!-- 포기사유 -->
           <div class="space-y-1">
-            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400">포기 사유 (상세)</label>
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400">포기 사유 (상세) <span class="text-rose-500">*</span></label>
             <textarea
               v-model="abandonReason"
               required
               rows="3"
-              placeholder="예: 타 대학(○○대학교 학생부종합전형) 중복 합격으로 인한 등록 포기"
+              placeholder="예: 다른 학교 지원을 위한 추천 포기 신청"
               class="w-full text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-slate-900 dark:text-white dark:border-slate-700"
               style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
             ></textarea>
@@ -607,11 +722,84 @@
             class="text-xs font-semibold text-slate-500 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg cursor-pointer px-4 py-2"
           >취소</button>
           <button
-            @click="submitAbandonRequest"
+            @click="openAbandonConfirm"
             :disabled="abandonSubmitLoading"
             class="text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg border-none cursor-pointer px-4 py-2 disabled:opacity-50"
           >
             {{ abandonSubmitLoading ? '제출 중...' : '포기 서류 제출 및 출력' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ 포기 최종 확인 모달 -->
+    <div v-if="showAbandonConfirm"
+      class="fixed inset-0 flex items-center justify-center z-60 p-4"
+      style="background: rgba(0,0,0,0.65); backdrop-filter: blur(2px);"
+    >
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border-2 border-rose-300 dark:border-rose-700">
+        <!-- 헤더 -->
+        <div class="p-5 bg-rose-600 text-white">
+          <div class="flex items-center gap-2.5">
+            <span class="text-2xl">🚨</span>
+            <div>
+              <h3 class="text-base font-extrabold m-0 leading-tight">최종 포기 확인</h3>
+              <p class="text-xs text-rose-100 m-0 mt-0.5 font-normal">아래 내용을 반드시 확인하고 동의해 주세요.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 본문 경고 -->
+        <div class="p-5 flex flex-col gap-4">
+          <div class="rounded-xl border-2 border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 p-4 space-y-3 text-sm text-rose-800 dark:text-rose-200">
+            <div class="flex items-start gap-2">
+              <span class="text-base shrink-0 mt-0.5">⛔</span>
+              <p class="m-0 leading-relaxed">
+                <strong>포기는 절대 되돌릴 수 없습니다.</strong><br />
+                포기 처리가 완료되면 취소가 불가능하며, 담임교사 및 관리자가 처리를 진행하게 됩니다.
+              </p>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="text-base shrink-0 mt-0.5">🖨️</span>
+              <p class="m-0 leading-relaxed">
+                <strong>포기원은 반드시 직접 출력하여 학교에 제출해야 합니다.</strong><br />
+                온라인 제출만으로는 효력이 없으며, 출력된 서류를 직접 학교에 제출해야 포기 처리가 완료됩니다.
+              </p>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="text-base shrink-0 mt-0.5">🔒</span>
+              <p class="m-0 leading-relaxed">
+                <strong>동일 대학·동일 전형에는 재지원할 수 없습니다.</strong><br />
+                포기 후에는 해당 대학의 해당 전형으로 다시 지원하는 것이 불가능합니다.
+              </p>
+            </div>
+          </div>
+
+          <!-- 동의 체크박스 -->
+          <label class="flex items-start gap-3 cursor-pointer p-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+            <input
+              type="checkbox"
+              v-model="abandonConfirmChecked"
+              class="mt-0.5 h-4 w-4 accent-rose-600 shrink-0 cursor-pointer"
+            />
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200 leading-relaxed">
+              위 내용을 모두 확인하였으며, 포기 신청이 되돌릴 수 없음에 동의합니다.
+            </span>
+          </label>
+        </div>
+
+        <!-- 버튼 -->
+        <div class="px-5 pb-5 flex gap-3 justify-end">
+          <button
+            @click="closeAbandonConfirm"
+            class="text-sm font-semibold text-slate-500 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg cursor-pointer px-5 py-2.5"
+          >취소 (돌아가기)</button>
+          <button
+            @click="submitAbandonRequest"
+            :disabled="!abandonConfirmChecked || abandonSubmitLoading"
+            class="text-sm font-extrabold text-white bg-rose-600 hover:bg-rose-700 disabled:bg-rose-300 disabled:cursor-not-allowed rounded-lg border-none cursor-pointer px-5 py-2.5 transition-colors"
+          >
+            {{ abandonSubmitLoading ? '처리 중...' : '🚨 포기 확인 및 서류 출력' }}
           </button>
         </div>
       </div>
@@ -627,13 +815,20 @@ import { supabase } from '../utils/supabaseClient'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { printApplicationForm } from '../utils/printTemplates'
 import { getDisclosureCount } from '../api/admin.js'
+import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../utils/roundSchedule'
 
 const router = useRouter()
 const auth = useAuthStore()
 
 const myApplications = ref([])
 const availableUnivs = ref([])
+const totalRounds = ref(3)
 const currentRound = ref(null)
+const currentRoundStatus = ref('CLOSED')
+
+const isSubmissionActive = computed(() => {
+  return currentRound.value !== null && currentRoundStatus.value === 'OPEN'
+})
 
 const loading = ref(true)
 const roundsLoading = ref(true)
@@ -668,8 +863,26 @@ const showAbandonModal = ref(false)
 const abandonTargetApp = ref(null)
 const abandonReason = ref('')
 const abandonSubmitLoading = ref(false)
+const showAbandonConfirm = ref(false)
+const abandonConfirmChecked = ref(false)
 const abandonStudentCanvasRef = ref(null)
 const abandonParentCanvasRef = ref(null)
+
+// 수시 원서 접수 기간 (포기원 제출 기간)
+const susiApplyStartDate = ref('')
+const susiApplyEndDate = ref('')
+
+const isSusiApplyPeriodActive = computed(() => {
+  if (!susiApplyEndDate.value) return true
+  const today = new Date().toISOString().split('T')[0]
+  return today <= susiApplyEndDate.value
+})
+
+const susiApplyPeriodDisplay = computed(() => {
+  if (!susiApplyEndDate.value) return '상시 가능'
+  if (susiApplyStartDate.value) return `${susiApplyStartDate.value} ~ ${susiApplyEndDate.value}`
+  return `~ ${susiApplyEndDate.value} (마감)`
+})
 
 let abandonStudentCtx = null
 let abandonParentCtx = null
@@ -744,6 +957,29 @@ const filteredRegionalRecs = computed(() => {
     (r.track_name && r.track_name.toLowerCase().includes(kw)) ||
     (r.region && r.region.toLowerCase().includes(kw))
   )
+})
+
+const applicantCountsMap = ref({})
+
+const selectedUnivInfo = computed(() => {
+  if (!selectedUnivId.value) return null
+  return availableUnivs.value.find(u => u.id === selectedUnivId.value) || null
+})
+
+const selectedUnivApplicantCount = computed(() => {
+  if (!selectedUnivId.value) return 0
+  return applicantCountsMap.value[selectedUnivId.value] || 0
+})
+
+const selectedUnivGradCondition = computed(() => {
+  if (!selectedUnivInfo.value) return ''
+  if (selectedUnivInfo.value.grad_allowed === false) return '재학생 전용 (졸업생 지원 불가)'
+
+  if (selectedUnivRegionalInfo.value && selectedUnivRegionalInfo.value.length > 0) {
+    const rInfo = selectedUnivRegionalInfo.value.find(r => r.grad_condition)
+    if (rInfo && rInfo.grad_condition) return rInfo.grad_condition
+  }
+  return selectedUnivInfo.value.grad_condition || '졸업생 지원 가능 (유)'
 })
 
 // 데이터 로드
@@ -849,13 +1085,36 @@ async function loadData() {
       }
     }
 
-    // 3. 수도권 학교장추천전형 (regional_recommendations) 목록 로드
+    // 3. 실시간 전체 신청 인원수 집계 (대학별 신청 건수)
+    const { data: allActiveApps } = await supabase
+      .from('applications')
+      .select('univ_id')
+      .eq('is_abandoned', false)
+
+    if (allActiveApps) {
+      const counts = {}
+      allActiveApps.forEach(ap => {
+        if (ap.univ_id) {
+          counts[ap.univ_id] = (counts[ap.univ_id] || 0) + 1
+        }
+      })
+      applicantCountsMap.value = counts
+    }
+
+    // 4. 수도권 학교장추천전형 (regional_recommendations) 목록 로드
     const { data: regRecs } = await supabase
       .from('regional_recommendations')
       .select('*')
       .order('seq_no', { ascending: true })
 
     regionalRecs.value = regRecs || []
+
+    // 5. 수시 원서 접수 기간 로드 (포기원 제출 기간 제어용)
+    const { data: cfgStart } = await supabase.from('config').select('value').eq('key', 'susi_apply_start_date').maybeSingle()
+    if (cfgStart?.value) susiApplyStartDate.value = cfgStart.value
+
+    const { data: cfgEnd } = await supabase.from('config').select('value').eq('key', 'susi_apply_end_date').maybeSingle()
+    if (cfgEnd?.value) susiApplyEndDate.value = cfgEnd.value
 
   } catch (e) {
     console.error('Error loading student data:', e)
@@ -864,24 +1123,65 @@ async function loadData() {
   }
 }
 
-// 활성화(OPEN)된 라운드 조회
+// 활성화(OPEN)된 라운드 및 총 회수(totalRounds) 조회
 async function checkCurrentRound() {
   roundsLoading.value = true
   try {
+    // 1. total_rounds 설정 로드
+    const localTotal = localStorage.getItem('total_rounds')
+    if (localTotal) totalRounds.value = parseInt(localTotal, 10) || 3
+
+    if (supabase) {
+      const { data: cfg } = await supabase.from('config').select('value').eq('key', 'total_rounds').maybeSingle()
+      if (cfg && cfg.value) {
+        totalRounds.value = parseInt(cfg.value, 10) || 3
+      }
+    }
+
     if (!supabase) return
-    const { data, error } = await supabase
+
+    // 2. 일정 맵 로드
+    const schedulesMap = await fetchRoundSchedulesMap()
+
+    // 3. timeline_rounds 데이터 로드
+    const { data: roundsList, error } = await supabase
       .from('timeline_rounds')
       .select('*')
-      .eq('status', 'OPEN')
       .order('id', { ascending: true })
 
     if (error) throw error
-    
-    // 진행중인 오픈 라운드가 있으면 가장 작은 차수 배정
-    if (data && data.length > 0) {
-      currentRound.value = data[0].id
+
+    if (roundsList && roundsList.length > 0) {
+      const processedRounds = roundsList.map(r => {
+        const sched = schedulesMap[r.id]
+        const dispStatus = computeRoundDisplayStatus(r, sched)
+        return {
+          ...r,
+          computedStatus: dispStatus
+        }
+      })
+
+      // 실시간 OPEN 상태인 라운드가 있는지 먼저 확인
+      const openRound = processedRounds.find(r => r.computedStatus === 'OPEN')
+      if (openRound) {
+        currentRound.value = openRound.id
+        currentRoundStatus.value = 'OPEN'
+      } else {
+        // OPEN인 라운드가 없다면, 접수 마감/종료(CLOSED, FINALIZED)된 라운드 중 가장 진행된 라운드 표시
+        const closedOrFinalized = processedRounds.filter(r => r.computedStatus === 'CLOSED' || r.computedStatus === 'FINALIZED')
+        if (closedOrFinalized.length > 0) {
+          const lastClosed = closedOrFinalized[closedOrFinalized.length - 1]
+          currentRound.value = lastClosed.id
+          currentRoundStatus.value = lastClosed.computedStatus
+        } else {
+          // 대기(DRAFT) 상태
+          currentRound.value = processedRounds[0].id
+          currentRoundStatus.value = processedRounds[0].computedStatus
+        }
+      }
     } else {
       currentRound.value = null
+      currentRoundStatus.value = 'CLOSED'
     }
   } catch (e) {
     console.error('Error checking active round:', e)
@@ -911,7 +1211,7 @@ function startStudentDraw(e) {
 }
 
 function studentDraw(e) {
-  if (!studentDrawing) return
+  if (!studentDrawing || !studentCtx || !studentCanvasRef.value) return
   const canvas = studentCanvasRef.value
   const rect = canvas.getBoundingClientRect()
   const x = (e.clientX - rect.left) * (canvas.width / rect.width)
@@ -927,10 +1227,11 @@ function startStudentTouch(e) {
 }
 
 function studentTouch(e) {
-  if (!studentDrawing) return
+  if (!studentDrawing || !studentCtx || !studentCanvasRef.value) return
   const canvas = studentCanvasRef.value
   const rect = canvas.getBoundingClientRect()
   const touch = e.touches[0]
+  if (!touch) return
   const x = (touch.clientX - rect.left) * (canvas.width / rect.width)
   const y = (touch.clientY - rect.top) * (canvas.height / rect.height)
   studentCtx.lineTo(x, y)
@@ -939,7 +1240,7 @@ function studentTouch(e) {
 
 function stopStudentDraw() {
   studentDrawing = false
-  studentCtx.beginPath()
+  studentCtx?.beginPath()
 }
 
 // 서명 그리기 로직 (학부모)
@@ -947,10 +1248,12 @@ function initParentCanvas() {
   const canvas = parentCanvasRef.value
   if (!canvas) return
   parentCtx = canvas.getContext('2d')
-  parentCtx.strokeStyle = '#0f172a'
-  parentCtx.lineWidth = 2.5
-  parentCtx.lineCap = 'round'
-  parentCtx.lineJoin = 'round'
+  if (parentCtx) {
+    parentCtx.strokeStyle = '#0f172a'
+    parentCtx.lineWidth = 2.5
+    parentCtx.lineCap = 'round'
+    parentCtx.lineJoin = 'round'
+  }
 }
 
 function startParentDraw(e) {
@@ -959,7 +1262,7 @@ function startParentDraw(e) {
 }
 
 function parentDraw(e) {
-  if (!parentDrawing) return
+  if (!parentDrawing || !parentCtx || !parentCanvasRef.value) return
   const canvas = parentCanvasRef.value
   const rect = canvas.getBoundingClientRect()
   const x = (e.clientX - rect.left) * (canvas.width / rect.width)
@@ -975,10 +1278,11 @@ function startParentTouch(e) {
 }
 
 function parentTouch(e) {
-  if (!parentDrawing) return
+  if (!parentDrawing || !parentCtx || !parentCanvasRef.value) return
   const canvas = parentCanvasRef.value
   const rect = canvas.getBoundingClientRect()
   const touch = e.touches[0]
+  if (!touch) return
   const x = (touch.clientX - rect.left) * (canvas.width / rect.width)
   const y = (touch.clientY - rect.top) * (canvas.height / rect.height)
   parentCtx.lineTo(x, y)
@@ -987,7 +1291,7 @@ function parentTouch(e) {
 
 function stopParentDraw() {
   parentDrawing = false
-  parentCtx.beginPath()
+  parentCtx?.beginPath()
 }
 
 function clearSignatures() {
@@ -1026,6 +1330,11 @@ function isCanvasBlank(canvas) {
 function prepareApply() {
   formError.value = null
   formSuccess.value = null
+
+  if (!isSubmissionActive.value) {
+    formError.value = '현재는 추천 희망서 제출 기간이 아닙니다.'
+    return
+  }
 
   if (!selectedUnivId.value) {
     formError.value = '지원할 대학교를 선택해 주세요.'
@@ -1275,6 +1584,10 @@ function handlePrint() {
 }
 
 function openAbandonRequestModal(ap) {
+  if (!isSusiApplyPeriodActive.value) {
+    alert(`수시 원서 접수 마감일이 지나 추천 포기 신청이 마감되었습니다.\n(포기원 제출 가능 마감일: ${susiApplyEndDate.value})`)
+    return
+  }
   abandonTargetApp.value = ap
   abandonReason.value = ''
   showAbandonModal.value = true
@@ -1285,8 +1598,20 @@ function openAbandonRequestModal(ap) {
 
 function closeAbandonModal() {
   showAbandonModal.value = false
+  showAbandonConfirm.value = false
+  abandonConfirmChecked.value = false
   abandonTargetApp.value = null
   abandonReason.value = ''
+}
+
+function openAbandonConfirm() {
+  abandonConfirmChecked.value = false
+  showAbandonConfirm.value = true
+}
+
+function closeAbandonConfirm() {
+  showAbandonConfirm.value = false
+  abandonConfirmChecked.value = false
 }
 
 function initAbandonCanvases() {
@@ -1323,7 +1648,7 @@ function startAbandonStudentDraw(e) {
   abandonStudentDraw(e)
 }
 function abandonStudentDraw(e) {
-  if (!abandonStudentDrawing) return
+  if (!abandonStudentDrawing || !abandonStudentCtx || !abandonStudentCanvasRef.value) return
   const canvas = abandonStudentCanvasRef.value
   const rect = canvas.getBoundingClientRect()
   const x = (e.clientX - rect.left) * (canvas.width / rect.width)
@@ -1339,6 +1664,7 @@ function startAbandonStudentTouch(e) {
   e.preventDefault()
   abandonStudentDrawing = true
   const touch = e.touches[0]
+  if (!touch || !abandonStudentCtx || !abandonStudentCanvasRef.value) return
   const canvas = abandonStudentCanvasRef.value
   const rect = canvas.getBoundingClientRect()
   const x = (touch.clientX - rect.left) * (canvas.width / rect.width)
@@ -1347,8 +1673,9 @@ function startAbandonStudentTouch(e) {
 }
 function abandonStudentTouch(e) {
   e.preventDefault()
-  if (!abandonStudentDrawing) return
+  if (!abandonStudentDrawing || !abandonStudentCtx || !abandonStudentCanvasRef.value) return
   const touch = e.touches[0]
+  if (!touch) return
   const canvas = abandonStudentCanvasRef.value
   const rect = canvas.getBoundingClientRect()
   const x = (touch.clientX - rect.left) * (canvas.width / rect.width)
@@ -1363,7 +1690,7 @@ function startAbandonParentDraw(e) {
   abandonParentDraw(e)
 }
 function abandonParentDraw(e) {
-  if (!abandonParentDrawing) return
+  if (!abandonParentDrawing || !abandonParentCtx || !abandonParentCanvasRef.value) return
   const canvas = abandonParentCanvasRef.value
   const rect = canvas.getBoundingClientRect()
   const x = (e.clientX - rect.left) * (canvas.width / rect.width)
@@ -1379,6 +1706,7 @@ function startAbandonParentTouch(e) {
   e.preventDefault()
   abandonParentDrawing = true
   const touch = e.touches[0]
+  if (!touch || !abandonParentCtx || !abandonParentCanvasRef.value) return
   const canvas = abandonParentCanvasRef.value
   const rect = canvas.getBoundingClientRect()
   const x = (touch.clientX - rect.left) * (canvas.width / rect.width)
@@ -1387,8 +1715,9 @@ function startAbandonParentTouch(e) {
 }
 function abandonParentTouch(e) {
   e.preventDefault()
-  if (!abandonParentDrawing) return
+  if (!abandonParentDrawing || !abandonParentCtx || !abandonParentCanvasRef.value) return
   const touch = e.touches[0]
+  if (!touch) return
   const canvas = abandonParentCanvasRef.value
   const rect = canvas.getBoundingClientRect()
   const x = (touch.clientX - rect.left) * (canvas.width / rect.width)
@@ -1448,70 +1777,108 @@ async function submitAbandonRequest() {
     await loadData()
 
     const printApp = abandonTargetApp.value
+    const targetSchoolFooter = getSchoolPrincipalFooterTitle()
     const printWindow = window.open('', '_blank')
     printWindow.document.write(`
       <html>
         <head>
-          <title>학교장추천 전형 지원 포기원</title>
+          <title>2027학년도 대입 학교장추천전형 지원 포기원</title>
           <style>
-            body { font-family: sans-serif; padding: 40px; color: #111; line-height: 1.6; }
-            .title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 40px; }
-            .table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-            .table th, .table td { border: 1px solid #000; padding: 12px; text-align: left; font-size: 13px; }
-            .table th { background: #f2f2f2; font-weight: bold; width: 25%; }
-            .section-title { font-weight: bold; font-size: 14px; margin-top: 20px; margin-bottom: 10px; }
-            .reason-box { border: 1px solid #000; padding: 15px; min-height: 120px; margin-bottom: 30px; font-size: 13px; }
-            .signature-area { display: flex; justify-content: space-between; margin-top: 50px; }
-            .sig-box { text-align: center; width: 45%; font-size: 13px; }
-            .sig-img { max-height: 80px; display: block; margin: 10px auto 0; }
-            .footer { text-align: center; margin-top: 60px; font-size: 14px; font-weight: bold; }
-            .date { text-align: center; margin-top: 30px; font-size: 14px; }
+            @page {
+              size: A4 portrait;
+              margin: 15mm 20mm;
+            }
+            * { box-sizing: border-box; }
+            html, body {
+              height: 100%;
+              margin: 0;
+              padding: 0;
+              font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+              color: #111;
+              line-height: 1.6;
+            }
+            .page {
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              height: 100%;
+              min-height: 245mm;
+              padding: 5mm 0;
+              box-sizing: border-box;
+            }
+            .top-section {
+              width: 100%;
+            }
+            .title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 35px; letter-spacing: 1px; }
+            .table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+            .table th, .table td { border: 1px solid #000; padding: 10px 12px; text-align: left; font-size: 13px; }
+            .table th { background: #f2f2f2; font-weight: bold; width: 25%; text-align: center; }
+            .section-title { font-weight: bold; font-size: 14px; margin-top: 20px; margin-bottom: 8px; }
+            .reason-box { border: 1px solid #000; padding: 15px; min-height: 130px; margin-bottom: 25px; font-size: 13px; white-space: pre-wrap; }
+            .statement { font-size: 13px; line-height: 1.7; word-break: keep-all; margin-top: 15px; }
+            .bottom-section {
+              margin-top: auto;
+              width: 100%;
+              padding-bottom: 5mm;
+            }
+            .date { text-align: center; font-size: 15px; margin-bottom: 35px; }
+            .signature-area { display: flex; justify-content: space-around; align-items: flex-start; margin-bottom: 40px; }
+            .sig-box { text-align: center; width: 45%; font-size: 13.5px; }
+            .sig-img { max-height: 75px; display: block; margin: 10px auto 0; }
+            .footer { text-align: left; font-size: 20px; font-weight: bold; letter-spacing: 1px; padding-left: 5px; }
           </style>
         </head>
         <body>
-          <div class="title">학교장추천전형 지원 포기원</div>
-          
-          <div class="section-title">[신청인 인적사항]</div>
-          <table class="table">
-            <tr>
-              <th>학번/학생코드</th>
-              <td>${auth.studentCode}</td>
-              <th>성명</th>
-              <td>${auth.studentName}</td>
-            </tr>
-            <tr>
-              <th>지원 대학</th>
-              <td>${printApp.universities.univ_name}</td>
-              <th>지원 전형</th>
-              <td>${printApp.universities.track_name}</td>
-            </tr>
-            <tr>
-              <th>지원 학과</th>
-              <td colspan="3">${printApp.department_name}</td>
-            </tr>
-          </table>
-          
-          <div class="section-title">[포기 사유]</div>
-          <div class="reason-box">${abandonReason.value}</div>
-          
-          <p style="font-size: 13px; line-height: 1.6;">
-            위 본인은 2027학년도 대입 학교장추천전형 선정과 관련하여 추천이 확정되었으나, 위의 정당한 사유로 인하여 학교장추천전형 지원 권한을 공식적으로 포기하고자 포기원을 제출합니다.
-          </p>
-          
-          <div class="date">${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-          
-          <div class="signature-area">
-            <div class="sig-box">
-              <div>학생 본인: ${auth.studentName} (서명/날인)</div>
-              <img class="sig-img" src="${studentSigUrl}" />
+          <div class="page">
+            <div class="top-section">
+              <div class="title">2027학년도 대입 학교장추천전형 지원 포기원</div>
+              
+              <div class="section-title">[신청인 인적사항]</div>
+              <table class="table">
+                <tr>
+                  <th>학번/학생코드</th>
+                  <td>${auth.studentCode}</td>
+                  <th>성명</th>
+                  <td>${auth.studentName}</td>
+                </tr>
+                <tr>
+                  <th>지원 대학</th>
+                  <td>${printApp.universities.univ_name}</td>
+                  <th>지원 전형</th>
+                  <td>${printApp.universities.track_name}</td>
+                </tr>
+                <tr>
+                  <th>지원 학과</th>
+                  <td colspan="3">${printApp.department_name}</td>
+                </tr>
+              </table>
+              
+              <div class="section-title">[포기 사유]</div>
+              <div class="reason-box">${abandonReason.value}</div>
+              
+              <p class="statement">
+                위 본인은 2027학년도 대입 학교장추천전형 선정과 관련하여 추천이 확정되었으나, 위의 사유로 인하여 학교장추천전형 지원 권한을 공식적으로 포기하고자 포기원을 제출합니다.
+                아울러 추천 포기 처리가 완료되면 차순위 대기 학생에게 추천 기회가 승계됨을 확인합니다.
+              </p>
             </div>
-            <div class="sig-box">
-              <div>보호자(학부모): ${printApp.parent_name} (서명/날인)</div>
-              <img class="sig-img" src="${parentSigUrl}" />
+            
+            <div class="bottom-section">
+              <div class="date">${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+              
+              <div class="signature-area">
+                <div class="sig-box">
+                  <div>학생 본인: ${auth.studentName} (서명/날인)</div>
+                  <img class="sig-img" src="${studentSigUrl}" />
+                </div>
+                <div class="sig-box">
+                  <div>보호자(학부모): ${printApp.parent_name} (서명/날인)</div>
+                  <img class="sig-img" src="${parentSigUrl}" />
+                </div>
+              </div>
+              
+              <div class="footer">${targetSchoolFooter}</div>
             </div>
           </div>
-          
-          <div class="footer">${schoolName.value} 귀하</div>
           
           <script>
             window.onload = function() {
@@ -1534,75 +1901,129 @@ async function submitAbandonRequest() {
   }
 }
 
+function getSchoolPrincipalFooterTitle() {
+  const name = (schoolName.value || '').trim()
+  if (!name || name === '우리학교' || name === '우리고등학교' || name === '학교명 미설정') {
+    return '우리고등학교장 귀하'
+  }
+  if (name.endsWith('학교')) {
+    return `${name}장 귀하`
+  }
+  if (name.endsWith('고')) {
+    return `${name}등학교장 귀하`
+  }
+  if (!name.includes('학교')) {
+    return `${name}고등학교장 귀하`
+  }
+  return `${name}장 귀하`
+}
+
 function printAbandonForm(ap) {
   const req = getAbandonRequest(ap)
   if (!req) return
 
+  const targetSchoolFooter = getSchoolPrincipalFooterTitle()
   const printWindow = window.open('', '_blank')
   printWindow.document.write(`
     <html>
       <head>
-        <title>학교장추천 전형 지원 포기원</title>
+        <title>2027학년도 대입 학교장추천전형 지원 포기원</title>
         <style>
-          body { font-family: sans-serif; padding: 40px; color: #111; line-height: 1.6; }
-          .title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 40px; }
-          .table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-          .table th, .table td { border: 1px solid #000; padding: 12px; text-align: left; font-size: 13px; }
-          .table th { background: #f2f2f2; font-weight: bold; width: 25%; }
-          .section-title { font-weight: bold; font-size: 14px; margin-top: 20px; margin-bottom: 10px; }
-          .reason-box { border: 1px solid #000; padding: 15px; min-height: 120px; margin-bottom: 30px; font-size: 13px; }
-          .signature-area { display: flex; justify-content: space-between; margin-top: 50px; }
-          .sig-box { text-align: center; width: 45%; font-size: 13px; }
-          .sig-img { max-height: 80px; display: block; margin: 10px auto 0; }
-          .footer { text-align: center; margin-top: 60px; font-size: 14px; font-weight: bold; }
-          .date { text-align: center; margin-top: 30px; font-size: 14px; }
+          @page {
+            size: A4 portrait;
+            margin: 15mm 20mm;
+          }
+          * { box-sizing: border-box; }
+          html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            color: #111;
+            line-height: 1.6;
+          }
+          .page {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+            min-height: 245mm;
+            padding: 5mm 0;
+            box-sizing: border-box;
+          }
+          .top-section {
+            width: 100%;
+          }
+          .title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 35px; letter-spacing: 1px; }
+          .table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+          .table th, .table td { border: 1px solid #000; padding: 10px 12px; text-align: left; font-size: 13px; }
+          .table th { background: #f2f2f2; font-weight: bold; width: 25%; text-align: center; }
+          .section-title { font-weight: bold; font-size: 14px; margin-top: 20px; margin-bottom: 8px; }
+          .reason-box { border: 1px solid #000; padding: 15px; min-height: 130px; margin-bottom: 25px; font-size: 13px; white-space: pre-wrap; }
+          .statement { font-size: 13px; line-height: 1.7; word-break: keep-all; margin-top: 15px; }
+          .bottom-section {
+            margin-top: auto;
+            width: 100%;
+            padding-bottom: 5mm;
+          }
+          .date { text-align: center; font-size: 15px; margin-bottom: 35px; }
+          .signature-area { display: flex; justify-content: space-around; align-items: flex-start; margin-bottom: 40px; }
+          .sig-box { text-align: center; width: 45%; font-size: 13.5px; }
+          .sig-img { max-height: 75px; display: block; margin: 10px auto 0; }
+          .footer { text-align: left; font-size: 20px; font-weight: bold; letter-spacing: 1px; padding-left: 5px; }
         </style>
       </head>
       <body>
-        <div class="title">학교장추천전형 지원 포기원</div>
-        
-        <div class="section-title">[신청인 인적사항]</div>
-        <table class="table">
-          <tr>
-            <th>학번/학생코드</th>
-            <td>${auth.studentCode}</td>
-            <th>성명</th>
-            <td>${auth.studentName}</td>
-          </tr>
-          <tr>
-            <th>지원 대학</th>
-            <td>${ap.universities.univ_name}</td>
-            <th>지원 전형</th>
-            <td>${ap.universities.track_name}</td>
-          </tr>
-          <tr>
-            <th>지원 학과</th>
-            <td colspan="3">${ap.department_name}</td>
-          </tr>
-        </table>
-        
-        <div class="section-title">[포기 사유]</div>
-        <div class="reason-box">${req.abandon_reason}</div>
-        
-        <p style="font-size: 13px; line-height: 1.6;">
-          위 본인은 2027학년도 대입 학교장추천전형 선정과 관련하여 추천이 확정되었으나, 위의 정당한 사유로 인하여 학교장추천전형 지원 권한을 공식적으로 포기하고자 포기원을 제출합니다.
-          아울러 추천 포기 처리가 완료되면 차순위 대기 학생에게 추천 기회가 승계됨을 확인합니다.
-        </p>
-        
-        <div class="date">${new Date(req.requested_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-        
-        <div class="signature-area">
-          <div class="sig-box">
-            <div>학생 본인: ${auth.studentName} (서명/날인)</div>
-            <img class="sig-img" src="${req.student_signature_url}" />
+        <div class="page">
+          <div class="top-section">
+            <div class="title">2027학년도 대입 학교장추천전형 지원 포기원</div>
+            
+            <div class="section-title">[신청인 인적사항]</div>
+            <table class="table">
+              <tr>
+                <th>학번/학생코드</th>
+                <td>${auth.studentCode}</td>
+                <th>성명</th>
+                <td>${auth.studentName}</td>
+              </tr>
+              <tr>
+                <th>지원 대학</th>
+                <td>${ap.universities.univ_name}</td>
+                <th>지원 전형</th>
+                <td>${ap.universities.track_name}</td>
+              </tr>
+              <tr>
+                <th>지원 학과</th>
+                <td colspan="3">${ap.department_name}</td>
+              </tr>
+            </table>
+            
+            <div class="section-title">[포기 사유]</div>
+            <div class="reason-box">${req.abandon_reason}</div>
+            
+            <p class="statement">
+              위 본인은 2027학년도 대입 학교장추천전형 선정과 관련하여 추천이 확정되었으나, 위의 사유로 인하여 학교장추천전형 지원 권한을 공식적으로 포기하고자 포기원을 제출합니다.
+              아울러 추천 포기 처리가 완료되면 차순위 대기 학생에게 추천 기회가 승계됨을 확인합니다.
+            </p>
           </div>
-          <div class="sig-box">
-            <div>보호자(학부모): ${ap.parent_name} (서명/날인)</div>
-            <img class="sig-img" src="${req.parent_signature_url}" />
+          
+          <div class="bottom-section">
+            <div class="date">${new Date(req.requested_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+            
+            <div class="signature-area">
+              <div class="sig-box">
+                <div>학생 본인: ${auth.studentName} (서명/날인)</div>
+                <img class="sig-img" src="${req.student_signature_url}" />
+              </div>
+              <div class="sig-box">
+                <div>보호자(학부모): ${ap.parent_name} (서명/날인)</div>
+                <img class="sig-img" src="${req.parent_signature_url}" />
+              </div>
+            </div>
+            
+            <div class="footer">${targetSchoolFooter}</div>
           </div>
         </div>
-        
-        <div class="footer">${schoolName.value} 귀하</div>
         
         <script>
           window.onload = function() {

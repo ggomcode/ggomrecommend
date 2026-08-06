@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col">
     <!-- 페이지 헤더 -->
-    <div ref="pageTopRef" class="flex-shrink-0 pt-8 pb-3 px-4 sm:px-10 flex items-start justify-between gap-4 flex-wrap">
+    <div ref="pageTopRef" class="shrink-0 pt-8 pb-3 px-4 sm:px-10 flex items-start justify-between gap-4 flex-wrap">
       <div>
         <p class="text-xs font-semibold mb-1 text-slate-400">담임 교사</p>
         <h1 class="text-2xl font-semibold text-slate-800 dark:text-white" style="margin: 0;">지원자 등록</h1>
@@ -20,28 +20,45 @@
     </div>
 
     <!-- 💡 학교장 추천전형 지원 안내 및 지원 전략 가이드 -->
-    <div class="mx-4 sm:mx-10 mb-4 bg-gradient-to-br from-blue-50 to-indigo-50/60 dark:from-slate-800 dark:to-slate-800/90 rounded-2xl p-5 border border-blue-200/80 dark:border-blue-900/40 shadow-sm space-y-3">
+    <div class="mx-4 sm:mx-10 mb-4 bg-linear-to-br from-blue-50 to-indigo-50/60 dark:from-slate-800 dark:to-slate-800/90 rounded-2xl p-5 border border-blue-200/80 dark:border-blue-900/40 shadow-sm space-y-3">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <div class="flex items-center gap-2">
           <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white text-sm font-bold shadow-sm">💡</span>
           <h3 class="text-base font-bold text-slate-900 dark:text-white m-0">학교장 추천전형 지원 안내 및 전략 가이드</h3>
         </div>
-        <span class="text-xs font-extrabold text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/60 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-800">
-          ★ 1차 추천 선발 적극 지원 유효
-        </span>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white/90 dark:bg-slate-900/90 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-800">
+            📅 수시 원서 접수 기간: <strong class="text-blue-600 dark:text-blue-400">{{ susiApplyPeriodDisplay }}</strong>
+          </span>
+          <span class="text-xs font-extrabold text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/60 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-800">
+            {{ totalRounds === 1 ? '★ 학교장 추천 선발 안내' : '★ 1차 추천 선발 적극 지원 유효' }}
+          </span>
+        </div>
       </div>
 
       <div class="p-3.5 rounded-xl bg-white/90 dark:bg-slate-900/80 border border-blue-100 dark:border-slate-700/60 text-xs text-slate-700 dark:text-slate-300 space-y-2">
         <p class="font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5 text-xs m-0">
-          <span class="text-sm">🎯</span> 1차 추천 선발 적극 지원의 법칙 (가장 중요)
+          <span class="text-sm">🎯</span> {{ totalRounds === 1 ? '학교장 추천 선발 지도 안내' : '1차 추천 선발 적극 지원의 법칙 (가장 중요)' }}
         </p>
-        <p class="leading-relaxed pl-5 text-slate-600 dark:text-slate-300 m-0">
+        <p v-if="totalRounds === 1" class="leading-relaxed pl-5 text-slate-600 dark:text-slate-300 m-0">
+          <strong>학생이 희망하는 대학을 빠짐없이 미리 신청하도록 지도해 주세요!</strong><br />
+          교내 심의 및 성적 기준에 따라 <strong>[추천 확정](합격)</strong>을 받은 학생의 자리는 100% 안전하게 확정 보호됩니다.
+        </p>
+        <p v-else class="leading-relaxed pl-5 text-slate-600 dark:text-slate-300 m-0">
           <strong>1차 추천 선발에 희망하는 대학을 빠짐없이 미리 신청하도록 지도해 주세요!</strong><br />
           1차 라운드에서 <strong>[추천 확정](합격)</strong>을 받은 학생의 자리는 2차 추천 선발이 열려 성적이 더 우수한 학생이 추가 지원하더라도 <strong>절대로 박탈되거나 취소되지 않으며 100% 안전하게 보호</strong>됩니다.
         </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">
+      <div v-if="totalRounds === 1" class="grid grid-cols-1 gap-2.5 text-xs">
+        <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
+          <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">🏆 학교장 추천 선발 (단일 차수 선발)</p>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
+            전체 대학/전형에 대해 추천 희망자를 접수 받아 심의위원회 규정 및 성적순 기준에 따라 공정하게 최종 추천 대상자를 단일 차수로 통합 선발합니다.
+          </p>
+        </div>
+      </div>
+      <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">
         <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
           <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">1️⃣ 1차 추천 선발 (메인 선발)</p>
           <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
@@ -63,7 +80,7 @@
       </div>
 
       <div class="text-[11px] text-slate-500 dark:text-slate-400 pt-2 flex items-center justify-between border-t border-blue-100 dark:border-slate-700/50">
-        <span>🛡️ <strong>포기자 발생 시</strong>: 1차 합격자가 포기서를 제출한 경우에만 해당 빈자리가 다음 차수 잔여 정원으로 이월됩니다.</span>
+        <span>🛡️ <strong>포기자 발생 시</strong>: {{ totalRounds === 1 ? '추천 확정된 학생이 포기서를 제출한 경우 승인 절차를 거쳐 포기 처리됩니다.' : '1차 합격자가 포기서를 제출한 경우에만 해당 빈자리가 다음 차수 잔여 정원으로 이월됩니다.' }}</span>
       </div>
     </div>
 
@@ -83,11 +100,11 @@
     <!-- 메인 레이아웃 -->
     <div v-else-if="loaded" class="flex flex-col lg:flex-row gap-6 px-4 sm:px-10 pb-8">
       <!-- 1. 좌측 학생 목록 -->
-      <div class="w-full lg:w-60 flex-shrink-0 bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm">
+      <div class="w-full lg:w-60 shrink-0 bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm">
         <div class="p-4 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-900/10">
           학급 학생 목록 ({{ students.length }}명)
         </div>
-        <div class="divide-y divide-slate-100 dark:divide-slate-700 max-h-[500px] overflow-y-auto">
+        <div class="divide-y divide-slate-100 dark:divide-slate-700 max-h-125 overflow-y-auto">
           <div
             v-for="s in students"
             :key="s.id"
@@ -362,10 +379,21 @@ import {
 } from '../../api/teacher.js'
 import ApplicationDetailModal from './ApplicationDetailModal.vue'
 
+import { supabase } from '../../utils/supabaseClient.js'
+
 const auth = useAuthStore()
 
 // ── 페이지 상태 ──
 const currentRound = ref(null)
+const totalRounds = ref(3)
+const susiApplyStartDate = ref('')
+const susiApplyEndDate = ref('')
+
+const susiApplyPeriodDisplay = computed(() => {
+  if (!susiApplyStartDate.value || !susiApplyEndDate.value) return '미설정'
+  return `${susiApplyStartDate.value} ~ ${susiApplyEndDate.value}`
+})
+
 const students = ref([])
 const applications = ref([])
 const universities = ref([])
@@ -415,9 +443,23 @@ function getDisplayScoreText(app) {
   return gpa
 }
 
+function isAbandonRequested(app) {
+  if (app.abandoned || app.is_abandoned) return false
+  if (!app.scanned_doc_url) return false
+  try {
+    const parsed = typeof app.scanned_doc_url === 'string' ? JSON.parse(app.scanned_doc_url) : app.scanned_doc_url
+    return parsed && parsed.abandon_requested === true
+  } catch {}
+  return false
+}
+
 function getBadgeInfo(app) {
   if (app.abandoned) {
-    return { text: '포기', css: 'bg-rose-50 text-rose-600 border-rose-200' }
+    return { text: '포기 완료', css: 'bg-rose-50 text-rose-600 border-rose-200' }
+  }
+
+  if (isAbandonRequested(app)) {
+    return { text: '포기 신청중', css: 'bg-rose-50 text-rose-600 border-rose-200 border-dashed' }
   }
 
   const rankStr = app.univ_rank
@@ -466,6 +508,19 @@ async function loadAll() {
 
     if (round) {
       applications.value = await teacherGetApplications(round.id)
+    }
+
+    if (supabase) {
+      try {
+        const { data: cfg } = await supabase.from('config').select('value').eq('key', 'total_rounds').maybeSingle()
+        if (cfg && cfg.value) {
+          totalRounds.value = parseInt(cfg.value, 10) || 3
+        }
+        const { data: cfgStart } = await supabase.from('config').select('value').eq('key', 'susi_apply_start_date').maybeSingle()
+        if (cfgStart?.value) susiApplyStartDate.value = cfgStart.value
+        const { data: cfgEnd } = await supabase.from('config').select('value').eq('key', 'susi_apply_end_date').maybeSingle()
+        if (cfgEnd?.value) susiApplyEndDate.value = cfgEnd.value
+      } catch {}
     }
   } catch (e) {
     loadError.value = e.message || '데이터를 불러오는 중 오류가 발생했습니다.'

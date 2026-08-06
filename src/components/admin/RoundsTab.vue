@@ -152,7 +152,11 @@
 
           <div class="rounded-xl mb-5"
             style="padding: 18px 22px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
-            <div class="flex items-center gap-3 flex-wrap">
+            <div v-if="showAbandonOnly" class="flex flex-col gap-1">
+              <span class="text-xl font-bold" style="color: #e11d48;">🚨 전체 차수 포기원 접수확인</span>
+              <p class="text-xs text-slate-500 mt-1 m-0">전체 선발 차수에서 학생들이 신청한 추천 포기원 서류 제출 현황 및 이미 처리된 포기 학생 목록입니다. 각 학생을 선택해 등록된 포기원 PDF 서류를 검토하고 확정하십시오.</p>
+            </div>
+            <div v-else class="flex items-center gap-3 flex-wrap">
               <span class="text-xl font-bold" style="color: #1e293b;">{{ totalRounds === 1 ? '선발 현황' : `${selected.id}차 선발 현황` }}</span>
               <span
                   class="text-base font-semibold transition-all"
@@ -243,7 +247,7 @@
 
 
           <HelpBox
-            v-if="helpBox"
+            v-if="helpBox && !showAbandonOnly"
             :key="helpBox.key"
             class="mb-5"
             :storage-key="helpBox.key"
@@ -252,119 +256,8 @@
             :items="helpBox.items"
           />
 
-          <!-- 서브탭 -->
-          <div class="flex mb-5" style="border-bottom: 1px solid #e2e8f0;">
-            <button
-              v-for="t in subTabs"
-              :key="t.key"
-              class="text-base font-medium transition-colors"
-              style="padding: 10px 20px; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;"
-              :style="{
-                borderBottomColor: view === t.key ? '#2563eb' : 'transparent',
-                color: view === t.key ? '#2563eb' : '#64748b',
-                fontWeight: view === t.key ? '600' : '400',
-              }"
-              @click="view = t.key"
-            >{{ t.label }}</button>
-          </div>
-
-          <!-- ── 지원 현황 탭 ──────────────────────────────── -->
-          <div v-if="view === 'apps'">
-            <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-              <span class="text-base" style="color: #64748b;">총 {{ apps.length }}건</span>
-              <!-- 나중에 과목별 내신 데이터 입력 기능 연동 시 복원 예정 -->
-              <!-- <div v-if="selected.status === 'CLOSED'" class="flex items-center gap-3">
-                <span v-if="calcMsg" class="text-base font-semibold"
-                  :style="{ color: calcMsg.ok ? '#16a34a' : '#ef4444' }">{{ calcMsg.text }}</span>
-                <button
-                  class="text-base font-semibold rounded-lg whitespace-nowrap disabled:opacity-40"
-                  style="padding: 9px 18px; border: none; background: #4f46e5; color: white; cursor: pointer;"
-                  :disabled="calcLoading || apps.length === 0"
-                  @click="handleCalculate"
-                >{{ calcLoading ? '계산 중…' : '점수 전체 재계산' }}</button>
-              </div> -->
-            </div>
-
-            <div v-if="apps.length === 0" class="text-base text-center" style="padding: 48px 0; color: #94a3b8;">
-              지원자가 없습니다
-            </div>
-
-            <div v-for="(group, key) in appsByUniv" :key="key" class="mb-6">
-              <h4 class="text-base font-semibold mb-3" style="color: #1e293b;">{{ key }}</h4>
-              <div class="rounded-xl overflow-hidden"
-                style="background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
-                <div class="overflow-x-auto">
-                  <table style="border-collapse: collapse; table-layout: fixed; width: 100%; min-width: 910px;">
-                    <colgroup>
-                      <col style="width: 160px;">
-                      <col style="width: 100px;">
-                      <col style="width: 90px;">
-                      <col style="width: 120px;">
-                      <col style="width: 150px;">
-                      <col style="width: 110px;">
-                      <col style="width: 110px;">
-                      <col style="width: 70px;">
-                    </colgroup>
-                    <thead>
-                      <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                        <th class="text-base font-semibold text-left" style="padding: 13px 18px; color: #475569;">학번/학생코드</th>
-                        <th class="text-base font-semibold text-left" style="padding: 13px 18px; color: #475569;">학생 이름</th>
-                        <th class="text-base font-semibold text-left" style="padding: 13px 18px; color: #475569;">구분</th>
-                        <th class="text-base font-semibold text-left" style="padding: 13px 18px; color: #475569;">모집단위</th>
-                        <th class="text-base font-semibold text-left" style="padding: 13px 18px; color: #475569;">지원 학과</th>
-                        <th class="text-base font-semibold text-center" style="padding: 13px 18px; color: #475569;">추천</th>
-                        <th class="text-base font-semibold text-center" style="padding: 13px 18px; color: #475569;">포기처리</th>
-                        <th class="text-base font-semibold text-left" style="padding: 13px 18px; color: #475569;">총점</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="app in group" :key="app.student_id"
-                        class="hover:bg-slate-50"
-                        style="border-bottom: 1px solid #f1f5f9; transition: background 0.1s;">
-                        <td class="text-base" style="padding: 12px 18px; color: #475569;">
-                          <span v-if="app.is_enrolled">{{ app.grade }}학년 {{ app.class_no }}반 {{ app.seq_no }}번</span>
-                          <span v-else class="font-mono">{{ app.student_code }}</span>
-                        </td>
-                        <td class="text-base font-medium" style="padding: 12px 18px; color: #1e293b;">{{ app.name }}</td>
-                        <td style="padding: 12px 18px;">
-                          <span class="text-base font-medium"
-                            :style="{ color: app.is_enrolled ? '#16a34a' : '#94a3b8' }">
-                            {{ app.is_enrolled ? '재학생' : '졸업생' }}
-                          </span>
-                        </td>
-                        <td class="text-base" style="padding: 12px 18px; color: #1e293b;">{{ app.track_name }}</td>
-                        <td class="text-base" style="padding: 12px 18px; color: #475569;">{{ app.department_name }}</td>
-                        <td class="text-base text-center" style="padding: 12px 18px;">
-                          <span v-if="app.abandoned" style="color: #cbd5e1;">-</span>
-                          <span v-else-if="selected.status === 'FINALIZED' && app.recommended"
-                            class="text-base font-semibold" style="color: #16a34a;">추천 확정</span>
-                          <span v-else-if="selected.status === 'FINALIZED' && !app.recommended"
-                            class="text-base font-semibold" style="color: #ef4444;">미선발</span>
-                          <span v-else style="color: #cbd5e1;">-</span>
-                        </td>
-                        <td class="text-center" style="padding: 12px 18px;">
-                          <span v-if="app.abandoned" class="text-base font-semibold" style="color: #ef4444;">포기됨</span>
-                          <button
-                            v-else-if="selected.status === 'FINALIZED' && app.recommended"
-                            class="text-base rounded-lg whitespace-nowrap"
-                            style="padding: 5px 12px; border: 1px solid #fca5a5; background: white; color: #ef4444; cursor: pointer;"
-                            @click="handleAbandon(app)"
-                          >포기하기</button>
-                          <span v-else style="color: #cbd5e1;">-</span>
-                        </td>
-                        <td class="text-base text-left font-semibold" style="padding: 12px 18px; color: #1e293b;">
-                          {{ appTotalScore(app) }}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ── 결과 탭 ──────────────────────────────────── -->
-          <div v-if="view === 'results'">
+          <!-- ── 통합 추천 선발 및 결과 뷰 ──────────────── -->
+          <div>
             <div class="sticky top-0 z-10" style="padding: 10px 0; margin: -10px 0 6px;">
               <div class="flex items-center gap-3 mb-3 flex-wrap">
                 <select
@@ -383,6 +276,10 @@
                   style="padding: 9px 16px; border: 1px solid #e2e8f0; background: white; color: #475569; cursor: pointer;"
                   @click="loadResults"
                 >새로고침</button>
+                <label class="flex items-center gap-2 text-base font-semibold cursor-pointer select-none bg-rose-50 border border-rose-200 text-rose-700 px-3.5 py-2 rounded-xl shadow-sm">
+                  <input type="checkbox" v-model="showAbandonOnly" class="rounded text-rose-600 focus:ring-rose-500" />
+                  🚨 포기 신청 학생만 보기
+                </label>
                 <span style="color: #cbd5e1; user-select: none;">|</span>
                 <button
                   v-if="selected.status === 'CLOSED'"
@@ -427,19 +324,49 @@
               </div>
             </div>
 
-            <div v-if="results.length === 0" class="text-base text-center" style="padding: 48px 0; color: #94a3b8;">
-              결과가 없습니다. 점수 계산을 먼저 실행하세요.
+            <div v-if="Object.keys(resultsByView).length === 0" class="text-base text-center" style="padding: 48px 0; color: #94a3b8;">
+              <template v-if="showAbandonOnly">포기 신청 대기 중인 학생이 없습니다.</template>
+              <template v-else>결과가 없습니다. 점수 계산을 먼저 실행하세요.</template>
             </div>
 
             <div v-for="(group, key) in resultsByView" :key="key" class="mb-6">
               <div class="flex items-center gap-3 mb-3 flex-wrap">
                 <h4 class="text-base font-semibold" style="color: #1e293b; margin: 0;">{{ key }}</h4>
-                <span class="text-base" style="color: #94a3b8;">
-                  <template v-if="group.totalQuota != null">
-                    대학 정원 {{ group.totalQuota }}명 / 잔여 {{ group.univRemaining }}석
-                  </template>
-                  <template v-else>대학 정원 무제한</template>
-                </span>
+                
+                <!-- 모집단위별 보기일 때 -->
+                <div v-if="rankView === 'track'" class="flex items-center gap-2.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 flex-wrap">
+                  <span v-if="group.unitQuota != null" class="text-emerald-700 dark:text-emerald-400">
+                    🎯 모집단위 정원: {{ group.unitQuota }}명 (잔여: {{ group.remaining }}석)
+                  </span>
+                  <span v-else class="text-slate-400">
+                    🎯 모집단위 정원: 제한 없음
+                  </span>
+
+                  <span class="text-slate-300">|</span>
+
+                  <span v-if="group.totalQuota != null" class="text-indigo-700 dark:text-indigo-400">
+                    🏫 대학 전체 정원: {{ group.totalQuota }}명 (잔여: {{ group.univRemaining }}석)
+                  </span>
+                  <span v-else class="text-slate-400">
+                    🏫 대학 전체 정원: 제한 없음
+                  </span>
+
+                  <span class="text-slate-300">|</span>
+
+                  <span :class="group.gradAllowed ? 'text-blue-600 dark:text-blue-400' : 'text-rose-600 dark:text-rose-400'">
+                    🎓 졸업생 지원: {{ group.gradAllowed ? '허용' : '제한 (재학생 전용)' }}
+                  </span>
+                </div>
+
+                <!-- 대학별 보기일 때 -->
+                <div v-else class="flex items-center gap-2.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-600">
+                  <span v-if="group.totalQuota != null" class="text-indigo-700 dark:text-indigo-400">
+                    🏫 대학 전체 정원: {{ group.totalQuota }}명 (잔여: {{ group.univRemaining }}석)
+                  </span>
+                  <span v-else class="text-slate-400">
+                    🏫 대학 전체 정원: 제한 없음
+                  </span>
+                </div>
                 <button
                   v-if="selected.status === 'CLOSED' && univAutoButtonKeys.has(key)"
                   class="text-base font-medium rounded-lg whitespace-nowrap disabled:opacity-40"
@@ -500,7 +427,12 @@
                             <span v-if="r.is_enrolled">{{ r.grade }}학년 {{ r.class_no }}반 {{ r.seq_no }}번</span>
                             <span v-else class="font-mono">{{ r.student_code }}</span>
                           </td>
-                          <td class="text-base font-medium" style="padding: 12px 18px; color: #1e293b; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.name }}</td>
+                          <td class="text-base font-medium" style="padding: 12px 18px; color: #1e293b; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            <span v-if="showAbandonOnly" class="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 mr-1 border border-slate-200">
+                              {{ r.round }}차
+                            </span>
+                            {{ r.name }}
+                          </td>
                           <td style="padding: 12px 18px;">
                             <span class="text-base font-medium"
                               :style="{ color: r.is_enrolled ? '#16a34a' : '#94a3b8' }">
@@ -521,6 +453,7 @@
                           <td class="text-center" style="padding: 12px 18px;" @click.stop>
                             <div class="flex flex-col items-center gap-1">
                             <span v-if="r.abandoned" class="text-base font-semibold" style="color: #ef4444;">포기됨</span>
+                            <span v-else-if="isAbandonRequested(r)" class="text-base font-semibold text-rose-500" style="color: #f43f5e;">포기 신청중</span>
                             <template v-else-if="r.recommended">
                               <span class="text-base font-semibold" style="color: #16a34a;">추천 확정됨</span>
                               <button
@@ -544,7 +477,13 @@
                           </td>
                           <td class="text-center" style="padding: 12px 18px;" @click.stop>
                             <button
-                              v-if="r.recommended && !r.abandoned && selected.status === 'FINALIZED'"
+                              v-if="isAbandonRequested(r)"
+                              class="text-base font-semibold rounded-lg whitespace-nowrap"
+                              style="padding: 5px 12px; border: none; background: #e11d48; color: white; cursor: pointer;"
+                              @click="handleApproveAbandon(r)"
+                            >포기 승인</button>
+                            <button
+                              v-else-if="r.recommended && !r.abandoned && selected.status === 'FINALIZED'"
                               class="text-base rounded-lg whitespace-nowrap"
                               style="padding: 5px 12px; border: 1px solid #fca5a5; background: white; color: #ef4444; cursor: pointer;"
                               @click="handleAbandon(r)"
@@ -824,6 +763,7 @@ function fmtDt(s) {
 }
 
 const refreshSidebarRound = inject('refreshRound', () => {})
+const showAbandonOnly = inject('showAbandonOnly', ref(false))
 
 const rounds   = ref([])
 const selected  = ref(null)
@@ -1073,11 +1013,6 @@ const openaiKey          = ref('')
 
 function rowKey(r) { return `${r.student_id}-${r.track_id}` }
 
-const subTabs = [
-  { key: 'apps',    label: '지원 현황' },
-  { key: 'results', label: '결과' },
-]
-
 const hasOpenRound = computed(() => rounds.value.some(r => r.status === 'OPEN' || r.status === 'CLOSED'))
 
 const canAddRound = computed(() => true)
@@ -1109,27 +1044,15 @@ const helpBox = computed(() => {
     }
   }
   if (s === 'CLOSED') {
-    if (view.value === 'apps') {
-      return {
-        key: 'rounds-closed-apps',
-        title: '도움말 — 지원 현황 확인',
-        intro: '추천 선발 종료 시 모든 지원자의 점수가 자동 계산되어 있습니다.',
-        items: [
-          '환산점수나 내신 등급이 등록되면 순위와 총점이 실시간으로 자동 반영됩니다.',
-          '학생 정보나 성적이 수정되었을 경우, 변경 사항이 즉시 화면에 자동 계산되어 적용됩니다.',
-          '점수 확인이 끝나면 [결과] 탭으로 이동해 추천을 확정하세요.',
-        ],
-      }
-    }
     return {
-      key: 'rounds-closed-results',
-      title: '도움말 — 추천 확정',
-      intro: '순위를 확인하고 추천자를 확정하는 단계입니다.',
+      key: 'rounds-closed',
+      title: '도움말 — 추천 선발 및 확정',
+      intro: '모든 지원자의 환산점수 및 석차등급이 계산되어 있습니다.',
       items: [
-        '"자동 추천 확정"을 누르면 모든 모집단위에서 순위 순으로 잔여 정원까지 자동 확정됩니다.',
-        '동점 등으로 자동 확정하지 못한 모집단위는 노란색 "수동 확인 필요" 목록에 표시됩니다. 해당 모집단위에서 학생을 직접 골라 "추천 확정"을 누르세요.',
-        '잘못 확정했으면 "추천 취소"로 되돌릴 수 있습니다.',
-        { text: '확정이 모두 끝나면 위의 "마감하기"를 누르세요. 마감은 되돌릴 수 없으며, 마감하면 결과가 담임교사에게 공개됩니다.', warn: true },
+        '환산점수나 석차등급에 따라 순위와 총점이 실시간으로 반영됩니다.',
+        '"자동 추천 확정"을 누르면 모든 모집단위에서 순위에 따라 잔여 정원까지 자동으로 확정됩니다.',
+        '학생별로 "추천 확정", "추천 취소", "미선발 처리"를 직접 조작할 수 있습니다.',
+        { text: '확정이 완료되면 위의 "마감하기"를 누르세요. 마감하면 결과가 담임교사에게 공개됩니다.', warn: true },
       ],
     }
   }
@@ -1138,7 +1061,7 @@ const helpBox = computed(() => {
     title: '도움말 — 마감된 추천 선발',
     intro: '이 추천 선발은 마감되어 결과가 확정되었고 담임교사에게 공개되었습니다.',
     items: [
-      '[결과] 탭에서 "이 추천 선발 지원자 명단"(지원 학생 전원의 결과)과 "이 추천 선발 현황"(모집단위별 지원·추천·포기·잔여석)을 엑셀로 내려받을 수 있습니다.',
+      '"이 추천 선발 지원자 명단"(지원 학생 전원의 결과)과 "이 추천 선발 현황"(모집단위별 지원·추천·포기·잔여석)을 엑셀로 내려받을 수 있습니다.',
       { text: '추천 확정 학생이 추천을 포기하면 "포기하기"를 눌러 처리하세요. 포기는 되돌릴 수 없습니다.', warn: true },
       '학생의 지원 포기 등으로 빈자리가 생겨 추가 추천이 필요하면 "+ 추천 선발 추가"로 다음 추천 선발을 시작하세요.',
     ],
@@ -1165,14 +1088,17 @@ const appsByUniv = computed(() => {
 
 function appTotalScore(app) {
   const r = results.value.find(r => r.student_id === app.student_id && r.track_id === app.track_id)
-  if (!r) return '-'
-  
-  const rankText = r.ranking != null ? `${r.ranking}위` : '-'
+  const target = r || app
+
+  const rankText = target?.ranking != null ? `${target.ranking}위` : (r?.ranking != null ? `${r.ranking}위` : '-')
   let scoreText = ''
-  if (r.manual_score != null && Number(r.manual_score) > 0) {
-    scoreText = `${formatScore(r.manual_score)}점`
-  } else if (r.gpa_overall != null) {
-    scoreText = `${Number(r.gpa_overall).toFixed(2)}등급`
+  const manualScore = target?.manual_score ?? app?.manual_score
+  const gpaOverall = target?.gpa_overall ?? app?.gpa_overall
+
+  if (manualScore != null && Number(manualScore) > 0) {
+    scoreText = `${formatScore(manualScore)}점`
+  } else if (gpaOverall != null && !isNaN(Number(gpaOverall)) && Number(gpaOverall) > 0) {
+    scoreText = `${Number(gpaOverall).toFixed(2)}등급`
   } else {
     scoreText = '-'
   }
@@ -1202,9 +1128,33 @@ const trackQuotaMap = computed(() => {
 
 const rankView = ref('track')
 
+function hasPendingAbandon(r) {
+  if (r.abandoned || r.is_abandoned) return true
+
+  if (r.scanned_doc_url) {
+    try {
+      const parsed = typeof r.scanned_doc_url === 'string' ? JSON.parse(r.scanned_doc_url) : r.scanned_doc_url
+      return parsed && parsed.abandon_requested === true
+    } catch {}
+  }
+  return false
+}
+
+function isAbandonRequested(r) {
+  if (r.abandoned || r.is_abandoned) return false
+  if (r.scanned_doc_url) {
+    try {
+      const parsed = typeof r.scanned_doc_url === 'string' ? JSON.parse(r.scanned_doc_url) : r.scanned_doc_url
+      return parsed && parsed.abandon_requested === true
+    } catch {}
+  }
+  return false
+}
+
 const resultsByUniv = computed(() => {
   const map = {}
-  for (const r of results.value) {
+  const source = showAbandonOnly.value ? results.value.filter(hasPendingAbandon) : results.value
+  for (const r of source) {
     const key = `${r.univ_name} ${r.track_name}`
     if (!map[key]) {
       const q = trackQuotaMap.value[r.track_id]
@@ -1217,6 +1167,7 @@ const resultsByUniv = computed(() => {
         totalQuota,
         remaining: unitQuota != null ? Math.max(0, unitQuota - (q?.unitUsed ?? 0)) : null,
         univRemaining: totalQuota != null ? Math.max(0, totalQuota - (q?.totalUsed ?? 0)) : null,
+        gradAllowed: r.grad_allowed,
         results: [],
       }
     }
@@ -1227,7 +1178,8 @@ const resultsByUniv = computed(() => {
 
 const resultsByUnivOnly = computed(() => {
   const map = {}
-  for (const r of results.value) {
+  const source = showAbandonOnly.value ? results.value.filter(hasPendingAbandon) : results.value
+  for (const r of source) {
     const key = r.univ_name
     if (!map[key]) {
       const q = trackQuotaMap.value[r.track_id]
@@ -1310,7 +1262,6 @@ function getAreaScore(r, areaId) {
 }
 
 function getDisplayStatus(r) {
-  if (r.status === 'CLOSED') return 'CLOSED'
   if (r.status === 'FINALIZED') return 'FINALIZED'
 
   const sched = schedulesMap.value[r.id] || DEFAULT_SCHEDULES[r.id]
@@ -1319,12 +1270,38 @@ function getDisplayStatus(r) {
   // 한국 시간(KST) 기준 오늘 날짜 YYYY-MM-DD 생성
   const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
 
+  // 현재 한국 시간의 '시' 정보 (0~23)
+  let curHour = 12
+  try {
+    const formatter = new Intl.DateTimeFormat('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      hour: 'numeric',
+      hour12: false
+    })
+    const parts = formatter.formatToParts(new Date())
+    const hourPart = parts.find(p => p.type === 'hour')
+    if (hourPart) curHour = parseInt(hourPart.value, 10)
+  } catch {
+    curHour = new Date().getHours()
+  }
+
   if (todayStr < sched.apply_start) {
     return 'DRAFT' // UI 수준에서만 대기중으로 표시
-  } else if (todayStr > sched.apply_end) {
-    return 'CLOSED' // 접수 종료
-  } else {
+  } else if (todayStr >= sched.apply_start && todayStr <= sched.apply_end) {
     return 'OPEN' // 진행중
+  } else {
+    // 접수 마감 후 (오늘Str > apply_end)
+    if (sched.announce_date && todayStr === sched.announce_date) {
+      if (curHour < 18) {
+        return 'CLOSED' // 심사 진행중
+      } else {
+        return 'FINALIZED' // 최종 마감
+      }
+    }
+    if (sched.announce_date && todayStr > sched.announce_date) {
+      return 'FINALIZED' // 최종 마감
+    }
+    return 'CLOSED' // 심사 진행중
   }
 }
 
@@ -1334,6 +1311,21 @@ async function syncRoundStatuses(roundsList) {
   // 한국 시간(KST) 기준 오늘 날짜 YYYY-MM-DD 생성
   const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
   
+  // 현재 한국 시간의 '시' 정보 (0~23)
+  let curHour = 12
+  try {
+    const formatter = new Intl.DateTimeFormat('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      hour: 'numeric',
+      hour12: false
+    })
+    const parts = formatter.formatToParts(new Date())
+    const hourPart = parts.find(p => p.type === 'hour')
+    if (hourPart) curHour = parseInt(hourPart.value, 10)
+  } catch {
+    curHour = new Date().getHours()
+  }
+
   const updatedList = []
   for (const r of roundsList) {
     // 이미 최종 마감(FINALIZED)된 라운드는 건드리지 않음
@@ -1351,12 +1343,21 @@ async function syncRoundStatuses(roundsList) {
     let targetStatus = r.status
     if (todayStr < sched.apply_start) {
       targetStatus = 'OPEN' // DB check constraint를 우회하기 위해 DB상에는 OPEN으로 저장하되, UI에서 DRAFT로 표시
-    } else if (todayStr > sched.apply_end) {
-      // 종료(CLOSED) 상태로 자동 이관
-      targetStatus = 'CLOSED' 
-    } else {
-      // 진행중(OPEN) 상태
+    } else if (todayStr >= sched.apply_start && todayStr <= sched.apply_end) {
       targetStatus = 'OPEN' 
+    } else {
+      // 접수 마감 후 (오늘Str > apply_end)
+      if (sched.announce_date && todayStr === sched.announce_date) {
+        if (curHour < 18) {
+          targetStatus = 'CLOSED' 
+        } else {
+          targetStatus = 'FINALIZED' 
+        }
+      } else if (sched.announce_date && todayStr > sched.announce_date) {
+        targetStatus = 'FINALIZED' 
+      } else {
+        targetStatus = 'CLOSED' 
+      }
     }
 
     if (r.status !== targetStatus) {
@@ -1423,8 +1424,9 @@ async function loadApps() {
 
 async function loadResults() {
   if (!selected.value) return
+  const roundId = showAbandonOnly.value ? null : selected.value.id
   ;[results.value, quotaStats.value] = await Promise.all([
-    getResults(selected.value.id, selectedTrackId.value || null),
+    getResults(roundId, selectedTrackId.value || null),
     getQuotaStats(),
   ])
   // 필터 없이 전체 결과를 불러올 때만 드롭다운 목록 갱신
@@ -1702,6 +1704,50 @@ async function confirmAbandon() {
   }
 }
 
+async function handleApproveAbandon(r) {
+  let docUrl = null
+  if (r.scanned_doc_url) {
+    try {
+      const parsed = typeof r.scanned_doc_url === 'string' ? JSON.parse(r.scanned_doc_url) : r.scanned_doc_url
+      if (parsed && parsed.doc_url) {
+        docUrl = parsed.doc_url
+      }
+    } catch {}
+  }
+
+  if (!(await dialog.confirm({
+    title: '추천 포기 승인',
+    message: `${r.name} 학생의 ${r.univ_name} ${r.track_name} 추천 포기 신청을 승인하시겠습니까?`,
+    confirmText: '포기 승인',
+    level: 'danger',
+    dangerNotice: '승인하면 해당 추천 기회가 취소되며 공석이 반환됩니다. 이 작업은 되돌릴 수 없습니다.',
+    finalConfirmText: '승인 확정',
+  }))) return
+
+  resultActing.value = true
+  try {
+    await abandonApplication(r.student_id, r.track_id, r.round_id, docUrl)
+
+    // 차순위 승계 처리 수행
+    let successionMsg = ''
+    try {
+      const nextStudent = await promoteNextEligibleStudent(r.track_id, r.round_id)
+      if (nextStudent) {
+        successionMsg = `\n\n🎉 [차순위 승계 알림]\n- 대학: ${nextStudent.univ_name} ${nextStudent.track_name}\n- 차순위 후보인 ${nextStudent.name} (${nextStudent.student_code}) 학생이 새롭게 추천 후보명단에 자동 등록되었습니다.`
+      }
+    } catch (e) {
+      console.warn('Succession error:', e)
+    }
+
+    await Promise.all([loadApps(), loadResults()])
+    await dialog.alert({ title: '성공', message: '포기 처리가 완료되었습니다.' + successionMsg, level: 'success' })
+  } catch (e) {
+    await dialog.alert({ title: '오류', message: e.message || '포기 처리 도중 오류가 발생했습니다.', level: 'error' })
+  } finally {
+    resultActing.value = false
+  }
+}
+
 function startExclude(r) {
   excludeTarget.value = r
   excludeReasonDraft.value = ''
@@ -1856,10 +1902,42 @@ async function handleUnrecommend(r) {
   }
 }
 
+function getLatestReachedRound() {
+  if (rounds.value.length === 0) return null
+  const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
+  let latest = null
+  for (const r of rounds.value) {
+    const sched = schedulesMap.value[r.id] || DEFAULT_SCHEDULES[r.id]
+    if (sched && sched.apply_start && todayStr >= sched.apply_start) {
+      if (!latest || r.id > latest.id) {
+        latest = r
+      }
+    }
+  }
+  return latest || rounds.value[0]
+}
+
+watch(showAbandonOnly, async (newVal) => {
+  if (newVal && rounds.value.length > 0) {
+    const targetRound = getLatestReachedRound()
+    if (targetRound) {
+      await selectRound(targetRound)
+    }
+  }
+})
+
 onMounted(async () => {
   await loadSchedules()
   await loadTotalRounds()
   await loadRounds()
+  
+  if (showAbandonOnly.value && rounds.value.length > 0) {
+    const targetRound = getLatestReachedRound()
+    if (targetRound) {
+      await selectRound(targetRound)
+    }
+  }
+
   if (supabase) {
     try {
       const { data } = await supabase.from('config').select('value').eq('key', 'openai_api_key').single()

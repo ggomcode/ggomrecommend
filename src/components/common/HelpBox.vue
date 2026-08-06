@@ -8,10 +8,10 @@
       :style="{ color: c.title }"
       @click="toggle"
     >
-      <HelpCircle :size="18" class="flex-shrink-0" />
+      <HelpCircle :size="18" class="shrink-0" />
       <span class="flex-1 min-w-0">{{ title }}</span>
-      <ChevronUp v-if="open" :size="18" class="flex-shrink-0" />
-      <ChevronDown v-else :size="18" class="flex-shrink-0" />
+      <ChevronUp v-if="open" :size="18" class="shrink-0" />
+      <ChevronDown v-else :size="18" class="shrink-0" />
     </button>
 
     <!-- 본문 -->

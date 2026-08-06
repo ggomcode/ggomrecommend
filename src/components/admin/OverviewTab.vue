@@ -22,17 +22,16 @@
     <div v-else-if="data" class="flex flex-col gap-4">
 
       <!-- ① 앱 정보 -->
-      <div class="rounded-xl" style="padding: 20px 24px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 items-center">
-          <div>
-            <p class="text-base font-semibold" style="color: #94a3b8; text-transform: uppercase; letter-spacing: 0.07em;">
-              Teacher Utility Kit
-            </p>
-            <p class="text-xl font-bold mt-0.5" style="color: #0f172a;">학교장추천전형 시스템</p>
-          </div>
-          <div class="lg:text-right">
-            <p class="text-base font-semibold" style="color: #475569;">© luminousky, murmurgene</p>
-          </div>
+      <div class="rounded-xl flex flex-wrap items-center justify-between gap-4" style="padding: 20px 24px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
+        <div>
+          <p class="text-base font-semibold" style="color: #94a3b8; text-transform: uppercase; letter-spacing: 0.07em; margin: 0 0 4px;">
+            Teacher Utility Kit
+          </p>
+          <p class="text-xl font-bold" style="color: #0f172a; margin: 0;">학교장추천전형 시스템</p>
+        </div>
+        <div class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-50/70 border border-blue-100 text-xs text-slate-600 font-semibold">
+          <span>📅 <strong>2027 수시 원서 접수 기간</strong>:</span>
+          <span class="font-bold text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-200">{{ susiApplyPeriodDisplay }}</span>
         </div>
       </div>
 
@@ -49,8 +48,8 @@
               style="padding: 12px 16px;"
               :style="{ background: item.count > 0 ? '#f0fdf4' : '#fef2f2' }"
           >
-            <CheckCircle2 v-if="item.count > 0" :size="20" style="color: #16a34a;" class="flex-shrink-0" />
-            <XCircle v-else :size="20" style="color: #ef4444;" class="flex-shrink-0" />
+            <CheckCircle2 v-if="item.count > 0" :size="20" style="color: #16a34a;" class="shrink-0" />
+            <XCircle v-else :size="20" style="color: #ef4444;" class="shrink-0" />
             <div class="min-w-0">
               <p class="text-base font-semibold" style="margin: 0;"
                  :style="{ color: item.count > 0 ? '#15803d' : '#b91c1c' }">
@@ -61,13 +60,13 @@
             </div>
             <button
                 v-if="item.count === 0"
-                class="flex items-center gap-1 text-base font-medium rounded-lg ml-auto flex-shrink-0"
+                class="flex items-center gap-1 text-base font-medium rounded-lg ml-auto shrink-0"
                 style="padding: 7px 14px; border: none; background: #2563eb; color: white; cursor: pointer;"
                 @click="setActiveTab(item.tab)"
             >설정하러 가기 <ArrowRight :size="15" /></button>
             <button
                 v-else
-                class="flex items-center gap-1 text-base rounded-lg ml-auto flex-shrink-0"
+                class="flex items-center gap-1 text-base rounded-lg ml-auto shrink-0"
                 style="padding: 7px 14px; border: 1px solid #e2e8f0; background: white; color: #64748b; cursor: pointer;"
                 @click="setActiveTab(item.tab)"
             >보기 <ArrowRight :size="15" /></button>
@@ -81,7 +80,7 @@
             모든 준비가 끝났습니다. 이제 첫 번째 추천 선발을 개시하여 담임교사의 입력을 시작할 수 있습니다.
           </p>
           <button
-              class="flex items-center gap-1 text-base font-semibold rounded-lg ml-auto flex-shrink-0"
+              class="flex items-center gap-1 text-base font-semibold rounded-lg ml-auto shrink-0"
               style="padding: 7px 14px; border: none; background: #2563eb; color: white; cursor: pointer;"
               @click="setActiveTab('rounds')"
           >추천 선발 관리로 이동 <ArrowRight :size="15" /></button>
@@ -105,11 +104,15 @@
           <span
             class="text-base font-semibold"
             style="padding: 4px 14px; border-radius: 999px;"
-            :style="data.round.status === 'OPEN'
+            :style="effectiveRoundStatus === 'OPEN'
               ? { background: '#dcfce7', color: '#15803d' }
-              : { background: '#dbeafe', color: '#1d4ed8' }"
+              : effectiveRoundStatus === 'FINALIZED'
+              ? { background: '#f3e8ff', color: '#7e22ce' }
+              : effectiveRoundStatus === 'CLOSED'
+              ? { background: '#dbeafe', color: '#1d4ed8' }
+              : { background: '#fef9c3', color: '#a16207' }"
           >
-            {{ roundStatusLabel(data.round.status) }}
+            {{ roundStatusLabel(effectiveRoundStatus) }}
           </span>
           <span v-if="data.round.opened_at" class="text-base ml-auto" style="color: #94a3b8;">접수 시작일 {{ data.round.opened_at.slice(0, 10) }}</span>
         </div>
@@ -328,6 +331,7 @@ import { supabase } from '../../utils/supabaseClient.js'
 import { Copy, Check, AlertTriangle, CheckCircle2, XCircle, ArrowRight } from 'lucide-vue-next'
 import { getOverview, getClasses, getStudents, getAreas, getUniversities } from '../../api/admin.js'
 import { roundStatusLabel } from '../../data/roundStatus.js'
+import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../../utils/roundSchedule.js'
 import MiniPie from './MiniPie.vue'
 import HelpBox from '../common/HelpBox.vue'
 
@@ -354,6 +358,14 @@ const copied  = ref(false)
 const readiness = ref(null)
 const totalRounds = ref(3)
 
+const susiApplyStartDate = ref('')
+const susiApplyEndDate = ref('')
+
+const susiApplyPeriodDisplay = computed(() => {
+  if (!susiApplyStartDate.value || !susiApplyEndDate.value) return '미설정'
+  return `${susiApplyStartDate.value} ~ ${susiApplyEndDate.value}`
+})
+
 async function loadTotalRounds() {
   const local = localStorage.getItem('total_rounds')
   if (local) {
@@ -367,6 +379,11 @@ async function loadTotalRounds() {
         const n = parseInt(configLimit.value, 10)
         if (n >= 1 && n <= 5) totalRounds.value = n
       }
+
+      const { data: cfgStart } = await supabase.from('config').select('value').eq('key', 'susi_apply_start_date').maybeSingle()
+      if (cfgStart?.value) susiApplyStartDate.value = cfgStart.value
+      const { data: cfgEnd } = await supabase.from('config').select('value').eq('key', 'susi_apply_end_date').maybeSingle()
+      if (cfgEnd?.value) susiApplyEndDate.value = cfgEnd.value
     } catch {}
   }
 }
@@ -420,6 +437,15 @@ const unconfirmedCount = computed(() => {
   if (data.value?.graduated && !data.value.graduated.confirmed) count++
   return count
 })
+const schedulesMap = ref({})
+
+const effectiveRoundStatus = computed(() => {
+  if (!data.value?.round) return 'DRAFT'
+  const round = data.value.round
+  const sched = schedulesMap.value[round.id]
+  return computeRoundDisplayStatus(round, sched)
+})
+
 const helpBox = computed(() => {
   if (!data.value) return null
   const round = data.value.round
@@ -430,8 +456,8 @@ const helpBox = computed(() => {
         title: '도움말 — 처음 시작하기',
         intro: '이 화면은 시스템의 전체 현황을 한눈에 보여줍니다. 아직 진행 중인 추천 선발이 없습니다.',
         items: [
-          '처음 사용하신다면 왼쪽 메뉴에서 [학급 관리] → [학생 관리] → [추천순위 기준 설정] → [대학 설정] 순서로 기초 정보를 먼저 입력하세요.',
-          '준비가 끝나면 [추천 선발 관리]에서 "+ 추천 선발 추가"를 눌러 담임교사의 입력을 시작할 수 있습니다.',
+          '처음 사용하신다면 왼쪽 메뉴에서 [학급 현황] → [학생 관리] → [추천순위 기준 설정] → [대학 설정] 순서로 기초 정보를 먼저 입력하세요.',
+          '준비가 끝나면 [학교장 추천 선발]에서 "+ 추천 선발 추가"를 눌러 담임교사의 입력을 시작할 수 있습니다.',
           '자세한 사용 방법은 왼쪽 아래 [매뉴얼] 메뉴에서 볼 수 있습니다.',
         ],
       }
@@ -441,12 +467,15 @@ const helpBox = computed(() => {
       title: '도움말 — 진행 중인 추천 선발 없음',
       intro: '이전 추천 선발은 모두 마감되었고, 지금은 진행 중인 추천 선발이 없습니다.',
       items: [
-        '추가 추천이 필요하면 [추천 선발 관리]에서 "+ 추천 선발 추가"로 다음 차수를 시작하세요.',
-        '이전 추천 선발의 결과는 [추천 선발 관리]에서 해당 차수를 선택해 다시 확인하거나 내려받을 수 있습니다.',
+        '추가 추천이 필요하면 [학교장 추천 선발]에서 "+ 추천 선발 추가"로 다음 차수를 시작하세요.',
+        '이전 추천 선발의 결과는 [학교장 추천 선발]에서 해당 차수를 선택해 다시 확인하거나 내려받을 수 있습니다.',
       ],
     }
   }
-  if (round.status === 'OPEN') {
+
+  const status = effectiveRoundStatus.value
+
+  if (status === 'OPEN') {
     return {
       key: 'overview-open',
       title: '도움말 — 추천 선발 진행 중',
@@ -454,16 +483,41 @@ const helpBox = computed(() => {
       items: [
         '아래 "학급별 지원자 현황"에서 학급별 입력 상황을 확인하세요. 빨간색으로 표시된 학급은 아직 지원자를 한 명도 등록하지 않은 학급입니다.',
         '담임교사들에게 웹 접속 주소를 안내해 주세요. 교사는 해당 주소로 접속하여 로그인합니다.',
-        '모든 담임교사의 입력이 끝나면 [추천 선발 관리]에서 "종료하기"를 눌러 입력을 마감하세요.',
+        '모든 담임교사의 입력이 끝나면 [학교장 추천 선발]에서 "종료하기"를 눌러 입력을 마감하세요.',
       ],
     }
   }
+
+  if (status === 'FINALIZED') {
+    return {
+      key: 'overview-finalized',
+      title: '도움말 — 최종 마감된 추천 선발',
+      intro: '추천 선발 및 추천 확정 절차가 모두 최종 마감되었습니다.',
+      items: [
+        '최종 마감된 추천 선발 결과는 [학교장 추천 선발] 메뉴 또는 [결과 보고서] 메뉴에서 조회 및 출력할 수 있습니다.',
+        '새로운 차수의 선발을 개시하거나 설정을 변경하려면 [학교장 추천 선발] 메뉴로 이동하세요.',
+      ],
+    }
+  }
+
+  if (status === 'DRAFT') {
+    return {
+      key: 'overview-draft',
+      title: '도움말 — 접수 시작 전 (대기 중)',
+      intro: '추천 선발 접수 시작 전 상태입니다.',
+      items: [
+        '접수 시작일이 되면 자동으로 지원자 접수가 개시됩니다.',
+        '일정을 변경하거나 조기 시작하려면 [학교장 추천 선발] 메뉴에서 관리하세요.',
+      ],
+    }
+  }
+
   return {
     key: 'overview-closed',
     title: '도움말 — 입력 종료, 추천 확정 단계',
     intro: '담임교사 입력이 종료되었습니다. 이제 관리자가 추천자를 확정할 차례입니다.',
     items: [
-      '[추천 선발 관리]에서 이 차수를 선택한 뒤 [결과] 탭에서 "자동 추천 확정"을 누르거나 학생별로 "추천 확정"을 누르세요.',
+      '[학교장 추천 선발]에서 이 차수를 선택한 뒤 [결과] 탭에서 "자동 추천 확정"을 누르거나 학생별로 "추천 확정"을 누르세요.',
       '추천 확정이 모두 끝나면 "마감하기"를 눌러 결과를 담임교사에게 공개하세요.',
       '입력을 다시 받아야 하면 "다시 열기"를 누르면 됩니다.',
     ],
@@ -486,6 +540,7 @@ onMounted(async () => {
   await loadTotalRounds()
   loadReadiness() // 개요 로드와 병렬 실행 — 실패해도 체크리스트 카드만 숨겨진다
   try {
+    schedulesMap.value = await fetchRoundSchedulesMap()
     data.value = await getOverview()
   } catch (e) {
     error.value = e.response?.data ?? e.message ?? '데이터를 불러오지 못했습니다.'

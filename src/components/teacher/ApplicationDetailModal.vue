@@ -5,7 +5,7 @@
     @keydown.escape.window="$emit('close')"
   >
     <div
-      class="bg-white dark:bg-slate-800 flex flex-col rounded-2xl shadow-xl w-[480px] max-w-[90vw] overflow-hidden"
+      class="bg-white dark:bg-slate-800 flex flex-col rounded-2xl shadow-xl w-120 max-w-[90vw] overflow-hidden"
     >
       <!-- 헤더 -->
       <div class="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/10">
@@ -34,12 +34,18 @@
         <!-- 추천 처리 상태 요약 -->
         <div
           class="rounded-xl border p-4 text-xs font-semibold"
-          :class="app.abandoned ? 'bg-rose-50 border-rose-200 text-rose-800' : (app.excluded || app.is_excluded) ? 'bg-amber-50 border-amber-200 text-amber-900' : (app.recommended || app.is_recommended) ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-700'"
+          :class="app.abandoned ? 'bg-rose-50 border-rose-200 text-rose-800' : isAbandonRequested ? 'bg-rose-50 border-rose-200 border-dashed text-rose-800' : (app.excluded || app.is_excluded) ? 'bg-amber-50 border-amber-200 text-amber-900' : (app.recommended || app.is_recommended) ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-700'"
         >
           <div v-if="app.abandoned" class="space-y-1.5">
             <p>⚠️ <strong>추천 포기 완료 건:</strong> 이 지원서는 학생/학부모의 추천 포기 서신이 제출되어 반려 및 종료되었습니다.</p>
             <div v-if="docUrl || app.abandoned_doc_url" class="mt-2 text-right">
               <a :href="docUrl || app.abandoned_doc_url" target="_blank" class="text-rose-600 underline font-bold">📄 업로드된 포기원 문서 보기</a>
+            </div>
+          </div>
+          <div v-else-if="isAbandonRequested" class="space-y-1.5">
+            <p>⚠️ <strong>추천 포기 신청 대기 건:</strong> 학생이 추천 포기 신청서(포기원)를 작성 및 서명 제출했습니다. 관리자의 최종 승인 및 처리 대기 상태입니다.</p>
+            <div v-if="app.scanned_doc_url" class="mt-2 text-right">
+              <a :href="typeof app.scanned_doc_url === 'string' ? JSON.parse(app.scanned_doc_url).doc_url : app.scanned_doc_url.doc_url" target="_blank" class="text-rose-600 underline font-bold">📄 학생 제출 포기원 서류 보기</a>
             </div>
           </div>
           <div v-else-if="app.excluded || app.is_excluded">
@@ -54,7 +60,7 @@
         </div>
 
         <!-- 💡 추천 여부 선택 패널 (추천 / 대기 전환) -->
-        <div v-if="!app.abandoned" class="border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex flex-col gap-3 bg-slate-50/60 dark:bg-slate-900/30">
+        <div v-if="!app.abandoned && !isAbandonRequested" class="border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex flex-col gap-3 bg-slate-50/60 dark:bg-slate-900/30">
           <div>
             <h4 class="text-xs font-bold text-slate-800 dark:text-white m-0">추천 여부 선택</h4>
             <p class="text-[10px] text-slate-500 leading-normal mt-0.5 m-0">
@@ -86,7 +92,7 @@
         </div>
 
         <!-- 포기 처리 패널 (추천 확정된 상태에서 포기 처리 시 포기서류 PDF 업로드 필수) -->
-        <div v-if="(app.recommended || app.is_recommended) && !app.abandoned" class="border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex flex-col gap-3">
+        <div v-if="(app.recommended || app.is_recommended) && !app.abandoned && !isAbandonRequested" class="border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex flex-col gap-3">
           <div>
             <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300 m-0">추천 전형 포기 처리</h4>
             <p class="text-[10px] text-slate-400 leading-normal mt-0.5 m-0">학생이 추천을 포기할 경우, 포기원 양식 스캔 파일(PDF)을 필수 업로드하고 포기 처리를 완료하여 공석을 복구해야 합니다.</p>
@@ -190,6 +196,15 @@ const displayScoreText = computed(() => {
     return `${gpa} (대학환산: ${calc}점)`
   }
   return gpa
+})
+
+const isAbandonRequested = computed(() => {
+  if (!props.app.scanned_doc_url) return false
+  try {
+    const parsed = typeof props.app.scanned_doc_url === 'string' ? JSON.parse(props.app.scanned_doc_url) : props.app.scanned_doc_url
+    return parsed && parsed.abandon_requested === true
+  } catch {}
+  return false
 })
 
 onMounted(async () => {

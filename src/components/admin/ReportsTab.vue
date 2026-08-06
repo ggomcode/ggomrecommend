@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col h-full overflow-hidden p-6" style="background: #f8fafc;">
     <!-- ── 상단 헤더 ────────────────────────────────────────── -->
-    <div class="flex items-center justify-between flex-shrink-0 mb-5">
+    <div class="flex items-center justify-between shrink-0 mb-5">
       <div>
         <h1 class="text-2xl font-bold text-slate-900" style="margin: 0;">결과 보고서 및 프린트</h1>
         <p class="text-xs text-slate-500 mt-1" style="margin: 4px 0 0;">
@@ -31,13 +31,19 @@
         >
           <span>🖨️ 보고서 인쇄 (PDF)</span>
         </button>
+        <button
+          class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors border-none"
+          @click="printReportRecommendOnly"
+        >
+          <span>🖨️ 보고서 인쇄 (PDF, 추천 대학만)</span>
+        </button>
       </div>
     </div>
 
     <!-- ── 인쇄 전용 영역 (Print Only View) ───────────────────── -->
     <div class="flex-1 min-h-0 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" id="report-print-area">
       <!-- 보고서 헤더 (화면 & 인쇄 공통) -->
-      <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50/50 flex-shrink-0">
+      <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50/50 shrink-0">
         <div>
           <span class="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">{{ schoolName }}</span>
           <h2 class="text-xl font-black text-slate-900" style="margin: 0;">학교장추천전형 추천 명단</h2>
@@ -87,7 +93,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
-            <tr v-for="item in flatStats" :key="item.no" class="hover:bg-slate-50/80 text-slate-700 transition-colors">
+            <tr v-for="item in displayedStats" :key="item.no" class="hover:bg-slate-50/80 text-slate-700 transition-colors">
               <td class="p-3 text-center text-slate-500 font-medium">{{ item.no }}</td>
               <td class="p-3 font-bold text-slate-900 whitespace-nowrap w-28">
                 <span class="text-sm font-extrabold text-blue-950">{{ item.univ_name }}</span>
@@ -116,13 +122,34 @@
             </tr>
           </tbody>
         </table>
+
+        <!-- 하단 선발 인원 통계 (상시 표시 및 인쇄 영역 포함) -->
+        <div class="mt-6 border border-slate-200 rounded-xl bg-slate-50/50 p-4 text-xs font-semibold text-slate-700 flex justify-between items-center print:border-slate-300">
+          <div class="flex items-center gap-1">
+            <span class="text-xs font-bold text-slate-800">📊 학교장추천 선발 인원 통계</span>
+          </div>
+          <div class="flex gap-6 items-center">
+            <div class="flex items-center gap-1.5">
+              <span class="text-slate-400">총 추천 확정:</span>
+              <span class="text-sm font-extrabold text-blue-600">{{ totalRecommendedStats.total }}명</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-slate-400">재학생:</span>
+              <span class="font-bold text-slate-800">{{ totalRecommendedStats.enrolled }}명</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-slate-400">졸업생:</span>
+              <span class="font-bold text-slate-800">{{ totalRecommendedStats.grad }}명</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { getQuotaStats, exportQuotaStats, getDisclosureCount } from '../../api/admin.js'
 import { schoolName } from '../../utils/schoolConfig.js'
 import { dialog } from '../common/dialog.js'
@@ -213,6 +240,29 @@ const flatStats = computed(() => {
     }
   }
   return list
+})
+
+const printOnlyWithRecommendations = ref(false)
+
+const displayedStats = computed(() => {
+  if (printOnlyWithRecommendations.value) {
+    return flatStats.value
+      .filter(item => item.unit_used > 0)
+      .map((item, idx) => ({ ...item, no: idx + 1 }))
+  }
+  return flatStats.value
+})
+
+const totalRecommendedStats = computed(() => {
+  let total = 0
+  let enrolled = 0
+  let grad = 0
+  for (const item of flatStats.value) {
+    total += item.unit_used
+    enrolled += item.enrolled_used
+    grad += item.grad_used
+  }
+  return { total, enrolled, grad }
 })
 
 const currentDate = computed(() => {
@@ -333,20 +383,36 @@ async function downloadExcel() {
 }
 
 function printReport() {
+  printOnlyWithRecommendations.value = false
+  window.print()
+}
+
+async function printReportRecommendOnly() {
+  printOnlyWithRecommendations.value = true
+  await nextTick()
   window.print()
 }
 
 onMounted(async () => {
   disclosureCount.value = await getDisclosureCount()
   loadData()
+  window.addEventListener('afterprint', () => {
+    printOnlyWithRecommendations.value = false
+  })
 })
 </script>
 
-<style scoped>
+<style>
 @media print {
   @page {
     size: A4 landscape;
     margin: 10mm;
+  }
+  /* 사이드바 및 인쇄에 불필요한 버튼/레이아웃 완전 숨김 */
+  aside,
+  button,
+  .no-print {
+    display: none !important;
   }
   body * {
     visibility: hidden;
@@ -358,7 +424,7 @@ onMounted(async () => {
     position: absolute;
     left: 0;
     top: 0;
-    width: 100%;
+    width: 100% !important;
     border: none !important;
     box-shadow: none !important;
   }

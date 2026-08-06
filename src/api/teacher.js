@@ -372,6 +372,7 @@ quota_limit: u.quota_limit || null,
 univ_rank: rInfo.rank,
 univ_total_count: rInfo.total,
 recommended: ap.is_recommended,
+scanned_doc_url: ap.scanned_doc_url,
 round_status: 'OPEN'
 }
 })
@@ -521,7 +522,7 @@ const studentIds = students.map(s => s.id)
 
   const [{ data: allStudents }, { data: allApps }] = await Promise.all([
     supabase.from('enrolled_students').select('id, name, student_code, is_enrolled, gpa_overall, seq_no, grade, class_no'),
-    supabase.from('applications').select('*').eq('is_abandoned', false).lte('round', limit)
+    supabase.from('applications').select('*').lte('round', limit)
   ])
 
 if (!allApps) return { rounds: rounds || [], results: [] }
@@ -651,6 +652,7 @@ ranking: finalRank,
 track_rank: finalRank,
 recommended: ap.is_recommended,
 abandoned: ap.is_abandoned,
+scanned_doc_url: ap.scanned_doc_url,
 excluded: ap.is_excluded,
 excluded_reason: ap.excluded_reason,
 student_code: st.student_code || '',
