@@ -970,6 +970,7 @@ CREATE POLICY "Students can view own rural eligibility" ON public.student_rural_
 -- ----------------------------------------------------------------
 INSERT INTO config (key, value) VALUES ('jungsi_apply_start_date', '') ON CONFLICT (key) DO NOTHING;
 INSERT INTO config (key, value) VALUES ('jungsi_apply_end_date', '') ON CONFLICT (key) DO NOTHING;
+INSERT INTO config (key, value) VALUES ('enable_rural_system', 'false') ON CONFLICT (key) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS public.rural_tracks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1084,3 +1085,22 @@ CREATE POLICY "Teachers/Admins can manage all rural applications" ON public.rura
     );
 
 
+
+
+-- 18. config 테이블 RLS 통합 정책 및 기본 키 설정
+ALTER TABLE public.config ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can view config" ON public.config;
+DROP POLICY IF EXISTS "Anyone can select config" ON public.config;
+DROP POLICY IF EXISTS "Anyone can modify config" ON public.config;
+DROP POLICY IF EXISTS "Enable all access to config" ON public.config;
+
+CREATE POLICY "Enable all access to config" 
+ON public.config 
+FOR ALL 
+TO public
+USING (true) 
+WITH CHECK (true);
+
+GRANT ALL ON TABLE public.config TO anon, authenticated, service_role;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;

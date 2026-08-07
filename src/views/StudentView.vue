@@ -27,6 +27,10 @@
             <p class="text-xs text-slate-400 font-semibold">학번: {{ auth.studentCode }}</p>
           </div>
           <button
+            @click="showMyPageModal = true"
+            class="text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-300 dark:border-slate-600 px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
+          >👤 마이페이지</button>
+          <button
             @click="router.push('/select-system')"
             class="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40 px-3.5 py-2 rounded-lg transition-all cursor-pointer"
           >🏠 포털 이동</button>
@@ -804,6 +808,32 @@
         </div>
       </div>
     </div>
+    
+    <!-- 학생 마이페이지 모달 (학교장 추천 시스템에서 대입 희망 전형 설정/수정) -->
+    <div
+      v-if="showMyPageModal"
+      class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+    >
+      <div class="bg-slate-100 rounded-2xl max-w-4xl w-full p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+          <h3 class="text-base font-bold text-slate-900 m-0 flex items-center gap-2">
+            👤 학생 마이페이지 (대입 희망 전형 설정 및 자격 서약)
+          </h3>
+          <button
+            @click="showMyPageModal = false"
+            class="text-slate-400 hover:text-slate-600 font-bold text-xl bg-transparent border-none cursor-pointer p-1"
+          >
+            ✕
+          </button>
+        </div>
+        <Suspense>
+          <RuralMyPageTab />
+          <template #fallback>
+            <div class="py-12 text-center text-slate-400">마이페이지 로딩 중...</div>
+          </template>
+        </Suspense>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -811,6 +841,10 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { safeAsyncComponent } from '../utils/asyncComponent'
+
+const RuralMyPageTab = safeAsyncComponent(() => import('../components/rural/RuralMyPageTab.vue'))
+const showMyPageModal = ref(false)
 import { supabase } from '../utils/supabaseClient'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { printApplicationForm } from '../utils/printTemplates'

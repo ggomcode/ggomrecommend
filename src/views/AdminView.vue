@@ -156,6 +156,7 @@
           <!-- 액션 버튼 -->
           <div class="pt-2 border-t border-slate-200/80 flex flex-col gap-1.5">
             <button
+              v-if="isRuralSystemEnabled"
               @click="switchToRuralSystem"
               class="w-full text-left text-xs font-semibold text-emerald-600 hover:text-emerald-800 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
             >
@@ -166,6 +167,7 @@
               농어촌 전형 시스템
             </button>
             <button
+              v-if="isRuralSystemEnabled"
               @click="goToPortal"
               class="w-full text-left text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
             >
@@ -266,6 +268,7 @@ import { useAuthStore } from '../stores/auth.js'
 import { changeAdminPassword, getCurrentRound } from '../api/admin.js'
 import { dialog } from '../components/common/dialog.js'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig.js'
+import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
 import { safeAsyncComponent } from '../utils/asyncComponent.js'
 import {
   Home, Trophy, LayoutGrid, Users, SlidersHorizontal, FileSpreadsheet,
@@ -275,6 +278,7 @@ import {
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const isRuralSystemEnabled = ref(localStorage.getItem('pcm_enable_rural_system') === 'true')
 
 // ── 탭 컴포넌트 ──────────────────────────────────────────────
 const OverviewTab = safeAsyncComponent(() => import('../components/admin/OverviewTab.vue'))
@@ -463,6 +467,10 @@ function stripV(v) {
 }
 
 onMounted(async () => {
+  try {
+    const status = await checkRuralSystemOpenStatus()
+    isRuralSystemEnabled.value = status.isEnabled === true
+  } catch (e) {}
   if (route.query.tab) {
     active.value = route.query.tab
   }

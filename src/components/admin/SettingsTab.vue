@@ -14,7 +14,9 @@
           학교 이름 설정
         </h2>
         <p class="text-xs text-slate-400 mb-4">
-          시스템 헤더 및 메인 타이틀 상단에 표시될 학        <form @submit.prevent="saveSchoolName" class="flex gap-3 w-full">
+          시스템 헤더 및 메인 타이틀 상단에 표시될 학교 이름을 지정합니다.
+        </p>
+        <form @submit.prevent="saveSchoolName" class="flex gap-3 w-full">
           <input
             v-model="inputSchoolName"
             type="text"
@@ -26,7 +28,7 @@
             :disabled="schoolNameLoading"
             class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-5 py-2.5 cursor-pointer transition-colors whitespace-nowrap shrink-0"
           >
-            {{ schoolNameLoading ? '저장 중…' : '학교 이름 저장' }}
+            {{ schoolNameLoading ? "저장 중…" : "학교 이름 저장" }}
           </button>
         </form>
       </div>
@@ -157,8 +159,7 @@
           <input
             v-model="openaiKey"
             type="password"
-            required
-            placeholder="sk-..."
+            :placeholder="hasOpenAIKey ? '******************************' : 'sk-...'"
             class="flex-1 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white font-mono"
           />
           <button
@@ -183,7 +184,7 @@
           <input
             v-model="schoolInfoApiKey"
             type="password"
-            placeholder="학교알리미 API 인증키 입력"
+            :placeholder="hasSchoolInfoApiKey ? '******************************' : '학교알리미 API 인증키 입력'"
             class="flex-1 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white font-mono"
           />
           <button
@@ -194,26 +195,8 @@
             {{ schoolInfoApiLoading ? '저장 중…' : '저장 적용' }}
           </button>
         </form>
-      </div>�� Open API 키 설정 (고교 주소 및 정보 조회용)
-        </h2>
-        <p class="text-xs text-slate-400 mb-4">고교 주소 및 법정동 자동 조회를 위한 학교알리미 Open API 인증키를 지정합니다.</p>
-
-        <form @submit.prevent="saveSchoolInfoApiKey" class="flex gap-3 max-w-lg">
-          <input
-            v-model="schoolInfoApiKey"
-            type="password"
-            placeholder="학교알리미 API 인증키 입력"
-            class="flex-1 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white font-mono"
-          />
-          <button
-            type="submit"
-            :disabled="schoolInfoApiLoading"
-            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap"
-          >
-            {{ schoolInfoApiLoading ? '저장 중…' : '저장 적용' }}
-          </button>
-        </form>
       </div>
+      
 
       <!-- 3-3. 수시 원서 접수 마감일 설정 (포기원 제출 마감 기준) -->
       <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
@@ -226,32 +209,33 @@
           설정한 마감일 자정(23:59:59)까지 학생 화면에서 추천 포기 신청 버튼이 활성화됩니다.
         </p>
 
-        <form @submit.prevent="saveSusiApplyPeriod" class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center max-w-xl">
-          <div class="flex items-center gap-2 flex-1">
-            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">접수 시작일 (선택):</span>
+        <form @submit.prevent="saveSusiApplyPeriod" class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">접수 시작일:</span>
             <input
               v-model="susiApplyStartDate"
               type="date"
-              class="w-full text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white"
+              required
+              class="text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white"
             />
           </div>
 
           <span class="text-slate-400 font-bold text-center hidden sm:inline">~</span>
 
-          <div class="flex items-center gap-2 flex-1">
-            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">접수 마감일 (필수):</span>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">접수 마감일:</span>
             <input
               v-model="susiApplyEndDate"
               type="date"
               required
-              class="w-full text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white"
+              class="text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white"
             />
           </div>
 
           <button
             type="submit"
             :disabled="susiPeriodLoading"
-            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-4 py-2.5 cursor-pointer transition-colors whitespace-nowrap"
+            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-5 py-2.5 cursor-pointer transition-colors whitespace-nowrap sm:ml-auto shrink-0"
           >
             {{ susiPeriodLoading ? '저장 중…' : '기간 저장' }}
           </button>
@@ -259,8 +243,11 @@
 
         <p v-if="susiApplyEndDate" class="text-xs text-slate-500 mt-3">
           현재 설정 마감일: <strong class="text-blue-600 dark:text-blue-400">{{ susiApplyStartDate ? `${susiApplyStartDate} ~ ` : '' }}{{ susiApplyEndDate }}</strong>
-          <span v-if="isSusiPeriodActive" class="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+          <span v-if="susiPeriodStatus === 'ACTIVE'" class="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
             🟢 원서접수 진행 중 (마감 전)
+          </span>
+          <span v-else-if="susiPeriodStatus === 'WAITING'" class="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+            ⏳ 시작 전 (대기 중)
           </span>
           <span v-else class="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300">
             🔒 원서접수 마감 (접수 종료)
@@ -281,31 +268,31 @@
           정시 원서 접수 기간을 설정합니다. 설정된 <strong>정시 접수 시작일 15일 전부터 마감일까지</strong> 농어촌 추천 시스템이 자동으로 재오픈됩니다.
         </p>
 
-        <form @submit.prevent="saveJungsiApplyPeriod" class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center max-w-xl">
-          <div class="flex items-center gap-2 flex-1">
+        <form @submit.prevent="saveJungsiApplyPeriod" class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full justify-between">
+          <div class="flex items-center gap-2">
             <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">정시 시작일:</span>
             <input
               v-model="jungsiApplyStartDate"
               type="date"
-              class="w-full text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-slate-800 dark:text-white"
+              class="text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-slate-800 dark:text-white"
             />
           </div>
 
           <span class="text-slate-400 font-bold text-center hidden sm:inline">~</span>
 
-          <div class="flex items-center gap-2 flex-1">
+          <div class="flex items-center gap-2">
             <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">정시 마감일:</span>
             <input
               v-model="jungsiApplyEndDate"
               type="date"
-              class="w-full text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-slate-800 dark:text-white"
+              class="text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-slate-800 dark:text-white"
             />
           </div>
 
           <button
             type="submit"
             :disabled="jungsiPeriodLoading"
-            class="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 border-none rounded-lg px-4 py-2.5 cursor-pointer transition-colors whitespace-nowrap"
+            class="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 border-none rounded-lg px-5 py-2.5 cursor-pointer transition-colors whitespace-nowrap sm:ml-auto shrink-0"
           >
             {{ jungsiPeriodLoading ? '저장 중…' : '기간 저장' }}
           </button>
@@ -334,13 +321,13 @@
           <!-- 1. 학교장 추천 전형 구글 시트 ID -->
           <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-700 space-y-3">
             <label class="block text-xs font-bold text-slate-800 dark:text-slate-200">
-              1) 학교장 추천자 선발 전형 구글 시트 ID (<code>2027 대입 학교장추천전형.xlsx</code> 대응)
+              1) 학교장 추천자 선발 전형 구글 시트 ID 
             </label>
             <div class="flex gap-2">
               <input
                 v-model="googleSheetPrincipalId"
-                type="text"
-                placeholder="예: 1BxiMVs0XRnt3kgZbA0VpD1-m67F-..."
+                type="password"
+                :placeholder="hasGoogleSheetPrincipalId ? '******************************' : 'ID 입력 (예: 1BxiMVs...)'"
                 class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-slate-800 dark:text-white"
               />
               <button
@@ -364,13 +351,13 @@
           <!-- 2. 농어촌 및 기회균형 구글 시트 ID -->
           <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-700 space-y-3">
             <label class="block text-xs font-bold text-slate-800 dark:text-slate-200">
-              2) 농어촌 및 기회균형 전형 구글 시트 ID (<code>2027 농어촌 및 기회균형(농어촌).xlsx</code> 대응)
+              2) 농어촌 및 기회균형 전형 구글 시트 ID 
             </label>
             <div class="flex gap-2">
               <input
                 v-model="googleSheetRuralId"
-                type="text"
-                placeholder="예: 1CyiNWs0XRnt3kgZbA0VpD2-k78G-..."
+                type="password"
+                :placeholder="hasGoogleSheetRuralId ? '******************************' : 'ID 입력 (예: 1CyiNWs...)'"
                 class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-slate-800 dark:text-white"
               />
               <button
@@ -419,6 +406,34 @@
           </button>
         </div>
       </div>
+
+      <!-- 4-2. 농어촌 전형 시스템 활성화 -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-800 dark:text-white mb-1 flex items-center gap-2">
+              <span class="w-1 h-3 bg-blue-600 rounded-full"></span>
+              농어촌 전형 시스템 활성화
+            </h2>
+            <p class="text-xs text-slate-400">
+              농어촌 전형 및 기회균형 전형 학생 선발을 위한 전용 시스템과 메뉴를 활성화합니다.
+            </p>
+          </div>
+          <button
+            type="button"
+            @click="toggleEnableRuralSystem"
+            :disabled="ruralSystemLoading"
+            class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+            :class="enableRuralSystem ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'"
+          >
+            <span
+              class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+              :class="enableRuralSystem ? 'translate-x-5' : 'translate-x-0'"
+            />
+          </button>
+        </div>
+      </div>
+
       <!-- 5. 데이터 초기화 설정 -->
       <div class="bg-white dark:bg-slate-800 border border-red-200 dark:border-red-950/40 rounded-xl p-6 shadow-sm">
         <h2 class="text-base font-bold text-rose-600 dark:text-rose-400 mb-2 flex items-center gap-2">
@@ -478,6 +493,9 @@ import { fetchSchoolName, setSchoolNameConfig } from '../../utils/schoolConfig'
 import { getDisclosureCount, setDisclosureCount, syncRegionalToUniversities, syncPrincipalUnivsFromGoogleSheet } from '../../api/admin.js'
 import { syncRuralTracksFromGoogleSheet } from '../../api/ruralApi.js'
 import { dialog } from '../common/dialog.js'
+import { useAuthStore } from '../../stores/auth'
+
+const auth = useAuthStore()
 
 const googleSheetPrincipalId = ref('')
 const googleSheetPrincipalLoading = ref(false)
@@ -506,9 +524,20 @@ const regCodeLoading = ref(false)
 
 const openaiKey = ref('')
 const openaiLoading = ref(false)
+const hasOpenAIKey = ref(false)
+
+const schoolInfoApiKey = ref('')
+const schoolInfoApiLoading = ref(false)
+const hasSchoolInfoApiKey = ref(false)
+
+const hasGoogleSheetPrincipalId = ref(false)
+const hasGoogleSheetRuralId = ref(false)
 
 const allowAreaEdit = ref(false)
 const areaEditLoading = ref(false)
+
+const enableRuralSystem = ref(false)
+const ruralSystemLoading = ref(false)
 
 const susiApplyStartDate = ref('')
 const susiApplyEndDate = ref('')
@@ -526,112 +555,88 @@ function calculate15DaysBefore(dateStr) {
   return d.toISOString().split('T')[0]
 }
 
-const isSusiPeriodActive = computed(() => {
-  if (!susiApplyEndDate.value) return true
+function getStatusText(startDate, endDate) {
+  if (!startDate || !endDate) return '미설정'
   const today = new Date().toISOString().split('T')[0]
-  return today <= susiApplyEndDate.value
+  if (today < startDate) return '⏳ 시작 전 (대기 중)'
+  if (today > endDate) return '🔴 기간 마감'
+  return '🟢 원서접수 진행 중 (마감 전)'
+}
+
+const susiPeriodStatus = computed(() => {
+  if (!susiApplyStartDate.value || !susiApplyEndDate.value) return 'UNSET'
+  const today = new Date().toISOString().split('T')[0]
+  if (today < susiApplyStartDate.value) return 'WAITING'
+  if (today > susiApplyEndDate.value) return 'ENDED'
+  return 'ACTIVE'
 })
+
+const isSusiPeriodActive = computed(() => susiPeriodStatus.value === 'ACTIVE')
 
 async function loadConfig() {
   inputSchoolName.value = await fetchSchoolName()
   const localEdit = localStorage.getItem('pcm_allow_area_edit') === 'true'
   allowAreaEdit.value = localEdit
-  // 정보공시 재학생 수 로드
   disclosureCount.value = await getDisclosureCount()
+
   if (!supabase) return
   try {
-    const { data: countData } = await supabase
+    const { data: rows, error } = await supabase
       .from('config')
-      .select('value')
-      .eq('key', 'class_count')
-      .maybeSingle()
-    if (countData && countData.value) {
-      classCount.value = Number(countData.value) || 11
+      .select('key, value')
+
+    if (error) {
+      console.error('Error fetching config batch:', error)
     }
 
-    const { data: codeData } = await supabase
-      .from('config')
-      .select('value')
-      .eq('key', 'registration_code')
-      .maybeSingle()
-    if (codeData && codeData.value) {
-      regCode.value = codeData.value
+    const configMap = {}
+    if (rows && Array.isArray(rows)) {
+      rows.forEach(r => {
+        if (r && r.key) {
+          const k = String(r.key).trim().toLowerCase()
+          configMap[k] = r.value !== null && r.value !== undefined ? String(r.value).trim() : ''
+        }
+      })
     }
 
-    const { data: keyData } = await supabase
-      .from('config')
-      .select('value')
-      .eq('key', 'openai_api_key')
-      .maybeSingle()
-    if (keyData && keyData.value) {
-      openaiKey.value = keyData.value
+    if (configMap['class_count']) {
+      classCount.value = Number(configMap['class_count']) || 11
+    }
+    if (configMap['registration_code']) {
+      regCode.value = configMap['registration_code']
     }
 
-    const { data: editData } = await supabase
-      .from('config')
-      .select('value')
-      .eq('key', 'allow_area_edit')
-      .maybeSingle()
-    if (editData && editData.value) {
-      allowAreaEdit.value = editData.value === 'true'
-      localStorage.setItem('pcm_allow_area_edit', editData.value)
+    const dbOpenAIKey = configMap['openai_api_key'] || ''
+    const envOpenAIKey = import.meta.env.VITE_OPENAI_API_KEY
+    hasOpenAIKey.value = !!(dbOpenAIKey || (envOpenAIKey && String(envOpenAIKey).trim()))
+    openaiKey.value = ''
+
+    const dbSchoolKey = configMap['school_info_api_key'] || ''
+    const envSchoolKey = import.meta.env.VITE_SCHOOL_INFO_API_KEY
+    hasSchoolInfoApiKey.value = !!(dbSchoolKey || (envSchoolKey && String(envSchoolKey).trim()))
+    schoolInfoApiKey.value = ''
+
+    const dbPrincipalId = configMap['google_sheet_principal_id'] || ''
+    hasGoogleSheetPrincipalId.value = !!dbPrincipalId
+    googleSheetPrincipalId.value = ''
+
+    const dbRuralId = configMap['google_sheet_rural_id'] || ''
+    hasGoogleSheetRuralId.value = !!dbRuralId
+    googleSheetRuralId.value = ''
+
+    if (configMap['allow_area_edit']) {
+      allowAreaEdit.value = configMap['allow_area_edit'] === 'true'
+      localStorage.setItem('pcm_allow_area_edit', configMap['allow_area_edit'])
+    }
+    if (configMap['enable_rural_system']) {
+      enableRuralSystem.value = configMap['enable_rural_system'] === 'true'
+      localStorage.setItem('pcm_enable_rural_system', configMap['enable_rural_system'])
     }
 
-    // 수시 원서 접수 기간 로드
-    const { data: startDateData } = await supabase
-      .from('config')
-      .select('value')
-      .eq('key', 'susi_apply_start_date')
-      .maybeSingle()
-    if (startDateData && startDateData.value) {
-      susiApplyStartDate.value = startDateData.value
-    }
-
-    const { data: endDateData } = await supabase
-      .from('config')
-      .select('value')
-      .eq('key', 'susi_apply_end_date')
-      .maybeSingle()
-    if (endDateData && endDateData.value) {
-      susiApplyEndDate.value = endDateData.value
-    }
-
-    // 정시 원서 접수 기간 로드
-    const { data: jStartData } = await supabase
-      .from('config')
-      .select('value')
-      .eq('key', 'jungsi_apply_start_date')
-      .maybeSingle()
-    if (jStartData && jStartData.value) {
-      jungsiApplyStartDate.value = jStartData.value
-    }
-
-    const { data: jEndData } = await supabase
-      .from('config')
-      .select('value')
-      .eq('key', 'jungsi_apply_end_date')
-      .maybeSingle()
-    if (jEndData && jEndData.value) {
-      jungsiApplyEndDate.value = jEndData.value
-    }
-
-    const { data: gPData } = await supabase
-      .from('config')
-      .select('value')
-      .eq('key', 'google_sheet_principal_id')
-      .maybeSingle()
-    if (gPData && gPData.value) {
-      googleSheetPrincipalId.value = gPData.value
-    }
-
-    const { data: gRData } = await supabase
-      .from('config')
-      .select('value')
-      .eq('key', 'google_sheet_rural_id')
-      .maybeSingle()
-    if (gRData && gRData.value) {
-      googleSheetRuralId.value = gRData.value
-    }
+    susiApplyStartDate.value = configMap['susi_apply_start_date'] || ''
+    susiApplyEndDate.value = configMap['susi_apply_end_date'] || ''
+    jungsiApplyStartDate.value = configMap['jungsi_apply_start_date'] || ''
+    jungsiApplyEndDate.value = configMap['jungsi_apply_end_date'] || ''
   } catch (e) {
     console.error('Error loading config:', e)
   }
@@ -641,7 +646,11 @@ async function saveGoogleSheetPrincipalId() {
   googleSheetPrincipalLoading.value = true
   try {
     if (supabase) {
-      await supabase.from('config').upsert({ key: 'google_sheet_principal_id', value: googleSheetPrincipalId.value.trim() })
+      const val = googleSheetPrincipalId.value.trim()
+      const { error } = await supabase.from('config').upsert({ key: 'google_sheet_principal_id', value: val }, { onConflict: 'key' })
+      if (error) throw error
+      hasGoogleSheetPrincipalId.value = !!val
+      googleSheetPrincipalId.value = ''
       alert('학교장 추천전형 구글 스프레드시트 ID가 저장되었습니다.')
     }
   } catch (e) {
@@ -656,7 +665,11 @@ async function saveGoogleSheetRuralId() {
   googleSheetRuralLoading.value = true
   try {
     if (supabase) {
-      await supabase.from('config').upsert({ key: 'google_sheet_rural_id', value: googleSheetRuralId.value.trim() })
+      const val = googleSheetRuralId.value.trim()
+      const { error } = await supabase.from('config').upsert({ key: 'google_sheet_rural_id', value: val }, { onConflict: 'key' })
+      if (error) throw error
+      hasGoogleSheetRuralId.value = !!val
+      googleSheetRuralId.value = ''
       alert('농어촌 전형 구글 스프레드시트 ID가 저장되었습니다.')
     }
   } catch (e) {
@@ -711,10 +724,10 @@ async function saveJungsiApplyPeriod() {
   jungsiPeriodLoading.value = true
   try {
     if (supabase) {
-      await Promise.all([
-        supabase.from('config').upsert({ key: 'jungsi_apply_start_date', value: jungsiApplyStartDate.value }),
-        supabase.from('config').upsert({ key: 'jungsi_apply_end_date', value: jungsiApplyEndDate.value })
-      ])
+      const { error: err1 } = await supabase.from('config').upsert({ key: 'jungsi_apply_start_date', value: jungsiApplyStartDate.value }, { onConflict: 'key' })
+      const { error: err2 } = await supabase.from('config').upsert({ key: 'jungsi_apply_end_date', value: jungsiApplyEndDate.value }, { onConflict: 'key' })
+      if (err1) throw err1
+      if (err2) throw err2
       alert('정시 원서 접수 일정이 저장되었습니다.')
     }
   } catch (e) {
@@ -733,10 +746,10 @@ async function saveSusiApplyPeriod() {
   susiPeriodLoading.value = true
   try {
     if (supabase) {
-      await Promise.all([
-        supabase.from('config').upsert({ key: 'susi_apply_start_date', value: susiApplyStartDate.value }),
-        supabase.from('config').upsert({ key: 'susi_apply_end_date', value: susiApplyEndDate.value })
-      ])
+      const { error: err1 } = await supabase.from('config').upsert({ key: 'susi_apply_start_date', value: susiApplyStartDate.value }, { onConflict: 'key' })
+      const { error: err2 } = await supabase.from('config').upsert({ key: 'susi_apply_end_date', value: susiApplyEndDate.value }, { onConflict: 'key' })
+      if (err1) throw err1
+      if (err2) throw err2
       alert('수시 원서 접수 기간이 설정되었습니다.')
     }
   } catch (e) {
@@ -755,7 +768,7 @@ async function toggleAllowAreaEdit() {
     try {
       await supabase
         .from('config')
-        .upsert({ key: 'allow_area_edit', value: String(allowAreaEdit.value) })
+        .upsert({ key: 'allow_area_edit', value: String(allowAreaEdit.value) }, { onConflict: 'key' })
     } catch (e) {
       console.error(e)
     } finally {
@@ -763,6 +776,30 @@ async function toggleAllowAreaEdit() {
     }
   } else {
     areaEditLoading.value = false
+  }
+}
+
+async function toggleEnableRuralSystem() {
+  enableRuralSystem.value = !enableRuralSystem.value
+  ruralSystemLoading.value = true
+  localStorage.setItem('pcm_enable_rural_system', String(enableRuralSystem.value))
+  if (supabase) {
+    try {
+      const { error } = await supabase
+        .from('config')
+        .upsert({ key: 'enable_rural_system', value: String(enableRuralSystem.value) }, { onConflict: 'key' })
+      if (error) throw error
+      alert(`농어촌 전형 시스템이 ${enableRuralSystem.value ? '활성화' : '비활성화'}되었습니다. 전체 화면을 새로고침하고 로그아웃합니다.`)
+      await auth.logout()
+      window.location.href = '/login'
+    } catch (e) {
+      console.error(e)
+      alert('농어촌 시스템 설정 저장 중 오류가 발생했습니다.')
+    } finally {
+      ruralSystemLoading.value = false
+    }
+  } else {
+    ruralSystemLoading.value = false
   }
 }
 
@@ -864,11 +901,14 @@ async function saveOpenAIKey() {
   if (!supabase) return
   openaiLoading.value = true
   try {
+    const val = openaiKey.value.trim()
     const { error } = await supabase
       .from('config')
-      .upsert({ key: 'openai_api_key', value: openaiKey.value })
+      .upsert({ key: 'openai_api_key', value: val }, { onConflict: 'key' })
 
     if (error) throw error
+    hasOpenAIKey.value = !!val
+    openaiKey.value = ''
     alert('OpenAI API Key가 저장되었습니다.')
   } catch (e) {
     console.error(e)
@@ -882,11 +922,14 @@ async function saveSchoolInfoApiKey() {
   if (!supabase) return
   schoolInfoApiLoading.value = true
   try {
+    const val = schoolInfoApiKey.value.trim()
     const { error } = await supabase
       .from('config')
-      .upsert({ key: 'school_info_api_key', value: schoolInfoApiKey.value })
+      .upsert({ key: 'school_info_api_key', value: val }, { onConflict: 'key' })
 
     if (error) throw error
+    hasSchoolInfoApiKey.value = !!val
+    schoolInfoApiKey.value = ''
     alert('학교알리미 Open API 인증키가 저장되었습니다.')
   } catch (e) {
     console.error(e)

@@ -22,8 +22,10 @@
         <p class="text-xs font-extrabold text-blue-600 mb-2 tracking-wide">{{ schoolName }}</p>
         <h1 class="text-slate-900 m-0 flex flex-col items-center justify-center gap-1 font-extrabold tracking-tight">
           <span class="text-base text-slate-900">학교장 추천자 선발 시스템</span>
-          <span class="text-xs text-blue-600 font-bold leading-none my-0.5">및</span>
-          <span class="text-base text-slate-900">농어촌(기회균형) 전형 추천 등록 시스템</span>
+          <template v-if="isRuralSystemEnabled">
+            <span class="text-xs text-blue-600 font-bold leading-none my-0.5">및</span>
+            <span class="text-base text-slate-900">농어촌(기회균형) 전형 추천 등록 시스템</span>
+          </template>
         </h1>
       </div>
 
@@ -153,7 +155,7 @@
               class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-slate-800"
               style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
             />
-            <p class="text-[11px] text-slate-400 mt-1 leading-normal">
+            <p class="text-[11px] text-slate-400 mt-1 leading-normal" style="margin: 2px 0 0;">
               고3기간이 2025년 3월~2026년 1월이고, 2026년 2월에 졸업한 학생의 졸업학년도는 '2026'입니다.
             </p>
           </div>
@@ -196,14 +198,66 @@
               class="w-full text-sm focus:outline-none focus:ring-2 bg-white text-slate-800 border-slate-300 focus:ring-blue-400"
               style="border-radius: 8px; padding: 8px 12px; box-sizing: border-box; border-width: 1px; border-style: solid;"
             />
-            <div class="mt-2.5 p-2.5 bg-blue-50/80 border border-blue-200/80 rounded-lg text-xs text-blue-700 space-y-1" style="margin-top: 10px;">
-              <p class="font-bold flex items-center gap-1" style="margin: 0 0 3px;">
-                🔒 개인정보 보호 및 보안 암호화 안내
-              </p>
-              <p class="leading-relaxed text-blue-600/90" style="margin: 0; font-size: 11px; line-height: 1.4;">
-                가입 시 입력한 내용은 <strong>SHA-256 단방향 암호화 해시 및 AES-256 보안 알고리즘</strong>을 거쳐 저장됩니다. 원본 복호화가 불가능하므로 관리자를 포함한 그 누구도 조회하거나 알 수 없습니다.
-              </p>
+          </div>
+
+          <!-- 대입 지원 전형 선택 영역 (학교장 추천 / 농어촌 선택) -->
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2" style="margin-top: 6px;">
+            <label class="block text-xs font-bold text-slate-800" style="margin: 0 0 4px;">
+              🎯 희망 대입 지원 전형 선택
+            </label>
+            <div class="flex items-center gap-4 text-xs font-medium text-slate-700">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" v-model="signupApplySchoolRecommend" class="accent-blue-600 rounded cursor-pointer" />
+                학교장 추천 전형
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" v-model="signupApplyRural" class="accent-emerald-600 rounded cursor-pointer" />
+                농어촌 특별전형
+              </label>
             </div>
+
+            <!-- 농어촌 선택 시 펼쳐지는 자격 확인 서술 카드 -->
+            <div v-if="signupApplyRural" class="p-2.5 bg-emerald-50/90 border border-emerald-200 rounded-lg text-xs space-y-2 text-emerald-950 mt-2">
+              <div class="font-bold text-emerald-800 flex items-center gap-1">
+                🌾 농어촌 전형 자격 요건 안내
+              </div>
+              <div class="text-[11px] space-y-1 text-emerald-900 leading-relaxed bg-white/90 p-2 rounded border border-emerald-100">
+                <p class="m-0 font-semibold">• 유형 I (6년): 중·고 6년 과정 이수 및 본인·부모 모두 읍·면 거주</p>
+                <p class="m-0 font-semibold">• 유형 II (12년): 초·중·고 12년 과정 이수 및 본인 읍·면 거주</p>
+              </div>
+
+              <!-- 농어촌 유형 선택 -->
+              <div class="space-y-1 pt-1">
+                <label class="block font-bold text-emerald-900">지원 세부 유형 선택</label>
+                <div class="flex gap-4">
+                  <label class="flex items-center gap-1.5 cursor-pointer font-medium">
+                    <input type="radio" v-model="signupRuralType" value="유형I" class="accent-emerald-600 cursor-pointer" />
+                    유형 I (6년)
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer font-medium">
+                    <input type="radio" v-model="signupRuralType" value="유형II" class="accent-emerald-600 cursor-pointer" />
+                    유형 II (12년)
+                  </label>
+                </div>
+              </div>
+
+              <!-- 본인 확인 및 서약 동의 -->
+              <div class="pt-1.5 border-t border-emerald-200/80">
+                <label class="flex items-start gap-1.5 cursor-pointer font-bold text-emerald-900">
+                  <input type="checkbox" v-model="signupRuralSelfCheck" class="accent-emerald-600 rounded mt-0.5 shrink-0 cursor-pointer" />
+                  <span class="leading-normal">본인은 위 농어촌 자격 기준을 직접 확인하였으며, 조건에 해당함을 동의합니다.</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-2.5 bg-blue-50/80 border border-blue-200/80 rounded-lg text-xs text-blue-700 space-y-1" style="margin-top: 6px;">
+            <p class="font-bold flex items-center gap-1" style="margin: 0 0 2px;">
+              🔒 개인정보 보호 및 보안 암호화 안내
+            </p>
+            <p class="leading-relaxed text-blue-600/90" style="margin: 0; font-size: 11px; line-height: 1.4;">
+              가입 시 입력한 내용은 <strong>SHA-256 단방향 암호화 해시 및 AES-256 보안 알고리즘</strong>을 거쳐 저장됩니다. 원본 복호화가 불가능하므로 관리자를 포함한 그 누구도 조회하거나 알 수 없습니다.
+            </p>
           </div>
 
           <button
@@ -265,6 +319,14 @@
               <span class="text-xs text-slate-500 font-semibold">전화번호 (로그인 비번)</span>
               <span class="font-bold text-slate-800 font-mono">{{ cleanPhoneInput }}</span>
             </div>
+            <div class="flex justify-between items-center pt-2 border-t border-slate-200">
+              <span class="text-xs text-slate-500 font-semibold">신청 희망 전형</span>
+              <span class="font-bold text-slate-800 text-xs">
+                <template v-if="signupApplySchoolRecommend && signupApplyRural">학교장추천 + 농어촌({{ signupRuralType }})</template>
+                <template v-else-if="signupApplySchoolRecommend">학교장 추천 전형만</template>
+                <template v-else-if="signupApplyRural">농어촌 특별전형만 ({{ signupRuralType }})</template>
+              </span>
+            </div>
           </div>
 
           <p class="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200 text-center" style="margin: 0;">
@@ -312,14 +374,20 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
+import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
 
 const router = useRouter()
 const auth = useAuthStore()
 
-onMounted(() => {
+onMounted(async () => {
   fetchSchoolName()
+  try {
+    const status = await checkRuralSystemOpenStatus()
+    isRuralSystemEnabled.value = status.isEnabled === true
+  } catch (e) {}
 })
 
+const isRuralSystemEnabled = ref(localStorage.getItem('pcm_enable_rural_system') === 'true')
 const isSignUp = ref(false)
 const loading = ref(false)
 const error = ref(null)
@@ -344,6 +412,12 @@ const signupName = ref('')
 const signupPhone = ref('')
 const signupParentPhone = ref('')
 
+// 대입 지원 전형 선택 상태
+const signupApplySchoolRecommend = ref(true)
+const signupApplyRural = ref(false)
+const signupRuralType = ref('유형I')
+const signupRuralSelfCheck = ref(false)
+
 const cleanPhoneInput = computed(() => {
   return signupPhone.value.replace(/\D/g, '')
 })
@@ -363,7 +437,6 @@ async function handleLogin() {
     } else if (id === 'teacher') {
       await auth.loginTeacher(id, pw)
     } else {
-      // 5자리 숫자 학번 형태를 검사해서 학생 로그인 처리 (전화번호 비밀번호 정제 지원)
       if (!/^\d{5}$/.test(id)) {
         throw new Error('아이디는 admin, teacher 또는 5자리 학번이어야 합니다.')
       }
@@ -429,6 +502,16 @@ function openConfirmModal() {
     return
   }
 
+  if (!signupApplySchoolRecommend.value && !signupApplyRural.value) {
+    error.value = '학교장 추천 전형 또는 농어촌 특별전형 중 최소 1개 이상을 선택해 주세요.'
+    return
+  }
+
+  if (signupApplyRural.value && !signupRuralSelfCheck.value) {
+    error.value = '농어촌 특별전형 지원 자격 요건 직접 확인 동의에 체크해 주세요.'
+    return
+  }
+
   // 모달 열기
   showConfirmModal.value = true
 }
@@ -446,7 +529,11 @@ async function confirmAndSignUp() {
       parentPhone: signupParentPhone.value,
       isEnrolled: signupIsEnrolled.value,
       gradYear: signupIsEnrolled.value ? null : signupGradYear.value,
-      registrationCode: signupCode.value
+      registrationCode: signupCode.value,
+      applySchoolRecommend: signupApplySchoolRecommend.value,
+      applyRural: signupApplyRural.value,
+      ruralType: signupRuralType.value,
+      ruralSelfCheck: signupRuralSelfCheck.value
     })
     
     // 모달 닫기 & 성공 처리 및 로그인 폼으로 자동 전환
@@ -467,6 +554,10 @@ async function confirmAndSignUp() {
     signupName.value = ''
     signupPhone.value = ''
     signupParentPhone.value = ''
+    signupApplySchoolRecommend.value = true
+    signupApplyRural.value = false
+    signupRuralType.value = '유형I'
+    signupRuralSelfCheck.value = false
   } catch (e) {
     showConfirmModal.value = false
     error.value = e.message || '회원가입에 실패했습니다.'

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
 
 const routes = [
   { path: '/', redirect: '/login' },
@@ -64,6 +65,11 @@ router.beforeEach(async to => {
 
   if (auth.initialized === true && to.path === '/welcome') {
     return '/login'
+  }
+
+  if (to.path === '/rural') {
+    const status = await checkRuralSystemOpenStatus()
+    if (status.isEnabled !== true) return '/select-system'
   }
 
   if (to.meta.requiresAuth && !auth.isAdmin && !auth.isTeacher && !auth.isStudent) return '/login'

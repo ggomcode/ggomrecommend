@@ -86,8 +86,9 @@
         </div>
       </div>
 
-      <div class="text-slate-500 font-medium">
-        총 <strong class="text-emerald-600 font-bold">{{ filteredTracks.length }}</strong>개 전형 등록됨
+      <div class="text-slate-500 font-medium whitespace-nowrap">
+        총 <strong class="text-emerald-600 font-bold">{{ filteredTracks.length }}</strong>개 대학 모집요강 전형 등록됨
+        <span v-if="tracksList.length !== filteredTracks.length" class="text-xs text-slate-400"> (전체 {{ tracksList.length }}개 중)</span>
       </div>
     </div>
 
@@ -191,7 +192,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { BookOpen, RefreshCw, Search } from 'lucide-vue-next';
 import { useAuthStore } from '../../stores/auth';
-import { getRuralTracks, syncRuralTracksFromGoogleSheet } from '../../api/ruralApi';
+import { getRuralTracks, syncRuralTracksFromGoogleSheet, sortRuralTracks, getRuralDefaultTerm } from '../../api/ruralApi';
 import { supabase } from '../../utils/supabaseClient';
 import { dialog } from '../common/dialog';
 
@@ -205,8 +206,9 @@ const filterMedical = ref('all');
 const filterTrackType = ref('all');
 const searchQuery = ref('');
 
-onMounted(() => {
-  loadTracks();
+onMounted(async () => {
+  filterTerm.value = await getRuralDefaultTerm();
+  await loadTracks();
 });
 
 async function loadTracks() {
@@ -260,7 +262,7 @@ async function handleSyncRuralGoogleSheet() {
 }
 
 const filteredTracks = computed(() => {
-  return tracksList.value.filter(t => {
+  const filtered = tracksList.value.filter(t => {
     if (filterTerm.value !== 'all' && t.term_type !== filterTerm.value) return false;
     if (filterMedical.value !== 'all') {
       if (filterMedical.value === '없음' && t.medical_type && t.medical_type !== '없음') return false;
@@ -278,6 +280,8 @@ const filteredTracks = computed(() => {
 
     return true;
   });
+
+  return sortRuralTracks(filtered);
 });
 </script>
 

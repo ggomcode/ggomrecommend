@@ -261,6 +261,7 @@ import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../utils/roun
 const router = useRouter()
 const route  = useRoute()
 const auth   = useAuthStore()
+const isRuralSystemEnabled = ref(localStorage.getItem('pcm_enable_rural_system') === 'true')
 
 // ── 학급 선택 상태 및 저장 ────────────────────────────────────
 const LS_GRADE = 'teacher_selected_grade'

@@ -422,7 +422,7 @@ async function handleSyncGoogleSheet() {
       title: '추천 전형 구글 시트 동기화 완료',
       message: `총 ${res.count}건의 대학별 추천전형 요강 데이터가 DB에 연동되었습니다.`
     })
-    await loadRegionalData()
+    await Promise.all([loadRegionalRecs(), loadUnivs(), loadQuotaStats()])
   } catch (err) {
     console.error('Failed to sync google sheet:', err)
     await dialog.alert({

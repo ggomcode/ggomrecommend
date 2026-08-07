@@ -41,7 +41,7 @@
     <main class="max-w-5xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center items-center">
       <div class="text-center max-w-2xl mb-12">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-bold mb-3 border border-blue-200">
-          <span>통합 추천자 관리 시스템</span>
+          <span>{{ isRuralSystemEnabled ? '통합 추천자 관리 시스템' : '학교장 추천자 선발 시스템' }}</span>
         </div>
         <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-3">
           {{ schoolName }} 추천 시스템 포털
@@ -52,7 +52,7 @@
       </div>
 
       <!-- 시스템 선택 2개 카드 뷰 -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
+      <div :class="['grid gap-8 w-full', isRuralSystemEnabled ? 'grid-cols-1 md:grid-cols-2 max-w-4xl' : 'grid-cols-1 max-w-xl']">
         
         <!-- 카드 1: 학교장 추천자 선발 시스템 -->
         <div
@@ -93,10 +93,11 @@
 
         <!-- 카드 2: 농어촌 전형 추천자 관리 시스템 -->
         <div
+          v-if="isRuralSystemEnabled"
           @click="enterRuralSystem"
           :class="[
             'group relative bg-white rounded-3xl p-8 border shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden',
-            (!auth.isStudent || isRuralSystemOpen)
+            (!auth.isStudent || (isRuralSystemOpen && studentApplyRural))
               ? 'border-slate-200/80 hover:shadow-xl hover:border-emerald-500 cursor-pointer'
               : 'border-slate-200 opacity-60 bg-slate-50 cursor-not-allowed'
           ]"
@@ -114,10 +115,13 @@
               <span
                 :class="[
                   'px-3 py-1 rounded-full text-xs font-bold shadow-xs',
-                  isRuralSystemOpen ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-slate-200 text-slate-600'
+                  (!auth.isStudent || (isRuralSystemOpen && studentApplyRural))
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                    : 'bg-amber-100 text-amber-800 border border-amber-200'
                 ]"
               >
-                {{ isRuralSystemOpen ? `🟢 접수 진행 중 (${activeRuralTerm})` : '🔒 접수 마감' }}
+                <template v-if="auth.isStudent && !studentApplyRural">🔒 농어촌 미지원</template>
+                <template v-else>{{ isRuralSystemOpen ? `🟢 접수 진행 중 (${activeRuralTerm})` : '🔒 접수 마감' }}</template>
               </span>
             </div>
 
@@ -135,7 +139,11 @@
           </div>
 
           <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-emerald-600">
-            <span>{{ (!auth.isStudent || isRuralSystemOpen) ? '시스템 바로가기' : '접수 마감 (이용 불가)' }}</span>
+            <span>
+              <template v-if="auth.isStudent && !studentApplyRural">농어촌 미지원 (이용 불가)</template>
+              <template v-else-if="auth.isStudent && !isRuralSystemOpen">접수 마감 (이용 불가)</template>
+              <template v-else>시스템 바로가기</template>
+            </span>
             <svg class="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
@@ -158,15 +166,17 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
-import { checkRuralSystemOpenStatus } from '../api/ruralApi'
+import { checkRuralSystemOpenStatus, getRuralEligibilityList } from '../api/ruralApi'
 import { dialog } from '../components/common/dialog'
 
 const router = useRouter()
 const auth = useAuthStore()
 
 const isRuralSystemOpen = ref(true)
+const isRuralSystemEnabled = ref(false)
 const activeRuralTerm = ref('수시')
 const ruralClosedReason = ref('')
+const studentApplyRural = ref(true)
 
 const userName = computed(() => {
   if (auth.isAdmin) return '관리자'
@@ -209,6 +219,17 @@ function enterPrincipalSystem() {
 }
 
 async function enterRuralSystem() {
+  if (!isRuralSystemEnabled.value) {
+    await dialog.alert({ title: '시스템 이용 제한', message: '농어촌 전형 추천자 관리 시스템이 현재 비활성화되어 있습니다.' })
+    return
+  }
+  if (auth.isStudent && !studentApplyRural.value) {
+    await dialog.alert({
+      title: '🔒 농어촌 특별전형 미지원 안내',
+      message: '현재 대입 지원 전형 설정에서 [농어촌 특별전형 지원]이 체크되어 있지 않아 시스템에 진입할 수 없습니다.\n\n학교장 추천 시스템의 [👤 마이페이지]에서 농어촌 특별전형 지원을 체크하고 자격 확인 서약을 완료해 주세요.'
+    })
+    return
+  }
   if (auth.isStudent && !isRuralSystemOpen.value) {
     await dialog.alert({
       title: '농어촌 전형 시스템 접수 마감',
@@ -224,11 +245,39 @@ async function handleLogout() {
   router.push('/login')
 }
 
+const isPortalLoading = ref(true)
+
 onMounted(async () => {
   fetchSchoolName()
   const status = await checkRuralSystemOpenStatus()
+  isRuralSystemEnabled.value = status.isEnabled === true
   isRuralSystemOpen.value = status.isOpen
   activeRuralTerm.value = status.activeTerm
   ruralClosedReason.value = status.reason
+
+  if (auth.isStudent) {
+    try {
+      const studentId = auth.user?.id || auth.userId || auth.studentId
+      const sCode = auth.studentCode ? String(auth.studentCode).trim() : null
+      const list = await getRuralEligibilityList()
+      const myInfo = list.find(s =>
+        (studentId && (s.id === studentId || s.user_id === studentId)) ||
+        (sCode && s.student_code && String(s.student_code).trim() === sCode)
+      )
+      if (myInfo) {
+        studentApplyRural.value = myInfo.apply_rural !== undefined && myInfo.apply_rural !== null
+          ? Boolean(myInfo.apply_rural)
+          : true
+      } else {
+        studentApplyRural.value = false
+      }
+    } catch (e) {
+      console.warn('Failed to load student apply_rural status in portal:', e)
+    } finally {
+      isPortalLoading.value = false
+    }
+  } else {
+    isPortalLoading.value = false
+  }
 })
 </script>

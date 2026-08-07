@@ -13,6 +13,7 @@ export function setRouter(router) {
 export const useAuthStore = defineStore('auth', () => {
   // 로컬 스토리지 보존 상태 로드
   const token = ref(localStorage.getItem('pcm_token') || null)
+  const userId = ref(localStorage.getItem('pcm_user_id') || null)
   const role = ref(localStorage.getItem('pcm_role') || null)
   const status = ref(localStorage.getItem('pcm_status') || null)
   
@@ -66,14 +67,15 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // 사용자 프로필 가져오기 및 상태 바인딩 (자동 복구 내장)
-  async function fetchProfile(userId) {
+  async function fetchProfile(uId) {
     if (!supabase) return
+    if (uId) userId.value = uId
 
     // 1. 관리자 및 교사 프로필 검사 (profiles)
     let { data: adminTeacherData } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', userId)
+      .eq('id', uId)
       .maybeSingle()
 
     if (adminTeacherData && (adminTeacherData.role === 'admin' || adminTeacherData.role === 'teacher')) {
@@ -84,8 +86,8 @@ export const useAuthStore = defineStore('auth', () => {
         classNo.value = null
         teacherName.value = '관리자'
       } else {
-        const { data: { user } } = await supabase.auth.getUser()
-        const meta = user?.user_metadata || {}
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        const meta = authUser?.user_metadata || {}
         grade.value = meta.grade != null ? Number(meta.grade) : null
         classNo.value = meta.class_no != null ? Number(meta.class_no) : null
         teacherName.value = adminTeacherData.name === '관리자' ? '관리자' : await decryptText(adminTeacherData.name)
@@ -95,16 +97,16 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     // 2. 학생 프로필 검사 (enrolled_students 마스터 원장 100% 통합)
-    const { data: { user } } = await supabase.auth.getUser()
-    const meta = user?.user_metadata || {}
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    const meta = authUser?.user_metadata || {}
     const sCode = meta.student_code || (adminTeacherData ? adminTeacherData.student_code : null)
 
     let studentData = null
-    if (userId) {
+    if (uId) {
       const { data: byUser } = await supabase
         .from('enrolled_students')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', uId)
         .maybeSingle()
       studentData = byUser
     }
@@ -142,8 +144,8 @@ export const useAuthStore = defineStore('auth', () => {
       classNo.value = pClass
       seqNo.value = pSeq
 
-      if (userId && !studentData.user_id) {
-        await supabase.from('enrolled_students').update({ user_id: userId }).eq('id', studentData.id)
+      if (uId && !studentData.user_id) {
+        await supabase.from('enrolled_students').update({ user_id: uId }).eq('id', studentData.id)
       }
       _persist()
       return
@@ -170,6 +172,9 @@ export const useAuthStore = defineStore('auth', () => {
   function _persist() {
     if (token.value) localStorage.setItem('pcm_token', token.value)
     else localStorage.removeItem('pcm_token')
+
+    if (userId.value) localStorage.setItem('pcm_user_id', userId.value)
+    else localStorage.removeItem('pcm_user_id')
 
     if (role.value) localStorage.setItem('pcm_role', role.value)
     else localStorage.removeItem('pcm_role')
@@ -217,6 +222,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   function clearAuthStates() {
     token.value = null
+    userId.value = null
     role.value = null
     status.value = null
     grade.value = null
@@ -378,7 +384,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // 학생 회원가입 (enrolled_students 마스터 원장에 저장 - profiles 미생성)
-  async function signUpStudent({ studentCode: sCode, name, phone, parentPhone, isEnrolled: enrolled, gradYear: gYear, registrationCode }) {
+  async function signUpStudent({ studentCode: sCode, name, phone, parentPhone, isEnrolled: enrolled, gradYear: gYear, registrationCode, applySchoolRecommend = true, applyRural = false, ruralType = '유형I', ruralSelfCheck = false }) {
     if (!supabase) throw new Error('Supabase가 설정되지 않았습니다.')
 
     const cleanPhone = String(phone || '').replace(/\D/g, '')
@@ -457,6 +463,7 @@ export const useAuthStore = defineStore('auth', () => {
       .maybeSingle()
 
     let isAutoApproved = false
+    let targetId = matchedStudent?.id
 
     if (matchedStudent) {
       // 기존 enrolled_students 원장에 학생이 있는 경우: 승인절차 없이 학생이 새로 입력한 전화번호 업데이트 및 자동 승인(approved)
@@ -473,7 +480,11 @@ export const useAuthStore = defineStore('auth', () => {
         class_no: enrolled ? parsedClass : (matchedStudent.class_no || null),
         student_no: enrolled ? parsedSeq : (matchedStudent.student_no || null),
         seq_no: enrolled ? parsedSeq : (matchedStudent.seq_no || null),
-        grad_year: !enrolled && gYear ? Number(gYear) : (matchedStudent.grad_year || null)
+        grad_year: !enrolled && gYear ? Number(gYear) : (matchedStudent.grad_year || null),
+        apply_school_recommend: applySchoolRecommend !== false,
+        apply_rural: Boolean(applyRural),
+        rural_type: applyRural ? (ruralType || '유형I') : null,
+        rural_self_check: Boolean(ruralSelfCheck)
       }
       await supabase.from('enrolled_students').update(updatePayload).eq('id', matchedStudent.id)
     } else {
@@ -491,9 +502,31 @@ export const useAuthStore = defineStore('auth', () => {
         student_no: enrolled ? parsedSeq : null,
         seq_no: enrolled ? parsedSeq : null,
         grad_year: !enrolled && gYear ? Number(gYear) : null,
-        status: 'pending' // 승인 절차 필요
+        status: 'pending', // 승인 절차 필요
+        apply_school_recommend: applySchoolRecommend !== false,
+        apply_rural: Boolean(applyRural),
+        rural_type: applyRural ? (ruralType || '유형I') : null,
+        rural_self_check: Boolean(ruralSelfCheck)
       }
-      await supabase.from('enrolled_students').insert(insertPayload)
+      const { data: inserted } = await supabase.from('enrolled_students').insert(insertPayload).select('id').maybeSingle()
+      if (inserted) targetId = inserted.id
+    }
+
+    // 3. 농어촌 지원 및 본인 확인 체크 시 student_rural_eligibility 자동 승인 데이터 생성
+    if (applyRural && ruralSelfCheck && targetId) {
+      try {
+        await supabase.from('student_rural_eligibility').upsert({
+          student_id: targetId,
+          is_eligible: true,
+          is_manual_approved: true,
+          is_type1_eligible: (ruralType || '유형I') === '유형I',
+          is_type2_eligible: (ruralType || '유형I') === '유형II',
+          manual_reason: '본인 자격 요건 직접 확인 및 신청',
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'student_id' })
+      } catch (e) {
+        console.warn('Auto rural eligibility creation error:', e)
+      }
     }
 
     clearAuthStates()
@@ -509,8 +542,10 @@ export const useAuthStore = defineStore('auth', () => {
     _router?.push('/login')
   }
 
+  const user = computed(() => userId.value ? { id: userId.value } : null)
+
   return {
-    token, role, status, grade, classNo, teacherName,
+    token, userId, user, role, status, grade, classNo, teacherName,
     studentCode, studentName, studentPhone, gpaOverall, phoneLast4, seqNo, isEnrolled, gradYear, hasDisciplinary,
     initialized, isAdmin, isTeacher, isStudent,
     checkStatus, loginAdmin, loginTeacher, loginStudent, signUpStudent, logout

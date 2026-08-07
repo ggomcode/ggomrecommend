@@ -261,7 +261,7 @@ async function saveGrade(row) {
       await supabase.from('config').upsert({
         key: 'global_course_grades',
         value: JSON.stringify(gradesMap.value)
-      })
+      }, { onConflict: 'key' })
       localStorage.setItem('global_course_grades', JSON.stringify(gradesMap.value))
     } catch (e) {
       console.error('saveGrade error:', e)
@@ -312,7 +312,7 @@ async function confirmImport() {
       await supabase.from('config').upsert({
         key: 'global_course_grades',
         value: JSON.stringify(gradesMap.value)
-      })
+      }, { onConflict: 'key' })
       localStorage.setItem('global_course_grades', JSON.stringify(gradesMap.value))
     }
 

@@ -1,5 +1,98 @@
 <template>
-  <div class="flex h-screen overflow-hidden bg-slate-100 font-sans">
+  <!-- 1) 학생 로그인 시: 좌측 사이드바 없는 단순화된 top-header 전용 학생 화면 (학추 시스템 StudentView와 100% 동일) -->
+  <div v-if="auth.isStudent" class="min-h-screen bg-slate-100 text-slate-800 font-sans transition-colors duration-300">
+    <!-- 네비게이션 헤더 바 -->
+    <header class="bg-white/90 border-b border-slate-200/80 sticky top-0 z-50 shadow-sm backdrop-blur-md">
+      <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-md">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="m9 12 2 2 4-4"/>
+            </svg>
+          </div>
+          <div class="flex flex-col leading-tight">
+            <span class="text-[11px] font-extrabold text-emerald-600 tracking-tight">{{ schoolName }}</span>
+            <h1 class="text-base font-bold text-slate-900 m-0">농어촌(기회균형) 전형 추천 신청</h1>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <div class="text-right hidden sm:block">
+            <p class="text-sm font-bold text-slate-700 m-0">
+              {{ auth.studentName }} 
+              <span class="text-xs font-medium text-slate-400">
+                ({{ auth.isEnrolled ? `${auth.grade ?? (auth.studentCode?.length === 5 ? parseInt(auth.studentCode.substring(0, 1)) : 3)}학년 ${auth.classNo ?? (auth.studentCode?.length === 5 ? parseInt(auth.studentCode.substring(1, 3)) : '')}반 ${auth.seqNo ?? (auth.studentCode?.length === 5 ? parseInt(auth.studentCode.substring(3, 5)) : '')}번` : `${auth.gradYear}년 졸업생` }})
+              </span>
+            </p>
+            <p class="text-xs text-slate-400 font-semibold m-0">학번: {{ auth.studentCode }}</p>
+          </div>
+
+          <button
+            @click="showMyPageModal = true"
+            class="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
+          >
+            👤 마이페이지
+          </button>
+
+          <button
+            @click="goToPortal"
+            class="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1"
+          >
+            🏠 포털 이동
+          </button>
+
+          <button
+            @click="handleLogout"
+            class="text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer"
+          >
+            로그아웃
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 메인 신청 콘텐츠 영역 -->
+    <main class="max-w-6xl mx-auto px-6 py-8">
+      <Suspense>
+        <RuralApplyTab />
+        <template #fallback>
+          <div class="flex items-center justify-center py-20 text-slate-500">
+            <p class="text-base font-semibold">농어촌 전형 희망 지망 신청 로딩 중...</p>
+          </div>
+        </template>
+      </Suspense>
+    </main>
+
+    <!-- 학생 마이페이지 모달 -->
+    <div
+      v-if="showMyPageModal"
+      class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+    >
+      <div class="bg-slate-100 rounded-2xl max-w-4xl w-full p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+          <h3 class="text-base font-bold text-slate-900 m-0 flex items-center gap-2">
+            👤 학생 마이페이지 (대입 희망 전형 설정 및 자격 서약)
+          </h3>
+          <button
+            @click="showMyPageModal = false"
+            class="text-slate-400 hover:text-slate-600 font-bold text-xl bg-transparent border-none cursor-pointer p-1"
+          >
+            ✕
+          </button>
+        </div>
+        <Suspense>
+          <RuralMyPageTab />
+          <template #fallback>
+            <div class="py-12 text-center text-slate-400">마이페이지 로딩 중...</div>
+          </template>
+        </Suspense>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2) 교사/관리자 전용: 좌측 사이드바 관리자 화면 -->
+  <div v-else class="flex h-screen overflow-hidden bg-slate-100 font-sans">
     <!-- 사이드바 -->
     <aside
       class="flex flex-col shrink-0 bg-white border-r border-slate-200 overflow-hidden transition-all duration-200 shadow-sm"
@@ -106,16 +199,7 @@
       <div class="p-6 flex-1 min-h-0 flex flex-col overflow-y-auto">
         <Transition name="tab-fade" mode="out-in">
           <div :key="active" class="flex-1 min-h-0 flex flex-col">
-            <Suspense v-if="active === 'apply'">
-              <RuralApplyTab />
-              <template #fallback>
-                <div class="flex items-center justify-center py-20 text-slate-500">
-                  <p class="text-base font-semibold">농어촌 전형 희망 지망 신청 로딩 중...</p>
-                </div>
-              </template>
-            </Suspense>
-
-            <Suspense v-else-if="active === 'tracks'">
+            <Suspense v-if="active === 'tracks'">
               <RuralTracksTab />
               <template #fallback>
                 <div class="flex items-center justify-center py-20 text-slate-500">
@@ -141,6 +225,15 @@
                 </div>
               </template>
             </Suspense>
+
+            <Suspense v-else-if="active === 'settings'">
+              <RuralSettingsTab />
+              <template #fallback>
+                <div class="flex items-center justify-center py-20 text-slate-500">
+                  <p class="text-base font-semibold">환경설정 로딩 중...</p>
+                </div>
+              </template>
+            </Suspense>
           </div>
         </Transition>
       </div>
@@ -154,7 +247,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { safeAsyncComponent } from '../utils/asyncComponent'
-import { FileSpreadsheet, BookOpen, PenTool, Users, ChevronRight, Menu, Home, LogOut } from 'lucide-vue-next'
+import { FileSpreadsheet, BookOpen, PenTool, Users, Settings, ChevronRight, Menu, Home, LogOut, User } from 'lucide-vue-next'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -163,31 +256,27 @@ const RuralTab = safeAsyncComponent(() => import('../components/teacher/RuralTab
 const RuralTracksTab = safeAsyncComponent(() => import('../components/rural/RuralTracksTab.vue'))
 const RuralApplyTab = safeAsyncComponent(() => import('../components/rural/RuralApplyTab.vue'))
 const RuralApplicationsTab = safeAsyncComponent(() => import('../components/rural/RuralApplicationsTab.vue'))
+const RuralSettingsTab = safeAsyncComponent(() => import('../components/rural/RuralSettingsTab.vue'))
+const RuralMyPageTab = safeAsyncComponent(() => import('../components/rural/RuralMyPageTab.vue'))
 
 const collapsed = ref(false)
+const showMyPageModal = ref(false)
 
 const sidebarMenus = computed(() => {
-  if (auth.isStudent) {
-    return [
-      { key: 'apply', label: '농어촌 전형 신청', icon: PenTool },
-      { key: 'academic', label: '학적 및 자격 검증', icon: FileSpreadsheet }
-    ]
-  }
   return [
-    { key: 'applications', label: '신청 현황 & 대장', icon: Users },
     { key: 'tracks', label: '전형 요강 관리', icon: BookOpen },
-    { key: 'academic', label: '학적 및 자격 검증', icon: FileSpreadsheet }
+    { key: 'academic', label: '학적 및 자격 검증', icon: FileSpreadsheet },
+    { key: 'applications', label: '신청 현황 & 대장', icon: Users },
+    { key: 'settings', label: '환경설정', icon: Settings }
   ]
 })
 
-const active = ref('academic')
+const active = ref('tracks')
 
 onMounted(() => {
   fetchSchoolName()
-  if (auth.isStudent) {
-    active.value = 'apply'
-  } else {
-    active.value = 'applications'
+  if (!auth.isStudent) {
+    active.value = 'tracks'
   }
 })
 

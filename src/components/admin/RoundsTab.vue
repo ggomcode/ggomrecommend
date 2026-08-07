@@ -873,7 +873,7 @@ async function loadSchedules() {
       await supabase.from('config').upsert({
         key: 'round_schedules_map',
         value: JSON.stringify(DEFAULT_SCHEDULES)
-      })
+      }, { onConflict: 'key' })
     } catch (e) {
       console.error('Failed to auto-initialize round_schedules_map:', e)
     }
@@ -905,7 +905,7 @@ async function saveTotalRounds() {
   localStorage.setItem('total_rounds', String(totalRounds.value))
   if (supabase) {
     try {
-      await supabase.from('config').upsert({ key: 'total_rounds', value: String(totalRounds.value) })
+      await supabase.from('config').upsert({ key: 'total_rounds', value: String(totalRounds.value) }, { onConflict: 'key' })
     } catch (e) { console.warn('total_rounds 저장 실패:', e) }
   }
   await loadRounds()
@@ -951,7 +951,7 @@ async function saveAllSchedules() {
       await supabase.from('config').upsert({
         key: 'round_schedules_map',
         value: JSON.stringify(schedulesMap.value)
-      })
+      }, { onConflict: 'key' })
     } catch (e) {
       console.error(e)
     }
