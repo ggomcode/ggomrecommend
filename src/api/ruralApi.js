@@ -1,7 +1,7 @@
 import { supabase } from '../utils/supabaseClient';
 import * as XLSX from 'xlsx';
 import { encryptText, decryptText } from '../utils/cryptoUtils';
-import { clearAllRuralStorage } from '../utils/storageUtils';
+import { clearAllRuralStorage, deleteStudentRuralSignatures } from '../utils/storageUtils';
 
 const API_BASE_URL = 'https://www.schoolinfo.go.kr/openApi.do';
 
@@ -1814,6 +1814,7 @@ export async function saveStudentRuralApplications(studentId, applications) {
   }
 
   if (rowsToInsert.length === 0) {
+    await deleteStudentRuralSignatures(targetStudentId);
     return [];
   }
 
@@ -1867,6 +1868,18 @@ export async function updateRuralApplicationByTeacher(applicationId, updatePaylo
  * 교사/관리자가 학생 농어촌 신청 항목 삭제
  */
 export async function deleteRuralApplicationByTeacher(applicationId) {
+  if (!supabase) return true;
+
+  // 1. 해당 신청서 정보 조회 (학생 ID 파악)
+  const { data: targetApp } = await supabase
+    .from('rural_applications')
+    .select('student_id')
+    .eq('id', applicationId)
+    .maybeSingle();
+
+  const studentId = targetApp?.student_id;
+
+  // 2. 신청서 레코드 삭제
   const { error } = await supabase
     .from('rural_applications')
     .delete()
@@ -1875,6 +1888,19 @@ export async function deleteRuralApplicationByTeacher(applicationId) {
   if (error) {
     throw error;
   }
+
+  // 3. 만약 해당 학생의 남은 농어촌 신청 항목이 없으면, 연결된 농어촌 서명(DB, Storage, localStorage)도 완전 삭제
+  if (studentId) {
+    const { data: remainingApps } = await supabase
+      .from('rural_applications')
+      .select('id')
+      .eq('student_id', studentId);
+
+    if (!remainingApps || remainingApps.length === 0) {
+      await deleteStudentRuralSignatures(studentId);
+    }
+  }
+
   return true;
 }
 
