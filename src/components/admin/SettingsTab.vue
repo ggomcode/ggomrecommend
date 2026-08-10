@@ -470,6 +470,7 @@ import { getDisclosureCount, setDisclosureCount, syncRegionalToUniversities, syn
 import { syncRuralTracksFromGoogleSheet } from '../../api/ruralApi.js'
 import { dialog } from '../common/dialog.js'
 import { useAuthStore } from '../../stores/auth'
+import { clearAllApplicationStorage, clearAllRuralStorage } from '../../utils/storageUtils'
 
 const auth = useAuthStore()
 
@@ -937,12 +938,16 @@ async function resetApplicationsOnly() {
     message: '학생들이 제출한 모든 대입 학교장추천 희망서와 서명, 추천 확정 및 포기원 데이터가 영구 삭제됩니다. 계속하시겠습니까?',
     confirmText: '지원 현황만 초기화',
     level: 'danger',
-    dangerNotice: '이 작업은 취소할 수 없습니다. 모든 학급의 학생 신청 목록이 비워집니다.',
+    dangerNotice: '이 작업은 취소할 수 없습니다. 모든 학급의 학생 신청 목록 및 스토리지 서명/문서 파일이 완전 삭제됩니다.',
     finalConfirmText: '확인 및 삭제'
   }))) return
 
   resetAppLoading.value = true
   try {
+    // 1. Supabase Storage 서명 및 보관 문서 파일 일괄 전면 삭제
+    await clearAllApplicationStorage()
+
+    // 2. DB applications 레코드 삭제
     const { error: appErr } = await supabase
       .from('applications')
       .delete()
@@ -965,12 +970,12 @@ async function resetApplicationsOnly() {
         await supabase.from('audit_logs').insert({
           actor_id: userRes.data.user.id,
           action: 'RESET_APPLICATIONS_ONLY',
-          details: { message: '교사용/학생용 지원 현황 데이터 일괄 삭제 초기화' }
+          details: { message: '교사용/학생용 지원 현황 데이터 및 서명/문서 스토리지 파일 일괄 삭제 초기화' }
         })
       }
     } catch {}
 
-    alert('학생들의 지원 현황이 성공적으로 초기화되었습니다.')
+    alert('학생들의 지원 현황 및 서명 파일이 성공적으로 초기화되었습니다.')
   } catch (e) {
     console.error(e)
     alert(e.message || '지원 현황 초기화 작업 중 오류가 발생했습니다.')
@@ -983,15 +988,20 @@ async function resetAllSystemData() {
   if (!supabase) return
   if (!(await dialog.confirm({
     title: '🚨 시스템 전체 초기화 경고',
-    message: '지원 현황을 포함한 대학 목록, 지역 정원 요강, 정보공시 재학생 설정 및 학생 마스터 DB 등 모든 데이터가 완전히 소멸됩니다. 정말로 공장 초기화를 진행하시겠습니까?',
+    message: '지원 현황을 포함한 대학 목록, 지역 정원 요강, 정보공시 재학생 설정 및 학생 마스터 DB, 서명 스토리지 파일 등 모든 데이터가 완전히 소멸됩니다. 정말로 공장 초기화를 진행하시겠습니까?',
     confirmText: '모든 데이터 초기화',
     level: 'danger',
-    dangerNotice: '모든 데이터베이스 테이블이 완전히 초기화됩니다. 이 작업은 즉각 반영되며 절대 취소할 수 없습니다.',
+    dangerNotice: '모든 데이터베이스 테이블과 서명 스토리지 파일이 완전히 초기화됩니다. 이 작업은 즉각 반영되며 절대 취소할 수 없습니다.',
     finalConfirmText: '공장 초기화 최종 확정'
   }))) return
 
   resetAllLoading.value = true
   try {
+    // 1. 모든 Storage 버킷 (signatures, documents, rural_signatures) 파일 전면 삭제
+    await clearAllApplicationStorage()
+    await clearAllRuralStorage()
+
+    // 2. 모든 DB 테이블 데이터 삭제
     await supabase.from('applications').delete().not('id', 'is', null)
     await supabase.from('universities').delete().not('id', 'is', null)
     await supabase.from('regional_recommendations').delete().not('id', 'is', null)

@@ -1,6 +1,7 @@
 import { supabase } from '../utils/supabaseClient';
 import * as XLSX from 'xlsx';
 import { encryptText, decryptText } from '../utils/cryptoUtils';
+import { clearAllRuralStorage } from '../utils/storageUtils';
 
 const API_BASE_URL = 'https://www.schoolinfo.go.kr/openApi.do';
 
@@ -1969,11 +1970,14 @@ export async function resetRuralAcademicDB() {
 }
 
 /**
- * 3. 학생 신청 현황 DB 초기화 (rural_applications 전체 삭제)
+ * 3. 학생 신청 현황 DB 초기화 (rural_applications 전체 삭제 및 서명 스토리지 초기화)
  */
 export async function resetRuralApplicationsDB() {
+  await clearAllRuralStorage();
   const { error } = await supabase.from('rural_applications').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  const { error: sigErr } = await supabase.from('rural_signatures').delete().neq('student_id', '00000000-0000-0000-0000-000000000000');
   if (error) throw error;
+  if (sigErr) console.warn('Reset rural_signatures warning:', sigErr);
   return true;
 }
 
@@ -1981,6 +1985,7 @@ export async function resetRuralApplicationsDB() {
  * 4. 농어촌 시스템 전체 DB 일괄 초기화
  */
 export async function resetAllRuralDBs() {
+  await clearAllRuralStorage();
   await resetRuralTracksDB();
   await resetRuralAcademicDB();
   await resetRuralApplicationsDB();

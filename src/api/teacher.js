@@ -2,6 +2,7 @@ import { supabase } from '../utils/supabaseClient'
 import { decryptText } from '../utils/cryptoUtils'
 import { formatScore } from '../utils/scorePreviewShared'
 import { fetchRoundSchedulesMap, computeRoundDisplayStatus, DEFAULT_SCHEDULES } from '../utils/roundSchedule'
+import { deleteApplicationStorageFiles } from '../utils/storageUtils'
 
 // 1. 현재 활성화된 라운드 조회
 export const getCurrentRound = async () => {
@@ -426,17 +427,46 @@ console.warn('감사 로그 작성 실패:', e)
 }
 }
 
-// 10. 지원서 삭제
+// 10. 지원서 삭제 (스토리지 서명/문서 파일 및 DB 레코드 완전 삭제)
 export const teacherDeleteApplication = async (sid, tid, rid) => {
-if (!supabase) return
-const { error } = await supabase
-.from('applications')
-.delete()
-.eq('student_id', sid)
-.eq('univ_id', tid)
-.eq('round', rid)
+  if (!supabase) return
 
-if (error) throw error
+  // 1. 해당 지원서 데이터 조회 (첨부된 서명/문서 URL 획득)
+  const { data: app } = await supabase
+    .from('applications')
+    .select('*')
+    .eq('student_id', sid)
+    .eq('univ_id', tid)
+    .eq('round', rid)
+    .maybeSingle()
+
+  if (app) {
+    await deleteApplicationStorageFiles(app)
+  }
+
+  // 2. DB 레코드 삭제
+  const { error } = await supabase
+    .from('applications')
+    .delete()
+    .eq('student_id', sid)
+    .eq('univ_id', tid)
+    .eq('round', rid)
+
+  if (error) throw error
+
+  // 감사로그 기록
+  try {
+    const userRes = await supabase.auth.getUser()
+    if (userRes?.data?.user) {
+      await supabase.from('audit_logs').insert({
+        actor_id: userRes.data.user.id,
+        action: 'DELETE_APPLICATION',
+        details: { student_id: sid, univ_id: tid, round: rid }
+      })
+    }
+  } catch (e) {}
+
+  return true
 }
 
 // 10-1. 지원서 수정 (지원전형·학과·환산점수)
@@ -704,6 +734,8 @@ details: { student_id: sid, univ_id: tid, round: rid }
 console.warn('감사 로그 작성 실패:', e)
 }
 }
+
+
 
 // 14. 라운드 컨펌 상태 조회 (더미)
 export const teacherGetRoundConfirmation = async (roundId) => {

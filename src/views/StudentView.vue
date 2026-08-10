@@ -850,6 +850,7 @@ import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { printApplicationForm } from '../utils/printTemplates'
 import { getDisclosureCount } from '../api/admin.js'
 import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../utils/roundSchedule'
+import { deleteApplicationStorageFiles } from '../utils/storageUtils'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -1553,15 +1554,15 @@ async function handleCancelApplication(id) {
   
   submitLoading.value = true
   try {
-    // 신청 건 조회하여 업로드된 서명 파일 경로 획득
+    // 신청 건 조회하여 업로드된 서명 파일 경로 획득 및 스토리지 삭제
     const ap = myApplications.value.find(item => item.id === id)
     if (!ap) return
 
     const { data: userData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }))
     const userId = userData?.user?.id || (auth.token?.startsWith('student_') ? auth.token.split('_')[1] : 'guest')
 
-    const studentSigPath = `student_${userId}_r${ap.round}_u_${ap.univ_id}_student.png`
-    const parentSigPath = `student_${userId}_r${ap.round}_u_${ap.univ_id}_parent.png`
+    // 서명 및 보관 파일 스토리지 완전 삭제 수행
+    await deleteApplicationStorageFiles(ap)
 
     // DB 삭제
     const { error: deleteErr } = await supabase
@@ -1570,9 +1571,6 @@ async function handleCancelApplication(id) {
       .eq('id', id)
 
     if (deleteErr) throw deleteErr
-
-    // 스토리지 파일 삭제
-    await supabase.storage.from('signatures').remove([studentSigPath, parentSigPath])
 
     // 감사로그 기록
     try {

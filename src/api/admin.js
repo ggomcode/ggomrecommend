@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx'
 import { formatPhoneLast4, hashPhone, cleanFullPhone } from '../utils/phoneUtils'
 import { encryptText, decryptText, hashText } from '../utils/cryptoUtils'
 import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../utils/roundSchedule'
+import { deleteApplicationStorageFiles } from '../utils/storageUtils'
 
 // Helper for error parsing
 export async function blobErrMsg(e) {
@@ -1305,6 +1306,23 @@ export const addGraduatedStudent = async (body) => {
 // 9. 학생/졸업생 삭제
 export const deleteStudent = async (id) => {
   if (!supabase) return
+
+  // 삭제 전 해당 학생의 모든 지원서 서명/문서 스토리지 파일 삭제
+  try {
+    const { data: apps } = await supabase
+      .from('applications')
+      .select('*')
+      .eq('student_id', id)
+
+    if (apps && apps.length > 0) {
+      for (const ap of apps) {
+        await deleteApplicationStorageFiles(ap)
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to delete student application storage files:', e)
+  }
+
   const { error } = await supabase
     .from('enrolled_students')
     .delete()
