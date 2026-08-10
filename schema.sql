@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     grad_year INTEGER, -- 졸업학년도 (is_enrolled가 false인 경우 필수)
     grade INTEGER, -- 학년
     class_no INTEGER, -- 반
+    seq_no INTEGER, -- 번호
     has_disciplinary BOOLEAN NOT NULL DEFAULT FALSE, -- 선도처분 여부 (사회봉사 이상 시 true)
     rejection_reason TEXT, -- 관리자 가입 반려 사유
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
