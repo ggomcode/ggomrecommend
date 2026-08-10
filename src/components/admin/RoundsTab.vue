@@ -742,6 +742,7 @@ import {
 import HelpBox from '../common/HelpBox.vue'
 import { dialog } from '../common/dialog.js'
 import { roundStatusLabel } from '../../data/roundStatus.js'
+import { computeRoundDisplayStatus } from '../../utils/roundSchedule.js'
 import { formatScore } from '../../utils/scorePreviewShared.js'
 import { convertPdfToImages, analyzeDocumentWithAI } from '../../utils/ocrParser.js'
 
@@ -1262,108 +1263,28 @@ function getAreaScore(r, areaId) {
 }
 
 function getDisplayStatus(r) {
-  if (r.status === 'FINALIZED') return 'FINALIZED'
-
+  if (!r) return 'DRAFT'
   const sched = schedulesMap.value[r.id] || DEFAULT_SCHEDULES[r.id]
-  if (!sched || !sched.apply_start || !sched.apply_end) return r.status
-
-  // 한국 시간(KST) 기준 오늘 날짜 YYYY-MM-DD 생성
-  const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
-
-  // 현재 한국 시간의 '시' 정보 (0~23)
-  let curHour = 12
-  try {
-    const formatter = new Intl.DateTimeFormat('ko-KR', {
-      timeZone: 'Asia/Seoul',
-      hour: 'numeric',
-      hour12: false
-    })
-    const parts = formatter.formatToParts(new Date())
-    const hourPart = parts.find(p => p.type === 'hour')
-    if (hourPart) curHour = parseInt(hourPart.value, 10)
-  } catch {
-    curHour = new Date().getHours()
-  }
-
-  if (todayStr < sched.apply_start) {
-    return 'DRAFT' // UI 수준에서만 대기중으로 표시
-  } else if (todayStr >= sched.apply_start && todayStr <= sched.apply_end) {
-    return 'OPEN' // 진행중
-  } else {
-    // 접수 마감 후 (오늘Str > apply_end)
-    if (sched.announce_date && todayStr === sched.announce_date) {
-      if (curHour < 18) {
-        return 'CLOSED' // 심사 진행중
-      } else {
-        return 'FINALIZED' // 최종 마감
-      }
-    }
-    if (sched.announce_date && todayStr > sched.announce_date) {
-      return 'FINALIZED' // 최종 마감
-    }
-    return 'CLOSED' // 심사 진행중
-  }
+  return computeRoundDisplayStatus(r, sched)
 }
 
 async function syncRoundStatuses(roundsList) {
   if (!supabase || !roundsList || roundsList.length === 0) return roundsList
 
-  // 한국 시간(KST) 기준 오늘 날짜 YYYY-MM-DD 생성
-  const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
-  
-  // 현재 한국 시간의 '시' 정보 (0~23)
-  let curHour = 12
-  try {
-    const formatter = new Intl.DateTimeFormat('ko-KR', {
-      timeZone: 'Asia/Seoul',
-      hour: 'numeric',
-      hour12: false
-    })
-    const parts = formatter.formatToParts(new Date())
-    const hourPart = parts.find(p => p.type === 'hour')
-    if (hourPart) curHour = parseInt(hourPart.value, 10)
-  } catch {
-    curHour = new Date().getHours()
-  }
-
   const updatedList = []
   for (const r of roundsList) {
-    // 이미 최종 마감(FINALIZED)된 라운드는 건드리지 않음
-    if (r.status === 'FINALIZED') {
-      updatedList.push(r)
-      continue
-    }
-
     const sched = schedulesMap.value[r.id] || DEFAULT_SCHEDULES[r.id]
-    if (!sched || !sched.apply_start || !sched.apply_end) {
-      updatedList.push(r)
-      continue
+    const calculatedStatus = computeRoundDisplayStatus(r, sched)
+
+    let dbStatus = calculatedStatus
+    if (calculatedStatus === 'DRAFT') {
+      dbStatus = 'OPEN'
     }
 
-    let targetStatus = r.status
-    if (todayStr < sched.apply_start) {
-      targetStatus = 'OPEN' // DB check constraint를 우회하기 위해 DB상에는 OPEN으로 저장하되, UI에서 DRAFT로 표시
-    } else if (todayStr >= sched.apply_start && todayStr <= sched.apply_end) {
-      targetStatus = 'OPEN' 
-    } else {
-      // 접수 마감 후 (오늘Str > apply_end)
-      if (sched.announce_date && todayStr === sched.announce_date) {
-        if (curHour < 18) {
-          targetStatus = 'CLOSED' 
-        } else {
-          targetStatus = 'FINALIZED' 
-        }
-      } else if (sched.announce_date && todayStr > sched.announce_date) {
-        targetStatus = 'FINALIZED' 
-      } else {
-        targetStatus = 'CLOSED' 
-      }
-    }
-
-    if (r.status !== targetStatus) {
+    if (r.status !== dbStatus) {
       try {
-        await updateRoundStatus(r.id, targetStatus)
-        updatedList.push({ ...r, status: targetStatus })
+        await updateRoundStatus(r.id, dbStatus)
+        updatedList.push({ ...r, status: dbStatus })
       } catch (e) {
         console.error(`차수 ${r.id} 진행상태 자동 동기화 실패:`, e)
         updatedList.push(r)

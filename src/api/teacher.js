@@ -24,35 +24,37 @@ export const getCurrentRound = async () => {
     }
   } catch {}
 
-  const { data, error } = await supabase
+  const { data: rounds, error } = await supabase
     .from('timeline_rounds')
     .select('*')
-    .eq('status', 'OPEN')
     .lte('id', limit)
     .order('id', { ascending: true })
-    
+
   if (error) throw error
-  if (data && data.length > 0) return data[0]
-  
-  // OPEN 라운드가 없으면 CLOSED 라운드 조회
-  const { data: closedData } = await supabase
-    .from('timeline_rounds')
-    .select('*')
-    .eq('status', 'CLOSED')
-    .lte('id', limit)
-    .order('id', { ascending: true })
-    
-  if (closedData && closedData.length > 0) return closedData[0]
+  if (!rounds || rounds.length === 0) return null
 
-  // 둘 다 없으면 lte(limit) 범위에서 가장 최근 라운드를 반환
-  const { data: latest } = await supabase
-    .from('timeline_rounds')
-    .select('*')
-    .lte('id', limit)
-    .order('id', { ascending: false })
-    .limit(1)
+  const schedulesMap = await fetchRoundSchedulesMap()
 
-  return latest && latest.length > 0 ? latest[0] : null
+  // 1. 현재 접수 중(OPEN)인 차수가 있으면 낮은 차수(1차 우선) 선택
+  for (const r of rounds) {
+    const sched = schedulesMap[r.id]
+    if (computeRoundDisplayStatus(r, sched) === 'OPEN') return r
+  }
+
+  // 2. 접수 전(DRAFT) 상태인 차수가 있으면 가장 낮은 차수(1차) 선택
+  for (const r of rounds) {
+    const sched = schedulesMap[r.id]
+    if (computeRoundDisplayStatus(r, sched) === 'DRAFT') return r
+  }
+
+  // 3. 심사 중(CLOSED)인 차수가 있으면 선택
+  for (const r of rounds) {
+    const sched = schedulesMap[r.id]
+    if (computeRoundDisplayStatus(r, sched) === 'CLOSED') return r
+  }
+
+  // 4. 모두 FINALIZED이면 첫 차수(1차) 선택
+  return rounds[0]
 }
 
 // 2. 담당 학급 학생 목록 조회 (enrolled_students 통합 마스터 원장 참조)

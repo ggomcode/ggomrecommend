@@ -43,17 +43,16 @@ export function printApplicationForm(apps, studentInfo) {
   const win = window.open('', '_blank')
   const isEnrolled = studentInfo.is_enrolled !== false
 
-  // 학번 표시
-  const grade   = studentInfo.grade    || ''
-  const classNo = studentInfo.class_no || ''
-  const seqNo   = studentInfo.seq_no   || ''
-  const code    = studentInfo.student_code || ''
-  let studentNumberDisplay = ''
-  if (grade && classNo && seqNo) {
-    studentNumberDisplay = `${grade}학년 ${classNo}반 ${seqNo}번`
-  } else if (code) {
-    studentNumberDisplay = code
+  // 학번 표시 (5자리 숫자 포맷 - 예: 30202)
+  const rawCode = String(studentInfo.student_code || '').trim()
+  let cleanCode = rawCode.length > 5 ? rawCode.slice(-5) : rawCode
+  if (!cleanCode && studentInfo.grade && studentInfo.class_no && studentInfo.seq_no) {
+    const g = String(studentInfo.grade).padStart(1, '0')
+    const c = String(studentInfo.class_no).padStart(2, '0')
+    const s = String(studentInfo.seq_no).padStart(2, '0')
+    cleanCode = `${g}${c}${s}`
   }
+  const studentNumberDisplay = cleanCode || rawCode
 
   // 재학생/졸업생 체크박스
   const enrolledBox  = isEnrolled ? '☑ 재학생' : '☐ 재학생'

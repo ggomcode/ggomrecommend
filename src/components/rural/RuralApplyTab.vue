@@ -119,17 +119,13 @@
             </div>
           </div>
 
-          <!-- 하단 저장 안내 & 인쇄 정보 -->
-          <div v-if="myApplications.length > 0" class="pt-3 border-t border-slate-100 flex items-center justify-between">
-            <span class="text-xs font-semibold text-slate-500">총 {{ myApplications.length }}개 농어촌 지망 등록됨</span>
-            <button
-              @click="saveAllApplications(false)"
-              :disabled="saving"
-              class="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors cursor-pointer border-none shadow-xs disabled:opacity-50 flex items-center gap-1.5"
-            >
-              <Save class="w-4 h-4" />
-              {{ saving ? '저장 중…' : '농어촌 지망 신청서 저장' }}
-            </button>
+          <!-- 하단 실시간 자동 저장 안내 정보 -->
+          <div v-if="myApplications.length > 0" class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span class="font-semibold">총 <strong class="text-emerald-700 font-bold">{{ myApplications.length }}개</strong> 지망 등록됨</span>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full font-bold text-[11px]">
+              <CheckCircle class="w-3.5 h-3.5" />
+              DB 실시간 자동 저장됨
+            </span>
           </div>
         </div>
       </section>
@@ -142,8 +138,8 @@
               <Plus class="w-5 h-5 text-emerald-600" />
               농어촌 희망 지망 추가
             </h3>
-            <p class="text-xs text-slate-500 m-0 mt-1">
-              대학 및 전형을 선택한 후 하단 버튼을 눌러 신청 목록에 추가하세요.
+            <p class="text-xs text-emerald-700 font-bold m-0 mt-1">
+              대학 및 전형을 선택한 후 하단 버튼을 누르면 DB에 즉시 저장됩니다.
             </p>
           </div>
 
@@ -158,15 +154,33 @@
               </select>
             </div>
 
+            <!-- 2. 직접 입력 모드 안내 뱃지 -->
+            <div v-if="isCustomInputMode || formInput.univ_name === '__CUSTOM__' || formInput.track_name === '__CUSTOM__'" class="p-3 bg-amber-50 rounded-xl border border-amber-300 text-xs space-y-1 text-amber-900 shadow-xs">
+              <div class="flex items-center justify-between font-extrabold text-amber-950">
+                <span class="flex items-center gap-1">⚠️ 미등록 대학/전형 직접 입력 모드</span>
+                <button type="button" @click="isCustomInputMode = false; formInput.univ_name = ''; formInput.track_name = '';" class="text-[11px] underline text-slate-600 hover:text-slate-900 cursor-pointer">목록 선택으로 변경</button>
+              </div>
+              <p class="text-[11px] text-amber-800 m-0 leading-relaxed">
+                지원하려는 대학/전형이 드롭다운에 없는 경우 직접 작성해 주세요. (담임 교사 및 관리자에게 자동 통보됩니다.)
+              </p>
+            </div>
+
             <!-- 3. 지원 대학 -->
             <div>
               <label class="block font-bold text-slate-700 mb-1">지원 대학 선택 <span class="text-rose-500">*</span></label>
-              <select v-model="formInput.univ_name" @change="onFormUnivChange" class="w-full p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-900">
+              <select v-if="!isCustomInputMode" v-model="formInput.univ_name" @change="onFormUnivChange" class="w-full p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-900">
                 <option value="">-- 대학 선택 --</option>
                 <option v-for="u in availableFormUnivs" :key="u.value" :value="u.value">
                   {{ u.label }}
                 </option>
               </select>
+              <input
+                v-if="isCustomInputMode || formInput.univ_name === '__CUSTOM__'"
+                v-model="customUnivName"
+                type="text"
+                placeholder="대학명 직접 입력 (예: 서울대학교)"
+                class="w-full p-2 mt-1 bg-white border border-amber-400 rounded-lg font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+              />
             </div>
 
             <!-- 4. 학과 입력 -->
@@ -186,27 +200,52 @@
             <!-- 5. 전형 유형 -->
             <div>
               <label class="block font-bold text-slate-700 mb-1">전형 유형</label>
-              <select v-model="formInput.track_type" @change="onFormTrackTypeChange" class="w-full p-2 bg-white border border-slate-300 rounded-lg font-semibold text-slate-900">
+              <select v-if="!isCustomInputMode && formInput.univ_name !== '__CUSTOM__'" v-model="formInput.track_type" @change="onFormTrackTypeChange" class="w-full p-2 bg-white border border-slate-300 rounded-lg font-semibold text-slate-900">
                 <option value="">-- 유형 선택 --</option>
                 <option v-for="tType in availableFormTrackTypes" :key="tType" :value="tType">
                   {{ tType }}
                 </option>
               </select>
+              <input
+                v-else
+                v-model="customTrackType"
+                type="text"
+                placeholder="전형유형 직접 입력 (예: 학생부종합)"
+                class="w-full p-2 bg-white border border-slate-300 rounded-lg font-semibold text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              />
             </div>
 
             <!-- 6. 전형명 -->
             <div>
               <label class="block font-bold text-slate-700 mb-1">전형명 선택 <span class="text-rose-500">*</span></label>
-              <select v-model="formInput.track_name" @change="onFormTrackNameChange" class="w-full p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-900">
+              <select v-if="!isCustomInputMode && formInput.univ_name !== '__CUSTOM__'" v-model="formInput.track_name" @change="onFormTrackNameChange" class="w-full p-2 bg-white border border-slate-300 rounded-lg font-bold text-slate-900">
                 <option value="">-- 전형명 선택 --</option>
                 <option v-for="t in availableFormTrackNames" :key="t.id" :value="t.track_name">
                   {{ t.track_name }}
                 </option>
               </select>
+              <input
+                v-if="isCustomInputMode || formInput.univ_name === '__CUSTOM__' || formInput.track_name === '__CUSTOM__'"
+                v-model="customTrackName"
+                type="text"
+                placeholder="전형명 직접 입력 (예: 기회균형특별전형(농어촌))"
+                class="w-full p-2 mt-1 bg-white border border-amber-400 rounded-lg font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+              />
+            </div>
+
+            <!-- 직접 입력 토글 버튼 -->
+            <div class="pt-1 text-right">
+              <button
+                type="button"
+                @click="toggleCustomInputMode"
+                class="text-xs font-bold text-amber-700 hover:text-amber-900 underline cursor-pointer inline-flex items-center gap-1"
+              >
+                ✏️ {{ isCustomInputMode ? '기본 드롭다운 목록 선택 모드로 돌아가기' : '찾으시는 대학/전형이 목록에 없나요? (직접 입력)' }}
+              </button>
             </div>
 
             <!-- 요강 자동 미리보기 카드 -->
-            <div v-if="formInput.track_name" class="p-3 bg-emerald-50/80 rounded-xl border border-emerald-200 text-xs space-y-1 text-slate-700">
+            <div v-if="formInput.track_name && formInput.track_name !== '__CUSTOM__'" class="p-3 bg-emerald-50/80 rounded-xl border border-emerald-200 text-xs space-y-1 text-slate-700">
               <div class="flex justify-between font-bold text-emerald-900 border-b border-emerald-200/60 pb-1">
                 <span>모집인원:</span>
                 <span class="text-indigo-700">{{ formInput.recruitment_quota || '-' }}</span>
@@ -269,6 +308,14 @@
             <span>2. 학부모(보호자) 서명</span>
             <button @click="clearParentSig" class="text-slate-400 hover:text-slate-600 text-[11px]">서명 지우기</button>
           </div>
+          <div class="mb-2">
+            <input 
+              v-model="parentName" 
+              type="text" 
+              placeholder="학부모(보호자) 성함 입력 (필수)" 
+              class="w-full p-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+            />
+          </div>
           <canvas
             ref="parentCanvasRef"
             width="420"
@@ -300,6 +347,51 @@
         </div>
       </div>
     </div>
+
+    <!-- 양면 인쇄 권장 안내 모달 -->
+    <div v-if="showPrintModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 mx-auto flex items-center justify-center shadow-xs">
+          <Printer class="w-7 h-7" />
+        </div>
+
+        <div class="space-y-1.5">
+          <h3 class="text-xl font-extrabold text-slate-900 m-0">
+            농어촌 특별전형 추천 확인서 인쇄
+          </h3>
+          <p class="text-xs text-slate-600 leading-relaxed m-0">
+            본 확인서는 <strong class="text-indigo-700">A4 2페이지 양면 서식</strong>으로 작성되었습니다.
+          </p>
+        </div>
+
+        <!-- 인쇄 팁 안내 상자 -->
+        <div class="bg-indigo-50/70 p-4 rounded-2xl border border-indigo-100 text-left text-xs space-y-2 text-indigo-950">
+          <p class="font-extrabold text-indigo-900 m-0 flex items-center gap-1.5 text-xs">
+            💡 프린터 양면 인쇄 설정 안내
+          </p>
+          <ul class="margin-0 padding-left-4 space-y-1.5 text-indigo-900 list-disc pl-4 m-0 text-xs leading-relaxed">
+            <li>인쇄 팝업 창에서 <strong>[양면 인쇄]</strong> 옵션을 선택해 주세요.</li>
+            <li>양면 방향은 <strong>[긴 축으로 넘김]</strong>으로 선택하시면 앞/뒷면이 바르게 인쇄됩니다.</li>
+          </ul>
+        </div>
+
+        <div class="flex items-center gap-3 pt-2">
+          <button
+            @click="showPrintModal = false"
+            class="flex-1 py-3 px-4 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer border border-slate-300"
+          >
+            취소
+          </button>
+          <button
+            @click="executePrintFromModal"
+            class="flex-1 py-3 px-4 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-md cursor-pointer border-none flex items-center justify-center gap-1.5"
+          >
+            <Printer class="w-4 h-4" />
+            인쇄
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -311,7 +403,8 @@ import {
   Save,
   Printer,
   Plus,
-  Trash2
+  Trash2,
+  CheckCircle
 } from 'lucide-vue-next';
 import { useAuthStore } from '../../stores/auth';
 import { supabase } from '../../utils/supabaseClient';
@@ -319,7 +412,9 @@ import {
   getRuralTracks,
   getStudentRuralApplications,
   saveStudentRuralApplications,
-  getRuralEligibilityList
+  getRuralEligibilityList,
+  getRuralSignatures,
+  saveRuralSignatures
 } from '../../api/ruralApi';
 import { dialog } from '../common/dialog';
 import { printRuralConfirmationDocument } from '../../utils/ruralPrintHelper';
@@ -356,7 +451,9 @@ const formInput = ref({
 
 const studentSig = ref(null);
 const parentSig = ref(null);
+const parentName = ref('');
 const showSigModal = ref(false);
+const showPrintModal = ref(false);
 
 const studentCanvasRef = ref(null);
 const parentCanvasRef = ref(null);
@@ -421,26 +518,49 @@ async function loadEligibilityAndTracks() {
         prefRuralSelfCheck.value = Boolean(myInfo.rural_self_check);
 
         const elig = myInfo.eligibility;
-        isEligible.value = Boolean(elig?.is_eligible || elig?.is_manual_approved);
+        isEligible.value = Boolean(myInfo.is_rural_eligible || elig?.is_eligible || elig?.is_manual_approved);
         evalReport.value = elig?.evaluation_notes || '';
       } else {
         isEligible.value = false;
         evalReport.value = '학생 자격 정보 미등록 또는 미확인 상태입니다.';
       }
 
-      // 내 기존 지망 신청 내역 로드
+      // 내 기존 지망 신청 내역 및 서명 로드
       const fetchId = currentStudentDbId.value || studentId;
       const savedApps = await getStudentRuralApplications(fetchId);
-      if (savedApps && savedApps.length > 0) {
-        myApplications.value = savedApps.map(sa => ({
-          ...sa,
-          term_type: sa.term_type || '수시',
-          medical_type: sa.medical_type || '없음'
-        }));
 
-        if (savedApps[0].student_signature) studentSig.value = savedApps[0].student_signature;
-        if (savedApps[0].parent_signature) parentSig.value = savedApps[0].parent_signature;
-        if (savedApps[0].is_warning_acknowledged) warningAcknowledged.value = true;
+      // 1. 서명 복원 (rural_signatures 테이블 1순위 -> localStorage 2순위)
+      const sigData = await getRuralSignatures(fetchId);
+      if (sigData) {
+        if (sigData.student_signature) studentSig.value = sigData.student_signature;
+        if (sigData.parent_signature) parentSig.value = sigData.parent_signature;
+        if (sigData.parent_name) parentName.value = sigData.parent_name;
+      }
+      if (!studentSig.value && !parentSig.value) {
+        const localSigRaw = localStorage.getItem(`rural_sig_${fetchId}`);
+        if (localSigRaw) {
+          try {
+            const localSig = JSON.parse(localSigRaw);
+            if (localSig.studentSig) studentSig.value = localSig.studentSig;
+            if (localSig.parentSig) parentSig.value = localSig.parentSig;
+            if (localSig.parentName) parentName.value = localSig.parentName;
+          } catch (err) {
+            console.warn('Failed to parse local signature cache:', err);
+          }
+        }
+      }
+
+      // 2. 지망 내역 복원 (choice_number > 0 이며 univ_name 존재하는 경우만)
+      if (savedApps && savedApps.length > 0) {
+        const realApps = savedApps.filter(sa => sa.choice_number > 0 && sa.univ_name);
+        if (realApps.length > 0) {
+          myApplications.value = realApps.map(sa => ({
+            ...sa,
+            term_type: sa.term_type || '수시',
+            medical_type: sa.medical_type || '없음'
+          }));
+          if (realApps[0].is_warning_acknowledged) warningAcknowledged.value = true;
+        }
       }
     }
   } catch (e) {
@@ -528,14 +648,16 @@ const availableFormUnivs = computed(() => {
     return a.univ_name.localeCompare(b.univ_name, 'ko');
   });
 
-  return sorted.map(u => ({
+  const sortedResult = sorted.map(u => ({
     value: u.univ_name,
     label: u.region ? `(${u.region}) ${u.univ_name}` : u.univ_name
   }));
+  sortedResult.push({ value: '__CUSTOM__', label: '✏️ -- 목록에 없음 (직접 입력) --' });
+  return sortedResult;
 });
 
 const availableFormTrackTypes = computed(() => {
-  if (!formInput.value.univ_name) return [];
+  if (!formInput.value.univ_name || formInput.value.univ_name === '__CUSTOM__') return ['직접입력'];
   const targetUniv = formInput.value.univ_name.trim();
   const targetTerm = (formInput.value.term_type || '수시').trim();
   const med = detectedMedical.value;
@@ -558,11 +680,13 @@ const availableFormTrackTypes = computed(() => {
     }
   }
 
-  return Array.from(new Set(filtered.map(t => t.track_type).filter(Boolean)));
+  const result = Array.from(new Set(filtered.map(t => t.track_type).filter(Boolean)));
+  result.push('직접입력');
+  return result;
 });
 
 const availableFormTrackNames = computed(() => {
-  if (!formInput.value.univ_name) return [];
+  if (!formInput.value.univ_name || formInput.value.univ_name === '__CUSTOM__') return [];
   const targetUniv = formInput.value.univ_name.trim();
   const targetTerm = (formInput.value.term_type || '수시').trim();
   const targetType = formInput.value.track_type ? formInput.value.track_type.trim() : '';
@@ -586,11 +710,33 @@ const availableFormTrackNames = computed(() => {
     filtered = filtered.filter(t => t.track_type && String(t.track_type).trim() === targetType);
   }
 
-  return filtered;
+  const result = [...filtered];
+  result.push({ id: '__CUSTOM__', track_name: '✏️ -- 목록에 없음 (직접 입력) --' });
+  return result;
 });
+
+const isCustomInputMode = ref(false);
+const customUnivName = ref('');
+const customTrackType = ref('직접입력');
+const customTrackName = ref('');
+
+function toggleCustomInputMode() {
+  isCustomInputMode.value = !isCustomInputMode.value;
+  if (!isCustomInputMode.value) {
+    customUnivName.value = '';
+    customTrackType.value = '직접입력';
+    customTrackName.value = '';
+    formInput.value.univ_name = '';
+    formInput.value.track_name = '';
+  }
+}
 
 // 대학, 학과, 구분 변경 시 자동 전형 연동
 watch([() => formInput.value.univ_name, () => formInput.value.department, () => formInput.value.term_type], () => {
+  if (formInput.value.univ_name === '__CUSTOM__') {
+    isCustomInputMode.value = true;
+    return;
+  }
   const validTypes = availableFormTrackTypes.value;
   if (validTypes.length === 1) {
     formInput.value.track_type = validTypes[0];
@@ -613,6 +759,7 @@ function onFormTermTypeChange() {
 function onFormUnivChange() {
   formInput.value.track_type = '';
   formInput.value.track_name = '';
+  formInput.value.track_id = '';
   formInput.value.recruitment_quota = '';
   formInput.value.eval_method = '';
   formInput.value.suneung_minimum = '';
@@ -624,6 +771,10 @@ function onFormTrackTypeChange() {
 }
 
 function onFormTrackNameChange() {
+  if (formInput.value.track_name === '__CUSTOM__') {
+    isCustomInputMode.value = true;
+    return;
+  }
   const targetUniv = formInput.value.univ_name.trim();
   const targetTrack = formInput.value.track_name.trim();
   const targetTerm = (formInput.value.term_type || '수시').trim();
@@ -640,17 +791,38 @@ function onFormTrackNameChange() {
   );
 
   if (match) {
+    formInput.value.track_id = match.id || '';
     formInput.value.track_type = match.track_type || '';
     formInput.value.recruitment_quota = match.recruitment_quota || '';
     formInput.value.eval_method = match.eval_method || '';
     formInput.value.suneung_minimum = match.suneung_minimum || '';
     formInput.value.remarks = match.remarks || '';
     formInput.value.region = match.region || '';
+  } else {
+    formInput.value.track_id = '';
   }
 }
 
 async function addApplicationFromForm() {
-  if (!formInput.value.univ_name || !formInput.value.department || !formInput.value.track_name) {
+  const isCustom = isCustomInputMode.value || 
+                   formInput.value.univ_name === '__CUSTOM__' || 
+                   formInput.value.track_name === '__CUSTOM__';
+
+  const finalUniv = isCustom 
+    ? (formInput.value.univ_name !== '__CUSTOM__' && !isCustomInputMode.value && formInput.value.univ_name ? formInput.value.univ_name.trim() : customUnivName.value.trim())
+    : (formInput.value.univ_name || '').trim();
+
+  const finalDept = formInput.value.department ? formInput.value.department.trim() : '';
+
+  const finalType = isCustom
+    ? (customTrackType.value.trim() || formInput.value.track_type || '직접입력')
+    : (formInput.value.track_type || '직접입력');
+
+  const finalTrack = isCustom
+    ? (formInput.value.track_name !== '__CUSTOM__' && !isCustomInputMode.value && formInput.value.track_name ? formInput.value.track_name.trim() : customTrackName.value.trim())
+    : (formInput.value.track_name || '').trim();
+
+  if (!finalUniv || !finalDept || !finalTrack) {
     await dialog.alert({
       title: '입력 확인',
       message: '지원 대학, 학과(부), 전형명을 모두 선택/입력해 주세요.'
@@ -660,7 +832,15 @@ async function addApplicationFromForm() {
 
   myApplications.value.push({
     ...formInput.value,
-    medical_type: detectedMedical.value
+    univ_name: finalUniv,
+    department: finalDept,
+    track_type: finalType,
+    track_name: finalTrack,
+    medical_type: detectedMedical.value,
+    is_custom_entry: isCustom,
+    remarks: isCustom
+      ? `[미등록 직접입력] ${formInput.value.remarks || ''}`.trim()
+      : formInput.value.remarks
   });
 
   // 폼 초기화
@@ -676,13 +856,18 @@ async function addApplicationFromForm() {
     remarks: '',
     region: ''
   };
+  customUnivName.value = '';
+  customTrackType.value = '직접입력';
+  customTrackName.value = '';
+  isCustomInputMode.value = false;
 
+  // 즉시 DB 저장
   await saveAllApplications(true);
 }
 
-function removeApplication(idx) {
+async function removeApplication(idx) {
   myApplications.value.splice(idx, 1);
-  saveAllApplications(true);
+  await saveAllApplications(true);
 }
 
 async function saveAllApplications(silent = false) {
@@ -698,7 +883,10 @@ async function saveAllApplications(silent = false) {
   saving.value = true;
   try {
     const studentId = currentStudentDbId.value || auth.user?.id || auth.studentId;
-    await saveStudentRuralApplications(studentId, myApplications.value, studentSig.value, parentSig.value);
+    await saveStudentRuralApplications(
+      studentId,
+      myApplications.value
+    );
     if (!silent) {
       await dialog.alert({
         title: '농어촌 추천 신청 저장 완료',
@@ -725,16 +913,37 @@ function openSignatureModal() {
   });
 }
 
+function drawDataUrlToCanvas(canvas, dataUrl) {
+  if (!canvas || !dataUrl) return;
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  img.onload = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  };
+  img.src = dataUrl;
+}
+
 function initCanvases() {
   if (studentCanvasRef.value) {
     const ctx = studentCanvasRef.value.getContext('2d');
     ctx.lineWidth = 2.5;
     ctx.strokeStyle = '#0f172a';
+    if (studentSig.value) {
+      drawDataUrlToCanvas(studentCanvasRef.value, studentSig.value);
+    } else {
+      ctx.clearRect(0, 0, studentCanvasRef.value.width, studentCanvasRef.value.height);
+    }
   }
   if (parentCanvasRef.value) {
     const ctx = parentCanvasRef.value.getContext('2d');
     ctx.lineWidth = 2.5;
     ctx.strokeStyle = '#0f172a';
+    if (parentSig.value) {
+      drawDataUrlToCanvas(parentCanvasRef.value, parentSig.value);
+    } else {
+      ctx.clearRect(0, 0, parentCanvasRef.value.width, parentCanvasRef.value.height);
+    }
   }
 }
 
@@ -814,17 +1023,35 @@ async function confirmSignatures() {
   }
   showSigModal.value = false;
 
-  await saveAllApplications(true);
+  const studentId = currentStudentDbId.value || auth.user?.id || auth.studentId;
+  if (studentId) {
+    localStorage.setItem(`rural_sig_${studentId}`, JSON.stringify({
+      studentSig: studentSig.value,
+      parentSig: parentSig.value,
+      parentName: parentName.value
+    }));
+    
+    try {
+      await saveRuralSignatures(studentId, studentSig.value, parentSig.value, parentName.value);
+    } catch(e) {
+      console.warn('Failed to save signature to DB:', e);
+    }
+  }
 
   await dialog.alert({
     title: '서명 저장 완료',
-    message: '학생 및 학부모 서명이 성공적으로 반영되었습니다.'
+    message: '학생 및 학부모 서명이 성공적으로 저장되었습니다.'
   });
 }
 
-async function triggerPrintConfirmation() {
+function triggerPrintConfirmation() {
+  showPrintModal.value = true;
+}
+
+async function executePrintFromModal() {
+  showPrintModal.value = false;
   try {
-    const studentId = currentStudentDbId.value || auth.user?.id || auth.studentId;
+    const studentId = await resolveStudentId();
     const eligibilityList = await getRuralEligibilityList();
     const myInfo = eligibilityList.find(s =>
       s.id === studentId ||
@@ -842,20 +1069,23 @@ async function triggerPrintConfirmation() {
 
     const validChoices = myApplications.value;
 
-    printRuralConfirmationDocument({
-      studentName,
-      studentCode,
-      isEnrolled,
-      grade,
-      classNo,
-      seqNo,
-      gradYear: auth.gradYear || 2026,
-      ruralType: prefRuralType.value === '유형II' ? 'TYPE_2' : 'TYPE_1',
-      choices: validChoices,
-      studentSignature: studentSig.value,
-      parentSignature: parentSig.value,
-      isWarningAcknowledged: warningAcknowledged.value || prefRuralSelfCheck.value
-    });
+    printRuralConfirmationDocument(
+      {
+        studentName,
+        studentCode,
+        isEnrolled,
+        grade,
+        classNo,
+        seqNo,
+        gradYear: auth.gradYear || 2026,
+        ruralType: prefRuralType.value === '유형II' ? 'TYPE_2' : 'TYPE_1',
+        isWarningAcknowledged: warningAcknowledged.value || prefRuralSelfCheck.value
+      },
+      validChoices,
+      studentSig.value,
+      parentSig.value,
+      parentName.value
+    );
   } catch (e) {
     console.error('Failed to trigger print:', e);
     await dialog.alert({ title: '인쇄 오류', message: '신청서 인쇄 양식 생성 중 오류가 발생했습니다.' });

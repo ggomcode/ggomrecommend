@@ -216,8 +216,16 @@ const flatStats = computed(() => {
       })
 
       const studentsArray = trackApps.map(ap => {
+        const stInfo = studentMap.value[ap.student_id] || {}
+        const rawCode = String(ap.student_code || '').trim()
+        const code5 = rawCode.length > 5 ? rawCode.slice(-5) : rawCode
+        const isGrad = stInfo.is_graduated || (!stInfo.grade && stInfo.grad_year)
+        let displayCode = code5
+        if (isGrad && stInfo.grad_year) {
+          displayCode = `${code5}(${stInfo.grad_year})`
+        }
         return {
-          student_code: ap.student_code,
+          student_code: displayCode,
           name: ap.name,
           suffix: hasQuota ? `(${ap.rank}위, ${ap.score_text})` : ''
         }
@@ -278,7 +286,7 @@ async function loadData() {
       // 1. 순위 계산을 위해 포기하지 않은 모든 지원서 및 학생 데이터 로드
       const [{ data: allApps }, { data: students }] = await Promise.all([
         supabase.from('applications').select('*').eq('is_abandoned', false),
-        supabase.from('enrolled_students').select('id, name, student_code, gpa_overall')
+        supabase.from('enrolled_students').select('id, name, student_code, gpa_overall, grad_year, grade')
       ])
 
       const studentMapLocal = {}
@@ -288,7 +296,9 @@ async function loadData() {
           id: s.id,
           name: decName,
           student_code: s.student_code,
-          gpa_overall: s.gpa_overall
+          gpa_overall: s.gpa_overall,
+          grad_year: s.grad_year || null,
+          is_graduated: !s.grade && !!s.grad_year
         }
       }
       studentMap.value = studentMapLocal

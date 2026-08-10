@@ -2,6 +2,7 @@ import { supabase } from '../utils/supabaseClient'
 import * as XLSX from 'xlsx'
 import { formatPhoneLast4, hashPhone, cleanFullPhone } from '../utils/phoneUtils'
 import { encryptText, decryptText, hashText } from '../utils/cryptoUtils'
+import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../utils/roundSchedule'
 
 // Helper for error parsing
 export async function blobErrMsg(e) {
@@ -29,34 +30,37 @@ export const getCurrentRound = async () => {
     }
   } catch {}
 
-  const { data, error } = await supabase
+  const { data: rounds, error } = await supabase
     .from('timeline_rounds')
     .select('*')
     .lte('id', limit)
-    .eq('status', 'OPEN')
     .order('id', { ascending: true })
 
   if (error) throw error
-  if (data && data.length > 0) return data[0]
+  if (!rounds || rounds.length === 0) return null
 
-  const { data: closedData } = await supabase
-    .from('timeline_rounds')
-    .select('*')
-    .lte('id', limit)
-    .eq('status', 'CLOSED')
-    .order('id', { ascending: true })
+  const schedulesMap = await fetchRoundSchedulesMap()
 
-  if (closedData && closedData.length > 0) return closedData[0]
+  // 1. 현재 접수 중(OPEN)인 차수가 있으면 낮은 차수(1차 우선) 선택
+  for (const r of rounds) {
+    const sched = schedulesMap[r.id]
+    if (computeRoundDisplayStatus(r, sched) === 'OPEN') return r
+  }
 
-  // 둘 다 없으면 lte(limit) 범위에서 가장 최근 라운드를 반환
-  const { data: latest } = await supabase
-    .from('timeline_rounds')
-    .select('*')
-    .lte('id', limit)
-    .order('id', { ascending: false })
-    .limit(1)
+  // 2. 접수 전(DRAFT) 상태인 차수가 있으면 가장 낮은 차수(1차) 선택
+  for (const r of rounds) {
+    const sched = schedulesMap[r.id]
+    if (computeRoundDisplayStatus(r, sched) === 'DRAFT') return r
+  }
 
-  return latest && latest.length > 0 ? latest[0] : null
+  // 3. 심사 중(CLOSED)인 차수가 있으면 선택
+  for (const r of rounds) {
+    const sched = schedulesMap[r.id]
+    if (computeRoundDisplayStatus(r, sched) === 'CLOSED') return r
+  }
+
+  // 4. 모두 FINALIZED이면 첫 차수(1차) 선택
+  return rounds[0]
 }
 
 export const getOverview = async () => {
@@ -106,11 +110,7 @@ export const getOverview = async () => {
     supabase.from('applications').select('*', { count: 'exact', head: true }).eq('is_abandoned', true).lte('round', limit)
   ])
 
-  const limitRounds = allRoundsLimitRes.data || []
-  // OPEN인 것이 있으면 우선 쓰고, 없으면 CLOSED, 그것도 없으면 FINALIZED 등 가장 최근 차수를 선택
-  const round = limitRounds.find(r => r.status === 'OPEN') || 
-                limitRounds.find(r => r.status === 'CLOSED') || 
-                limitRounds[0] || null
+  const round = await getCurrentRound()
 
   const studentCount = studentCountRes.count || 0
   const teachers = teachersRes.data || []
@@ -3136,7 +3136,7 @@ export const syncRegionalToUniversities = async () => {
 
   const regionalRows = await getRegionalRecommendations()
   if (!regionalRows || regionalRows.length === 0) {
-    throw new Error('1단계 추천전형 엑셀 요강 데이터가 없습니다. 먼저 1단계에서 엑셀을 업로드해 주세요.')
+    throw new Error('등록된 학교장 추천전형 모집요강 데이터가 없습니다. 먼저 상단의 [학교장 전형 DB 동기화] (구글 시트 동기화) 버튼을 클릭해 주세요.')
   }
 
   // 정보공시 재학생 수 (% 인원제한 환산용) - 루프 진입 전 1회만 조회

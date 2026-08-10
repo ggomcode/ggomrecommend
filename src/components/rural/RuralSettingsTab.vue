@@ -25,12 +25,18 @@
       </div>
 
       <!-- 사전 안내 카드 -->
-      <div class="bg-amber-50/80 border border-amber-200/90 rounded-xl p-3.5 flex items-start gap-3">
-        <AlertTriangle class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-        <div class="text-xs text-amber-900 leading-relaxed">
-          <strong class="font-bold">⚠️ 파일 업로드 안내:</strong>
-          학급이나 상황에 따라 <strong class="text-amber-950 font-bold">인적사항 또는 학적사항 중 어느 것을 먼저 업로드해도 무방</strong>합니다. 단, 자격 판정은 동일 학생의 인적사항(주소)과 학적사항(학교) 데이터 2개가 모두 DB에 저장된 시점에 자동 교차 검증됩니다.
-          (※ 파일 업로드 전 '학교장추천전형 시스템 > 학생 관리'에서 3학년 재학생 명렬표 원장을 먼저 등록해 주세요.)
+      <div class="bg-amber-50/90 border border-amber-200 rounded-xl p-4 flex items-start gap-3 shadow-xs">
+        <AlertTriangle class="w-4.5 h-4.5 text-amber-600 shrink-0 mt-0.5" />
+        <div class="text-xs text-amber-900 leading-relaxed space-y-1">
+          <p class="font-bold text-amber-950 text-xs m-0 flex items-center gap-1.5">
+            <span>📌 NEIS 학교생활기록부 엑셀 다운로드 및 업로드 안내</span>
+          </p>
+          <p class="m-0 text-amber-900">
+            NEIS <strong class="text-amber-950 font-bold bg-amber-100/80 px-1 py-0.5 rounded">학교생활기록부 > 항목별조회</strong> 메뉴에서 각 학급별 <strong class="text-amber-950 font-bold">인적사항</strong>과 <strong class="text-amber-950 font-bold">학적사항</strong>을 <span class="bg-amber-200/80 text-amber-950 font-bold px-1.5 py-0.5 rounded border border-amber-300">xls</span> 또는 <span class="bg-amber-200/80 text-amber-950 font-bold px-1.5 py-0.5 rounded border border-amber-300">xls data</span> 형식으로 다운로드받은 후 아래 업로드 영역에 첨부하세요.
+          </p>
+          <p class="m-0 text-[11px] text-amber-800 pt-0.5">
+            ※ 파일 종류(인적/학적)는 시스템이 스스로 자동 구별하여 처리합니다. 단, 자격 판정은 인적사항(주소)과 학적사항(학교) 2개 데이터가 모두 등록된 시점에 완결되므로 두 종류 파일을 모두 업로드해 주세요.
+          </p>
         </div>
       </div>
 
@@ -75,7 +81,7 @@
                     인적사항(주소) 엑셀 파일 클릭 선택 또는 드롭
                   </p>
                   <p class="text-[11px] text-slate-500 mt-0.5 m-0">
-                    `인적사항_주소_1반~11반.xlsx` 파일들을 이곳에 첨부하세요.
+                    NEIS 항목별조회 인적사항 <span class="text-indigo-600 font-semibold">(xls / xls data)</span> 파일들을 첨부하세요.
                   </p>
                 </div>
               </div>
@@ -123,7 +129,7 @@
                     학적사항(학교) 엑셀 파일 클릭 선택 또는 드롭
                   </p>
                   <p class="text-[11px] text-slate-500 mt-0.5 m-0">
-                    `학적사항_1반~11반.xlsx` 파일들을 이곳에 첨부하세요.
+                    NEIS 항목별조회 학적사항 <span class="text-amber-600 font-semibold">(xls / xls data)</span> 파일들을 첨부하세요.
                   </p>
                 </div>
               </div>
@@ -363,46 +369,52 @@ function clearUploadedFiles() {
   uploadStatus.value = { files: [], addressData: [], academicData: [] };
 }
 
-async function processFilesList(files, targetType = null) {
-  if (files.length === 0) return;
+async function processFilesList(files, fallbackType = null) {
+  if (!files || files.length === 0) return;
 
-  const parsedFilesInfo = [];
-  const addressResults = [];
-  const academicResults = [];
+  const currentFiles = [...uploadStatus.value.files];
+  const currentAddress = [...uploadStatus.value.addressData];
+  const currentAcademic = [...uploadStatus.value.academicData];
 
   for (const file of files) {
     try {
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: 'array' });
       const info = identifyExcelFile(file, workbook);
-      if (targetType) {
-        info.fileType = targetType;
-      }
 
-      parsedFilesInfo.push(info);
+      if (info.fileType === 'UNKNOWN' && fallbackType) {
+        info.fileType = fallbackType;
+      }
 
       if (info.fileType === 'ADDRESS') {
         const parsed = parseAddressExcel(workbook, info.classNo);
-        addressResults.push(parsed);
+        const idx = currentAddress.findIndex(a => a.classNo === parsed.classNo);
+        if (idx >= 0) currentAddress[idx] = parsed;
+        else currentAddress.push(parsed);
+
+        const fIdx = currentFiles.findIndex(f => f.classNo === info.classNo && f.fileType === 'ADDRESS');
+        if (fIdx >= 0) currentFiles[fIdx] = info;
+        else currentFiles.push(info);
+
       } else if (info.fileType === 'ACADEMIC') {
         const parsed = parseAcademicExcel(workbook, info.classNo);
-        academicResults.push(parsed);
+        const idx = currentAcademic.findIndex(a => a.classNo === parsed.classNo);
+        if (idx >= 0) currentAcademic[idx] = parsed;
+        else currentAcademic.push(parsed);
+
+        const fIdx = currentFiles.findIndex(f => f.classNo === info.classNo && f.fileType === 'ACADEMIC');
+        if (fIdx >= 0) currentFiles[fIdx] = info;
+        else currentFiles.push(info);
       }
     } catch (err) {
       console.warn(`Error parsing excel file ${file.name}:`, err);
     }
   }
 
-  const existingFiles = targetType
-    ? uploadStatus.value.files.filter(f => f.fileType !== targetType)
-    : uploadStatus.value.files;
-  const existingAddress = targetType === 'ADDRESS' ? [] : uploadStatus.value.addressData;
-  const existingAcademic = targetType === 'ACADEMIC' ? [] : uploadStatus.value.academicData;
-
   uploadStatus.value = {
-    files: [...existingFiles, ...parsedFilesInfo],
-    addressData: [...existingAddress, ...addressResults],
-    academicData: [...existingAcademic, ...academicResults]
+    files: currentFiles,
+    addressData: currentAddress,
+    academicData: currentAcademic
   };
 }
 
@@ -411,18 +423,23 @@ async function processUploadedFiles() {
   uploading.value = true;
 
   try {
-    await saveAndEvaluateRuralData(
+    const res = await saveAndEvaluateRuralData(
       uploadStatus.value.addressData,
       uploadStatus.value.academicData
     );
 
+    let alertMessage = '농어촌 전형 주소 및 학적 데이터 업로드와 NEIS 연동 자격 자동 검증이 완료되었습니다.';
+    if (res?.logs && res.logs.length > 0) {
+      alertMessage += '\n\n [확인 필요 경고 및 안내 사항]\n' + res.logs.join('\n\n');
+    }
+
     await dialog.alert({
-      title: '자동 검증 완료',
-      message: '농어촌 전형 주소 및 학적 데이터 업로드와 학교알리미 연동 검증이 성공적으로 완료되었습니다.'
+      title: (res?.logs && res.logs.length > 0) ? '자동 검증 완료 (경고 확인 필요)' : '자동 검증 완료',
+      message: alertMessage
     });
     uploadStatus.value = { files: [], addressData: [], academicData: [] };
-  } catch (e) {
-    console.error('Failed to process and evaluate rural data:', e);
+  } catch (err) {
+    console.error('Failed to process and evaluate rural data:', err);
     await dialog.alert({
       title: '파싱 처리 실패',
       message: err.message || '데이터 파싱 처리 중 오류가 발생하였습니다.'

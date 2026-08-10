@@ -243,13 +243,14 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { safeAsyncComponent } from '../utils/asyncComponent'
 import { FileSpreadsheet, BookOpen, PenTool, Users, Settings, ChevronRight, Menu, Home, LogOut, User } from 'lucide-vue-next'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
 const RuralTab = safeAsyncComponent(() => import('../components/teacher/RuralTab.vue'))
@@ -275,7 +276,9 @@ const active = ref('tracks')
 
 onMounted(() => {
   fetchSchoolName()
-  if (!auth.isStudent) {
+  if (route.query.tab) {
+    active.value = route.query.tab
+  } else if (!auth.isStudent) {
     active.value = 'tracks'
   }
 })

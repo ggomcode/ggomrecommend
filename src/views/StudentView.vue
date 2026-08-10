@@ -376,10 +376,10 @@
               />
             </div>
 
-            <!-- 졸업생 전용: 대학별 산출점수 입력 -->
-            <div v-if="!auth.isEnrolled" class="p-3 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/40">
-              <label class="block text-xs font-bold mb-1 text-amber-700 dark:text-amber-400">학교별 내신 산출점수 <span class="text-rose-500">*</span></label>
-              <p class="text-[11px] text-amber-700 dark:text-amber-400 mb-2 leading-relaxed">지원하는 대학의 모집요강을 참고하여 대학별 산출점수를 계산한 후 입력해주세요. 단, 학교에서 확인과정을 거친 후, 정정될 수 있습니다.</p>
+            <!-- 대학별 산출점수 입력 (선택) -->
+            <div class="p-3 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800/40">
+              <label class="block text-xs font-bold mb-1 text-amber-800 dark:text-amber-300">대학별 내신 산출점수(선택)</label>
+              <p class="text-[11px] text-rose-600 font-bold mb-2 leading-relaxed">※주의: 대학별 모집요강에 표시되어 있는 방법대로 산출점수를 계산하여 표기하되, 잘 모를 경우 빈칸으로 두세요.</p>
               <input
                 v-model="univCalcScore"
                 :disabled="!isSubmissionActive"
@@ -1515,15 +1515,17 @@ async function executeApply() {
 
     // 감사로그 기록
     try {
+      const actorUuid = userData?.user?.id || null
       await supabase.from('audit_logs').insert({
-        actor_id: userId,
+        actor_id: actorUuid,
         action: 'APPLY',
         details: {
+          student_code: auth.studentCode || userId,
           univ_id: selectedUnivId.value,
           round: currentRound.value,
           department_name: departmentName.value
         }
-      })
+      }).catch(e => console.warn('감사 로그 작성 스킵:', e))
     } catch (e) {
       console.warn('감사 로그 작성 실패:', e)
     }
@@ -1574,15 +1576,17 @@ async function handleCancelApplication(id) {
 
     // 감사로그 기록
     try {
+      const actorUuid = userData?.user?.id || null
       await supabase.from('audit_logs').insert({
-        actor_id: userId,
+        actor_id: actorUuid,
         action: 'CANCEL_APPLICATION',
         details: {
+          student_code: auth.studentCode || userId,
           univ_id: ap.univ_id,
           round: ap.round,
           department_name: ap.department_name
         }
-      })
+      }).catch(e => console.warn('감사 로그 작성 스킵:', e))
     } catch (e) {
       console.warn('감사 로그 작성 실패:', e)
     }

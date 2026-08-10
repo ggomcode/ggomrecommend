@@ -23,71 +23,80 @@
       </div>
     </div>
 
-    <!-- 엑셀 파일 업로드 안내 배너 -->
-    <div class="bg-linear-to-r from-indigo-50 to-blue-50 border border-indigo-200/80 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 font-bold shadow-xs">
-          <UploadCloud class="w-5 h-5" />
-        </div>
-        <div>
-          <h4 class="text-sm font-bold text-slate-900 m-0 flex items-center gap-1.5">
-            📂 엑셀 파일 업로드 안내
-          </h4>
-          <p class="text-xs text-slate-600 mt-1 mb-0 leading-relaxed">
-            3학년 인적사항(주소) 및 학적사항(학교) 엑셀 파일 업로드는 왼쪽 메뉴의 <strong class="text-indigo-700 font-bold">[⚙️ 환경설정]</strong> 메뉴에서 등록 및 파싱 검증을 진행해 주세요.
-          </p>
-        </div>
-      </div>
+    <!-- 데이터 로딩 중 표시 -->
+    <div v-if="loading" class="flex flex-col items-center justify-center py-24 bg-white rounded-xl border border-slate-200 shadow-sm">
+      <RefreshCw class="w-8 h-8 text-emerald-600 animate-spin mb-3" />
+      <p class="text-base font-semibold text-slate-700">학적 및 자격 검증 데이터를 불러오는 중입니다...</p>
+      <p class="text-xs text-slate-400 mt-1">잠시만 기다려 주세요.</p>
     </div>
 
-    <!-- 3학년 재학생 요약 통계 카운터 -->
-    <div class="space-y-1.5">
-      <div class="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-        <Users class="w-4 h-4 text-blue-600" />
-        <span>3학년 재학생 현황</span>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+    <!-- 데이터 로딩 완료 후 표시 -->
+    <div v-else class="space-y-6">
+      <!-- 엑셀 파일 업로드 안내 배너 -->
+      <div class="bg-linear-to-r from-indigo-50 to-blue-50 border border-indigo-200/80 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 font-bold shadow-xs">
+            <UploadCloud class="w-5 h-5" />
+          </div>
           <div>
-            <p class="text-xs font-medium text-slate-500">3학년 전체 대상 학생</p>
-            <p class="text-2xl font-bold text-slate-900 mt-1">{{ grade3TotalCount }}명</p>
-          </div>
-          <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600">
-            <Users class="w-5 h-5" />
-          </div>
-        </div>
-
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <p class="text-xs font-medium text-emerald-600">지원가능 (자동 적격)</p>
-            <p class="text-2xl font-bold text-emerald-600 mt-1">{{ grade3EligibleCount }}명</p>
-          </div>
-          <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
-            <CheckCircle2 class="w-5 h-5" />
-          </div>
-        </div>
-
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <p class="text-xs font-medium text-rose-600">지원불가 (요건 미달)</p>
-            <p class="text-2xl font-bold text-rose-600 mt-1">{{ grade3IneligibleCount }}명</p>
-          </div>
-          <div class="w-10 h-10 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600">
-            <XCircle class="w-5 h-5" />
-          </div>
-        </div>
-
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <p class="text-xs font-medium text-amber-600">수동 변경/소명 인정</p>
-            <p class="text-2xl font-bold text-amber-600 mt-1">{{ grade3ManualApprovedCount }}명</p>
-          </div>
-          <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
-            <UserCheck class="w-5 h-5" />
+            <h4 class="text-sm font-bold text-slate-900 m-0 flex items-center gap-1.5">
+              📂 엑셀 파일 업로드 안내
+            </h4>
+            <p class="text-xs text-slate-600 mt-1 mb-0 leading-relaxed">
+              3학년 인적사항(주소) 및 학적사항(학교) 엑셀 파일 업로드는 왼쪽 메뉴의 <strong class="text-indigo-700 font-bold">[⚙️ 환경설정]</strong> 메뉴에서 등록 및 파싱 검증을 진행해 주세요.
+            </p>
           </div>
         </div>
       </div>
-    </div>
+
+      <!-- 3학년 재학생 요약 통계 카운터 -->
+      <div class="space-y-1.5">
+        <div class="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+          <Users class="w-4 h-4 text-blue-600" />
+          <span>3학년 재학생 현황</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+            <div>
+              <p class="text-xs font-medium text-slate-500">3학년 전체 대상 학생</p>
+              <p class="text-2xl font-bold text-slate-900 mt-1">{{ grade3TotalCount }}명</p>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600">
+              <Users class="w-5 h-5" />
+            </div>
+          </div>
+
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+            <div>
+              <p class="text-xs font-medium text-emerald-600">지원가능 (자동 적격)</p>
+              <p class="text-2xl font-bold text-emerald-600 mt-1">{{ grade3EligibleCount }}명</p>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+              <CheckCircle2 class="w-5 h-5" />
+            </div>
+          </div>
+
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+            <div>
+              <p class="text-xs font-medium text-rose-600">지원불가 (요건 미달)</p>
+              <p class="text-2xl font-bold text-rose-600 mt-1">{{ grade3IneligibleCount }}명</p>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600">
+              <XCircle class="w-5 h-5" />
+            </div>
+          </div>
+
+          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+            <div>
+              <p class="text-xs font-medium text-amber-600">수동 변경/소명 인정</p>
+              <p class="text-2xl font-bold text-amber-600 mt-1">{{ grade3ManualApprovedCount }}명</p>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+              <UserCheck class="w-5 h-5" />
+            </div>
+          </div>
+        </div>
+      </div>
 
     <!-- 졸업생 요약 통계 카운터 -->
     <div class="space-y-1.5">
@@ -215,46 +224,171 @@
               <td class="py-3 px-3 font-bold text-slate-900 whitespace-nowrap">{{ item.name }}</td>
               
               <!-- 1) 인적사항 (주소 6년 읍면) 자격 -->
-              <td class="py-3 px-3 text-center">
+              <td class="py-3 px-3 text-center relative group">
                 <span
                   v-if="item.addressInfo"
+                  :title="`[인적사항] ${item.addressInfo.raw_address_text || ''}`"
                   :class="[
-                    'px-2 py-0.5 rounded text-[11px] font-semibold inline-flex items-center gap-1',
+                    'px-2 py-0.5 rounded text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition-all hover:scale-105 shadow-xs',
                     item.addressInfo.has_rural_address ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
                   ]"
                 >
                   {{ item.addressInfo.has_rural_address ? '적격 (읍·면)' : '미달 (동지역)' }}
                 </span>
-                <span v-else class="text-slate-400">미등록</span>
+                <span
+                  v-else-if="isGrad(item)"
+                  :title="`[인적사항] ${item.eligibility?.address_rural_valid ? '적격 (본인확인)' : '미달 (동지역)'}`"
+                  :class="[
+                    'px-2 py-0.5 rounded text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition-all hover:scale-105 shadow-xs',
+                    item.eligibility?.address_rural_valid ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                  ]"
+                >
+                  {{ item.eligibility?.address_rural_valid ? '적격 (본인확인)' : '미달 (동지역)' }}
+                </span>
+                <span v-else class="text-slate-400 cursor-pointer" title="인적사항(주소) 미등록">미등록</span>
+
+                <!-- 인적사항 (주소) 호버 툴팁 카드 -->
+                <div
+                  class="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 hidden group-hover:block w-72 p-3 bg-slate-900 text-white rounded-lg shadow-2xl text-xs z-50 text-left pointer-events-none transition-all border border-slate-700"
+                >
+                  <div class="font-bold text-slate-200 mb-1.5 flex items-center gap-1.5 border-b border-slate-700 pb-1">
+                    <span>🏠</span>
+                    <span>인적사항 (주소 요건)</span>
+                    <span
+                      :class="[
+                        'ml-auto text-[10px] px-1.5 py-0.5 rounded font-semibold',
+                        (item.addressInfo?.has_rural_address || item.eligibility?.address_rural_valid) ? 'bg-emerald-900 text-emerald-300' : 'bg-rose-900 text-rose-300'
+                      ]"
+                    >
+                      {{ (item.addressInfo?.has_rural_address || item.eligibility?.address_rural_valid) ? '읍·면 적격' : '동지역 미달' }}
+                    </span>
+                  </div>
+
+                  <div v-if="item.addressInfo" class="space-y-1 text-slate-300">
+                    <p class="font-mono text-[11px] text-slate-100 bg-slate-800 p-2 rounded border border-slate-700 break-keep leading-relaxed">
+                      {{ item.addressInfo.raw_address_text || '등록된 주소 정보 없음' }}
+                    </p>
+                    <p v-if="item.addressInfo.notes" class="text-[10px] text-amber-400">
+                      💡 {{ item.addressInfo.notes }}
+                    </p>
+                  </div>
+                  <div v-else-if="isGrad(item)" class="text-slate-300 text-[11px]">
+                    <p class="text-slate-300 font-semibold">🎓 졸업생 자가 확인 정보</p>
+                    <p class="text-slate-400 text-[10px] mt-0.5">졸업생 지원자에 의해 직접 입력된 주소 자격입니다.</p>
+                  </div>
+                  <div v-else class="text-slate-400 text-[11px] bg-slate-800 p-2 rounded border border-slate-700">
+                    ⚠️ 업로드된 주소 정보가 없습니다. (인적사항 엑셀 파일 업로드 필요)
+                  </div>
+
+                  <div class="absolute left-1/2 -translate-x-1/2 bottom-full w-0 h-0 border-x-4 border-x-transparent border-b-4 border-b-slate-900"></div>
+                </div>
               </td>
               
               <!-- 2) 학적사항 (학교 6년 중/고교) 자격 -->
-              <td class="py-3 px-3 text-center">
+              <td class="py-3 px-3 text-center relative group">
                 <span
                   v-if="item.eligibility?.academic_rural_valid"
-                  class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  :title="`[학적사항] 적격 - ${item.academicRecords?.map(r => r.school_name).join(', ') || ''}`"
+                  class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1 cursor-pointer transition-all hover:scale-105 shadow-xs"
                 >
-                  적격 (중·고교)
+                  {{ isGrad(item) ? '적격 (본인확인)' : '적격 (중·고교)' }}
                 </span>
                 <span
                   v-else-if="item.academicRecords && item.academicRecords.length > 0"
-                  class="px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200"
+                  :title="`[학적사항] 미달 - ${item.academicRecords?.map(r => r.school_name).join(', ') || ''}`"
+                  class="px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1 cursor-pointer transition-all hover:scale-105 shadow-xs"
                 >
                   미달
                 </span>
-                <span v-else class="text-slate-400">미등록</span>
+                <span
+                  v-else-if="isGrad(item)"
+                  :title="`[학적사항] 미달 (본인확인)`"
+                  class="px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1 cursor-pointer transition-all hover:scale-105 shadow-xs"
+                >
+                  미달
+                </span>
+                <span v-else class="text-slate-400 cursor-pointer" title="학적사항(학교) 미등록">미등록</span>
+
+                <!-- 학적사항 (학교) 호버 툴팁 카드 -->
+                <div
+                  class="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 hidden group-hover:block w-80 p-3 bg-slate-900 text-white rounded-lg shadow-2xl text-xs z-50 text-left pointer-events-none transition-all border border-slate-700"
+                >
+                  <div class="font-bold text-slate-200 mb-1.5 flex items-center gap-1.5 border-b border-slate-700 pb-1">
+                    <span>🎓</span>
+                    <span>학적 이력 및 출신 학교</span>
+                    <span
+                      :class="[
+                        'ml-auto text-[10px] px-1.5 py-0.5 rounded font-semibold',
+                        item.eligibility?.academic_rural_valid ? 'bg-emerald-900 text-emerald-300' : 'bg-rose-900 text-rose-300'
+                      ]"
+                    >
+                      {{ item.eligibility?.academic_rural_valid ? '중·고교 적격' : '학적 미달' }}
+                    </span>
+                  </div>
+
+                  <div v-if="item.academicRecords && item.academicRecords.length > 0" class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                    <div
+                      v-for="(rec, idx) in item.academicRecords"
+                      :key="idx"
+                      class="bg-slate-800 p-2 rounded border border-slate-700/80 text-[11px]"
+                    >
+                      <div class="flex items-center justify-between text-slate-200 font-semibold mb-1">
+                        <span>🏫 {{ rec.school_name || '학교명 없음' }}</span>
+                        <span
+                          v-if="rec.rural_school_cache"
+                          :class="[
+                            'text-[10px] font-bold px-1.5 py-0.2 rounded',
+                            rec.rural_school_cache.is_rural ? 'text-emerald-400 bg-emerald-950/60' : 'text-rose-400 bg-rose-950/60'
+                          ]"
+                        >
+                          {{ rec.rural_school_cache.is_rural ? '읍/면 소재' : '동지역 소재' }}
+                        </span>
+                      </div>
+                      <p v-if="rec.rural_school_cache?.road_address || rec.rural_school_cache?.address" class="text-[10px] text-slate-400 break-keep">
+                        📍 {{ rec.rural_school_cache.road_address || rec.rural_school_cache.address }}
+                      </p>
+                      <p v-if="rec.raw_record_text" class="text-[10px] text-slate-300 mt-1 border-t border-slate-700/50 pt-1">
+                        📄 {{ rec.raw_record_text }}
+                      </p>
+                    </div>
+                  </div>
+                  <div v-else-if="isGrad(item)" class="text-slate-300 text-[11px]">
+                    <p class="text-slate-300 font-semibold">🎓 졸업생 자가 확인 정보</p>
+                    <p class="text-slate-400 text-[10px] mt-0.5">졸업생 지원자에 의해 직접 입력된 학적 자격입니다.</p>
+                  </div>
+                  <div v-else class="text-slate-400 text-[11px] bg-slate-800 p-2 rounded border border-slate-700">
+                    ⚠️ 업로드된 학적 기록이 없습니다. (학적사항 엑셀 파일 업로드 필요)
+                  </div>
+
+                  <div class="absolute left-1/2 -translate-x-1/2 bottom-full w-0 h-0 border-x-4 border-x-transparent border-b-4 border-b-slate-900"></div>
+                </div>
               </td>
 
               <!-- 3) 유형 I (6년) 자격 (주소 & 학적 모두 충족) -->
-              <td class="py-3 px-3 text-center">
+              <td class="py-3 px-3 text-center relative group">
                 <span
                   :class="[
-                    'px-2 py-0.5 rounded text-[11px] font-semibold',
+                    'px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer transition-all hover:scale-105 shadow-xs',
                     item.eligibility?.is_type1_eligible ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
                   ]"
                 >
                   {{ item.eligibility?.is_type1_eligible ? '적격 (6년)' : '미달' }}
                 </span>
+
+                <!-- 유형 I 호버 툴팁 -->
+                <div
+                  v-if="item.eligibility"
+                  class="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block w-64 p-2.5 bg-slate-900 text-white rounded-lg shadow-xl text-xs z-50 text-left pointer-events-none"
+                >
+                  <p class="font-bold text-slate-200 mb-1">📋 유형 I (6년) 요건</p>
+                  <p class="text-[11px] text-slate-300">
+                    인적사항(주소 6년): <strong :class="item.addressInfo?.has_rural_address || item.eligibility?.address_rural_valid ? 'text-emerald-400' : 'text-rose-400'">{{ (item.addressInfo?.has_rural_address || item.eligibility?.address_rural_valid) ? '적격' : '미달' }}</strong>
+                  </p>
+                  <p class="text-[11px] text-slate-300">
+                    학적사항(중·고 6년): <strong :class="item.eligibility?.academic_rural_valid ? 'text-emerald-400' : 'text-rose-400'">{{ item.eligibility?.academic_rural_valid ? '적격' : '미달' }}</strong>
+                  </p>
+                  <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-slate-900"></div>
+                </div>
               </td>
 
               <!-- 4) 유형 II (12년) 자격 (교사 수동 판단) -->
@@ -265,15 +399,15 @@
                     item.eligibility?.is_type2_eligible ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-slate-100 text-slate-400'
                   ]"
                 >
-                  {{ item.eligibility?.is_type2_eligible ? '적격 (교사지정)' : '미확인 (수동)' }}
+                  {{ item.eligibility?.is_type2_eligible ? (isGrad(item) ? '적격 (12년)' : '적격 (교사지정)') : '미확인 (수동)' }}
                 </span>
               </td>
 
               <!-- 5) 최종 자격 상태 -->
-              <td class="py-3 px-3 text-center">
+              <td class="py-3 px-3 text-center relative group">
                 <span
                   :class="[
-                    'px-2.5 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1 shadow-sm',
+                    'px-2.5 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1 shadow-sm cursor-pointer transition-all hover:scale-105',
                     item.eligibility?.is_type1_eligible
                       ? 'bg-emerald-500 text-white'
                       : (item.eligibility?.is_type2_eligible
@@ -313,49 +447,57 @@
       <div class="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl border border-slate-200 space-y-4">
         <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
           <UserCheck class="w-5 h-5 text-blue-600" />
-          농어촌 전형 자격 상태 수동 수정 & 소명
+          농어촌 전형 자격 상태 수동 수정 & 소명 (관리자 권한)
         </h3>
 
         <div v-if="selectedStudent" class="space-y-2 text-xs bg-slate-50 p-3 rounded-lg border border-slate-200">
-          <p><strong class="text-slate-700">학생:</strong> {{ selectedStudent.name }} (3학년 {{ selectedStudent.class_no }}반 {{ selectedStudent.seq_no }}번)</p>
-          <p><strong class="text-slate-700">주소:</strong> {{ selectedStudent.addressInfo?.raw_address_text || '미등록' }}</p>
-          <p class="leading-relaxed"><strong class="text-slate-700">자동 검증 리포트:</strong> {{ selectedStudent.eligibility?.evaluation_notes || '기록 없음' }}</p>
+          <p><strong class="text-slate-700">학생:</strong> {{ selectedStudent.name }} <span v-if="isGrad(selectedStudent)" class="text-amber-700 font-bold">(🎓 졸업생)</span><span v-else>(3학년 {{ selectedStudent.class_no }}반 {{ selectedStudent.seq_no }}번)</span></p>
+          <p><strong class="text-slate-700">주소:</strong> {{ selectedStudent.addressInfo?.raw_address_text || (isGrad(selectedStudent) ? '졸업생 자가 등록 주소' : '미등록') }}</p>
+          <p class="leading-relaxed"><strong class="text-slate-700">검증 리포트:</strong> {{ selectedStudent.eligibility?.evaluation_notes || '기록 없음' }}</p>
         </div>
 
-        <!-- 1) 유형 I 수동 승인 -->
+        <!-- 1) 최종 자격 지정 -->
         <div class="space-y-2 border-t border-slate-100 pt-3">
-          <label class="block text-xs font-bold text-slate-800">1. 유형 I (6년) 수동 인정 / 소명 승인</label>
-          <div class="flex items-center gap-4 text-xs">
-            <label class="flex items-center gap-1.5 cursor-pointer">
-              <input type="radio" :value="true" v-model="modalForm.isManualApproved" class="text-blue-600" />
-              <span class="font-bold text-emerald-700">유형 I 지원가능 (수동 인정)</span>
+          <label class="block text-xs font-bold text-slate-800">1. 관리자 최종 자격 판단 지정</label>
+          <div class="space-y-1.5 text-xs">
+            <label
+              class="flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors"
+              :class="modalForm.statusChoice === 'TYPE1' ? 'bg-emerald-50 border-emerald-300 font-bold text-emerald-900' : 'bg-white border-slate-200 text-slate-700'"
+            >
+              <input type="radio" value="TYPE1" v-model="modalForm.statusChoice" class="text-emerald-600" />
+              <span>유형 I (6년 중·고 읍면 거주/재학) 지원가능 수동 인정</span>
             </label>
-            <label class="flex items-center gap-1.5 cursor-pointer">
-              <input type="radio" :value="false" v-model="modalForm.isManualApproved" class="text-blue-600" />
-              <span class="font-bold text-slate-600">자동 검증 결과 유지</span>
+            <label
+              class="flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors"
+              :class="modalForm.statusChoice === 'TYPE2' ? 'bg-amber-50 border-amber-300 font-bold text-amber-900' : 'bg-white border-slate-200 text-slate-700'"
+            >
+              <input type="radio" value="TYPE2" v-model="modalForm.statusChoice" class="text-amber-600" />
+              <span>유형 II (12년 전 교육과정 읍면 거주/재학) 지원가능 수동 지정</span>
+            </label>
+            <label
+              class="flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors"
+              :class="modalForm.statusChoice === 'INELIGIBLE' ? 'bg-rose-50 border-rose-300 font-bold text-rose-900' : 'bg-white border-slate-200 text-slate-700'"
+            >
+              <input type="radio" value="INELIGIBLE" v-model="modalForm.statusChoice" class="text-rose-600" />
+              <span>지원불가 (요건 미달 / 부적격 처리)</span>
+            </label>
+            <label
+              class="flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors"
+              :class="modalForm.statusChoice === 'AUTO' ? 'bg-slate-50 border-slate-300 font-bold text-slate-900' : 'bg-white border-slate-200 text-slate-600'"
+            >
+              <input type="radio" value="AUTO" v-model="modalForm.statusChoice" class="text-slate-600" />
+              <span>자동 검증 / 본인 확인 결과 기본값 유지</span>
             </label>
           </div>
         </div>
 
-        <!-- 2) 유형 II 수동 승인 -->
-        <div class="space-y-2 border-t border-slate-100 pt-3">
-          <label class="block text-xs font-bold text-slate-800">2. 유형 II (12년 초·중·고) 자격 지정</label>
-          <label class="flex items-center gap-2 cursor-pointer bg-amber-50/60 p-2.5 rounded-lg border border-amber-200">
-            <input type="checkbox" v-model="modalForm.isType2Eligible" class="rounded text-amber-600 focus:ring-amber-500 w-4 h-4" />
-            <span class="text-xs font-bold text-amber-900">유형 II (12년 전 교육과정 읍면 거주/재학) 적격 학생으로 수동 지정</span>
-          </label>
-          <p class="text-[11px] text-slate-500 leading-snug m-0">
-            ※ 업로드 파일에는 초등학교 및 중학교 입학 이력이 포함되어 있지 않으므로 유형 II 자격은 교사가 증빙 서류 개별 확인 후 수동으로 지정해야 합니다.
-          </p>
-        </div>
-
-        <!-- 3) 사유 입력 -->
+        <!-- 2) 사유 입력 -->
         <div class="space-y-1 border-t border-slate-100 pt-3">
           <label class="block text-xs font-bold text-slate-700">수정 사유 및 소명 내용</label>
           <textarea
             v-model="modalForm.reason"
             rows="3"
-            placeholder="행정구역 변경, 이사 소명 또는 유형 II 증빙 서류 확인 사유를 상세히 입력하세요."
+            placeholder="행정구역 변경, 졸업생 서류 확인, 이사 소명 등 수정 사유를 상세히 입력하세요."
             class="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
           ></textarea>
         </div>
@@ -376,6 +518,7 @@
           </button>
         </div>
       </div>
+    </div>
     </div>
   </div>
 </template>
@@ -405,8 +548,7 @@ const showModal = ref(false);
 const selectedStudent = ref(null);
 const savingModal = ref(false);
 const modalForm = ref({
-  isManualApproved: false,
-  isType2Eligible: false,
+  statusChoice: 'AUTO',
   reason: ''
 });
 
@@ -443,7 +585,7 @@ const gradIneligibleCount = computed(() => gradList.value.filter(s => !s.eligibi
 const gradManualApprovedCount = computed(() => gradList.value.filter(s => s.eligibility?.is_manual_approved || s.eligibility?.is_type2_eligible).length);
 
 const filteredList = computed(() => {
-  return studentList.value.filter(item => {
+  const result = studentList.value.filter(item => {
     // 반 필터
     if (filterClass.value === 'graduated') {
       if (!isGrad(item)) return false;
@@ -471,13 +613,35 @@ const filteredList = computed(() => {
     }
     return true;
   });
+
+  // 재학생 우선, 학번 오름차순 정렬
+  return result.sort((a, b) => {
+    const gradA = isGrad(a) ? 1 : 0;
+    const gradB = isGrad(b) ? 1 : 0;
+    if (gradA !== gradB) {
+      return gradA - gradB;
+    }
+
+    const codeA = String(a.student_code || (a.class_no ? `3${String(a.class_no).padStart(2, '0')}${String(a.seq_no || a.student_no || 0).padStart(2, '0')}` : '99999'));
+    const codeB = String(b.student_code || (b.class_no ? `3${String(b.class_no).padStart(2, '0')}${String(b.seq_no || b.student_no || 0).padStart(2, '0')}` : '99999'));
+
+    return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+  });
 });
 
 function openManualModal(item) {
   selectedStudent.value = item;
+  let choice = 'AUTO';
+  if (item.eligibility?.is_type2_eligible) {
+    choice = 'TYPE2';
+  } else if (item.eligibility?.is_type1_eligible || item.eligibility?.is_manual_approved) {
+    choice = 'TYPE1';
+  } else if (item.eligibility?.is_eligible === false && item.eligibility?.is_manual_approved) {
+    choice = 'INELIGIBLE';
+  }
+
   modalForm.value = {
-    isManualApproved: item.eligibility?.is_manual_approved || false,
-    isType2Eligible: item.eligibility?.is_type2_eligible || false,
+    statusChoice: choice,
     reason: item.eligibility?.manual_reason || ''
   };
   showModal.value = true;
@@ -488,11 +652,17 @@ async function saveManualApproval() {
   savingModal.value = true;
 
   try {
+    const choice = modalForm.value.statusChoice;
+    const isManualApproved = choice === 'TYPE1';
+    const isType2Eligible = choice === 'TYPE2';
+    const overrideIneligible = choice === 'INELIGIBLE';
+
     await updateRuralManualApproval(
       selectedStudent.value.id,
-      modalForm.value.isManualApproved,
-      modalForm.value.isType2Eligible,
-      modalForm.value.reason
+      isManualApproved,
+      isType2Eligible,
+      modalForm.value.reason,
+      overrideIneligible
     );
     showModal.value = false;
     await loadData();

@@ -2,24 +2,36 @@
   <div class="min-h-screen flex items-center justify-center p-6 bg-slate-100 font-sans transition-colors duration-300">
     <div
       class="w-full bg-white shadow-xl border border-slate-200/80 transition-all duration-300 relative overflow-hidden"
-      style="max-width: 440px; border-radius: 24px; padding: 2.5rem;"
+      style="max-width: 460px; border-radius: 28px; padding: 2.25rem 2.25rem 2.5rem;"
     >
       <!-- Decorative background blur -->
-      <div class="absolute -top-24 -left-24 w-40 h-40 bg-blue-500/5 rounded-full blur-3xl"></div>
-      <div class="absolute -bottom-24 -right-24 w-40 h-40 bg-indigo-500/5 rounded-full blur-3xl"></div>
+      <div
+        :class="[
+          'absolute -top-24 -left-24 w-44 h-44 rounded-full blur-3xl transition-colors duration-500',
+          activeTab === 'student' ? 'bg-blue-500/10' : (activeTab === 'graduate' ? 'bg-indigo-500/10' : 'bg-emerald-500/10')
+        ]"
+      ></div>
+      <div
+        :class="[
+          'absolute -bottom-24 -right-24 w-44 h-44 rounded-full blur-3xl transition-colors duration-500',
+          activeTab === 'student' ? 'bg-indigo-500/10' : (activeTab === 'graduate' ? 'bg-purple-500/10' : 'bg-teal-500/10')
+        ]"
+      ></div>
 
       <!-- 헤더 -->
-      <div class="text-center mb-8 relative">
+      <div class="text-center mb-6 relative">
         <div
-          class="inline-flex items-center justify-center rounded-2xl mb-4 shadow-sm border border-blue-100"
-          style="width: 56px; height: 56px; background: #eff6ff;"
+          :class="[
+            'inline-flex items-center justify-center rounded-2xl mb-3 shadow-xs border transition-all duration-300',
+            activeTab === 'student' ? 'bg-blue-50 text-blue-600 border-blue-100' : (activeTab === 'graduate' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100')
+          ]"
+          style="width: 56px; height: 56px;"
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-            <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-          </svg>
+          <GraduationCap v-if="activeTab === 'student'" class="w-7 h-7" />
+          <School v-else-if="activeTab === 'graduate'" class="w-7 h-7" />
+          <UserCheck v-else class="w-7 h-7" />
         </div>
-        <p class="text-xs font-extrabold text-blue-600 mb-2 tracking-wide">{{ schoolName }}</p>
+        <p class="text-xs font-extrabold text-blue-600 mb-1.5 tracking-wide">{{ schoolName }}</p>
         <h1 class="text-slate-900 m-0 flex flex-col items-center justify-center gap-1 font-extrabold tracking-tight">
           <span class="text-base text-slate-900">학교장 추천자 선발 시스템</span>
           <template v-if="isRuralSystemEnabled">
@@ -29,82 +41,231 @@
         </h1>
       </div>
 
-      <!-- 통합 로그인 폼 -->
-      <div v-if="!isSignUp">
-        <form @submit.prevent="handleLogin" class="flex flex-col gap-4">
-          <div>
-            <label class="block text-sm font-semibold mb-1.5 text-slate-600">아이디 또는 학번</label>
-            <input
-              v-model="loginId"
-              type="text"
-              required
-              placeholder="아이디 또는 5자리 학번 입력"
-              class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-slate-800"
-              style="border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 14px; box-sizing: border-box;"
-            />
-          </div>
+      <!-- 3가지 역할 구분 탭 (재학생 / 졸업생 / 교사) -->
+      <div v-if="!isSignUp" class="flex p-1.5 bg-slate-100/90 rounded-2xl mb-6 border border-slate-200/80">
+        <button
+          type="button"
+          @click="switchTab('student')"
+          :class="[
+            'flex-1 py-2.5 px-2 text-xs font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer border-none',
+            activeTab === 'student'
+              ? 'bg-white text-blue-600 shadow-md font-extrabold'
+              : 'text-slate-500 hover:text-slate-800 bg-transparent'
+          ]"
+        >
+          <GraduationCap class="w-4 h-4" />
+          재학생
+        </button>
 
-          <div v-if="/^\d{5}$/.test(loginId.trim())" class="flex flex-col gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold text-slate-600">학생 구분</span>
-              <div class="flex gap-4">
-                <label class="flex items-center gap-1.5 text-xs font-medium cursor-pointer text-slate-700">
-                  <input type="radio" v-model="loginIsEnrolled" :value="true" class="accent-blue-600" />
-                  재학생
-                </label>
-                <label class="flex items-center gap-1.5 text-xs font-medium cursor-pointer text-slate-700">
-                  <input type="radio" v-model="loginIsEnrolled" :value="false" class="accent-blue-600" />
-                  졸업생
-                </label>
-              </div>
-            </div>
-            <div v-if="!loginIsEnrolled" class="flex items-center justify-between border-t border-slate-200/60 pt-2.5 mt-1">
-              <label class="text-xs font-semibold text-slate-600">졸업 학년도</label>
+        <button
+          type="button"
+          @click="switchTab('graduate')"
+          :class="[
+            'flex-1 py-2.5 px-2 text-xs font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer border-none',
+            activeTab === 'graduate'
+              ? 'bg-white text-indigo-600 shadow-md font-extrabold'
+              : 'text-slate-500 hover:text-slate-800 bg-transparent'
+          ]"
+        >
+          <School class="w-4 h-4" />
+          졸업생
+        </button>
+
+        <button
+          type="button"
+          @click="switchTab('teacher')"
+          :class="[
+            'flex-1 py-2.5 px-2 text-xs font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer border-none',
+            activeTab === 'teacher'
+              ? 'bg-white text-emerald-600 shadow-md font-extrabold'
+              : 'text-slate-500 hover:text-slate-800 bg-transparent'
+          ]"
+        >
+          <UserCheck class="w-4 h-4" />
+          교사 / 관리자
+        </button>
+      </div>
+
+      <!-- 1. 재학생 로그인 폼 -->
+      <div v-if="!isSignUp && activeTab === 'student'">
+        <form @submit.prevent="handleLogin" autocomplete="off" class="flex flex-col gap-4">
+          <div>
+            <label class="block text-xs font-bold mb-1.5 text-slate-700">학번 (5자리)</label>
+            <div class="relative">
               <input
-                v-model.number="loginGradYear"
-                type="number"
+                v-model="loginStudentCode"
+                type="text"
                 required
-                placeholder="예: 2026"
-                class="text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-slate-800"
-                style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 8px; width: 100px; box-sizing: border-box;"
+                maxlength="5"
+                pattern="\d{5}"
+                autocomplete="off"
+                placeholder="예: 30120 (5자리 학번 입력)"
+                class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-slate-800"
+                style="border: 1px solid #cbd5e1; border-radius: 10px; padding: 11px 14px; box-sizing: border-box;"
               />
             </div>
           </div>
 
           <div>
-            <label class="block text-sm font-semibold mb-1.5 text-slate-600">비밀번호 또는 학생 연락처</label>
+            <label class="block text-xs font-bold mb-1.5 text-slate-700">비밀번호 또는 학생 연락처</label>
             <input
               v-model="loginPassword"
               type="password"
               required
+              autocomplete="new-password"
               placeholder="비밀번호 또는 연락처(010...) 입력"
               class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-slate-800"
-              style="border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 14px; box-sizing: border-box;"
+              style="border: 1px solid #cbd5e1; border-radius: 10px; padding: 11px 14px; box-sizing: border-box;"
             />
           </div>
 
           <button
             type="submit"
             :disabled="loading"
-            class="w-full text-sm font-bold disabled:opacity-40 hover:bg-blue-700 transition-colors cursor-pointer"
+            class="w-full text-sm font-bold disabled:opacity-40 hover:bg-blue-700 transition-colors cursor-pointer flex items-center justify-center gap-2"
             style="padding: 12px; border: none; border-radius: 10px; background: #2563eb; color: white; margin-top: 4px;"
-          >{{ loading ? '로그인 중…' : '로그인' }}</button>
+          >
+            {{ loading ? '로그인 중…' : '재학생 로그인' }}
+          </button>
 
-          <div class="text-center mt-4">
+          <div class="text-center mt-3">
             <button
               type="button"
-              @click="isSignUp = true"
-              class="text-sm font-medium text-slate-600 hover:text-blue-600 cursor-pointer bg-transparent border-none transition-colors"
+              @click="openSignUpFor('student')"
+              class="text-xs font-semibold text-slate-600 hover:text-blue-600 cursor-pointer bg-transparent border-none transition-colors"
             >
-              아직 계정이 없으신가요?
-              <span class="text-blue-600 font-bold underline ml-1">학생 회원가입 신청</span>
+              비밀번호는 연락처를 사용하세요.
+              <span class="text-blue-600 font-bold underline ml-1">연락처 수정</span>
             </button>
           </div>
         </form>
       </div>
 
+      <!-- 2. 졸업생 로그인 폼 -->
+      <div v-else-if="!isSignUp && activeTab === 'graduate'">
+        <form @submit.prevent="handleLogin" autocomplete="off" class="flex flex-col gap-4">
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs font-bold mb-1.5 text-slate-700">학번 (5자리)</label>
+              <input
+                v-model="loginStudentCode"
+                type="text"
+                required
+                maxlength="5"
+                pattern="\d{5}"
+                autocomplete="off"
+                placeholder="예: 30120"
+                class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white text-slate-800"
+                style="border: 1px solid #cbd5e1; border-radius: 10px; padding: 11px 14px; box-sizing: border-box;"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-bold mb-1.5 text-slate-700">졸업 학년도</label>
+              <input
+                v-model.number="loginGradYear"
+                type="number"
+                required
+                autocomplete="off"
+                placeholder="예: 2026"
+                class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white text-slate-800"
+                style="border: 1px solid #cbd5e1; border-radius: 10px; padding: 11px 14px; box-sizing: border-box;"
+              />
+            </div>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1 leading-normal" style="margin: 0;">
+            💡 고3 재학 기간이 2025년 3월~2026년 1월이고 2026년 2월에 졸업한 경우 졸업학년도는 '2026'입니다.
+          </p>
+
+          <div>
+            <label class="block text-xs font-bold mb-1.5 text-slate-700">비밀번호 또는 학생 연락처</label>
+            <input
+              v-model="loginPassword"
+              type="password"
+              required
+              autocomplete="new-password"
+              placeholder="비밀번호 또는 연락처(010...) 입력"
+              class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white text-slate-800"
+              style="border: 1px solid #cbd5e1; border-radius: 10px; padding: 11px 14px; box-sizing: border-box;"
+            />
+          </div>
+
+          <button
+            type="submit"
+            :disabled="loading"
+            class="w-full text-sm font-bold disabled:opacity-40 hover:bg-indigo-700 transition-colors cursor-pointer flex items-center justify-center gap-2"
+            style="padding: 12px; border: none; border-radius: 10px; background: #4f46e5; color: white; margin-top: 4px;"
+          >
+            {{ loading ? '로그인 중…' : '졸업생 로그인' }}
+          </button>
+
+          <div class="text-center mt-3">
+            <button
+              type="button"
+              @click="openSignUpFor('graduate')"
+              class="text-xs font-semibold text-slate-600 hover:text-indigo-600 cursor-pointer bg-transparent border-none transition-colors"
+            >
+              아직 계정이 없으신가요?
+              <span class="text-indigo-600 font-bold underline ml-1">졸업생 회원가입 신청</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 3. 교사 / 관리자 로그인 폼 -->
+      <div v-else-if="!isSignUp && activeTab === 'teacher'">
+        <form @submit.prevent="handleLogin" autocomplete="off" class="flex flex-col gap-4">
+          <div>
+            <label class="block text-xs font-bold mb-1.5 text-slate-700">교사 / 관리자 아이디</label>
+            <input
+              v-model="loginId"
+              type="text"
+              required
+              autocomplete="off"
+              placeholder="아이디 입력"
+              class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white text-slate-800"
+              style="border: 1px solid #cbd5e1; border-radius: 10px; padding: 11px 14px; box-sizing: border-box;"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold mb-1.5 text-slate-700">비밀번호</label>
+            <input
+              v-model="loginPassword"
+              type="password"
+              required
+              autocomplete="new-password"
+              placeholder="비밀번호 입력"
+              class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white text-slate-800"
+              style="border: 1px solid #cbd5e1; border-radius: 10px; padding: 11px 14px; box-sizing: border-box;"
+            />
+          </div>
+
+          <button
+            type="submit"
+            :disabled="loading"
+            class="w-full text-sm font-bold disabled:opacity-40 hover:bg-emerald-700 transition-colors cursor-pointer flex items-center justify-center gap-2"
+            style="padding: 12px; border: none; border-radius: 10px; background: #059669; color: white; margin-top: 4px;"
+          >
+            {{ loading ? '로그인 중…' : '교사 / 관리자 로그인' }}
+          </button>
+        </form>
+      </div>
+
       <!-- 학생 회원가입 폼 -->
       <div v-else>
+        <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-200">
+          <h2 class="text-base font-bold text-slate-900 m-0">
+            {{ signupIsEnrolled ? '재학생 정보 수정' : '졸업생 회원가입 신청' }}
+          </h2>
+          <button
+            type="button"
+            @click="isSignUp = false"
+            class="text-xs font-bold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer border-none"
+          >
+            취소
+          </button>
+        </div>
+
         <form @submit.prevent="openConfirmModal" class="flex flex-col gap-3">
           <div>
             <label class="block text-xs font-semibold mb-1 text-slate-600">학교 배포 가입코드</label>
@@ -151,7 +312,7 @@
               v-model.number="signupGradYear"
               type="number"
               required
-              placeholder="예: 2025"
+              placeholder="예: 2026"
               class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-slate-800"
               style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
             />
@@ -265,16 +426,15 @@
             :disabled="loading"
             class="w-full text-sm font-bold disabled:opacity-40 transition-colors cursor-pointer hover:bg-blue-700"
             style="padding: 10px; border: none; border-radius: 8px; background: #2563eb; color: white; margin-top: 4px;"
-          >{{ loading ? '검증 중…' : '가입 신청 완료하기' }}</button>
+          >{{ loading ? '검증 중…' : (signupIsEnrolled ? '정보 수정' : '가입 신청 완료하기') }}</button>
 
           <div class="text-center mt-3">
             <button
               type="button"
               @click="isSignUp = false"
-              class="text-sm font-medium text-slate-600 hover:text-blue-600 cursor-pointer bg-transparent border-none transition-colors"
+              class="text-xs font-bold text-blue-600 underline hover:text-blue-700 cursor-pointer bg-transparent border-none transition-colors"
             >
-              이미 가입하셨나요?
-              <span class="text-blue-600 font-bold underline ml-1">로그인하러 가기</span>
+              로그인하러 가기
             </button>
           </div>
         </form>
@@ -283,12 +443,12 @@
       <!-- 가입 정보 최종 확인 팝업 모달 -->
       <div
         v-if="showConfirmModal"
-        class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4"
       >
         <div class="bg-white rounded-2xl p-6 shadow-2xl border border-slate-200 max-w-sm w-full space-y-4">
           <div class="text-center">
             <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 border border-blue-100">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              <CheckCircle class="w-6 h-6 text-blue-600" />
             </div>
             <h3 class="text-lg font-bold text-slate-900" style="margin: 0 0 4px;">가입 정보 최종 확인</h3>
             <p class="text-xs text-slate-500" style="margin: 0;">입력하신 가입 정보가 맞는지 확인해 주세요.</p>
@@ -301,7 +461,7 @@
                 {{ signupIsEnrolled ? '재학생' : `졸업생 (${signupGradYear}학년도)` }}
               </span>
             </div>
-            <div v-if="signupIsEnrolled" class="flex justify-between items-center">
+            <div class="flex justify-between items-center">
               <span class="text-xs text-slate-500 font-semibold">학번</span>
               <span class="font-bold text-blue-600 font-mono">
                 {{ signupStudentCode }}
@@ -372,6 +532,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { GraduationCap, School, UserCheck, CheckCircle } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
@@ -379,13 +540,8 @@ import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
 const router = useRouter()
 const auth = useAuthStore()
 
-onMounted(async () => {
-  fetchSchoolName()
-  try {
-    const status = await checkRuralSystemOpenStatus()
-    isRuralSystemEnabled.value = status.isEnabled === true
-  } catch (e) {}
-})
+// 활성화된 역할 탭: 'student' (재학생), 'graduate' (졸업생), 'teacher' (교사/관리자)
+const activeTab = ref('student')
 
 const isRuralSystemEnabled = ref(localStorage.getItem('pcm_enable_rural_system') === 'true')
 const isSignUp = ref(false)
@@ -397,13 +553,13 @@ const showConfirmModal = ref(false)
 const isRejectedError = ref(false)
 const rejectedCode = ref('')
 
-// 로그인 상태
+// 로그인 폼 입력값
 const loginId = ref('')
+const loginStudentCode = ref('')
 const loginPassword = ref('')
-const loginIsEnrolled = ref(true)
 const loginGradYear = ref(new Date().getFullYear())
 
-// 학생 회원가입 상태
+// 학생 회원가입 입력값
 const signupCode = ref('')
 const signupIsEnrolled = ref(true)
 const signupGradYear = ref(new Date().getFullYear())
@@ -422,39 +578,83 @@ const cleanPhoneInput = computed(() => {
   return signupPhone.value.replace(/\D/g, '')
 })
 
+onMounted(async () => {
+  fetchSchoolName()
+  loginId.value = ''
+  loginStudentCode.value = ''
+  loginPassword.value = ''
+  try {
+    const status = await checkRuralSystemOpenStatus()
+    isRuralSystemEnabled.value = status.isEnabled === true
+  } catch (e) {}
+})
+
+function switchTab(tab) {
+  activeTab.value = tab
+  error.value = null
+  success.value = null
+  isRejectedError.value = false
+  loginId.value = ''
+  loginStudentCode.value = ''
+  loginPassword.value = ''
+}
+
+function openSignUpFor(type) {
+  if (type === 'graduate') {
+    signupIsEnrolled.value = false
+  } else {
+    signupIsEnrolled.value = true
+  }
+  isSignUp.value = true
+  error.value = null
+  success.value = null
+}
+
 async function handleLogin() {
   error.value = null
   success.value = null
   isRejectedError.value = false
   rejectedCode.value = ''
   loading.value = true
-  const id = loginId.value.trim()
-  const pw = loginPassword.value
 
   try {
-    if (id === 'admin') {
-      await auth.loginAdmin(id, pw)
-    } else if (id === 'teacher') {
-      await auth.loginTeacher(id, pw)
+    if (activeTab.value === 'teacher') {
+      const id = loginId.value.trim()
+      const pw = loginPassword.value
+      if (!id) throw new Error('아이디를 입력해 주세요.')
+      if (!pw) throw new Error('비밀번호를 입력해 주세요.')
+
+      if (id === 'admin') {
+        await auth.loginAdmin(id, pw)
+      } else {
+        await auth.loginTeacher(id, pw)
+      }
+    } else if (activeTab.value === 'graduate') {
+      const code = loginStudentCode.value.trim()
+      const pw = loginPassword.value
+      if (!/^\d{5}$/.test(code)) {
+        throw new Error('학번은 5자리 숫자여야 합니다 (예: 30120).')
+      }
+      if (!loginGradYear.value) {
+        throw new Error('졸업 학년도를 입력해 주세요.')
+      }
+      const finalCode = `${loginGradYear.value}${code}`
+      await auth.loginStudent(finalCode, pw, false)
     } else {
-      if (!/^\d{5}$/.test(id)) {
-        throw new Error('아이디는 admin, teacher 또는 5자리 학번이어야 합니다.')
+      // 재학생 (student)
+      const code = loginStudentCode.value.trim()
+      const pw = loginPassword.value
+      if (!/^\d{5}$/.test(code)) {
+        throw new Error('학번은 5자리 숫자여야 합니다 (예: 30120).')
       }
-      let finalStudentCode = id
-      if (!loginIsEnrolled.value) {
-        if (!loginGradYear.value) {
-          throw new Error('졸업생은 졸업 학년도를 입력해야 합니다.')
-        }
-        finalStudentCode = `${loginGradYear.value}${id}`
-      }
-      await auth.loginStudent(finalStudentCode, pw, loginIsEnrolled.value)
+      await auth.loginStudent(code, pw, true)
     }
     router.push('/select-system')
   } catch (e) {
     error.value = e.message || '로그인에 실패했습니다.'
     if (e.isRejected) {
       isRejectedError.value = true
-      rejectedCode.value = e.studentCode || id
+      rejectedCode.value = e.studentCode || loginStudentCode.value
     }
   } finally {
     loading.value = false
@@ -464,7 +664,7 @@ async function handleLogin() {
 function openSignupWithCode() {
   if (rejectedCode.value) {
     signupStudentCode.value = rejectedCode.value
-    signupIsEnrolled.value = loginIsEnrolled.value
+    signupIsEnrolled.value = activeTab.value === 'student'
   }
   isSignUp.value = true
   error.value = null
@@ -512,7 +712,6 @@ function openConfirmModal() {
     return
   }
 
-  // 모달 열기
   showConfirmModal.value = true
 }
 
@@ -536,10 +735,10 @@ async function confirmAndSignUp() {
       ruralSelfCheck: signupRuralSelfCheck.value
     })
     
-    // 모달 닫기 & 성공 처리 및 로그인 폼으로 자동 전환
     showConfirmModal.value = false
     isSignUp.value = false
-    loginId.value = signupStudentCode.value
+    activeTab.value = signupIsEnrolled.value ? 'student' : 'graduate'
+    loginStudentCode.value = signupStudentCode.value
     loginPassword.value = cleanPhoneInput.value
     
     if (res?.isAutoApproved) {
@@ -548,7 +747,6 @@ async function confirmAndSignUp() {
       success.value = '회원가입 신청이 완료되었습니다! 관리자의 승인 후 로그인이 가능합니다.'
     }
     
-    // 입력폼 초기화
     signupCode.value = ''
     signupStudentCode.value = ''
     signupName.value = ''

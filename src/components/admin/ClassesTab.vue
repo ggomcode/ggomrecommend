@@ -111,22 +111,22 @@
     <p v-if="error" class="text-base mb-3" style="color: #ef4444;">{{ error }}</p>
 
     <!-- 학급 테이블 -->
-    <div class="rounded-xl overflow-hidden"
+    <div class="rounded-xl overflow-hidden max-w-4xl"
       style="background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
       <div class="overflow-x-auto">
-        <table style="border-collapse: collapse; table-layout: fixed; width: 100%; min-width: 660px;">
+        <table style="border-collapse: collapse; table-layout: fixed; width: 100%;">
           <colgroup>
-            <col style="width: 90px;">
-            <col style="width: 80px;">
-            <col style="width: 160px;">
-            <col>
+            <col style="width: 25%;">
+            <col style="width: 25%;">
+            <col style="width: 32%;">
+            <col style="width: 18%;">
           </colgroup>
           <thead>
             <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-              <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">학년</th>
-              <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">반</th>
-              <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">담임명</th>
-              <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">편집</th>
+              <th class="text-base font-semibold text-left whitespace-nowrap" style="padding: 14px 20px; color: #475569;">학년</th>
+              <th class="text-base font-semibold text-left whitespace-nowrap" style="padding: 14px 20px; color: #475569;">반</th>
+              <th class="text-base font-semibold text-left whitespace-nowrap" style="padding: 14px 20px; color: #475569;">담임명</th>
+              <th class="text-base font-semibold text-left whitespace-nowrap" style="padding: 14px 20px; color: #475569;">편집</th>
             </tr>
           </thead>
           <tbody>
@@ -135,9 +135,9 @@
               <tr v-if="editing?.grade !== row.grade || editing?.class_no !== row.class_no"
                 style="border-bottom: 1px solid #f1f5f9; transition: background 0.1s;"
                 class="hover:bg-slate-50">
-                <td class="text-base font-bold text-slate-800" style="padding: 14px 20px;">{{ row.grade === 0 ? '졸업생' : row.grade + '학년' }}</td>
-                <td class="text-base font-bold text-slate-800" style="padding: 14px 20px;">{{ row.class_no === 0 ? '졸업생' : row.class_no + '반' }}</td>
-                <td class="text-base" style="padding: 14px 20px; color: #1e293b;">{{ row.teacher_name ?? '-' }}</td>
+                <td class="text-base font-bold text-slate-800 whitespace-nowrap" style="padding: 14px 20px;">{{ (!row.grade || Number(row.grade) === 0) ? '졸업생' : row.grade + '학년' }}</td>
+                <td class="text-base font-bold text-slate-800 whitespace-nowrap" style="padding: 14px 20px;">{{ (!row.class_no || Number(row.class_no) === 0) ? '졸업생' : row.class_no + '반' }}</td>
+                <td class="text-base whitespace-nowrap" style="padding: 14px 20px; color: #1e293b;">{{ row.teacher_name ?? '-' }}</td>
                 <td style="padding: 14px 20px;">
                   <div class="flex gap-3">
                     <button class="text-base font-medium disabled:opacity-40"
@@ -151,8 +151,8 @@
               </tr>
               <!-- 편집 행 -->
               <tr v-else style="background: #eff6ff; border-bottom: 1px solid #bfdbfe;">
-                <td class="text-base font-bold text-slate-800" style="padding: 14px 20px;">{{ row.grade === 0 ? '졸업생' : row.grade + '학년' }}</td>
-                <td class="text-base font-bold text-slate-800" style="padding: 14px 20px;">{{ row.class_no === 0 ? '졸업생' : row.class_no + '반' }}</td>
+                <td class="text-base font-bold text-slate-800 whitespace-nowrap" style="padding: 14px 20px;">{{ (!row.grade || Number(row.grade) === 0) ? '졸업생' : row.grade + '학년' }}</td>
+                <td class="text-base font-bold text-slate-800 whitespace-nowrap" style="padding: 14px 20px;">{{ (!row.class_no || Number(row.class_no) === 0) ? '졸업생' : row.class_no + '반' }}</td>
                 <td style="padding: 10px 20px;">
                   <input v-model="editTeacherName" type="text"
                     class="text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -287,7 +287,7 @@ async function addRow() {
 }
 
 async function remove(row) {
-  const label = row.grade === 0 ? '졸업생' : `${row.grade}학년 ${row.class_no}반`
+  const label = (!row.grade || Number(row.grade) === 0) ? '졸업생' : `${row.grade}학년 ${row.class_no}반`
   if (!(await dialog.confirm({
     title: '학급 삭제',
     message: `${label}을 삭제하시겠습니까?\n해당 학급의 담임교사 로그인 계정도 함께 삭제됩니다.`,

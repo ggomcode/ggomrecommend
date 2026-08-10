@@ -4,31 +4,7 @@ import { encryptText, decryptText } from '../utils/cryptoUtils';
 
 const API_BASE_URL = 'https://www.schoolinfo.go.kr/openApi.do';
 
-/**
- * 학교알리미 API 키 동적 로드 (환경변수 VITE_SCHOOL_INFO_API_KEY 우선, 없으면 Supabase config 테이블)
- */
-export async function getSchoolInfoApiKey() {
-  const envKey = import.meta.env.VITE_SCHOOL_INFO_API_KEY;
-  if (envKey && envKey.trim()) {
-    return envKey.trim();
-  }
 
-  try {
-    const { data } = await supabase
-      .from('config')
-      .select('value')
-      .eq('key', 'school_info_api_key')
-      .maybeSingle();
-
-    if (data && data.value && data.value.trim()) {
-      return data.value.trim();
-    }
-  } catch (e) {
-    console.warn('Error fetching school_info_api_key from config:', e);
-  }
-
-  return '';
-}
 
 // 주요 시도 코드 목록 (경기: 41, 서울: 11, 인천: 28, 강원: 42, 충북: 43, 충남: 44, 전북: 45, 전남: 46, 경북: 47, 경남: 48, 세종: 50, 제주: 50)
 const MAJOR_SIDO_CODES = ['41', '11', '28', '44', '43', '47', '48', '45', '46', '42', '50'];
@@ -40,22 +16,34 @@ const SGG_CODE_MAP = {
 };
 
 /**
- * 학교 주소 내 읍/면 포함 여부 판단
+ * 학교 주소 내 읍/면 포함 여부 판단 (읍/면/리 수식어 및 주요 읍면 지역명 정규식)
  */
 export function checkIsRuralAddress(addressStr) {
-  if (!addressStr) return false;
-  return /([가-힣]+(읍|면))\b/.test(addressStr);
+  if (!addressStr || typeof addressStr !== 'string') return false;
+  const clean = addressStr.trim();
+
+  // 1. 주소 텍스트에 읍/면/리가 포함된 경우 (단, 동지역 제외)
+  const ruralRegex = /(?:[가-힣]+(?:읍|면|리))(?:\s|[0-9,()!]|$)/;
+  if (ruralRegex.test(clean)) return true;
+
+  // 2. 주요 읍/면 지역명 사전 체크 (학교명/주소에 읍/면 명칭이 포함되어 있는 경우)
+  const ruralKeywords = [
+    '포곡', '모현', '이동', '남사', '원삼', '백암', '양지',
+    '가평', '양평', '연천', '강화', '옹진', '소흘', '포천', '청평',
+    '설악', '조종', '지평', '용문', '청운', '단월', '양동', '개군'
+  ];
+  return ruralKeywords.some(kw => clean.includes(kw));
 }
 
 /**
- * 학교알리미 Open API를 통한 학교 정보 검색 및 DB 캐싱
+ * 학교알리미 / NEIS Open API를 통한 학교 정보 검색 및 DB 캐싱 (rural_school_cache)
  */
 export async function getOrFetchSchoolInfo(schoolName) {
   if (!schoolName) return null;
 
   const cleanName = schoolName.trim();
 
-  // 1. DB 캐시 확인
+  // 1. DB 캐시 확인 — 실제 주소가 이미 있으면 그대로 반환
   try {
     const { data: cached } = await supabase
       .from('rural_school_cache')
@@ -63,39 +51,115 @@ export async function getOrFetchSchoolInfo(schoolName) {
       .eq('school_name', cleanName)
       .maybeSingle();
 
-    if (cached) {
+    if (cached && cached.address && !cached.address.includes('자동 판정') && (cached.road_address || cached.detail_address)) {
       return cached;
     }
   } catch (e) {
-    // ignore cache query error
+    // ignore
   }
 
-  // 2. 학교명 및 주소 정규식으로 읍/면 소재 여부 즉시 판정 (무한루프 방지)
-  const isRural = checkIsRuralAddress(cleanName);
-  const fetchedInfo = {
+  // 2. NEIS 공공 Open API로 실제 학교 주소 조회
+  let realAddress = '';
+  let roadAddress = '';
+  let detailAddress = '';
+  let totalMatchCount = 0;
+  let schoolKind = cleanName.includes('고등학교') || cleanName.includes('고교') || cleanName.includes('고') ? '04' : '03';
+
+  try {
+    const res = await fetch(`https://open.neis.go.kr/hub/schoolInfo?Type=json&pIndex=1&pSize=10&SCHUL_NM=${encodeURIComponent(cleanName)}`);
+    if (res.ok) {
+      const json = await res.json();
+      const rows = json?.schoolInfo?.[1]?.row || [];
+      totalMatchCount = rows.length;
+
+      // 동명 학교가 전국에 여러 개 있을 경우 (예: 서울 백암고 vs 용인 백암고)
+      // 경기도 및 읍/면 지역 소재 학교 우선 매칭
+      let matchedRow = null;
+      if (rows.length > 0) {
+        // 1순위: 정확한 학교명 & 경기/용인 지역 & 읍/면 주소
+        matchedRow = rows.find(r =>
+          r.SCHUL_NM === cleanName &&
+          (r.LCTN_SC_NM?.includes('경기') || r.ORG_RDNMA?.includes('경기') || r.ATPT_OFCDC_SC_NM?.includes('경기')) &&
+          checkIsRuralAddress(`${r.ORG_RDNMA || ''} ${r.ORG_RDNDA || ''}`)
+        );
+
+        // 2순위: 정확한 학교명 & 경기/용인 지역
+        if (!matchedRow) {
+          matchedRow = rows.find(r =>
+            r.SCHUL_NM === cleanName &&
+            (r.LCTN_SC_NM?.includes('경기') || r.ORG_RDNMA?.includes('경기') || r.ATPT_OFCDC_SC_NM?.includes('경기'))
+          );
+        }
+
+        // 3순위: 정확한 학교명 & 읍/면 주소
+        if (!matchedRow) {
+          matchedRow = rows.find(r =>
+            r.SCHUL_NM === cleanName &&
+            checkIsRuralAddress(`${r.ORG_RDNMA || ''} ${r.ORG_RDNDA || ''}`)
+          );
+        }
+
+        // 4순위: 정확한 학교명 일치
+        if (!matchedRow) {
+          matchedRow = rows.find(r => r.SCHUL_NM === cleanName);
+        }
+
+        // 5순위: 첫 번째 검색 결과 fallback
+        if (!matchedRow) {
+          matchedRow = rows[0];
+        }
+      }
+
+      if (matchedRow) {
+        roadAddress = matchedRow.ORG_RDNMA || '';
+        detailAddress = matchedRow.ORG_RDNDA || '';
+        realAddress = roadAddress || detailAddress || '';
+        if (matchedRow.SCHUL_KND_SC_NM === '고등학교') schoolKind = '04';
+        else if (matchedRow.SCHUL_KND_SC_NM === '중학교') schoolKind = '03';
+      }
+    }
+  } catch (e) {
+    console.warn('NEIS API fetch error for school:', cleanName, e);
+  }
+
+  const fullAddrText = `${cleanName} ${realAddress} ${roadAddress} ${detailAddress}`;
+  const isRural = checkIsRuralAddress(fullAddrText);
+
+  // DB 스키마에 존재하는 실제 컬럼만 페이로드로 준비 (has_multiple_matches 등 임시 속성 제외하여 400 에러 방지)
+  const dbInsertPayload = {
     school_name: cleanName,
-    school_kind: cleanName.includes('고등학교') || cleanName.includes('고교') || cleanName.includes('고') ? '04' : '03',
-    bjd_code: '',
-    address: isRural ? '읍/면 소재 학교 (자동 판정)' : '동지역 소재 학교 (자동 판정)',
-    detail_address: '',
-    road_address: '',
-    is_rural: isRural
+    school_kind: schoolKind,
+    address: realAddress || (isRural ? '읍/면 소재 학교' : '동지역 소재 학교'),
+    detail_address: detailAddress,
+    road_address: roadAddress,
+    is_rural: isRural,
+    fetched_at: new Date().toISOString()
   };
 
-  // DB 캐시에 저장
+  // 3. DB 저장: 기존 행 삭제 후 INSERT
+  let cacheRow = null;
   try {
-    const { data: savedCache } = await supabase
+    await supabase.from('rural_school_cache').delete().eq('school_name', cleanName);
+
+    const { data: inserted, error: insErr } = await supabase
       .from('rural_school_cache')
-      .upsert(fetchedInfo, { onConflict: 'school_name' })
+      .insert(dbInsertPayload)
       .select('*')
       .maybeSingle();
 
-    if (savedCache) return savedCache;
+    if (insErr) {
+      console.warn('rural_school_cache insert error:', insErr);
+    }
+    if (inserted) cacheRow = inserted;
   } catch (e) {
-    console.warn('rural_school_cache save warning:', e);
+    console.warn('rural_school_cache save error:', cleanName, e);
   }
 
-  return fetchedInfo;
+  const result = cacheRow ? { ...cacheRow } : { ...dbInsertPayload };
+  result.has_multiple_matches = totalMatchCount > 1;
+  result.total_matches = totalMatchCount;
+
+  return result;
 }
 
 /**
@@ -181,14 +245,16 @@ export async function getGrade3Students() {
  * 파싱된 주소 및 학적 데이터 DB 저장 및 자동 농어촌 자격 판정 수행 (학교장 추천 DB 학생 매칭)
  */
 export async function saveAndEvaluateRuralData(parsedAddressData, parsedAcademicData) {
-  const grade3Students = await getGrade3Students();
+  const allStudents = await getGrade3Students();
+  // 엑셀 파싱 및 자동 자격 검증 대상은 3학년 '재학생' (졸업생/별도신청자 제외)
+  const grade3Students = allStudents.filter(s => !s.is_separate_applicant && !s.is_graduated);
 
   // 다중 키 지원 매칭용 맵 작성
   const mapClassSeqName = new Map(); // ${classNo}_${seqNo}_${name}
-  const mapClassSeq     = new Map(); // ${classNo}_${seqNo}
-  const mapClassName    = new Map(); // ${classNo}_${name}
-  const mapCode         = new Map(); // ${studentCode}
-  const mapName         = new Map(); // ${name} -> array
+  const mapClassSeq = new Map(); // ${classNo}_${seqNo}
+  const mapClassName = new Map(); // ${classNo}_${name}
+  const mapCode = new Map(); // ${studentCode}
+  const mapName = new Map(); // ${name} -> array
 
   grade3Students.forEach(s => {
     const classNo = s.class_no;
@@ -240,116 +306,458 @@ export async function saveAndEvaluateRuralData(parsedAddressData, parsedAcademic
 
   const logs = [];
 
-  // 1. 주소 데이터 저장
+  // 1. 주소 데이터 일괄(Batch) 저장 (DELETE + INSERT)
+  // student_rural_addresses.student_id → enrolled_students.id FK 참조
   if (parsedAddressData && parsedAddressData.length > 0) {
+    // 1-a. 저장 대상 학생의 enrolled_students.id 수집
+    const targetIdSet = new Set();
     for (const item of parsedAddressData) {
       for (const st of item.students) {
         const student = findMatchedStudent(st);
+        if (!student) continue;
+        targetIdSet.add(student.id); // 항상 enrolled_students.id 사용
+      }
+    }
 
+    // 1-b. 기존 레코드 삭제 (50개씩 청크)
+    const targetIdArr = Array.from(targetIdSet);
+    for (let i = 0; i < targetIdArr.length; i += 50) {
+      const chunk = targetIdArr.slice(i, i + 50);
+      const { error: delErr } = await supabase
+        .from('student_rural_addresses')
+        .delete()
+        .in('student_id', chunk);
+      if (delErr) {
+        console.error('[주소 삭제 실패]', delErr);
+        logs.push(`[주소 삭제 실패] ${delErr.message}`);
+      }
+    }
+
+    // 1-c. 새 데이터 INSERT
+    const addrPayloads = [];
+    for (const item of parsedAddressData) {
+      for (const st of item.students) {
+        const student = findMatchedStudent(st);
         if (!student) {
           logs.push(`[주소 매칭 실패] 3학년 ${st.classNo}반 ${st.seqNo}번 ${st.studentName}`);
           continue;
         }
 
-        const targetId = student.profile_id || student.id;
         const encName = await encryptText(st.studentName || student.name);
         const encRawAddress = await encryptText(st.rawAddress);
 
-        const addrPayload = {
-          student_id: targetId,
+        addrPayloads.push({
+          student_id: student.id, // enrolled_students.id (항상 존재, profiles FK 불필요)
           class_no: st.classNo || student.class_no,
           seq_no: st.seqNo || student.seq_no,
           student_name: encName,
           raw_address_text: encRawAddress,
-          parsed_addresses: st.parsedAddresses,
           has_rural_address: st.hasRuralAddress,
           notes: st.isMultipleAddress ? '다중 주소 기재 (확인 필요)' : null,
           updated_at: new Date().toISOString()
-        };
+        });
+      }
+    }
 
-        try {
-          const { data: existingAddr } = await supabase
-            .from('student_rural_addresses')
-            .select('id')
-            .eq('student_id', targetId)
-            .maybeSingle();
+    // student_id 중복 제거
+    const uniqueAddrMap = new Map();
+    addrPayloads.forEach(p => uniqueAddrMap.set(p.student_id, p));
+    const finalAddrPayloads = Array.from(uniqueAddrMap.values());
 
-          if (existingAddr) {
-            await supabase
-              .from('student_rural_addresses')
-              .update(addrPayload)
-              .eq('id', existingAddr.id);
-          } else {
-            await supabase
-              .from('student_rural_addresses')
-              .insert(addrPayload);
-          }
-        } catch (e) {
-          console.warn('student_rural_addresses save warning:', e);
-        }
+    // 1) 기존 student_id 주소 행 미리 삭제 (23505 UNIQUE 중복 키 에러 방지)
+    const targetAddrIds = finalAddrPayloads.map(p => p.student_id);
+    for (let i = 0; i < targetAddrIds.length; i += 50) {
+      const chunk = targetAddrIds.slice(i, i + 50);
+      const { error: delErr } = await supabase
+        .from('student_rural_addresses')
+        .delete()
+        .in('student_id', chunk);
+      if (delErr) {
+        console.error('[주소 DELETE 실패]', delErr);
+      }
+    }
+
+    // 2) 50개 청크 UPSERT
+    for (let i = 0; i < finalAddrPayloads.length; i += 50) {
+      const chunk = finalAddrPayloads.slice(i, i + 50);
+      const { error: insErr } = await supabase
+        .from('student_rural_addresses')
+        .upsert(chunk, { onConflict: 'student_id' });
+      if (insErr) {
+        console.error('[주소 UPSERT 실패]', insErr);
+        logs.push(`[주소 UPSERT 실패] ${insErr.message} (code: ${insErr.code})`);
       }
     }
   }
 
-  // 2. 학적 데이터 저장 & 학교 정보 API 캐싱
+  // 2. 학적 데이터 일괄(Batch) 저장 & 학교 정보 API 캐싱 (50개 청크 분할)
   if (parsedAcademicData && parsedAcademicData.length > 0) {
+    const targetIdsToDelete = new Set();
+    const academicRowsToInsert = [];
+
+    // 학교 캐시 미리 프리패치
+    const allSchoolNames = new Set();
+    for (const item of parsedAcademicData) {
+      for (const st of item.students) {
+        for (const rec of st.records) {
+          if (rec.extractedSchools[0]) allSchoolNames.add(rec.extractedSchools[0].trim());
+        }
+      }
+    }
+
+    const schoolCacheMap = new Map();
+    for (const sName of allSchoolNames) {
+      const info = await getOrFetchSchoolInfo(sName);
+      if (info) schoolCacheMap.set(sName, info);
+    }
+
+    const warnedSchools = new Set();
+
     for (const item of parsedAcademicData) {
       for (const st of item.students) {
         const student = findMatchedStudent(st);
-
         if (!student) {
           logs.push(`[학적 매칭 실패] 3학년 ${st.classNo}반 ${st.seqNo}번 ${st.studentName}`);
           continue;
         }
 
-        const targetId = student.profile_id || student.id;
+        const targetId = student.id; // enrolled_students.id 사용
+        targetIdsToDelete.add(targetId);
 
-        try {
-          // 기존 학적 기록 삭제 후 재등록
-          await supabase
-            .from('student_academic_records')
-            .delete()
-            .eq('student_id', targetId);
+        const encName = await encryptText(st.studentName || student.name);
 
-          for (const rec of st.records) {
-            const schoolName = rec.extractedSchools[0] || null;
-            let schoolCache = null;
-            if (schoolName) {
-              schoolCache = await getOrFetchSchoolInfo(schoolName);
+        for (const rec of st.records) {
+          const schoolName = rec.extractedSchools[0] || null;
+          const schoolCache = schoolName ? schoolCacheMap.get(schoolName.trim()) : null;
+          const encRecordText = await encryptText(rec.rawRecordText);
+
+          if (schoolCache && schoolCache.has_multiple_matches) {
+            const warnKey = `${student.id}_${schoolName}`;
+            if (!warnedSchools.has(warnKey)) {
+              warnedSchools.add(warnKey);
+              const addrText = schoolCache.road_address || schoolCache.address || '주소 정보';
+              const isRuralText = schoolCache.is_rural ? '읍/면 소재 학교 (적격)' : '동지역 소재 학교 (미달)';
+              logs.push(`⚠️ [동일명 학교 주의] 3학년 ${st.classNo || student.class_no}반 ${st.seqNo || student.seq_no}번 ${st.studentName || student.name} 학생: 전국에 동일한 이름의 학교가 ${schoolCache.total_matches}개 검색되어 '${addrText}' [${isRuralText}]로 자동 매칭되었습니다. 정확히 맞는지 확인이 필요합니다.`);
             }
-
-            const encName = await encryptText(st.studentName || student.name);
-            const encRecordText = await encryptText(rec.rawRecordText);
-
-            await supabase
-              .from('student_academic_records')
-              .insert({
-                student_id: targetId,
-                class_no: st.classNo || student.class_no,
-                seq_no: st.seqNo || student.seq_no,
-                student_name: encName,
-                seq_order: rec.seqOrder,
-                record_date: rec.recordDate ? parseToIsoDate(rec.recordDate) : null,
-                change_type: encRecordText,
-                school_name: schoolName,
-                school_cache_id: schoolCache ? schoolCache.id : null,
-                raw_record_text: encRecordText,
-                updated_at: new Date().toISOString()
-              });
           }
-        } catch (e) {
-          console.warn('student_academic_records insert error:', e);
+
+          academicRowsToInsert.push({
+            student_id: targetId,
+            class_no: st.classNo || student.class_no,
+            seq_no: st.seqNo || student.seq_no,
+            student_name: encName,
+            seq_order: rec.seqOrder,
+            record_date: rec.recordDate ? parseToIsoDate(rec.recordDate) : null,
+            change_type: encRecordText,
+            school_name: schoolName,
+            school_cache_id: schoolCache ? schoolCache.id : null,
+            raw_record_text: encRecordText,
+            updated_at: new Date().toISOString()
+          });
         }
+      }
+    }
+
+    const targetIdsArr = Array.from(targetIdsToDelete);
+    for (let i = 0; i < targetIdsArr.length; i += 50) {
+      const chunk = targetIdsArr.slice(i, i + 50);
+      const { error: delErr } = await supabase
+        .from('student_academic_records')
+        .delete()
+        .in('student_id', chunk);
+      if (delErr) {
+        console.error('[학적 삭제 실패]', delErr);
+        logs.push(`[학적 삭제 실패] ${delErr.message}`);
+      }
+    }
+
+    for (let i = 0; i < academicRowsToInsert.length; i += 50) {
+      const chunk = academicRowsToInsert.slice(i, i + 50);
+      const { error: insErr } = await supabase
+        .from('student_academic_records')
+        .insert(chunk);
+      if (insErr) {
+        console.error('[학적 INSERT 실패]', insErr);
+        logs.push(`[학적 INSERT 실패] ${insErr.message} (code: ${insErr.code})`);
       }
     }
   }
 
-  // 3. 3학년 전체 학생에 대해 농어촌 전형 자격 자동 평가 수행 및 enrolled_students 연동
-  for (const student of grade3Students) {
-    await evaluateStudentRuralEligibility(student.id, student.profile_id);
-  }
+  // 3. 3학년 전체 학생에 대해 농어촌 전형 자격 자동 평가 수행 (배치 처리로 1초 내 완성)
+  await evaluateAllRuralEligibility(grade3Students);
 
   return { success: true, logs };
+}
+
+/**
+ * 농어촌 전형 서명 정보(student_signature, parent_signature, parent_name) 조회
+ */
+export async function getRuralSignatures(studentId) {
+  if (!studentId) return null;
+
+  let targetStudentId = studentId;
+  const isUuid = typeof studentId === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(studentId);
+
+  try {
+    let query = supabase.from('enrolled_students').select('id, user_id, student_code');
+    if (isUuid) {
+      query = query.or(`id.eq.${studentId},user_id.eq.${studentId}`);
+    } else {
+      query = query.eq('student_code', String(studentId).trim());
+    }
+    const { data: st } = await query.maybeSingle();
+    if (st?.id) {
+      targetStudentId = st.id;
+    }
+  } catch (e) {
+    console.warn('Student lookup failed in getRuralSignatures:', e);
+  }
+
+  const { data, error } = await supabase
+    .from('rural_signatures')
+    .select('*')
+    .eq('student_id', targetStudentId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching rural signatures:', error);
+    return null;
+  }
+  return data;
+}
+
+/**
+ * 농어촌 전형 서명 정보(student_signature, parent_signature, parent_name) 저장
+ */
+export async function saveRuralSignatures(studentId, studentSignature, parentSignature, parentName) {
+  if (!studentId) throw new Error('학생 식별 ID가 필요합니다.');
+
+  let targetStudentId = studentId;
+  const isUuid = typeof studentId === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(studentId);
+
+  try {
+    let query = supabase.from('enrolled_students').select('id, user_id, student_code');
+    if (isUuid) {
+      query = query.or(`id.eq.${studentId},user_id.eq.${studentId}`);
+    } else {
+      query = query.eq('student_code', String(studentId).trim());
+    }
+    const { data: st } = await query.maybeSingle();
+    if (st?.id) {
+      targetStudentId = st.id;
+    }
+  } catch (e) {
+    console.warn('Student lookup failed in saveRuralSignatures:', e);
+  }
+
+  const payload = {
+    student_id: targetStudentId,
+    student_signature: studentSignature || null,
+    parent_signature: parentSignature || null,
+    parent_name: parentName || null,
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await supabase
+    .from('rural_signatures')
+    .upsert(payload, { onConflict: 'student_id' });
+
+  if (error) {
+    console.error('Error saving rural signatures:', error);
+    throw error;
+  }
+
+  return { success: true };
+}
+
+/**
+ * 3학년 전체 학생에 대해 일괄(Batch) 자격 평가 수행 및 enrolled_students 동기화
+ */
+export async function evaluateAllRuralEligibility(grade3Students) {
+  if (!grade3Students || grade3Students.length === 0) return;
+
+  const [addrRes, acadRes, eligRes, profRes] = await Promise.all([
+    supabase.from('student_rural_addresses').select('*'),
+    supabase.from('student_academic_records').select('*, rural_school_cache(*)').order('seq_order', { ascending: true }),
+    supabase.from('student_rural_eligibility').select('*'),
+    supabase.from('profiles').select('id')
+  ]);
+
+  const profSet = new Set((profRes.data || []).map(p => p.id));
+
+  const addrMap = new Map();
+  (addrRes.data || []).forEach(a => addrMap.set(a.student_id, a));
+
+  const acadMap = new Map();
+  (acadRes.data || []).forEach(ar => {
+    if (!acadMap.has(ar.student_id)) acadMap.set(ar.student_id, []);
+    acadMap.get(ar.student_id).push(ar);
+  });
+
+  const eligMap = new Map();
+  (eligRes.data || []).forEach(e => eligMap.set(e.student_id, e));
+
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  let currentHighSchoolAccYears = 2.5;
+  if (currentMonth >= 3 && currentMonth <= 5) currentHighSchoolAccYears = 2.0;
+  else if (currentMonth >= 6 && currentMonth <= 8) currentHighSchoolAccYears = 2.3;
+
+  const eligUpserts = [];
+  const enrolledUpdates = [];
+
+  for (const s of grade3Students) {
+    const studentId = s.id;
+    const profileId = s.profile_id;
+    const candidateIds = [profileId, studentId].filter(Boolean);
+
+    let addressRec = null;
+    for (const cid of candidateIds) {
+      if (addrMap.has(cid)) { addressRec = addrMap.get(cid); break; }
+    }
+
+    let academicRecs = [];
+    for (const cid of candidateIds) {
+      if (acadMap.has(cid)) { academicRecs = acadMap.get(cid); break; }
+    }
+
+    const hasAddress = !!addressRec;
+    const hasAcademic = academicRecs && academicRecs.length > 0;
+    const bothUploaded = hasAddress && hasAcademic;
+    const addressRuralValid = hasAddress ? addressRec.has_rural_address : false;
+
+    let middleSchoolYears = 0.0;
+    let highSchoolYears = 0.0;
+    let isMiddleValid = false;
+    let isHighValid = false;
+
+    if (hasAcademic) {
+      let ruralMiddleFound = false;
+      let ruralHighFound = false;
+
+      for (const rec of academicRecs) {
+        const cache = rec.rural_school_cache;
+        const isRural = cache ? cache.is_rural : checkIsRuralAddress(rec.school_name);
+        const schoolKind = cache ? cache.school_kind : (rec.school_name?.includes('고등학교') || rec.school_name?.includes('고교') || rec.school_name?.includes('고') ? '04' : '03');
+
+        if (schoolKind === '03' && isRural) {
+          ruralMiddleFound = true;
+          middleSchoolYears = 3.0;
+        } else if (schoolKind === '04' && isRural) {
+          ruralHighFound = true;
+          highSchoolYears = currentHighSchoolAccYears;
+        }
+      }
+
+      isMiddleValid = ruralMiddleFound || middleSchoolYears >= 3.0;
+      isHighValid = ruralHighFound || highSchoolYears >= 2.0;
+    }
+
+    const totalRuralYears = middleSchoolYears + highSchoolYears;
+    const academicRuralValid = isMiddleValid && isHighValid;
+    const isType1Eligible = bothUploaded && addressRuralValid && academicRuralValid;
+
+    const notes = [];
+    if (hasAddress) {
+      notes.push(addressRuralValid ? '인적사항(주소): 읍/면/리 거주 요건 충족 (적격)' : '인적사항(주소): 동지역 주소 (미달)');
+    } else {
+      notes.push('인적사항(주소): 미등록 (주소 엑셀 업로드 필요)');
+    }
+
+    if (hasAcademic) {
+      notes.push(academicRuralValid ? `학적사항(학교): 중·고교 읍/면 재학 요건 충족 (적격, 중학교 ${middleSchoolYears}년/고교 ${highSchoolYears}년)` : '학적사항(학교): 읍/면 재학 요건 미달');
+    } else {
+      notes.push('학적사항(학교): 미등록 (학적 엑셀 업로드 필요)');
+    }
+
+    if (bothUploaded) {
+      notes.push(isType1Eligible ? '유형I(6년) 최종 판정: 지원가능 (인적사항 & 학적사항 모두 충족)' : '유형I(6년) 최종 판정: 지원불가 (인적/학적 요건 미달)');
+    } else {
+      notes.push('최종 판정: 대기 중 (인적사항과 학적사항 엑셀 2개가 모두 올바르게 업로드되어야 자동 자격 판정이 완료됩니다)');
+    }
+    notes.push('유형II(12년) 판정: 교사 수동 확인 필요');
+
+    const evalNotesText = notes.join(' | ');
+    const nowIso = new Date().toISOString();
+
+    let existingElig = null;
+    for (const cid of candidateIds) {
+      if (eligMap.has(cid)) { existingElig = eligMap.get(cid); break; }
+    }
+
+    let isFinal = isType1Eligible;
+    if (existingElig) {
+      isFinal = bothUploaded
+        ? (isType1Eligible || (existingElig.is_type2_eligible || false) || (existingElig.is_manual_approved || false))
+        : ((existingElig.is_type2_eligible || false) || (existingElig.is_manual_approved || false));
+    }
+
+    // manual_reason (미달 사유 / 수동 승인 사유) 자동 작성
+    let autoReason = existingElig ? existingElig.manual_reason : null;
+    if (!autoReason) {
+      if (!isFinal) {
+        const reasonParts = [];
+        if (hasAddress && !addressRuralValid) reasonParts.push('동지역 주소 거주 (인적 요건 미달)');
+        if (hasAcademic && !academicRuralValid) reasonParts.push('중·고교 읍면 재학 기간 미달');
+        if (!hasAddress) reasonParts.push('인적사항(주소) 엑셀 미등록');
+        if (!hasAcademic) reasonParts.push('학적사항(학교) 엑셀 미등록');
+        autoReason = reasonParts.join(' / ');
+      } else {
+        autoReason = '자동자격검증 충족 (적격)';
+      }
+    }
+
+    eligUpserts.push({
+      student_id: studentId,
+      middle_school_years: middleSchoolYears,
+      high_school_years: highSchoolYears,
+      total_rural_years: totalRuralYears,
+      address_rural_valid: addressRuralValid,
+      is_eligible: isFinal,
+      is_manual_approved: existingElig ? (existingElig.is_manual_approved || false) : false,
+      manual_reason: autoReason,
+      ineligible_reason: !isFinal ? autoReason : null,
+      evaluation_notes: evalNotesText,
+      updated_at: nowIso
+    });
+
+    enrolledUpdates.push({
+      id: studentId,
+      is_rural_eligible: isFinal
+    });
+  }
+
+  // 1) student_rural_eligibility 중복 제거 후 50개 청크 UPSERT (student_id PK/ON CONFLICT)
+  const uniqueEligMap = new Map();
+  eligUpserts.forEach(u => uniqueEligMap.set(u.student_id, u));
+  const finalEligUpserts = Array.from(uniqueEligMap.values());
+
+  for (let i = 0; i < finalEligUpserts.length; i += 50) {
+    const chunk = finalEligUpserts.slice(i, i + 50);
+    try {
+      const { error: eligErr } = await supabase.from('student_rural_eligibility').upsert(chunk, { onConflict: 'student_id' });
+      if (eligErr) {
+        console.error('[student_rural_eligibility upsert 실패]', eligErr);
+      }
+    } catch (e) {
+      console.warn('Batch eligUpserts chunk error:', e);
+    }
+  }
+
+  // 2) enrolled_students 병렬 UPDATE (NOT NULL 제약조건 안전 방식)
+  if (enrolledUpdates.length > 0) {
+    try {
+      const updatePromises = enrolledUpdates.map(u =>
+        supabase
+          .from('enrolled_students')
+          .update({ is_rural_eligible: u.is_rural_eligible })
+          .eq('id', u.id)
+      );
+      await Promise.all(updatePromises);
+    } catch (e) {
+      console.warn('Batch enrolledUpdates error:', e);
+    }
+  }
 }
 
 /**
@@ -484,14 +892,13 @@ export async function evaluateStudentRuralEligibility(studentId, profileId = nul
   }
   notes.push('유형II(12년) 판정: 교사 수동 확인 필요');
 
-  // 4. student_rural_eligibility 에 저장
+  // 4. student_rural_eligibility 에 저장 (테이블에 실제로 존재하는 10개 컬럼만 사용)
   const evalData = {
+    student_id: studentId,
     middle_school_years: middleSchoolYears,
     high_school_years: highSchoolYears,
     total_rural_years: totalRuralYears,
     address_rural_valid: addressRuralValid,
-    academic_rural_valid: academicRuralValid,
-    is_type1_eligible: isType1Eligible,
     is_eligible: isType1Eligible,
     evaluation_notes: await encryptText(notes.join(' | ')),
     updated_at: new Date().toISOString()
@@ -502,40 +909,37 @@ export async function evaluateStudentRuralEligibility(studentId, profileId = nul
     const { data: existing } = await supabase
       .from('student_rural_eligibility')
       .select('*')
-      .eq('student_id', targetId)
+      .in('student_id', candidateIds)
       .maybeSingle();
 
-    if (existing) {
-      const isFinal = bothUploaded
-        ? (isType1Eligible || (existing.is_type2_eligible || false) || (existing.is_manual_approved || false))
-        : ((existing.is_type2_eligible || false) || (existing.is_manual_approved || false));
+    const isFinal = existing
+      ? (bothUploaded ? (isType1Eligible || existing.is_manual_approved) : existing.is_manual_approved)
+      : isType1Eligible;
 
-      const { data: updated } = await supabase
-        .from('student_rural_eligibility')
-        .update({
-          ...evalData,
-          is_type2_eligible: existing.is_type2_eligible || false,
-          is_eligible: isFinal
-        })
-        .eq('id', existing.id)
-        .select('*')
-        .maybeSingle();
-      if (updated) result = updated;
-    } else {
-      const { data: inserted } = await supabase
-        .from('student_rural_eligibility')
-        .insert({ ...evalData, is_type2_eligible: false, student_id: targetId })
-        .select('*')
-        .maybeSingle();
-      if (inserted) result = inserted;
-    }
+    const payload = {
+      ...evalData,
+      student_id: studentId,
+      is_eligible: isFinal,
+      is_manual_approved: existing ? (existing.is_manual_approved || false) : false,
+      manual_reason: existing ? (existing.manual_reason || null) : (isFinal ? '자동자격검증 충족' : null),
+      ineligible_reason: !isFinal ? (existing?.ineligible_reason || '농어촌 자격 요건 미달') : null
+    };
+
+    const { data: saved, error: saveErr } = await supabase
+      .from('student_rural_eligibility')
+      .upsert(payload, { onConflict: 'student_id' })
+      .select('*')
+      .maybeSingle();
+
+    if (saveErr) console.error('[student_rural_eligibility upsert error]', saveErr);
+    if (saved) result = saved;
   } catch (e) {
     console.warn('student_rural_eligibility save warning:', e);
   }
 
   // enrolled_students 원장에도 is_rural_eligible 동기화
   try {
-    const isFinalEligible = result?.is_eligible || false;
+    const isFinalEligible = result ? (result.is_eligible || false) : isType1Eligible;
     await supabase
       .from('enrolled_students')
       .update({ is_rural_eligible: isFinalEligible })
@@ -653,27 +1057,67 @@ export async function getRuralEligibilityList() {
     for (const cid of candidateIds) {
       if (eligMap.has(cid)) { rawElig = eligMap.get(cid); break; }
     }
-    let decryptedEligibility = null;
+
+    // 학적 이력 기반 중/고교 읍면 재학 자격 계산
+    let middleSchoolYears = 0.0;
+    let highSchoolYears = 0.0;
+    let ruralMiddleFound = false;
+    let ruralHighFound = false;
+
+    if (decryptedAcademic && decryptedAcademic.length > 0) {
+      for (const rec of decryptedAcademic) {
+        const cache = rec.rural_school_cache;
+        const isRural = cache ? cache.is_rural : checkIsRuralAddress(rec.school_name || '');
+        const schoolKind = cache ? cache.school_kind : (rec.school_name?.includes('고등학교') || rec.school_name?.includes('고교') || rec.school_name?.includes('고') ? '04' : '03');
+
+        if (schoolKind === '03' && isRural) {
+          ruralMiddleFound = true;
+          middleSchoolYears = 3.0;
+        } else if (schoolKind === '04' && isRural) {
+          ruralHighFound = true;
+          highSchoolYears = 2.5;
+        }
+      }
+    }
+
+    const isGradStudent = s.is_separate_applicant || s.is_graduated || s.is_enrolled === false;
+    const isSelfChecked = s.apply_rural !== false && (s.rural_self_check === true || isGradStudent);
+    const selectedType = s.rural_type || '유형I';
+
+    let finalEligibility = null;
     if (rawElig) {
-      decryptedEligibility = {
+      const midYears = Number(rawElig.middle_school_years || 0);
+      const highYears = Number(rawElig.high_school_years || 0);
+      const acadValid = midYears >= 3.0 && highYears >= 2.0;
+      const addrValid = rawElig.address_rural_valid === true;
+      const type1Valid = acadValid && addrValid;
+
+      finalEligibility = {
         ...rawElig,
+        address_rural_valid: isGradStudent ? (addrValid || isSelfChecked) : addrValid,
+        academic_rural_valid: isGradStudent ? (acadValid || isSelfChecked) : acadValid,
+        is_type1_eligible: isGradStudent ? (type1Valid || isSelfChecked) : type1Valid,
+        is_type2_eligible: rawElig.is_type2_eligible || (isGradStudent && isSelfChecked && selectedType === '유형II'),
+        is_manual_approved: rawElig.is_manual_approved || (isGradStudent && isSelfChecked),
+        is_eligible: rawElig.is_eligible || (isGradStudent && isSelfChecked),
         manual_reason: await decryptText(rawElig.manual_reason),
         evaluation_notes: await decryptText(rawElig.evaluation_notes)
       };
+    } else if (isGradStudent) {
+      const isEligible = isSelfChecked && s.apply_rural !== false;
+      finalEligibility = {
+        address_rural_valid: isEligible,
+        academic_rural_valid: isEligible,
+        is_type1_eligible: isEligible && selectedType === '유형I',
+        is_type2_eligible: isEligible && selectedType === '유형II',
+        is_manual_approved: isEligible,
+        is_eligible: isEligible,
+        evaluation_notes: isEligible ? `졸업생 자가 확인 (${selectedType}): 농어촌 전형 지원가능` : '졸업생: 미지원 설정'
+      };
+    } else {
+      // student_rural_eligibility DB 테이블에 기록이 없으면 미등록(null) 처리
+      finalEligibility = null;
     }
-
-    const isSelfChecked = s.apply_rural !== false && s.rural_self_check === true;
-    const selectedType = s.rural_type || '유형I';
-
-    const finalEligibility = decryptedEligibility || {
-      address_rural_valid: decryptedAddress?.has_rural_address || isSelfChecked,
-      academic_rural_valid: decryptedAcademic.length > 0 || isSelfChecked,
-      is_type1_eligible: isSelfChecked ? selectedType === '유형I' : ((decryptedAddress?.has_rural_address || false) && decryptedAcademic.length > 0),
-      is_type2_eligible: isSelfChecked ? selectedType === '유형II' : false,
-      is_manual_approved: isSelfChecked,
-      is_eligible: isSelfChecked ? true : (s.is_rural_eligible || false),
-      evaluation_notes: isSelfChecked ? `본인 자격 직접 확인 (${selectedType}): 자동 지원가능` : (s.is_rural_eligible ? '최종 판정: 농어촌 전형 지원가능' : '학적 및 주소 정보 미등록')
-    };
 
     list.push({
       ...s,
@@ -684,6 +1128,20 @@ export async function getRuralEligibilityList() {
       eligibility: finalEligibility
     });
   }
+
+  const isGrad = (s) => s.is_separate_applicant || s.is_graduated || s.is_enrolled === false;
+  list.sort((a, b) => {
+    const gradA = isGrad(a) ? 1 : 0;
+    const gradB = isGrad(b) ? 1 : 0;
+    if (gradA !== gradB) {
+      return gradA - gradB;
+    }
+
+    const codeA = String(a.student_code || (a.class_no ? `3${String(a.class_no).padStart(2, '0')}${String(a.seq_no || a.student_no || 0).padStart(2, '0')}` : '99999'));
+    const codeB = String(b.student_code || (b.class_no ? `3${String(b.class_no).padStart(2, '0')}${String(b.seq_no || b.student_no || 0).padStart(2, '0')}` : '99999'));
+
+    return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+  });
 
   return list;
 }
@@ -768,9 +1226,9 @@ export async function updateStudentApplicationPreference(studentId, { applySchoo
 }
 
 /**
- * 교사의 수동 자격 인정/소명 변경 (유형 I 수동승인 및 유형 II 수동지정 지원)
+ * 교사의 수동 자격 인정/소명 변경 (유형 I/II 수동 승인 및 지원불가 수동 지정 지원)
  */
-export async function updateRuralManualApproval(studentId, isManualApproved, isType2Eligible = false, manualReason = '') {
+export async function updateRuralManualApproval(studentId, isManualApproved, isType2Eligible = false, manualReason = '', overrideIneligible = false) {
   const encReason = manualReason ? await encryptText(manualReason) : null;
 
   const { data: existing } = await supabase
@@ -779,13 +1237,40 @@ export async function updateRuralManualApproval(studentId, isManualApproved, isT
     .eq('student_id', studentId)
     .maybeSingle();
 
-  const isFinalEligible = (existing?.is_type1_eligible || false) || isType2Eligible || isManualApproved;
+  let isType1 = false;
+  let isType2 = false;
+  let isFinalEligible = false;
+
+  if (overrideIneligible) {
+    isType1 = false;
+    isType2 = false;
+    isFinalEligible = false;
+  } else if (isType2Eligible) {
+    isType1 = false;
+    isType2 = true;
+    isFinalEligible = true;
+  } else if (isManualApproved) {
+    isType1 = true;
+    isType2 = false;
+    isFinalEligible = true;
+  } else {
+    // 기존 자동 검증 결과 유지
+    isType1 = existing ? (existing.is_type1_eligible || false) : false;
+    isType2 = existing ? (existing.is_type2_eligible || false) : false;
+    isFinalEligible = isType1 || isType2 || (existing ? (existing.is_eligible || false) : false);
+  }
 
   const payload = {
-    is_manual_approved: isManualApproved,
-    is_type2_eligible: isType2Eligible,
+    address_rural_valid: !overrideIneligible,
+    academic_rural_valid: !overrideIneligible,
+    is_type1_eligible: isType1,
+    is_type2_eligible: isType2,
+    is_manual_approved: Boolean(isManualApproved || isType2Eligible || overrideIneligible),
     is_eligible: isFinalEligible,
     manual_reason: encReason,
+    evaluation_notes: overrideIneligible
+      ? (encReason ? await encryptText(`관리자 수동 지정: 지원불가 | 사유: ${manualReason}`) : await encryptText('관리자 수동 지정: 지원불가 (요건 미달)'))
+      : (existing?.evaluation_notes || null),
     updated_at: new Date().toISOString()
   };
 
@@ -811,7 +1296,11 @@ export async function updateRuralManualApproval(studentId, isManualApproved, isT
   try {
     await supabase
       .from('enrolled_students')
-      .update({ is_rural_eligible: isFinalEligible })
+      .update({
+        is_rural_eligible: isFinalEligible,
+        rural_type: isType2 ? '유형II' : (isType1 ? '유형I' : null),
+        apply_rural: isFinalEligible
+      })
       .eq('id', studentId);
   } catch (e) {
     console.warn('Failed to sync is_rural_eligible in enrolled_students:', e);
@@ -840,6 +1329,7 @@ export async function checkRuralSystemOpenStatus() {
 
     const now = new Date();
 
+    const susiStartStr = configMap['susi_apply_start_date'];
     const susiEndStr = configMap['susi_apply_end_date'];
     const jungsiStartStr = configMap['jungsi_apply_start_date'];
     const jungsiEndStr = configMap['jungsi_apply_end_date'];
@@ -849,15 +1339,28 @@ export async function checkRuralSystemOpenStatus() {
     let activeTerm = '수시';
     let reason = '';
 
-    // 1. 수시 원서접수 기간 검사 (마감일 당일까지 접근 허용)
-    if (susiEndStr) {
+    // 1. 수시 원서접수 기간 검사 (수시 시작일 15일 전부터 마감일까지)
+    if (susiStartStr && susiEndStr) {
+      const susiStart = new Date(`${susiStartStr}T00:00:00`);
+      const susiEnd = new Date(`${susiEndStr}T23:59:59`);
+
+      if (!isNaN(susiStart.getTime()) && !isNaN(susiEnd.getTime())) {
+        const susiOpenStart = new Date(susiStart);
+        susiOpenStart.setDate(susiOpenStart.getDate() - 15);
+
+        if (now >= susiOpenStart && now <= susiEnd) {
+          isSusiOpen = true;
+          activeTerm = '수시';
+        }
+      }
+    } else if (susiEndStr) {
       const susiEnd = new Date(`${susiEndStr}T23:59:59`);
       if (!isNaN(susiEnd.getTime()) && now <= susiEnd) {
         isSusiOpen = true;
         activeTerm = '수시';
       }
     } else {
-      // 마감일 미설정 시 기본 오픈
+      // 마감일/시작일 미설정 시 기본 오픈
       isSusiOpen = true;
       activeTerm = '수시';
     }
@@ -882,10 +1385,66 @@ export async function checkRuralSystemOpenStatus() {
 
     const isOpen = isEnabled && (isSusiOpen || isJungsiOpen);
 
+    let periodState = 'open';
+    let statusText = `🟢 접수 진행 중 (${activeTerm})`;
+
+    if (!isOpen) {
+      let isBeforeSusi = false;
+      let isAfterSusi = false;
+      let isBeforeJungsi = false;
+
+      if (susiStartStr) {
+        const susiStart = new Date(`${susiStartStr}T00:00:00`);
+        if (!isNaN(susiStart.getTime())) {
+          const susiOpenStart = new Date(susiStart);
+          susiOpenStart.setDate(susiOpenStart.getDate() - 15);
+          if (now < susiOpenStart) {
+            isBeforeSusi = true;
+          }
+        }
+      }
+
+      if (susiEndStr) {
+        const susiEnd = new Date(`${susiEndStr}T23:59:59`);
+        if (!isNaN(susiEnd.getTime()) && now > susiEnd) {
+          isAfterSusi = true;
+        }
+      }
+
+      if (jungsiStartStr) {
+        const jungsiStart = new Date(`${jungsiStartStr}T00:00:00`);
+        if (!isNaN(jungsiStart.getTime())) {
+          const jungsiOpenStart = new Date(jungsiStart);
+          jungsiOpenStart.setDate(jungsiOpenStart.getDate() - 15);
+          if (now < jungsiOpenStart) {
+            isBeforeJungsi = true;
+          }
+        }
+      }
+
+      if (isBeforeSusi) {
+        periodState = 'before';
+        statusText = '⚪ 접수 전';
+      } else if (isAfterSusi) {
+        if (jungsiStartStr && isBeforeJungsi) {
+          periodState = 'before';
+          statusText = '⚪ 접수 전 (정시)';
+        } else {
+          periodState = 'closed';
+          statusText = '🔒 접수 마감';
+        }
+      } else {
+        periodState = 'closed';
+        statusText = '🔒 접수 마감';
+      }
+    }
+
     if (!isEnabled) {
       reason = '농어촌 전형 추천자 관리 시스템이 비활성화되어 있습니다.';
     } else if (!isOpen) {
-      reason = '현재 농어촌 전형 원서접수 기간이 아닙니다. (수시 마감 완료 또는 정시 시작 전)';
+      reason = periodState === 'before'
+        ? '현재 농어촌 전형 원서접수 전 기간입니다.'
+        : '현재 농어촌 전형 원서접수가 마감되었습니다.';
     }
 
     return {
@@ -894,6 +1453,9 @@ export async function checkRuralSystemOpenStatus() {
       isSusiOpen,
       isJungsiOpen,
       activeTerm,
+      periodState,
+      statusText,
+      susiStartDate: susiStartStr || null,
       susiEndDate: susiEndStr || null,
       jungsiStartDate: jungsiStartStr || null,
       jungsiEndDate: jungsiEndStr || null,
@@ -901,7 +1463,7 @@ export async function checkRuralSystemOpenStatus() {
     };
   } catch (e) {
     console.error('Failed to check rural system open status:', e);
-    return { isOpen: true, activeTerm: '수시', reason: '' };
+    return { isOpen: true, activeTerm: '수시', periodState: 'open', statusText: '🟢 접수 진행 중 (수시)', reason: '' };
   }
 }
 
@@ -1073,11 +1635,11 @@ export async function fetchRuralTracksFromGoogleSheetCsv() {
     const text = await res.text();
     const lines = text.split(/\r?\n/);
     const result = [];
-    
+
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
-      
+
       const cols = [];
       let inQuotes = false;
       let cur = '';
@@ -1093,14 +1655,14 @@ export async function fetchRuralTracksFromGoogleSheetCsv() {
         }
       }
       cols.push(cur.trim());
-      
+
       const termType = cols[0] ? cols[0].replace(/^"|"$/g, '').trim() : '';
       if (termType !== '수시' && termType !== '정시') continue;
-      
+
       const univName = cols[3] ? cols[3].replace(/^"|"$/g, '').trim() : '';
       const trackName = cols[5] ? cols[5].replace(/^"|"$/g, '').trim() : '';
       if (!univName || !trackName) continue;
-      
+
       result.push({
         id: `csv_${i}`,
         term_type: termType,
@@ -1169,46 +1731,94 @@ export async function getStudentRuralApplications(studentId) {
 /**
  * 학생 농어촌 신청 지망 목록 (1~6지망) 및 서명 저장
  */
-export async function saveStudentRuralApplications(studentId, applications, studentSignature = null, parentSignature = null) {
+export async function saveStudentRuralApplications(studentId, applications) {
   if (!studentId) throw new Error('학생 식별 ID가 필요합니다.');
 
-  // 기존 신청 내역 삭제 후 재등록
-  await supabase.from('rural_applications').delete().eq('student_id', studentId);
+  let targetStudentId = studentId;
+  const isUuid = typeof studentId === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(studentId);
 
-  if (!applications || applications.length === 0) {
-    return [];
+  // 1. enrolled_students에서 유효한 UUID ID 검색
+  try {
+    let query = supabase.from('enrolled_students').select('id, user_id, student_code');
+    if (isUuid) {
+      query = query.or(`id.eq.${studentId},user_id.eq.${studentId}`);
+    } else {
+      query = query.eq('student_code', String(studentId).trim());
+    }
+    const { data: st } = await query.maybeSingle();
+    if (st?.id) {
+      targetStudentId = st.id;
+    }
+  } catch (e) {
+    console.warn('Student lookup failed in saveStudentRuralApplications:', e);
+  }
+
+  // 2. 만약 여전히 targetStudentId가 UUID가 아니면 학번 전체 검색 시도
+  const isTargetUuid = typeof targetStudentId === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(targetStudentId);
+  if (!isTargetUuid) {
+    try {
+      const { data: stList } = await supabase.from('enrolled_students').select('id, student_code');
+      const found = (stList || []).find(s => String(s.student_code).trim() === String(studentId).trim());
+      if (found?.id) {
+        targetStudentId = found.id;
+      }
+    } catch (e) {
+      console.warn('Fallback student lookup failed:', e);
+    }
   }
 
   const nowIso = new Date().toISOString();
-  const { data: authData } = await supabase.auth.getUser();
-  const userId = authData?.user?.id || null;
 
-  const rowsToInsert = applications.map((app, index) => ({
-    student_id: studentId,
-    user_id: userId,
-    choice_number: index + 1,
-    track_id: app.track_id || null,
-    term_type: app.term_type || '수시',
-    medical_type: app.medical_type || '없음',
-    region: app.region || '',
-    univ_name: app.univ_name || '',
-    department: app.department || '',
-    track_type: app.track_type || '',
-    track_name: app.track_name || '',
-    recruitment_quota: app.recruitment_quota || '',
-    eval_method: app.eval_method || '',
-    suneung_minimum: app.suneung_minimum || '',
-    remarks: app.remarks || '',
-    is_warning_acknowledged: Boolean(app.is_warning_acknowledged),
-    student_signature: studentSignature || app.student_signature || null,
-    parent_signature: parentSignature || app.parent_signature || null,
-    signed_at: (studentSignature || parentSignature) ? nowIso : (app.signed_at || null),
-    status: app.status || 'submitted',
-    updated_at: nowIso
-  }));
+  // 기존 신청 내역 삭제 후 재등록
+  try {
+    await supabase.from('rural_applications').delete().eq('student_id', targetStudentId);
+  } catch (e) {
+    console.warn('Delete existing rural_applications failed:', e);
+  }
+
+  const rowsToInsert = [];
+
+  if (applications && applications.length > 0) {
+    applications.forEach((app, index) => {
+      const isCustom = Boolean(app.is_custom_entry || (app.remarks && String(app.remarks).includes('[미등록')));
+      const formattedRemarks = isCustom && !String(app.remarks || '').includes('[미등록')
+        ? `[미등록 직접입력] ${app.remarks || ''}`.trim()
+        : (app.remarks || '');
+
+      const rawTrackId = app.track_id ? String(app.track_id) : '';
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawTrackId);
+      const validTrackId = isUuid ? rawTrackId : null;
+
+      rowsToInsert.push({
+        student_id: targetStudentId,
+        choice_number: index + 1,
+        track_id: validTrackId,
+        term_type: app.term_type || '수시',
+        medical_type: app.medical_type || '없음',
+        region: app.region || '',
+        univ_name: app.univ_name || '',
+        department: app.department || '',
+        track_type: app.track_type || '',
+        track_name: app.track_name || '',
+        recruitment_quota: app.recruitment_quota || '',
+        eval_method: app.eval_method || '',
+        suneung_minimum: app.suneung_minimum || '',
+        remarks: formattedRemarks,
+        is_warning_acknowledged: Boolean(app.is_warning_acknowledged),
+        signed_at: app.signed_at || null,
+        status: app.status || 'submitted',
+        updated_at: nowIso
+      });
+    });
+  }
+
+  if (rowsToInsert.length === 0) {
+    return [];
+  }
 
   const { data, error } = await supabase.from('rural_applications').insert(rowsToInsert).select('*');
   if (error) {
+    console.error('Error in saveStudentRuralApplications insert:', error);
     throw error;
   }
   return data;
@@ -1250,6 +1860,21 @@ export async function updateRuralApplicationByTeacher(applicationId, updatePaylo
     throw error;
   }
   return data;
+}
+
+/**
+ * 교사/관리자가 학생 농어촌 신청 항목 삭제
+ */
+export async function deleteRuralApplicationByTeacher(applicationId) {
+  const { error } = await supabase
+    .from('rural_applications')
+    .delete()
+    .eq('id', applicationId);
+
+  if (error) {
+    throw error;
+  }
+  return true;
 }
 
 /**
@@ -1329,7 +1954,8 @@ export async function resetRuralTracksDB() {
 export async function resetRuralAcademicDB() {
   const { error: err1 } = await supabase.from('student_rural_addresses').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   const { error: err2 } = await supabase.from('student_academic_records').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  const { error: err3 } = await supabase.from('student_rural_eligibility').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  const { error: err3 } = await supabase.from('student_rural_eligibility').delete().neq('student_id', '00000000-0000-0000-0000-000000000000');
+  const { error: err4 } = await supabase.from('rural_school_cache').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   try {
     await supabase.from('enrolled_students').update({ is_rural_eligible: false }).eq('is_enrolled', true);
   } catch (e) {
@@ -1338,6 +1964,7 @@ export async function resetRuralAcademicDB() {
   if (err1) throw err1;
   if (err2) throw err2;
   if (err3) throw err3;
+  if (err4) throw err4;
   return true;
 }
 

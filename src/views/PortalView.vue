@@ -37,8 +37,16 @@
       </div>
     </header>
 
-    <!-- 메인 콘텐츠 영역 -->
-    <main class="max-w-5xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center items-center">
+    <!-- 로딩 중 화면 (자격 점검 완료 시까지 메인 제목 및 버튼 전면 숨김) -->
+    <main v-if="isPortalLoading" class="max-w-5xl mx-auto px-6 py-24 flex-1 flex flex-col justify-center items-center">
+      <div class="flex flex-col items-center gap-4 bg-white p-8 rounded-3xl border border-slate-200 shadow-md">
+        <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <p class="text-sm font-bold text-slate-700 m-0">추천 시스템 정보 및 학생 자격을 점검 중입니다...</p>
+      </div>
+    </main>
+
+    <!-- 자격 점검 완료 후 메인 콘텐츠 전체 일괄 표출 -->
+    <main v-else class="max-w-5xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center items-center">
       <div class="text-center max-w-2xl mb-12">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-bold mb-3 border border-blue-200">
           <span>{{ isRuralSystemEnabled ? '통합 추천자 관리 시스템' : '학교장 추천자 선발 시스템' }}</span>
@@ -96,17 +104,24 @@
           v-if="isRuralSystemEnabled"
           @click="enterRuralSystem"
           :class="[
-            'group relative bg-white rounded-3xl p-8 border shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden',
-            (!auth.isStudent || (isRuralSystemOpen && studentApplyRural))
-              ? 'border-slate-200/80 hover:shadow-xl hover:border-emerald-500 cursor-pointer'
-              : 'border-slate-200 opacity-60 bg-slate-50 cursor-not-allowed'
+            'group relative bg-white rounded-3xl p-8 border shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer',
+            (!auth.isStudent || isRuralEligible)
+              ? 'border-slate-200/80 hover:shadow-xl hover:border-emerald-500'
+              : 'border-amber-300 bg-amber-50/40 opacity-70 hover:opacity-100 hover:border-amber-400'
           ]"
         >
           <div class="absolute -top-20 -right-20 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
 
           <div>
             <div class="flex items-center justify-between mb-6">
-              <div class="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 shadow-sm border border-emerald-100">
+              <div
+                :class="[
+                  'w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-sm border',
+                  (!auth.isStudent || isRuralEligible)
+                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white'
+                    : 'bg-amber-100 text-amber-700 border-amber-200'
+                ]"
+              >
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                   <path d="m9 12 2 2 4-4"/>
@@ -115,13 +130,15 @@
               <span
                 :class="[
                   'px-3 py-1 rounded-full text-xs font-bold shadow-xs',
-                  (!auth.isStudent || (isRuralSystemOpen && studentApplyRural))
-                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                    : 'bg-amber-100 text-amber-800 border border-amber-200'
+                  (!auth.isStudent || isRuralEligible)
+                    ? (isRuralSystemOpen
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : (ruralPeriodState === 'before' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-700 border border-slate-200'))
+                    : 'bg-amber-100 text-amber-900 border border-amber-300 font-extrabold'
                 ]"
               >
-                <template v-if="auth.isStudent && !studentApplyRural">🔒 농어촌 미지원</template>
-                <template v-else>{{ isRuralSystemOpen ? `🟢 접수 진행 중 (${activeRuralTerm})` : '🔒 접수 마감' }}</template>
+                <template v-if="auth.isStudent && !isRuralEligible">🔒 농어촌 대상 자격 미달</template>
+                <template v-else>{{ ruralStatusText }}</template>
               </span>
             </div>
 
@@ -138,10 +155,16 @@
             </p>
           </div>
 
-          <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-emerald-600">
+          <div
+            :class="[
+              'mt-8 pt-6 border-t flex items-center justify-between text-sm font-bold',
+              (!auth.isStudent || isRuralEligible)
+                ? 'border-slate-100 text-emerald-600'
+                : 'border-amber-200 text-amber-800 font-extrabold'
+            ]"
+          >
             <span>
-              <template v-if="auth.isStudent && !studentApplyRural">농어촌 미지원 (이용 불가)</template>
-              <template v-else-if="auth.isStudent && !isRuralSystemOpen">접수 마감 (이용 불가)</template>
+              <template v-if="auth.isStudent && !isRuralEligible">⚠️ 농어촌 대상 자격 미달 (진입 시 확인 필요)</template>
               <template v-else>시스템 바로가기</template>
             </span>
             <svg class="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -149,7 +172,6 @@
             </svg>
           </div>
         </div>
-
       </div>
     </main>
 
@@ -176,7 +198,11 @@ const isRuralSystemOpen = ref(true)
 const isRuralSystemEnabled = ref(false)
 const activeRuralTerm = ref('수시')
 const ruralClosedReason = ref('')
+const ruralPeriodState = ref('open')
+const ruralStatusText = ref('🟢 접수 진행 중 (수시)')
+const isRuralEligible = ref(false)
 const studentApplyRural = ref(true)
+const isPortalLoading = ref(true)
 
 const userName = computed(() => {
   if (auth.isAdmin) return '관리자'
@@ -219,24 +245,26 @@ function enterPrincipalSystem() {
 }
 
 async function enterRuralSystem() {
+  if (isPortalLoading.value) return
   if (!isRuralSystemEnabled.value) {
     await dialog.alert({ title: '시스템 이용 제한', message: '농어촌 전형 추천자 관리 시스템이 현재 비활성화되어 있습니다.' })
     return
   }
-  if (auth.isStudent && !studentApplyRural.value) {
-    await dialog.alert({
-      title: '🔒 농어촌 특별전형 미지원 안내',
-      message: '현재 대입 지원 전형 설정에서 [농어촌 특별전형 지원]이 체크되어 있지 않아 시스템에 진입할 수 없습니다.\n\n학교장 추천 시스템의 [👤 마이페이지]에서 농어촌 특별전형 지원을 체크하고 자격 확인 서약을 완료해 주세요.'
+
+  // 농어촌 대상 자격 미달 학생인 경우 진입 확인 모달 표출
+  if (auth.isStudent && !isRuralEligible.value) {
+    const confirmed = await dialog.confirm({
+      title: '⚠️ 농어촌 전형 자격 미확인 안내',
+      message: '학생분의 농어촌 전형 자격 검증 결과 [농어촌 대상 자격 미달/미확인] 상태입니다.\n\n그래도 농어촌 추천자 관리 시스템에 진입하시겠습니까?',
+      confirmText: '진입하기',
+      cancelText: '취소'
     })
+    if (confirmed) {
+      router.push('/rural')
+    }
     return
   }
-  if (auth.isStudent && !isRuralSystemOpen.value) {
-    await dialog.alert({
-      title: '농어촌 전형 시스템 접수 마감',
-      message: `${ruralClosedReason.value || '현재 농어촌 전형 원서접수 기간이 아닙니다.'}\n\n※ 수시 원서 접수 마감일 경과 후에는 시스템 이용이 비활성화됩니다.`
-    })
-    return
-  }
+
   router.push('/rural')
 }
 
@@ -245,18 +273,19 @@ async function handleLogout() {
   router.push('/login')
 }
 
-const isPortalLoading = ref(true)
-
 onMounted(async () => {
   fetchSchoolName()
-  const status = await checkRuralSystemOpenStatus()
-  isRuralSystemEnabled.value = status.isEnabled === true
-  isRuralSystemOpen.value = status.isOpen
-  activeRuralTerm.value = status.activeTerm
-  ruralClosedReason.value = status.reason
+  isPortalLoading.value = true
+  try {
+    const status = await checkRuralSystemOpenStatus()
+    isRuralSystemEnabled.value = status.isEnabled === true
+    isRuralSystemOpen.value = status.isOpen
+    activeRuralTerm.value = status.activeTerm
+    ruralClosedReason.value = status.reason
+    ruralPeriodState.value = status.periodState || 'open'
+    ruralStatusText.value = status.statusText || '🟢 접수 진행 중 (수시)'
 
-  if (auth.isStudent) {
-    try {
+    if (auth.isStudent) {
       const studentId = auth.user?.id || auth.userId || auth.studentId
       const sCode = auth.studentCode ? String(auth.studentCode).trim() : null
       const list = await getRuralEligibilityList()
@@ -264,19 +293,24 @@ onMounted(async () => {
         (studentId && (s.id === studentId || s.user_id === studentId)) ||
         (sCode && s.student_code && String(s.student_code).trim() === sCode)
       )
+
       if (myInfo) {
-        studentApplyRural.value = myInfo.apply_rural !== undefined && myInfo.apply_rural !== null
-          ? Boolean(myInfo.apply_rural)
-          : true
+        const elig = myInfo.eligibility
+        const isEligible = Boolean(myInfo.is_rural_eligible || elig?.is_eligible || elig?.is_manual_approved)
+        isRuralEligible.value = isEligible
+        studentApplyRural.value = isEligible
       } else {
+        isRuralEligible.value = false
         studentApplyRural.value = false
       }
-    } catch (e) {
-      console.warn('Failed to load student apply_rural status in portal:', e)
-    } finally {
-      isPortalLoading.value = false
+    } else {
+      isRuralEligible.value = true
+      studentApplyRural.value = true
     }
-  } else {
+  } catch (e) {
+    console.warn('Failed to load rural eligibility in portal:', e)
+    isRuralEligible.value = false
+  } finally {
     isPortalLoading.value = false
   }
 })

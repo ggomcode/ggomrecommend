@@ -71,6 +71,7 @@ const auth = useAuthStore()
 
 const INACTIVITY_LIMIT_MS = 10 * 60 * 1000 // 10분
 const WARNING_COUNTDOWN_SEC = 30 // 30초
+const TOTAL_ALLOWED_IDLE_MS = INACTIVITY_LIMIT_MS + (WARNING_COUNTDOWN_SEC * 1000) // 총 10분 30초 (630,000ms)
 
 const showWarningModal = ref(false)
 const countdownSec = ref(WARNING_COUNTDOWN_SEC)
@@ -86,6 +87,58 @@ function updateLastActivity() {
   localStorage.setItem('pcm_last_activity', String(now))
 }
 
+function checkIdleStatus() {
+  if (!auth.token) return
+
+  const now = Date.now()
+  const storedLast = Number(localStorage.getItem('pcm_last_activity')) || lastActivityTime
+  const idleMs = now - storedLast
+
+  // 1. 총 허용 시간(10분 30초) 초과시 즉시 자동 로그아웃 (탭 비활성화 후 10분 30초 이상 경과한 경우 포함)
+  if (idleMs >= TOTAL_ALLOWED_IDLE_MS) {
+    if (countdownInterval) clearInterval(countdownInterval)
+    countdownInterval = null
+    showWarningModal.value = false
+    handleLogoutNow(true)
+    return
+  }
+
+  // 2. 10분 경과 시 경고 모달 표시 및 경과 시간에 맞춘 정확한 남아있는 초 계산
+  if (idleMs >= INACTIVITY_LIMIT_MS) {
+    const remainingSec = Math.max(1, Math.ceil((TOTAL_ALLOWED_IDLE_MS - idleMs) / 1000))
+    countdownSec.value = remainingSec
+
+    if (!showWarningModal.value) {
+      showWarningModal.value = true
+    }
+
+    if (!countdownInterval) {
+      countdownInterval = setInterval(() => {
+        const currentNow = Date.now()
+        const currentStoredLast = Number(localStorage.getItem('pcm_last_activity')) || lastActivityTime
+        const currentIdleMs = currentNow - currentStoredLast
+        const currentRemaining = Math.ceil((TOTAL_ALLOWED_IDLE_MS - currentIdleMs) / 1000)
+
+        if (currentRemaining <= 0) {
+          clearInterval(countdownInterval)
+          countdownInterval = null
+          showWarningModal.value = false
+          handleLogoutNow(true)
+        } else {
+          countdownSec.value = currentRemaining
+        }
+      }, 1000)
+    }
+  } else {
+    // 10분 미만으로 돌아온 경우 (다른 탭에서 활동하여 리셋되었을 때)
+    if (showWarningModal.value) {
+      showWarningModal.value = false
+      if (countdownInterval) clearInterval(countdownInterval)
+      countdownInterval = null
+    }
+  }
+}
+
 function startIdleMonitoring() {
   stopIdleMonitoring()
 
@@ -94,17 +147,11 @@ function startIdleMonitoring() {
     window.addEventListener(event, updateLastActivity, { passive: true })
   })
 
-  idleCheckInterval = setInterval(() => {
-    if (!auth.token) return
+  // 탭 화면이 전환/활성화될 때 실시간 즉시 검사
+  document.addEventListener('visibilitychange', checkIdleStatus)
 
-    const now = Date.now()
-    const storedLast = Number(localStorage.getItem('pcm_last_activity')) || lastActivityTime
-    const idleMs = now - storedLast
-
-    if (idleMs >= INACTIVITY_LIMIT_MS && !showWarningModal.value) {
-      triggerWarningModal()
-    }
-  }, 1000)
+  checkIdleStatus()
+  idleCheckInterval = setInterval(checkIdleStatus, 1000)
 }
 
 function stopIdleMonitoring() {
@@ -112,25 +159,12 @@ function stopIdleMonitoring() {
   events.forEach(event => {
     window.removeEventListener(event, updateLastActivity)
   })
+  document.removeEventListener('visibilitychange', checkIdleStatus)
+
   if (idleCheckInterval) clearInterval(idleCheckInterval)
   if (countdownInterval) clearInterval(countdownInterval)
   idleCheckInterval = null
   countdownInterval = null
-}
-
-function triggerWarningModal() {
-  showWarningModal.value = true
-  countdownSec.value = WARNING_COUNTDOWN_SEC
-
-  if (countdownInterval) clearInterval(countdownInterval)
-  countdownInterval = setInterval(() => {
-    countdownSec.value--
-    if (countdownSec.value <= 0) {
-      clearInterval(countdownInterval)
-      countdownInterval = null
-      handleLogoutNow(true)
-    }
-  }, 1000)
 }
 
 function extendSession() {
@@ -154,8 +188,8 @@ async function handleLogoutNow(isAuto = false) {
 function checkInitialSessionStale() {
   if (auth.token) {
     const storedLast = Number(localStorage.getItem('pcm_last_activity'))
-    if (storedLast && Date.now() - storedLast >= INACTIVITY_LIMIT_MS) {
-      auth.logout()
+    if (storedLast && Date.now() - storedLast >= TOTAL_ALLOWED_IDLE_MS) {
+      handleLogoutNow(true)
     } else {
       updateLastActivity()
       startIdleMonitoring()

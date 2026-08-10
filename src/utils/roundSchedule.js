@@ -49,15 +49,27 @@ export async function fetchRoundSchedulesMap() {
 
 export function computeRoundDisplayStatus(round, schedule) {
   if (!round) return 'DRAFT'
-  if (round.status === 'FINALIZED') return 'FINALIZED'
 
   if (!schedule || !schedule.apply_start || !schedule.apply_end) {
-    return round.status || 'OPEN'
+    return round.status || 'DRAFT'
   }
 
   // KST 오늘 날짜 YYYY-MM-DD
   const now = new Date()
   const todayStr = now.toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
+
+  // 1. 접수 시작 전 (오늘 < apply_start) -> 아직 일정이 시작되지 않았으므로 무조건 DRAFT(접수 전 / 대기중)
+  if (todayStr < schedule.apply_start) {
+    return 'DRAFT'
+  }
+
+  // 2. 접수 진행중 (apply_start <= today <= apply_end)
+  if (todayStr >= schedule.apply_start && todayStr <= schedule.apply_end) {
+    return 'OPEN'
+  }
+
+  // 3. 접수 마감 후 (오늘 > apply_end) -> 관리자가 최종 마감(FINALIZED) 처리해둔 경우 유지
+  if (round.status === 'FINALIZED') return 'FINALIZED'
 
   // 현재 한국 시간의 '시' 정보 (0~23)
   let curHour = 12

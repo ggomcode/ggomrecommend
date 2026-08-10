@@ -172,31 +172,7 @@
         </form>
       </div>
 
-      <!-- 3-2. 학교알리미 Open API 키 설정 -->
-      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
-        <h2 class="text-base font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
-          <span class="w-1 h-3 bg-blue-600 rounded-full"></span>
-          학교알리미 Open API 키 설정 (고교 주소 및 정보 조회용)
-        </h2>
-        <p class="text-xs text-slate-400 mb-4">고교 주소 및 법정동 자동 조회를 위한 학교알리미 Open API 인증키를 지정합니다.</p>
 
-        <form @submit.prevent="saveSchoolInfoApiKey" class="flex gap-3 w-full">
-          <input
-            v-model="schoolInfoApiKey"
-            type="password"
-            :placeholder="hasSchoolInfoApiKey ? '******************************' : '학교알리미 API 인증키 입력'"
-            class="flex-1 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white font-mono"
-          />
-          <button
-            type="submit"
-            :disabled="schoolInfoApiLoading"
-            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-5 py-2.5 cursor-pointer transition-colors whitespace-nowrap shrink-0"
-          >
-            {{ schoolInfoApiLoading ? '저장 중…' : '저장 적용' }}
-          </button>
-        </form>
-      </div>
-      
 
       <!-- 3-3. 수시 원서 접수 마감일 설정 (포기원 제출 마감 기준) -->
       <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
@@ -326,8 +302,8 @@
             <div class="flex gap-2">
               <input
                 v-model="googleSheetPrincipalId"
-                type="password"
-                :placeholder="hasGoogleSheetPrincipalId ? '******************************' : 'ID 입력 (예: 1BxiMVs...)'"
+                type="text"
+                :placeholder="hasGoogleSheetPrincipalId ? '저장된 ID (마스킹됨)' : 'ID 입력 (예: 1BxiMVs...)'"
                 class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-slate-800 dark:text-white"
               />
               <button
@@ -339,7 +315,7 @@
               </button>
               <button
                 @click="syncGoogleSheetPrincipal"
-                :disabled="syncPrincipalLoading || !googleSheetPrincipalId"
+                :disabled="syncPrincipalLoading || (!googleSheetPrincipalId.trim() && !realGoogleSheetPrincipalId)"
                 class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1"
               >
                 <span>🔄</span>
@@ -356,8 +332,8 @@
             <div class="flex gap-2">
               <input
                 v-model="googleSheetRuralId"
-                type="password"
-                :placeholder="hasGoogleSheetRuralId ? '******************************' : 'ID 입력 (예: 1CyiNWs...)'"
+                type="text"
+                :placeholder="hasGoogleSheetRuralId ? '저장된 ID (마스킹됨)' : 'ID 입력 (예: 1CyiNWs...)'"
                 class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-slate-800 dark:text-white"
               />
               <button
@@ -369,7 +345,7 @@
               </button>
               <button
                 @click="syncGoogleSheetRural"
-                :disabled="syncRuralLoading || !googleSheetRuralId"
+                :disabled="syncRuralLoading || (!googleSheetRuralId.trim() && !realGoogleSheetRuralId)"
                 class="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1"
               >
                 <span>🔄</span>
@@ -498,12 +474,25 @@ import { useAuthStore } from '../../stores/auth'
 const auth = useAuthStore()
 
 const googleSheetPrincipalId = ref('')
+const realGoogleSheetPrincipalId = ref('')
 const googleSheetPrincipalLoading = ref(false)
 const syncPrincipalLoading = ref(false)
 
 const googleSheetRuralId = ref('')
+const realGoogleSheetRuralId = ref('')
 const googleSheetRuralLoading = ref(false)
 const syncRuralLoading = ref(false)
+
+function maskGoogleSheetId(id) {
+  if (!id) return ''
+  const str = String(id).trim()
+  if (!str) return ''
+  if (str.includes('•')) return str
+  if (str.length <= 8) {
+    return str.slice(0, 2) + '••••••••' + str.slice(-2)
+  }
+  return str.slice(0, 4) + '••••••••••••••••' + str.slice(-4)
+}
 
 const inputSchoolName = ref('')
 const schoolNameLoading = ref(false)
@@ -525,10 +514,6 @@ const regCodeLoading = ref(false)
 const openaiKey = ref('')
 const openaiLoading = ref(false)
 const hasOpenAIKey = ref(false)
-
-const schoolInfoApiKey = ref('')
-const schoolInfoApiLoading = ref(false)
-const hasSchoolInfoApiKey = ref(false)
 
 const hasGoogleSheetPrincipalId = ref(false)
 const hasGoogleSheetRuralId = ref(false)
@@ -611,18 +596,17 @@ async function loadConfig() {
     hasOpenAIKey.value = !!(dbOpenAIKey || (envOpenAIKey && String(envOpenAIKey).trim()))
     openaiKey.value = ''
 
-    const dbSchoolKey = configMap['school_info_api_key'] || ''
-    const envSchoolKey = import.meta.env.VITE_SCHOOL_INFO_API_KEY
-    hasSchoolInfoApiKey.value = !!(dbSchoolKey || (envSchoolKey && String(envSchoolKey).trim()))
-    schoolInfoApiKey.value = ''
+
 
     const dbPrincipalId = configMap['google_sheet_principal_id'] || ''
+    realGoogleSheetPrincipalId.value = dbPrincipalId
     hasGoogleSheetPrincipalId.value = !!dbPrincipalId
-    googleSheetPrincipalId.value = ''
+    googleSheetPrincipalId.value = dbPrincipalId ? maskGoogleSheetId(dbPrincipalId) : ''
 
     const dbRuralId = configMap['google_sheet_rural_id'] || ''
+    realGoogleSheetRuralId.value = dbRuralId
     hasGoogleSheetRuralId.value = !!dbRuralId
-    googleSheetRuralId.value = ''
+    googleSheetRuralId.value = dbRuralId ? maskGoogleSheetId(dbRuralId) : ''
 
     if (configMap['allow_area_edit']) {
       allowAreaEdit.value = configMap['allow_area_edit'] === 'true'
@@ -646,11 +630,19 @@ async function saveGoogleSheetPrincipalId() {
   googleSheetPrincipalLoading.value = true
   try {
     if (supabase) {
-      const val = googleSheetPrincipalId.value.trim()
-      const { error } = await supabase.from('config').upsert({ key: 'google_sheet_principal_id', value: val }, { onConflict: 'key' })
+      const inputVal = googleSheetPrincipalId.value.trim()
+      let targetVal = inputVal
+      if (inputVal.includes('•')) {
+        targetVal = realGoogleSheetPrincipalId.value
+      } else {
+        realGoogleSheetPrincipalId.value = inputVal
+      }
+
+      const { error } = await supabase.from('config').upsert({ key: 'google_sheet_principal_id', value: targetVal }, { onConflict: 'key' })
       if (error) throw error
-      hasGoogleSheetPrincipalId.value = !!val
-      googleSheetPrincipalId.value = ''
+
+      hasGoogleSheetPrincipalId.value = !!targetVal
+      googleSheetPrincipalId.value = targetVal ? maskGoogleSheetId(targetVal) : ''
       alert('학교장 추천전형 구글 스프레드시트 ID가 저장되었습니다.')
     }
   } catch (e) {
@@ -665,11 +657,19 @@ async function saveGoogleSheetRuralId() {
   googleSheetRuralLoading.value = true
   try {
     if (supabase) {
-      const val = googleSheetRuralId.value.trim()
-      const { error } = await supabase.from('config').upsert({ key: 'google_sheet_rural_id', value: val }, { onConflict: 'key' })
+      const inputVal = googleSheetRuralId.value.trim()
+      let targetVal = inputVal
+      if (inputVal.includes('•')) {
+        targetVal = realGoogleSheetRuralId.value
+      } else {
+        realGoogleSheetRuralId.value = inputVal
+      }
+
+      const { error } = await supabase.from('config').upsert({ key: 'google_sheet_rural_id', value: targetVal }, { onConflict: 'key' })
       if (error) throw error
-      hasGoogleSheetRuralId.value = !!val
-      googleSheetRuralId.value = ''
+
+      hasGoogleSheetRuralId.value = !!targetVal
+      googleSheetRuralId.value = targetVal ? maskGoogleSheetId(targetVal) : ''
       alert('농어촌 전형 구글 스프레드시트 ID가 저장되었습니다.')
     }
   } catch (e) {
@@ -681,14 +681,19 @@ async function saveGoogleSheetRuralId() {
 }
 
 async function syncGoogleSheetPrincipal() {
-  if (!googleSheetPrincipalId.value.trim()) {
+  const inputVal = googleSheetPrincipalId.value.trim()
+  let targetId = inputVal
+  if (inputVal.includes('•') || !inputVal) {
+    targetId = realGoogleSheetPrincipalId.value
+  }
+
+  if (!targetId) {
     alert('구글 스프레드시트 ID를 먼저 입력하고 저장해 주세요.')
     return
   }
   syncPrincipalLoading.value = true
   try {
-    await saveGoogleSheetPrincipalId()
-    const res = await syncPrincipalUnivsFromGoogleSheet(googleSheetPrincipalId.value)
+    const res = await syncPrincipalUnivsFromGoogleSheet(targetId)
     alert(`학교장 추천전형 DB 동기화 완료! (총 ${res.count}건 파싱 및 업데이트됨)`)
   } catch (e) {
     console.error('Failed to sync principal sheet:', e)
@@ -699,14 +704,19 @@ async function syncGoogleSheetPrincipal() {
 }
 
 async function syncGoogleSheetRural() {
-  if (!googleSheetRuralId.value.trim()) {
+  const inputVal = googleSheetRuralId.value.trim()
+  let targetId = inputVal
+  if (inputVal.includes('•') || !inputVal) {
+    targetId = realGoogleSheetRuralId.value
+  }
+
+  if (!targetId) {
     alert('구글 스프레드시트 ID를 먼저 입력하고 저장해 주세요.')
     return
   }
   syncRuralLoading.value = true
   try {
-    await saveGoogleSheetRuralId()
-    const inserted = await syncRuralTracksFromGoogleSheet(googleSheetRuralId.value)
+    const inserted = await syncRuralTracksFromGoogleSheet(targetId)
     alert(`농어촌 및 기회균형 전형 DB 동기화 완료! (총 ${inserted.length}개 전형 저장됨)`)
   } catch (e) {
     console.error('Failed to sync rural sheet:', e)
@@ -918,26 +928,7 @@ async function saveOpenAIKey() {
   }
 }
 
-async function saveSchoolInfoApiKey() {
-  if (!supabase) return
-  schoolInfoApiLoading.value = true
-  try {
-    const val = schoolInfoApiKey.value.trim()
-    const { error } = await supabase
-      .from('config')
-      .upsert({ key: 'school_info_api_key', value: val }, { onConflict: 'key' })
 
-    if (error) throw error
-    hasSchoolInfoApiKey.value = !!val
-    schoolInfoApiKey.value = ''
-    alert('학교알리미 Open API 인증키가 저장되었습니다.')
-  } catch (e) {
-    console.error(e)
-    alert('학교알리미 API 키 저장 도중 오류가 발생했습니다.')
-  } finally {
-    schoolInfoApiLoading.value = false
-  }
-}
 
 async function resetApplicationsOnly() {
   if (!supabase) return
@@ -959,7 +950,14 @@ async function resetApplicationsOnly() {
 
     if (appErr) throw appErr
 
-    await supabase.from('timeline_rounds').update({ status: 'DRAFT' }).gt('id', 0)
+    try {
+      const { data: rList1 } = await supabase.from('timeline_rounds').select('id')
+      if (rList1 && rList1.length > 0) {
+        for (const r of rList1) {
+          await supabase.from('timeline_rounds').update({ status: 'DRAFT' }).eq('id', r.id).catch(() => {})
+        }
+      }
+    } catch {}
 
     try {
       const userRes = await supabase.auth.getUser()
@@ -994,13 +992,20 @@ async function resetAllSystemData() {
 
   resetAllLoading.value = true
   try {
-    await supabase.from('applications').delete().gt('created_at', '1970-01-01')
-    await supabase.from('universities').delete().gt('id', 0)
-    await supabase.from('regional_recommendations').delete().gt('seq_no', 0)
-    await supabase.from('enrolled_students').delete().gt('id', 0)
-    await supabase.from('config').delete().neq('key', 'openai_api_key')
-    await supabase.from('timeline_rounds').update({ status: 'DRAFT' }).gt('id', 0)
-    await supabase.from('audit_logs').delete().gt('id', 0)
+    await supabase.from('applications').delete().not('id', 'is', null)
+    await supabase.from('universities').delete().not('id', 'is', null)
+    await supabase.from('regional_recommendations').delete().not('id', 'is', null)
+    await supabase.from('enrolled_students').delete().not('id', 'is', null)
+    await supabase.from('config').update({ value: null }).neq('key', 'openai_api_key')
+    try {
+      const { data: rList2 } = await supabase.from('timeline_rounds').select('id')
+      if (rList2 && rList2.length > 0) {
+        for (const r of rList2) {
+          await supabase.from('timeline_rounds').update({ status: 'DRAFT' }).eq('id', r.id).catch(() => {})
+        }
+      }
+    } catch {}
+    await supabase.from('audit_logs').delete().not('id', 'is', null)
 
     try {
       const userRes = await supabase.auth.getUser()

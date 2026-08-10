@@ -14,7 +14,7 @@
 
       <div class="flex items-center gap-2">
         <button
-          @click="printRoster"
+          @click="openPrintModal"
           class="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors cursor-pointer border-none"
         >
           <Printer class="w-4 h-4" />
@@ -28,6 +28,26 @@
           <RefreshCw :class="{ 'animate-spin': loading }" class="w-4 h-4 text-slate-500" />
           새로고침
         </button>
+      </div>
+    </div>
+
+    <!-- 미등록 전형 직접입력 학생 발생 알림 바 (교사/관리자용) -->
+    <div v-if="customApplicationsCount > 0" class="bg-amber-50 border-2 border-amber-300 p-4 rounded-xl flex items-center justify-between shadow-xs shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-extrabold text-lg shrink-0 shadow-xs">
+          🔔
+        </div>
+        <div>
+          <h4 class="text-xs sm:text-sm font-extrabold text-amber-950 m-0 flex items-center gap-1.5">
+            미등록 대학/전형 직접 입력 신청 발생
+            <span class="px-2 py-0.5 rounded-full text-xs bg-amber-200 text-amber-950 border border-amber-300 font-extrabold">
+              총 {{ customStudentsCount }}명 ({{ customApplicationsCount }}건)
+            </span>
+          </h4>
+          <p class="text-xs text-amber-900 m-0 mt-1 leading-relaxed">
+            드롭다운 목록에 없는 대학/전형을 학생이 직접 입력하여 신청하였습니다. 아래 테이블의 <strong class="text-amber-950 bg-amber-200 px-1.5 py-0.5 rounded font-bold">⚠️ 직접입력</strong> 항목을 확인해 주세요.
+          </p>
+        </div>
       </div>
     </div>
 
@@ -103,7 +123,7 @@
           <thead class="sticky top-0 z-10 bg-slate-50">
             <tr class="bg-slate-50 text-slate-700 border-b border-slate-200 font-bold whitespace-nowrap">
               <th class="py-3 px-3.5 text-center whitespace-nowrap bg-slate-50" style="width: 50px; min-width: 50px;">순번</th>
-              <th class="py-3 px-3.5 whitespace-nowrap bg-slate-50" style="width: 80px; min-width: 80px;">학반</th>
+              <th class="py-3 px-3.5 whitespace-nowrap bg-slate-50" style="width: 80px; min-width: 80px;">학급</th>
               <th class="py-3 px-3.5 whitespace-nowrap bg-slate-50" style="width: 80px; min-width: 80px;">학번</th>
               <th class="py-3 px-3.5 whitespace-nowrap bg-slate-50" style="width: 100px; min-width: 100px;">이름</th>
               <th class="py-3 px-3.5 text-center whitespace-nowrap bg-slate-50" style="width: 100px; min-width: 100px;">자격상태</th>
@@ -113,7 +133,7 @@
               <th class="py-3 px-3.5 whitespace-nowrap bg-slate-50" style="width: 180px; min-width: 180px;">학과(부)</th>
               <th class="py-3 px-3.5 whitespace-nowrap bg-slate-50" style="width: 110px; min-width: 110px;">전형유형</th>
               <th class="py-3 px-3.5 whitespace-nowrap bg-slate-50" style="width: 200px; min-width: 200px;">전형명</th>
-              <th class="py-3 px-3.5 text-center whitespace-nowrap bg-slate-50" style="width: 70px; min-width: 70px;">수정</th>
+              <th class="py-3 px-3.5 text-center whitespace-nowrap bg-slate-50" style="width: 130px; min-width: 130px;">수정/삭제</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
@@ -161,16 +181,29 @@
                   {{ app.track_type }}
                 </span>
               </td>
-              <td class="py-3 px-4 font-semibold text-slate-800">{{ app.track_name }}</td>
+              <td class="py-3 px-4 font-semibold text-slate-800">
+                {{ app.track_name }}
+                <span v-if="app.is_custom_entry || (app.remarks && app.remarks.includes('[미등록'))" class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300 inline-block">
+                  ⚠️ 직접입력
+                </span>
+              </td>
 
-              <!-- 교사 수정 버튼 -->
-              <td class="py-3 px-4 text-center">
-                <button
-                  @click="openEditModal(app)"
-                  class="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded border border-slate-300 transition-colors cursor-pointer"
-                >
-                  수정
-                </button>
+              <!-- 교사 수정/삭제 버튼 -->
+              <td class="py-3 px-3 text-center whitespace-nowrap">
+                <div class="flex items-center justify-center gap-1.5">
+                  <button
+                    @click="openEditModal(app)"
+                    class="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded border border-slate-300 transition-colors cursor-pointer whitespace-nowrap"
+                  >
+                    수정
+                  </button>
+                  <button
+                    @click="deleteApplication(app)"
+                    class="px-2.5 py-1 text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-600 rounded border border-rose-200 transition-colors cursor-pointer whitespace-nowrap"
+                  >
+                    삭제
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -246,13 +279,96 @@
         </div>
       </div>
     </div>
+
+    <!-- 🖨️ 추천 대장 인쇄 옵션 모달 (4단 결재) -->
+    <div v-if="showPrintModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-200">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2 m-0">
+            <Printer class="w-5 h-5 text-indigo-600" />
+            농어촌 추천 대장 인쇄 옵션 설정
+          </h3>
+          <button @click="showPrintModal = false" class="text-slate-400 hover:text-slate-600 font-bold text-lg bg-transparent border-none cursor-pointer">✕</button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <!-- 1. 재학생 / 졸업생 구분 선택 -->
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">1. 구분 (재학생 / 졸업생)</label>
+            <select
+              v-model="printFilterCategory"
+              class="w-full p-2.5 border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-slate-800"
+            >
+              <option value="all">전체 (재학생 + 졸업생)</option>
+              <option value="enrolled">재학생</option>
+              <option value="graduated">졸업생</option>
+            </select>
+          </div>
+
+          <!-- 2. 학급 선택 -->
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">2. 학급 선택</label>
+            <select
+              v-model="printFilterClass"
+              class="w-full p-2.5 border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-slate-800"
+            >
+              <option value="all">전체 학급</option>
+              <option v-for="c in classNumbers" :key="c" :value="String(c)">
+                3학년 {{ c }}반
+              </option>
+              <option value="grad">졸업생</option>
+            </select>
+          </div>
+
+          <!-- 3. 자격 상태 선택 -->
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">3. 자격 상태</label>
+            <select
+              v-model="printFilterStatus"
+              class="w-full p-2.5 border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white text-slate-800"
+            >
+              <option value="all">전체 (적격 + 자격주의)</option>
+              <option value="eligible">적격</option>
+              <option value="warning">자격주의 (확인필요)</option>
+            </select>
+          </div>
+
+          <!-- 인쇄 대상 요약 안내 -->
+          <div class="p-3 bg-indigo-50/80 border border-indigo-100 rounded-xl flex items-center justify-between text-xs text-indigo-900 font-semibold">
+            <span>인쇄 대상건수:</span>
+            <span class="text-sm font-extrabold text-indigo-700">총 {{ printTargetApplications.length }}건</span>
+          </div>
+
+          <p class="text-[11px] text-slate-500 leading-normal m-0 pt-1">
+            * 정렬: 구분 ➔ 전형유형 ➔ 학급 ➔ 학번 ➔ 전형명 ➔ 자격상태 ➔ 지망 ➔ 대학 ➔ 학과 순 오름차순
+          </p>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+          <button
+            @click="showPrintModal = false"
+            class="px-4 py-2 text-xs font-semibold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 cursor-pointer border-none"
+          >
+            취소
+          </button>
+          <button
+            @click="executePrint"
+            :disabled="printTargetApplications.length === 0"
+            class="px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-xs cursor-pointer border-none disabled:opacity-40 flex items-center gap-1.5"
+          >
+            <Printer class="w-3.5 h-3.5" />
+            추천 대장 인쇄하기 (4단 결재)
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { Users, FileSpreadsheet, AlertTriangle, Printer, RefreshCw, Search, Edit3 } from 'lucide-vue-next';
-import { getAllRuralApplications, getRuralEligibilityList, updateRuralApplicationByTeacher } from '../../api/ruralApi';
+import { getAllRuralApplications, getRuralEligibilityList, updateRuralApplicationByTeacher, deleteRuralApplicationByTeacher } from '../../api/ruralApi';
 import { printRuralClassRoster } from '../../utils/ruralPrintHelper';
 import { dialog } from '../common/dialog';
 
@@ -328,6 +444,15 @@ const warningStudentsCount = computed(() => {
   return set.size;
 });
 
+const customApplicationsCount = computed(() => {
+  return rawApps.value.filter(a => a.is_custom_entry || (a.remarks && a.remarks.includes('[미등록'))).length;
+});
+
+const customStudentsCount = computed(() => {
+  const customApps = rawApps.value.filter(a => a.is_custom_entry || (a.remarks && a.remarks.includes('[미등록')));
+  return new Set(customApps.map(a => a.student_id)).size;
+});
+
 const filteredApplications = computed(() => {
   return enrichedApplications.value.filter(app => {
     if (filterClass.value !== 'all') {
@@ -381,14 +506,118 @@ async function saveEdit() {
   }
 }
 
-function printRoster() {
-  const titleStr = filterClass.value === 'all'
-    ? '2027학년도 대입 농어촌 전형 추천 대장 (전체)'
-    : filterClass.value === 'grad'
-      ? '2027학년도 대입 농어촌 전형 추천 대장 (졸업생)'
-      : `2027학년도 대입 농어촌 전형 추천 대장 (3학년 ${filterClass.value}반)`;
+async function deleteApplication(app) {
+  const confirmed = await dialog.confirm({
+    title: '신청 항목 삭제',
+    message: `${app.student_name} 학생의 ${app.choice_number}지망 (${app.univ_name} - ${app.department}) 신청 항목을 정말 삭제하시겠습니까?\n\n삭제된 항목은 복구할 수 없습니다.`
+  });
+  if (!confirmed) return;
 
-  printRuralClassRoster(titleStr, filteredApplications.value);
+  try {
+    await deleteRuralApplicationByTeacher(app.id);
+    await dialog.alert({
+      title: '삭제 완료',
+      message: '해당 신청 항목이 삭제되었습니다.'
+    });
+    await loadData();
+  } catch (err) {
+    console.error('Failed to delete application:', err);
+    await dialog.alert({
+      title: '삭제 오류',
+      message: '항목 삭제 중 오류가 발생하였습니다.'
+    });
+  }
+}
+
+function openPrintModal() {
+  showPrintModal.value = true;
+}
+
+const showPrintModal = ref(false);
+const printFilterCategory = ref('all');
+const printFilterClass = ref('all');
+const printFilterStatus = ref('all');
+
+function sortRuralApplicationsForPrint(apps) {
+  return [...apps].sort((a, b) => {
+    // 1. 구분 (재학생: 0, 졸업생: 1)
+    const enrolledA = a.is_enrolled !== false ? 0 : 1;
+    const enrolledB = b.is_enrolled !== false ? 0 : 1;
+    if (enrolledA !== enrolledB) return enrolledA - enrolledB;
+
+    // 2. 전형유형 (term_type or track_type)
+    const typeA = String(a.track_type || a.term_type || '').trim();
+    const typeB = String(b.track_type || b.term_type || '').trim();
+    if (typeA !== typeB) return typeA.localeCompare(typeB, 'ko');
+
+    // 3. 학급 (1~11, 없거나 졸업생은 999)
+    const classA = a.student_class != null ? Number(a.student_class) : 999;
+    const classB = b.student_class != null ? Number(b.student_class) : 999;
+    if (classA !== classB) return classA - classB;
+
+    // 4. 학번 (5자리 학번 오름차순)
+    const codeA = String(a.student_code || '').slice(-5);
+    const codeB = String(b.student_code || '').slice(-5);
+    if (codeA !== codeB) return codeA.localeCompare(codeB, 'ko', { numeric: true });
+
+    // 5. 전형명 (track_name)
+    const trackA = String(a.track_name || '').trim();
+    const trackB = String(b.track_name || '').trim();
+    if (trackA !== trackB) return trackA.localeCompare(trackB, 'ko');
+
+    // 6. 자격상태 (적격: 0, 자격주의: 1)
+    const warnA = a.is_warning ? 1 : 0;
+    const warnB = b.is_warning ? 1 : 0;
+    if (warnA !== warnB) return warnA - warnB;
+
+    // 7. 지망 (choice_number)
+    const choiceA = Number(a.choice_number || 0);
+    const choiceB = Number(b.choice_number || 0);
+    if (choiceA !== choiceB) return choiceA - choiceB;
+
+    // 8. 대학 (univ_name)
+    const univA = String(a.univ_name || '').trim();
+    const univB = String(b.univ_name || '').trim();
+    if (univA !== univB) return univA.localeCompare(univB, 'ko');
+
+    // 9. 학과 (department)
+    const deptA = String(a.department || '').trim();
+    const deptB = String(b.department || '').trim();
+    return deptA.localeCompare(deptB, 'ko');
+  });
+}
+
+const printTargetApplications = computed(() => {
+  const filtered = enrichedApplications.value.filter(app => {
+    // 1. 구분 필터
+    if (printFilterCategory.value === 'enrolled' && app.is_enrolled === false) return false;
+    if (printFilterCategory.value === 'graduated' && app.is_enrolled !== false) return false;
+
+    // 2. 학급 필터
+    if (printFilterClass.value !== 'all') {
+      if (printFilterClass.value === 'grad' && app.student_class != null) return false;
+      if (printFilterClass.value !== 'grad' && app.student_class !== Number(printFilterClass.value)) return false;
+    }
+
+    // 3. 자격 상태 필터
+    if (printFilterStatus.value === 'eligible' && app.is_warning) return false;
+    if (printFilterStatus.value === 'warning' && !app.is_warning) return false;
+
+    return true;
+  });
+
+  return sortRuralApplicationsForPrint(filtered);
+});
+
+function executePrint() {
+  const catText = printFilterCategory.value === 'enrolled' ? '재학생' : (printFilterCategory.value === 'graduated' ? '졸업생' : '전체');
+  const classText = printFilterClass.value === 'all' ? '전체학급' : (printFilterClass.value === 'grad' ? '졸업생' : `3학년 ${printFilterClass.value}반`);
+  const statusText = printFilterStatus.value === 'eligible' ? '적격' : (printFilterStatus.value === 'warning' ? '자격주의' : '전체');
+
+  const titleStr = `2027학년도 대입 농어촌 전형 추천 대장 (${catText} / ${classText} / ${statusText})`;
+
+  printRuralClassRoster(titleStr, printTargetApplications.value);
+  showPrintModal.value = false;
 }
 </script>
 
