@@ -748,7 +748,13 @@ CREATE TABLE IF NOT EXISTS public.enrolled_students (
     gpa_3_all TEXT, -- 3학년 전학기 석차등급
     gpa_overall NUMERIC, -- 전학년 석차등급 (대표 평균 내신)
 
-    -- [7] 생성 일시
+    -- [7] 추천 희망 및 농어촌 유형 선택 컬럼
+    apply_school_recommend BOOLEAN NOT NULL DEFAULT TRUE,
+    apply_rural BOOLEAN NOT NULL DEFAULT FALSE,
+    rural_type TEXT,
+    rural_self_check BOOLEAN NOT NULL DEFAULT FALSE,
+
+    -- [8] 생성 일시
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -878,6 +884,8 @@ CREATE TABLE IF NOT EXISTS public.student_rural_eligibility (
     high_school_years NUMERIC(3,1) DEFAULT 0.0,   -- 읍면 고등학교 재학 계산 기간 (년)
     total_rural_years NUMERIC(3,1) DEFAULT 0.0,   -- 총 읍면 학교 재학 기간 (년)
     address_rural_valid BOOLEAN DEFAULT FALSE,    -- 읍면 주소 거주 요건 만족 여부
+    is_type1_eligible BOOLEAN DEFAULT FALSE,      -- 유형 I (6년) 자격 여부
+    is_type2_eligible BOOLEAN DEFAULT FALSE,      -- 유형 II (12년) 자격 여부
     is_eligible BOOLEAN NOT NULL DEFAULT FALSE,   -- 자동 판정 최종 농어촌 자격 여부 (6년 이상 & 주소 만족)
     is_manual_approved BOOLEAN NOT NULL DEFAULT FALSE, -- 교사/관리자 수동 인정 여부
     manual_reason TEXT,                           -- 수동 인정/소명 사유
@@ -1088,7 +1096,22 @@ CREATE POLICY "Teachers/Admins can manage all rural applications" ON public.rura
 
 
 
--- 18. config 테이블 RLS 통합 정책 및 기본 키 설정
+-- ----------------------------------------------------------------
+-- 19. RURAL_SIGNATURES (농어촌 전형 서명 관리 테이블)
+-- ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.rural_signatures (
+    student_id UUID PRIMARY KEY,
+    student_signature TEXT,
+    parent_signature TEXT,
+    parent_name TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+ALTER TABLE public.rural_signatures ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable all access to rural_signatures" ON public.rural_signatures;
+CREATE POLICY "Enable all access to rural_signatures" ON public.rural_signatures FOR ALL USING (true) WITH CHECK (true);
+
+-- 20. config 테이블 RLS 통합 정책 및 기본 키 설정
 ALTER TABLE public.config ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Anyone can view config" ON public.config;
