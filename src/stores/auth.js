@@ -58,11 +58,22 @@ export const useAuthStore = defineStore('auth', () => {
         token.value = session.access_token
         await fetchProfile(session.user.id)
       } else {
-        clearAuthStates()
+        // 학생 로그인은 Supabase Auth 세션이 아니라 enrolled_students DB 및 localStorage (pcm_role = 'student') 기반입니다.
+        if (role.value === 'student' && studentCode.value) {
+          try {
+            await fetchProfile(userId.value)
+          } catch (e) {
+            console.warn('Student profile sync fallback on checkStatus:', e)
+          }
+        } else {
+          clearAuthStates()
+        }
       }
     } catch (e) {
       console.error('Session sync error:', e)
-      clearAuthStates()
+      if (role.value !== 'student') {
+        clearAuthStates()
+      }
     }
   }
 
@@ -72,11 +83,15 @@ export const useAuthStore = defineStore('auth', () => {
     if (uId) userId.value = uId
 
     // 1. 관리자 및 교사 프로필 검사 (profiles)
-    let { data: adminTeacherData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', uId)
-      .maybeSingle()
+    let adminTeacherData = null
+    if (uId) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', uId)
+        .maybeSingle()
+      adminTeacherData = data
+    }
 
     if (adminTeacherData && (adminTeacherData.role === 'admin' || adminTeacherData.role === 'teacher')) {
       role.value = adminTeacherData.role
@@ -97,9 +112,13 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     // 2. 학생 프로필 검사 (enrolled_students 마스터 원장 100% 통합)
-    const { data: { user: authUser } } = await supabase.auth.getUser()
-    const meta = authUser?.user_metadata || {}
-    const sCode = meta.student_code || (adminTeacherData ? adminTeacherData.student_code : null)
+    let meta = {}
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      meta = authUser?.user_metadata || {}
+    } catch (e) {}
+
+    const sCode = meta.student_code || (adminTeacherData ? adminTeacherData.student_code : null) || studentCode.value
 
     let studentData = null
     if (uId) {
@@ -163,6 +182,11 @@ export const useAuthStore = defineStore('auth', () => {
         hasDisciplinary.value = adminTeacherData.has_disciplinary
       }
       _persist()
+      return
+    }
+
+    if (role.value === 'student' && studentCode.value) {
+      // 로컬 스토리지에 이미 학생으로 인증된 경우 상태 유지
       return
     }
 
