@@ -353,7 +353,38 @@ export const useAuthStore = defineStore('auth', () => {
   async function loginTeacher(teacherId, password) {
     if (!supabase) throw new Error('Supabase가 설정되지 않았습니다.')
     
-    const email = `${teacherId}@ggomrecommend.ggomcode`
+    const rawInput = (teacherId || '').trim()
+    let email = `${rawInput}@ggomrecommend.ggomcode`
+    
+    // 1. "3-1", "3학년 1반", "301" 형식 파싱 -> teacher_3_1
+    const classMatch = rawInput.match(/^(\d)[학년\s\-_]*(\d{1,2})[반\s]*$/)
+    if (classMatch) {
+      const g = classMatch[1]
+      const c = classMatch[2]
+      email = `teacher_${g}_${c}@ggomrecommend.ggomcode`
+    } else if (rawInput.toLowerCase().startsWith('teacher_')) {
+      email = `${rawInput.toLowerCase()}@ggomrecommend.ggomcode`
+    } else {
+      // 2. 담임명(교사 이름)으로 입력한 경우 profiles에서 검색하여 해당 학년/반 이메일 매칭
+      try {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('grade, class_no, name')
+          .eq('role', 'teacher')
+        if (profiles && profiles.length > 0) {
+          for (const p of profiles) {
+            const decName = p.name === '관리자' ? '관리자' : await decryptText(p.name)
+            if (decName && decName.trim() === rawInput && p.grade && p.class_no) {
+              email = `teacher_${p.grade}_${p.class_no}@ggomrecommend.ggomcode`
+              break
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Teacher name resolution warning:', e)
+      }
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
