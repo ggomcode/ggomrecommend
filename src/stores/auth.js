@@ -553,9 +553,9 @@ export const useAuthStore = defineStore('auth', () => {
       const hashMatches = matchedStudent.name_hash && (matchedStudent.name_hash === nameHash)
       const textMatches = cleanExistingName && cleanInputName && (cleanExistingName === cleanInputName)
 
-      // 이름이 100% 완전히 일치하지 않으면 수정 차단!
+      // 이름이 100% 완전히 일치하지 않으면 수정 차단 (기존 등록 성명은 개인정보 보호를 위해 노출 금지)
       if (!hashMatches && !textMatches) {
-        throw new Error(`학번(${studentCodeStr})에 등록된 기존 학생 이름('${existingName}')과 입력하신 성명('${name.trim()}')이 완전히 일치하지 않습니다.\n성명을 오타 없이 정확하게 입력해 주세요.`)
+        throw new Error(`입력하신 학번(${studentCodeStr})과 성명('${name.trim()}')이 기존 등록된 학생 정보와 일치하지 않습니다.\n학번과 성명을 오타 없이 정확하게 입력해 주세요.`)
       }
 
       isAutoApproved = matchedStudent.status === 'approved'
