@@ -537,7 +537,7 @@ export const useAuthStore = defineStore('auth', () => {
     // 2. enrolled_students 원장 테이블에서 기존 가입 검사
     const { data: matchedStudent } = await supabase
       .from('enrolled_students')
-      .select('id, name, student_code, is_enrolled, status, user_id')
+      .select('id, name, name_hash, student_code, is_enrolled, status, user_id')
       .eq('student_code', studentCodeStr)
       .maybeSingle()
 
@@ -545,6 +545,15 @@ export const useAuthStore = defineStore('auth', () => {
     let targetId = matchedStudent?.id
 
     if (matchedStudent) {
+      // 기존 명렬표/원장에 등록된 학생이 있는 경우 -> 학번과 이름이 모두 일치해야만 수정 허용!
+      const existingName = await decryptText(matchedStudent.name)
+      const cleanExistingName = (existingName || '').replace(/\s+/g, '')
+      const cleanInputName = (name || '').trim().replace(/\s+/g, '')
+
+      if (cleanExistingName && cleanInputName && cleanExistingName !== cleanInputName) {
+        throw new Error(`학번(${studentCodeStr})에 등록된 기존 학생 이름과 입력하신 성명('${name.trim()}')이 일치하지 않습니다.\n기존 등록된 성명을 정확히 입력해 주세요.`)
+      }
+
       isAutoApproved = matchedStudent.status === 'approved'
       const updatePayload = {
         name: encName,
