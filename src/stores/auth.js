@@ -563,9 +563,9 @@ export const useAuthStore = defineStore('auth', () => {
         apply_school_recommend: applySchoolRecommend !== false,
         apply_rural: Boolean(applyRural),
         rural_type: applyRural ? (ruralType || '유형I') : null,
-        rural_self_check: Boolean(ruralSelfCheck)
       }
-      await supabase.from('enrolled_students').update(updatePayload).eq('id', matchedStudent.id)
+      const { error: updErr } = await supabase.from('enrolled_students').update(updatePayload).eq('id', matchedStudent.id)
+      if (updErr) throw updErr
     } else {
       // enrolled_students 원장에 없는 학생인 경우: 승인 절차(pending) 필요
       isAutoApproved = false
@@ -587,7 +587,8 @@ export const useAuthStore = defineStore('auth', () => {
         rural_type: applyRural ? (ruralType || '유형I') : null,
         rural_self_check: Boolean(ruralSelfCheck)
       }
-      const { data: inserted } = await supabase.from('enrolled_students').insert(insertPayload).select('id').maybeSingle()
+      const { data: inserted, error: insErr } = await supabase.from('enrolled_students').insert(insertPayload).select('id').maybeSingle()
+      if (insErr) throw insErr
       if (inserted) targetId = inserted.id
     }
 

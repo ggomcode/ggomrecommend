@@ -1102,3 +1102,9 @@ WITH CHECK (true);
 
 GRANT ALL ON TABLE public.config TO anon, authenticated, service_role;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+
+-- 21. ENROLLED_STUDENTS RLS 통합 정책 (학생 회원가입 anon 권한 보장)
+ALTER TABLE public.enrolled_students ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable all access to enrolled_students" ON public.enrolled_students;
+CREATE POLICY "Enable all access to enrolled_students" ON public.enrolled_students FOR ALL TO public USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.enrolled_students TO anon, authenticated, service_role;

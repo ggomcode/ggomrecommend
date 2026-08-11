@@ -64,6 +64,9 @@
                 >
                   {{ student.is_enrolled ? '재학생' : '졸업생' }}
                 </span>
+                <span v-if="student.class_no === 99" class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 ml-1">
+                  🧪 테스트 99반
+                </span>
               </td>
               <td class="p-4 text-sm font-semibold font-mono text-slate-800">{{ student.student_code }}</td>
               <td class="p-4 text-sm font-semibold text-slate-800">{{ student.name }}</td>
@@ -160,7 +163,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../../utils/supabaseClient'
 import { teacherGetStudents } from '../../api/teacher'
-import { deleteStudent } from '../../api/admin'
+import { deleteStudent, upsertClass } from '../../api/admin'
 
 const students = ref([])
 const loading = ref(true)
@@ -237,6 +240,15 @@ async function handleApprove(student) {
       .eq('id', student.id)
 
     if (error) throw error
+
+    // 99반(테스트용) 학생 승인 시 3학년 99반 학급 자동 생성
+    if (student.class_no === 99 || (student.student_code && student.student_code.substring(1, 3) === '99')) {
+      try {
+        await upsertClass(3, 99, { teacher_name: '3학년 99반 담임 (테스트)' })
+      } catch (classErr) {
+        console.warn('Auto create class 99 warning:', classErr)
+      }
+    }
 
     try {
       const { data } = await supabase.auth.getUser()
