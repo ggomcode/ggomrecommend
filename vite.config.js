@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  base: '/ggomrecommend/',
+  base: '/pogokrecommend/',
   plugins: [
     vue(),
     tailwindcss(),
@@ -11,13 +11,13 @@ export default defineConfig({
       name: 'redirect-base-middleware',
       configureServer(server) {
         server.middlewares.use((req, res, next) => {
-          if (req.url === '/ggomrecommend') {
-            res.writeHead(302, { Location: '/ggomrecommend/' })
+          if (req.url === '/pogokrecommend') {
+            res.writeHead(302, { Location: '/pogokrecommend/' })
             res.end()
             return
           }
-          if (req.url && !req.url.startsWith('/ggomrecommend') && !req.url.startsWith('/@') && !req.url.startsWith('/node_modules') && !req.url.includes('.')) {
-            res.writeHead(302, { Location: '/ggomrecommend' + req.url })
+          if (req.url && !req.url.startsWith('/pogokrecommend') && !req.url.startsWith('/@') && !req.url.startsWith('/node_modules') && !req.url.includes('.')) {
+            res.writeHead(302, { Location: '/pogokrecommend' + req.url })
             res.end()
             return
           }
