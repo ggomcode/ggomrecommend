@@ -246,7 +246,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
-import { safeAsyncComponent } from '../utils/asyncComponent'
 import { FileSpreadsheet, BookOpen, PenTool, Users, Settings, ChevronRight, Menu, Home, LogOut, User } from 'lucide-vue-next'
 
 const router = useRouter()

@@ -248,7 +248,6 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { safeAsyncComponent } from '../utils/asyncComponent.js'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { teacherChangePassword, getCurrentRound } from '../api/teacher.js'

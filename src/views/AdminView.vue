@@ -269,7 +269,6 @@ import { changeAdminPassword, getCurrentRound } from '../api/admin.js'
 import { dialog } from '../components/common/dialog.js'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig.js'
 import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
-import { safeAsyncComponent } from '../utils/asyncComponent.js'
 import {
   Home, Trophy, LayoutGrid, Users, SlidersHorizontal, FileSpreadsheet,
   Building2, BookOpen, RefreshCw, ChevronRight, LogOut, Menu, ScrollText, Settings, UserCheck, School, FileText

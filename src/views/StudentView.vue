@@ -841,7 +841,6 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { safeAsyncComponent } from '../utils/asyncComponent'
 
 const baseUrl = import.meta.env.BASE_URL || '/'
 
