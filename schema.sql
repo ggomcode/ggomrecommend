@@ -3,6 +3,9 @@
 -- Supabase PostgreSQL 스키마 스크립트
 -- ================================================================
 
+-- 0. EXTENSIONS (pgcrypto 필수 확장모듈)
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+
 -- 1. CONFIG (시스템 설정 테이블)
 CREATE TABLE IF NOT EXISTS config (
     key TEXT PRIMARY KEY,
@@ -343,7 +346,7 @@ BEGIN
 
     RETURN TRUE;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions, auth;
 
 -- 학생 계정 생성 RPC 함수 (pgcrypto 사용)
 CREATE OR REPLACE FUNCTION public.create_student_account(
@@ -459,7 +462,7 @@ BEGIN
 
     RETURN TRUE;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions, auth;
 
 -- profiles 삭제 시 auth.users 자동 삭제 트리거
 CREATE OR REPLACE FUNCTION public.handle_deleted_user()
@@ -605,7 +608,7 @@ BEGIN
 
     RETURN TRUE;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions, auth;
 
 -- 9. PROFILES 및 CONFIG 테이블 RLS 접근 정책
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -778,31 +781,48 @@ CREATE POLICY "Anyone can modify enrolled_students" ON public.enrolled_students 
 -- 16. APPLICATIONS 테이블 학부모 서명 컬럼 추가
 ALTER TABLE public.applications ADD COLUMN IF NOT EXISTS parent_signature_url TEXT;
 
--- 17. SUPABASE STORAGE 서명 (signatures) 버킷 생성 및 RLS 정책 설정
+-- 17. SUPABASE STORAGE 버킷 (signatures, documents, rural_signatures) 생성 및 RLS 정책 설정
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES ('signatures', 'signatures', true, 5242880, ARRAY['image/png', 'image/jpeg', 'image/webp'])
 ON CONFLICT (id) DO UPDATE SET public = true;
 
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('documents', 'documents', true, 52428800, ARRAY['application/pdf', 'image/png', 'image/jpeg'])
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('rural_signatures', 'rural_signatures', true, 5242880, ARRAY['image/png', 'image/jpeg', 'image/webp'])
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- signatures 버킷 정책
 DROP POLICY IF EXISTS "Anyone can select signatures" ON storage.objects;
-CREATE POLICY "Anyone can select signatures"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'signatures');
-
+CREATE POLICY "Anyone can select signatures" ON storage.objects FOR SELECT USING (bucket_id = 'signatures');
 DROP POLICY IF EXISTS "Anyone can insert signatures" ON storage.objects;
-CREATE POLICY "Anyone can insert signatures"
-ON storage.objects FOR INSERT
-WITH CHECK (bucket_id = 'signatures');
-
+CREATE POLICY "Anyone can insert signatures" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'signatures');
 DROP POLICY IF EXISTS "Anyone can update signatures" ON storage.objects;
-CREATE POLICY "Anyone can update signatures"
-ON storage.objects FOR UPDATE
-USING (bucket_id = 'signatures')
-WITH CHECK (bucket_id = 'signatures');
-
+CREATE POLICY "Anyone can update signatures" ON storage.objects FOR UPDATE USING (bucket_id = 'signatures') WITH CHECK (bucket_id = 'signatures');
 DROP POLICY IF EXISTS "Anyone can delete signatures" ON storage.objects;
-CREATE POLICY "Anyone can delete signatures"
-ON storage.objects FOR DELETE
-USING (bucket_id = 'signatures');
+CREATE POLICY "Anyone can delete signatures" ON storage.objects FOR DELETE USING (bucket_id = 'signatures');
+
+-- documents 버킷 정책
+DROP POLICY IF EXISTS "Anyone can select documents" ON storage.objects;
+CREATE POLICY "Anyone can select documents" ON storage.objects FOR SELECT USING (bucket_id = 'documents');
+DROP POLICY IF EXISTS "Anyone can insert documents" ON storage.objects;
+CREATE POLICY "Anyone can insert documents" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'documents');
+DROP POLICY IF EXISTS "Anyone can update documents" ON storage.objects;
+CREATE POLICY "Anyone can update documents" ON storage.objects FOR UPDATE USING (bucket_id = 'documents') WITH CHECK (bucket_id = 'documents');
+DROP POLICY IF EXISTS "Anyone can delete documents" ON storage.objects;
+CREATE POLICY "Anyone can delete documents" ON storage.objects FOR DELETE USING (bucket_id = 'documents');
+
+-- rural_signatures 버킷 정책
+DROP POLICY IF EXISTS "Anyone can select rural_signatures" ON storage.objects;
+CREATE POLICY "Anyone can select rural_signatures" ON storage.objects FOR SELECT USING (bucket_id = 'rural_signatures');
+DROP POLICY IF EXISTS "Anyone can insert rural_signatures" ON storage.objects;
+CREATE POLICY "Anyone can insert rural_signatures" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'rural_signatures');
+DROP POLICY IF EXISTS "Anyone can update rural_signatures" ON storage.objects;
+CREATE POLICY "Anyone can update rural_signatures" ON storage.objects FOR UPDATE USING (bucket_id = 'rural_signatures') WITH CHECK (bucket_id = 'rural_signatures');
+DROP POLICY IF EXISTS "Anyone can delete rural_signatures" ON storage.objects;
+CREATE POLICY "Anyone can delete rural_signatures" ON storage.objects FOR DELETE USING (bucket_id = 'rural_signatures');
 
 -- 18. 기타 주요 테이블 RLS 통합 정책 설정 (config, timeline_rounds, disciplinary_students, audit_logs)
 ALTER TABLE public.config ENABLE ROW LEVEL SECURITY;
@@ -908,71 +928,32 @@ ALTER TABLE public.student_rural_eligibility ENABLE ROW LEVEL SECURITY;
 -- ----------------------------------------------------------------
 
 DROP POLICY IF EXISTS "Anyone authenticated can view school cache" ON public.rural_school_cache;
-CREATE POLICY "Anyone authenticated can view school cache" ON public.rural_school_cache
-    FOR SELECT TO authenticated USING (true);
-
 DROP POLICY IF EXISTS "Teachers/Admins can manage school cache" ON public.rural_school_cache;
-CREATE POLICY "Teachers/Admins can manage school cache" ON public.rural_school_cache
-    FOR ALL TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE profiles.id = auth.uid() 
-            AND profiles.role IN ('teacher', 'admin') 
-            AND profiles.status = 'approved'
-        )
-    );
+DROP POLICY IF EXISTS "Anyone can select rural_school_cache" ON public.rural_school_cache;
+DROP POLICY IF EXISTS "Anyone can modify rural_school_cache" ON public.rural_school_cache;
+CREATE POLICY "Anyone can select rural_school_cache" ON public.rural_school_cache FOR SELECT USING (true);
+CREATE POLICY "Anyone can modify rural_school_cache" ON public.rural_school_cache FOR ALL USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Teachers/Admins can manage rural addresses" ON public.student_rural_addresses;
-CREATE POLICY "Teachers/Admins can manage rural addresses" ON public.student_rural_addresses
-    FOR ALL TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE profiles.id = auth.uid() 
-            AND profiles.role IN ('teacher', 'admin') 
-            AND profiles.status = 'approved'
-        )
-    );
-
 DROP POLICY IF EXISTS "Students can view own rural addresses" ON public.student_rural_addresses;
-CREATE POLICY "Students can view own rural addresses" ON public.student_rural_addresses
-    FOR SELECT TO authenticated
-    USING (student_id = auth.uid());
+DROP POLICY IF EXISTS "Anyone can select student_rural_addresses" ON public.student_rural_addresses;
+DROP POLICY IF EXISTS "Anyone can modify student_rural_addresses" ON public.student_rural_addresses;
+CREATE POLICY "Anyone can select student_rural_addresses" ON public.student_rural_addresses FOR SELECT USING (true);
+CREATE POLICY "Anyone can modify student_rural_addresses" ON public.student_rural_addresses FOR ALL USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Teachers/Admins can manage academic records" ON public.student_academic_records;
-CREATE POLICY "Teachers/Admins can manage academic records" ON public.student_academic_records
-    FOR ALL TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE profiles.id = auth.uid() 
-            AND profiles.role IN ('teacher', 'admin') 
-            AND profiles.status = 'approved'
-        )
-    );
-
 DROP POLICY IF EXISTS "Students can view own academic records" ON public.student_academic_records;
-CREATE POLICY "Students can view own academic records" ON public.student_academic_records
-    FOR SELECT TO authenticated
-    USING (student_id = auth.uid());
+DROP POLICY IF EXISTS "Anyone can select student_academic_records" ON public.student_academic_records;
+DROP POLICY IF EXISTS "Anyone can modify student_academic_records" ON public.student_academic_records;
+CREATE POLICY "Anyone can select student_academic_records" ON public.student_academic_records FOR SELECT USING (true);
+CREATE POLICY "Anyone can modify student_academic_records" ON public.student_academic_records FOR ALL USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Teachers/Admins can manage rural eligibility" ON public.student_rural_eligibility;
-CREATE POLICY "Teachers/Admins can manage rural eligibility" ON public.student_rural_eligibility
-    FOR ALL TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE profiles.id = auth.uid() 
-            AND profiles.role IN ('teacher', 'admin') 
-            AND profiles.status = 'approved'
-        )
-    );
-
 DROP POLICY IF EXISTS "Students can view own rural eligibility" ON public.student_rural_eligibility;
-CREATE POLICY "Students can view own rural eligibility" ON public.student_rural_eligibility
-    FOR SELECT TO authenticated
-    USING (student_id = auth.uid());
+DROP POLICY IF EXISTS "Anyone can select student_rural_eligibility" ON public.student_rural_eligibility;
+DROP POLICY IF EXISTS "Anyone can modify student_rural_eligibility" ON public.student_rural_eligibility;
+CREATE POLICY "Anyone can select student_rural_eligibility" ON public.student_rural_eligibility FOR SELECT USING (true);
+CREATE POLICY "Anyone can modify student_rural_eligibility" ON public.student_rural_eligibility FOR ALL USING (true) WITH CHECK (true);
 
 -- ----------------------------------------------------------------
 -- 16. RURAL_TRACKS (농어촌 및 기회균형 전형 정보 마스터 테이블)
@@ -1002,20 +983,11 @@ CREATE INDEX IF NOT EXISTS idx_rural_tracks_term_univ ON public.rural_tracks(ter
 ALTER TABLE public.rural_tracks ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Anyone authenticated can view rural tracks" ON public.rural_tracks;
-CREATE POLICY "Anyone authenticated can view rural tracks" ON public.rural_tracks
-    FOR SELECT TO authenticated USING (true);
-
 DROP POLICY IF EXISTS "Teachers/Admins can manage rural tracks" ON public.rural_tracks;
-CREATE POLICY "Teachers/Admins can manage rural tracks" ON public.rural_tracks
-    FOR ALL TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE profiles.id = auth.uid() 
-            AND profiles.role IN ('teacher', 'admin') 
-            AND profiles.status = 'approved'
-        )
-    );
+DROP POLICY IF EXISTS "Anyone can select rural_tracks" ON public.rural_tracks;
+DROP POLICY IF EXISTS "Anyone can modify rural_tracks" ON public.rural_tracks;
+CREATE POLICY "Anyone can select rural_tracks" ON public.rural_tracks FOR SELECT USING (true);
+CREATE POLICY "Anyone can modify rural_tracks" ON public.rural_tracks FOR ALL USING (true) WITH CHECK (true);
 
 -- ----------------------------------------------------------------
 -- 17. STUDENT_RURAL_ELIGIBILITY 확장 (유형 I/II 및 보류/사유 컬럼 추가)
@@ -1064,34 +1036,12 @@ CREATE INDEX IF NOT EXISTS idx_rural_applications_student ON public.rural_applic
 ALTER TABLE public.rural_applications ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Students can view own rural applications" ON public.rural_applications;
-CREATE POLICY "Students can view own rural applications" ON public.rural_applications
-    FOR SELECT TO authenticated
-    USING (student_id = auth.uid() OR EXISTS (
-        SELECT 1 FROM public.enrolled_students 
-        WHERE enrolled_students.id = rural_applications.student_id 
-        AND enrolled_students.user_id = auth.uid()
-    ));
-
 DROP POLICY IF EXISTS "Students can manage own rural applications" ON public.rural_applications;
-CREATE POLICY "Students can manage own rural applications" ON public.rural_applications
-    FOR ALL TO authenticated
-    USING (student_id = auth.uid() OR EXISTS (
-        SELECT 1 FROM public.enrolled_students 
-        WHERE enrolled_students.id = rural_applications.student_id 
-        AND enrolled_students.user_id = auth.uid()
-    ));
-
 DROP POLICY IF EXISTS "Teachers/Admins can manage all rural applications" ON public.rural_applications;
-CREATE POLICY "Teachers/Admins can manage all rural applications" ON public.rural_applications
-    FOR ALL TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles 
-            WHERE profiles.id = auth.uid() 
-            AND profiles.role IN ('teacher', 'admin') 
-            AND profiles.status = 'approved'
-        )
-    );
+DROP POLICY IF EXISTS "Anyone can select rural_applications" ON public.rural_applications;
+DROP POLICY IF EXISTS "Anyone can modify rural_applications" ON public.rural_applications;
+CREATE POLICY "Anyone can select rural_applications" ON public.rural_applications FOR SELECT USING (true);
+CREATE POLICY "Anyone can modify rural_applications" ON public.rural_applications FOR ALL USING (true) WITH CHECK (true);
 
 
 
