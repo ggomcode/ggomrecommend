@@ -536,7 +536,6 @@ export const importBaseData = async (id, file, studentType = 'enrolled') => {
 // B: 학년, C: 반, D: 번호, E: 이름, F: 석차, G: 석차백분율
 // H: 1-1, I: 1-2, J: 1전학기, K: 2-1, L: 2-2, M: 2전학기, N: 3-1, O: 3-2, P: 3전학기, Q: 전학년 ('-'는 성적 없음을 의미)
 export const parseUnivExcel = async (fileBuffer) => {
-  const XLSX = await import('xlsx')
   const wb = XLSX.read(fileBuffer, { type: 'array' })
   const sheetName = wb.SheetNames[0]
   const sheet = wb.Sheets[sheetName]
@@ -969,7 +968,6 @@ export const downloadStudentRosterTemplate = async () => {
 
 export const previewDaegyoImport = async (areaId, file) => {
   const buffer = await file.arrayBuffer()
-  const XLSX = await import('xlsx')
   const wb = XLSX.read(buffer, { type: 'array' })
   const sheet = wb.Sheets[wb.SheetNames[0]]
   const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
@@ -2303,7 +2301,6 @@ export const getRoundConfirmationStatus = async () => {
 }
 
 export const exportQuotaStats = async () => {
-  const XLSX = await import('xlsx')
   const stats = await getQuotaStats()
   const disclosureCount = await getDisclosureCount()
 
@@ -2422,7 +2419,6 @@ export const getTrackRecommendedList = async (trackId) => {
 }
 
 export const downloadUnivSettingsTemplate = async () => {
-  const XLSX = await import('xlsx')
   const headers = ['대학명', '대학 정원', '모집단위명', '모집단위 정원', '재학생 우선 여부']
   const sampleData = [
     ['○○대학교', 5, '인문계열', '제한 없음', 'Y'],
@@ -2439,7 +2435,6 @@ export const downloadUnivSettingsTemplate = async () => {
 }
 
 export const exportUnivSettings = async () => {
-  const XLSX = await import('xlsx')
   const univs = await getUniversities()
   const headers = ['대학명', '대학 정원', '모집단위명', '모집단위 정원', '재학생 우선 여부']
   const rows = univs.map(u => [
@@ -2458,7 +2453,6 @@ export const exportUnivSettings = async () => {
 }
 
 export const previewUnivSettings = async (file) => {
-  const XLSX = await import('xlsx')
   const arrayBuffer = await file.arrayBuffer()
   const workbook = XLSX.read(arrayBuffer, { type: 'array' })
   const sheetName = workbook.SheetNames[0]
@@ -2607,7 +2601,6 @@ export const importUnivSettings = async (file) => {
     throw new Error('가져오기 오류가 있습니다. 파일 내용을 확인하세요.')
   }
 
-  const XLSX = await import('xlsx')
   const arrayBuffer = await file.arrayBuffer()
   const workbook = XLSX.read(arrayBuffer, { type: 'array' })
   const sheetName = workbook.SheetNames[0]
@@ -3628,7 +3621,6 @@ export const setDisclosureCount = async (count) => {
 
 // DB 저장 데이터를 업로드 가능한 동일 형식 엑셀로 백업 내려받기
 export const exportRegionalRecommendations = async () => {
-  const XLSX = await import('xlsx')
   const rows = await getRegionalRecommendations()
 
   // 인원제한 백업 복원 헬퍼:
