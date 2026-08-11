@@ -545,13 +545,17 @@ export const useAuthStore = defineStore('auth', () => {
     let targetId = matchedStudent?.id
 
     if (matchedStudent) {
-      // 기존 명렬표/원장에 등록된 학생이 있는 경우 -> 학번과 이름이 모두 일치해야만 수정 허용!
+      // 1) 기존 명렬표/원장에 등록된 학생이 있는 경우 -> 이름이 100% 완전히 일치해야만 허용!
       const existingName = await decryptText(matchedStudent.name)
-      const cleanExistingName = (existingName || '').replace(/\s+/g, '')
-      const cleanInputName = (name || '').trim().replace(/\s+/g, '')
+      const cleanExistingName = String(existingName || '').trim().replace(/\s+/g, '')
+      const cleanInputName = String(name || '').trim().replace(/\s+/g, '')
 
-      if (cleanExistingName && cleanInputName && cleanExistingName !== cleanInputName) {
-        throw new Error(`학번(${studentCodeStr})에 등록된 기존 학생 이름과 입력하신 성명('${name.trim()}')이 일치하지 않습니다.\n기존 등록된 성명을 정확히 입력해 주세요.`)
+      const hashMatches = matchedStudent.name_hash && (matchedStudent.name_hash === nameHash)
+      const textMatches = cleanExistingName && cleanInputName && (cleanExistingName === cleanInputName)
+
+      // 이름이 100% 완전히 일치하지 않으면 수정 차단!
+      if (!hashMatches && !textMatches) {
+        throw new Error(`학번(${studentCodeStr})에 등록된 기존 학생 이름('${existingName}')과 입력하신 성명('${name.trim()}')이 완전히 일치하지 않습니다.\n성명을 오타 없이 정확하게 입력해 주세요.`)
       }
 
       isAutoApproved = matchedStudent.status === 'approved'
@@ -572,7 +576,12 @@ export const useAuthStore = defineStore('auth', () => {
       const { error: updErr } = await supabase.from('enrolled_students').update(updatePayload).eq('id', matchedStudent.id)
       if (updErr) throw updErr
     } else {
-      // enrolled_students 원장에 없는 학생인 경우: 승인 절차(pending) 필요
+      // 2) 명렬표에 학번이 없는 경우: 재학생(99반 제외)은 명렬표에 학번이 있어야 수정/신청 가능
+      if (enrolled && parsedClass !== 99) {
+        throw new Error(`학번(${studentCodeStr})은 등록된 재학생 명렬표 데이터에 존재하지 않습니다.\n학번을 정확히 확인해 주세요.`)
+      }
+
+      // 99반 테스트 학생 또는 졸업생 신규 신청
       isAutoApproved = false
       const insertPayload = {
         student_code: studentCodeStr,
