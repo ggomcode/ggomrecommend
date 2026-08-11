@@ -356,6 +356,7 @@ export const useAuthStore = defineStore('auth', () => {
     const rawInput = (teacherId || '').trim()
     if (!rawInput) throw new Error('아이디(담임명)를 입력해 주세요.')
 
+    const normInput = rawInput.replace(/\s+/g, '')
     let email = null
 
     // 1. profiles 테이블에서 담임명(AES-256 복호화)으로 학년/반 이메일 대조
@@ -367,7 +368,8 @@ export const useAuthStore = defineStore('auth', () => {
       if (profiles && profiles.length > 0) {
         for (const p of profiles) {
           const decName = p.name === '관리자' ? '관리자' : await decryptText(p.name)
-          if (decName && decName.trim() === rawInput) {
+          const normDec = (decName || '').trim().replace(/\s+/g, '')
+          if (normDec && normDec === normInput) {
             if (p.grade != null && p.class_no != null) {
               email = `teacher_${p.grade}_${p.class_no}@ggomrecommend.ggomcode`
             } else {
@@ -403,20 +405,29 @@ export const useAuthStore = defineStore('auth', () => {
       password
     })
 
-    // 로그인 실패 시 추가 fallback 시도 (학급 번호 추출)
+    // 4. 로그인 실패 시 스마트 fallback 시도 (학급 번호 및 담임교사 기본 계정 시도)
     if (error) {
+      const candidates = []
       const fallbackClassMatch = rawInput.match(/(\d)[학년\s\-_]*(\d{1,2})/)
       if (fallbackClassMatch) {
-        const fallbackEmail = `teacher_${fallbackClassMatch[1]}_${Number(fallbackClassMatch[2])}@ggomrecommend.ggomcode`
-        if (fallbackEmail !== email) {
-          const retryRes = await supabase.auth.signInWithPassword({
-            email: fallbackEmail,
-            password
-          })
-          if (!retryRes.error && retryRes.data?.session) {
-            data = retryRes.data
-            error = null
-          }
+        candidates.push(`teacher_${fallbackClassMatch[1]}_${Number(fallbackClassMatch[2])}@ggomrecommend.ggomcode`)
+      }
+      if (normInput === '담임교사' || normInput === '교사' || normInput.includes('담임')) {
+        candidates.push('teacher_3_1@ggomrecommend.ggomcode')
+        candidates.push('teacher_0_0@ggomrecommend.ggomcode')
+        candidates.push('teacher@ggomrecommend.ggomcode')
+      }
+
+      for (const candEmail of candidates) {
+        if (candEmail === email) continue
+        const retryRes = await supabase.auth.signInWithPassword({
+          email: candEmail,
+          password
+        })
+        if (!retryRes.error && retryRes.data?.session) {
+          data = retryRes.data
+          error = null
+          break
         }
       }
     }
