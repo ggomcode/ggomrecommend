@@ -45,6 +45,10 @@ const routes = [
     component: () => import('../views/RuralView.vue'),
     meta: { requiresAuth: true },
   },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/login',
+  },
 ]
 
 const router = createRouter({
@@ -83,7 +87,7 @@ router.onError((error, to) => {
     const key = 'module_import_retry_' + (to?.path || 'app')
     if (!sessionStorage.getItem(key)) {
       sessionStorage.setItem(key, '1')
-      window.location.assign(to.fullPath)
+      window.location.reload()
     } else {
       sessionStorage.removeItem(key)
       console.error('[Router] Dynamic import failed permanently:', error)
