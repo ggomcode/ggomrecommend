@@ -1040,13 +1040,21 @@ async function loadData() {
       }
     }
 
-    // 2. 지원 가능한 대학 목록 로드 및 추천인원 마감 여부 집계
+    // 2. 수도권 학교장추천전형 (regional_recommendations) 목록 우선 로드
+    const { data: regRecs } = await supabase
+      .from('regional_recommendations')
+      .select('*')
+      .order('seq_no', { ascending: true })
+
+    regionalRecs.value = regRecs || []
+
+    // 3. 지원 가능한 대학 목록 로드 및 추천인원 마감 여부 집계
     const { data: univs, error: err2 } = await supabase
       .from('universities')
       .select('*')
       .order('univ_name', { ascending: true })
 
-    // 1. 이미 최종 확정(마감)된 라운드 ID 목록 조회
+    // 이미 최종 확정(마감)된 라운드 ID 목록 조회
     const { data: finalizedRounds } = await supabase
       .from('timeline_rounds')
       .select('id')
@@ -1054,7 +1062,7 @@ async function loadData() {
 
     const finalizedRoundIds = (finalizedRounds || []).map(r => r.id)
 
-    // 2. 최종 확정된 라운드에서 추천 확정된 건수만 조회
+    // 최종 확정된 라운드에서 추천 확정된 건수만 조회
     let recommendedApps = []
     if (finalizedRoundIds.length > 0) {
       const { data: apps } = await supabase
@@ -1092,6 +1100,33 @@ async function loadData() {
       return mNum ? parseInt(mNum[0], 10) : null
     }
 
+    // 본교지원가능여부='X' 또는 사전마감여부='마감' 설정 대학 차단 검증
+    function isBlockedByRegionalSpec(u, regList) {
+      if (!u || !regList || regList.length === 0) return false
+      const uUnivName = String(u.univ_name || '').trim().toLowerCase()
+      const uTrackName = String(u.track_name || '').trim().toLowerCase()
+
+      const matched = regList.filter(r => {
+        const rUniv = String(r.univ_name || '').trim().toLowerCase()
+        const rTrack = String(r.track_name || '').trim().toLowerCase()
+        const univMatch = rUniv === uUnivName || rUniv.includes(uUnivName) || uUnivName.includes(rUniv)
+        const trackMatch = !uTrackName || !rTrack || rTrack === uTrackName || rTrack.includes(uTrackName) || uTrackName.includes(rTrack)
+        return univMatch && trackMatch
+      })
+
+      if (matched.length === 0) return false
+
+      return matched.some(r => {
+        const elig = String(r.target_students || '').trim().toUpperCase()
+        const remarks = String(r.remarks || '').trim()
+
+        const isEligX = elig === 'X' || elig.includes('X') || elig.includes('불가')
+        const isPreClosed = remarks.includes('마감')
+
+        return isEligX || isPreClosed
+      })
+    }
+
     if (!err2 && univs) {
       const enrichedUnivs = univs.map(u => {
         const limit = getQuotaLimitNumber(u)
@@ -1105,10 +1140,13 @@ async function loadData() {
         }
       })
 
+      // 본교지원가능여부 X 또는 사전마감인 항목 드롭다운 제외
+      const validUnivs = enrichedUnivs.filter(u => !isBlockedByRegionalSpec(u, regRecs || []))
+
       if (!auth.isEnrolled) {
-        availableUnivs.value = enrichedUnivs.filter(u => u.grad_allowed)
+        availableUnivs.value = validUnivs.filter(u => u.grad_allowed)
       } else {
-        availableUnivs.value = enrichedUnivs
+        availableUnivs.value = validUnivs
       }
     }
 
@@ -1127,14 +1165,6 @@ async function loadData() {
       })
       applicantCountsMap.value = counts
     }
-
-    // 4. 수도권 학교장추천전형 (regional_recommendations) 목록 로드
-    const { data: regRecs } = await supabase
-      .from('regional_recommendations')
-      .select('*')
-      .order('seq_no', { ascending: true })
-
-    regionalRecs.value = regRecs || []
 
     // 5. 수시 원서 접수 기간 로드 (포기원 제출 기간 제어용)
     const { data: cfgStart } = await supabase.from('config').select('value').eq('key', 'susi_apply_start_date').maybeSingle()
