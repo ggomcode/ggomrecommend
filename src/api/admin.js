@@ -3034,14 +3034,19 @@ export const importRegionalRecommendations = async (file) => {
   let lastUnivName = ''
   let lastQuota = ''
 
-  // 16개 컬럼 유연 매핑 및 병합 셀/생략 행 자동 채우기(Forward Fill)
+  // 9개 지정 컬럼 유연 매핑 (A: 지역, B: 대학명, C: 전형구분, D: 전형명, E: 인원제한, F: 졸업년도조건, G: 수능최저학력기준, H: 본교지원가능여부, I: 사전마감여부)
   const mappedRows = []
   for (const row of rawRows) {
     let reg = getExcelRowValue(row, ['지역', '권역', '소재지'])
     let rawUniv = getExcelRowValue(row, ['대학명', '대학', '학교명', '대학교'])
     let univ = normalizeUnivName(rawUniv)
-    let quota = getExcelRowValue(row, ['모집정원', '모집 정원', '정원', '입학정원', '모집 인원'])
+    let category = getExcelRowValue(row, ['전형구분', '전형 구분', '구분', '모집정원', '모집 정원', '전형유형'])
     let track = getExcelRowValue(row, ['전형명', '전형 명', '전형', '세부전형', '전형 유형'])
+    let quotaLimit = normalizeQuotaLimitRaw(getExcelRowValue(row, ['인원제한', '인원 제한', '추천인원', '추천 인원', '추천 제한', '추천인원제한', '추천인원 제한', '제한인원']))
+    let gradCond = getExcelRowValue(row, ['졸업년도조건', '졸업년도 조건', '졸업생조건', '졸업생 조건', '졸업조건'])
+    let csatMin = getExcelRowValue(row, ['수능최저학력기준', '수능최저학력 기준', '수능최저', '수능 최저', '수능최저기준', '수능 최저학력기준', '수능 최저 기준'])
+    let schoolElig = getExcelRowValue(row, ['본교지원가능여부', '본교 지원가능여부', '본교지원가능 여부', '본교지원 여부', '본교지원가능', '지원가능여부', '대상', '지원자격'])
+    let preClose = getExcelRowValue(row, ['사전마감여부', '사전 마감여부', '사전마감 여부', '사전마감', '마감여부', '비고'])
 
     if (!track && !univ) continue
 
@@ -3049,11 +3054,11 @@ export const importRegionalRecommendations = async (file) => {
     if (univ) {
       lastUnivName = univ
       if (reg) lastRegion = reg
-      if (quota) lastQuota = quota
+      if (category) lastQuota = category
     } else if (track && lastUnivName) {
       univ = lastUnivName
       reg = reg || lastRegion
-      quota = quota || lastQuota
+      category = category || lastQuota
     }
 
     // 제목/설명행이나 유효하지 않은 데이터 건너뛰기
@@ -3062,20 +3067,20 @@ export const importRegionalRecommendations = async (file) => {
     mappedRows.push({
       region: reg,
       univ_name: univ,
-      recruitment_quota: quota,
+      recruitment_quota: category,
       track_name: track,
-      quota_limit: normalizeQuotaLimitRaw(getExcelRowValue(row, ['인원제한', '인원 제한', '추천인원', '추천 인원', '추천 제한', '추천인원제한', '추천인원 제한', '제한인원'])),
-      target_students: getExcelRowValue(row, ['대상', '지원대상', '자격대상', '추천대상', '지원 자격', '지원자격']),
-      grad_condition: getExcelRowValue(row, ['졸업생조건', '졸업생 조건', '졸업생', '졸업 자격', '졸업조건']),
-      csat_min: getExcelRowValue(row, ['수능최저학력기준', '수능최저학력 기준', '수능최저', '수능 최저', '수능최저기준', '수능 최저학력기준', '수능 최저 기준']),
-      evaluation_method: getExcelRowValue(row, ['전형방법', '전형 방법', '전형요소', '전형 요소', '선발방법', '선발 방법']),
-      reflected_subjects: getExcelRowValue(row, ['반영교과', '반영 교과', '교과', '반영 과목']),
-      reflected_indicators: getExcelRowValue(row, ['반영지표', '반영 지표', '지표', '성적지표']),
-      course_unit_reflection: getExcelRowValue(row, ['이수단위 반영', '이수단위반영', '이수단위', '단위수 반영', '이수 단위']),
-      grade_ratio: getExcelRowValue(row, ['학년별 반영비율', '학년별반영비율', '학년별 비율', '반영비율', '학년 비율']),
-      grad_semesters: getExcelRowValue(row, ['졸업생 반영학기', '졸업생반영학기', '졸업생 학기', '반영학기']),
-      career_elective_method: getExcelRowValue(row, ['진로선택과목 반영방법', '진로선택과목반영방법', '진로선택과목', '진로선택 반영방법', '진로선택', '진로과목']),
-      remarks: getExcelRowValue(row, ['비고', '비고사항', '기타', '참고사항']),
+      quota_limit: quotaLimit,
+      grad_condition: gradCond,
+      csat_min: csatMin,
+      target_students: schoolElig,
+      remarks: preClose,
+      evaluation_method: '',
+      reflected_subjects: '',
+      reflected_indicators: '',
+      course_unit_reflection: '',
+      grade_ratio: '',
+      grad_semesters: '',
+      career_elective_method: ''
     })
   }
 
@@ -3635,12 +3640,9 @@ export const exportRegionalRecommendations = async () => {
     return str
   }
 
-  // 업로드 시 사용하는 헤더명과 1:1 매핑 (importRegionalRecommendations와 동일 순서)
+  // 업로드 시 사용하는 9개 헤더명과 1:1 매핑
   const HEADERS = [
-    '지역', '대학명', '모집정원', '전형명', '인원제한',
-    '대상', '졸업생조건', '수능최저학력기준', '전형방법',
-    '반영교과', '반영지표', '이수단위 반영', '학년별 반영비율',
-    '졸업생 반영학기', '진로선택과목 반영방법', '비고'
+    '지역', '대학명', '전형구분', '전형명', '인원제한', '졸업년도조건', '수능최저학력기준', '본교지원가능여부', '사전마감여부'
   ]
 
   const dataRows = rows.map(r => [
@@ -3649,17 +3651,10 @@ export const exportRegionalRecommendations = async () => {
     r.recruitment_quota || '',
     r.track_name || '',
     restoreQuotaLimitRaw(r.quota_limit),   // '10 (3%)' → '3%' 복원
-    r.target_students || '',
     r.grad_condition || '',
     r.csat_min || '',
-    r.evaluation_method || '',
-    r.reflected_subjects || '',
-    r.reflected_indicators || '',
-    r.course_unit_reflection || '',
-    r.grade_ratio || '',
-    r.grad_semesters || '',
-    r.career_elective_method || '',
-    r.remarks || '',
+    r.target_students || '',
+    r.remarks || ''
   ])
 
   const worksheet = XLSX.utils.aoa_to_sheet([HEADERS, ...dataRows])

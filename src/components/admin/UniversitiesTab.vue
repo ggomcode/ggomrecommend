@@ -31,8 +31,6 @@
       </div>
     </div>
 
-      <!-- 검색바 및 삭제 버튼 (고정 영역) -->
-      <div class="shrink-0 flex items-center justify-between mb-3 flex-wrap gap-3">
         <div class="flex items-center gap-3">
           <input
             v-model="regionalSearch"
@@ -43,7 +41,7 @@
           />
           <span class="text-base" style="color: #64748b;">총 {{ filteredRegionalRecs.length }}건</span>
           <span v-if="filteredRegionalRecs.length > 0" class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md border border-slate-200">
-            ↔️ 표를 좌우로 스크롤하여 17개 항목을 모두 확인하세요
+            📋 9개 핵심 전형 정보 항목
           </span>
         </div>
 
@@ -96,26 +94,19 @@
 
         <div v-else class="flex-1 min-h-0 flex flex-col overflow-x-auto rounded-xl border border-slate-200 shadow-sm" style="background: white;">
           <div class="flex-1 min-h-0 overflow-y-auto">
-            <table class="w-full text-left" style="border-collapse: separate; border-spacing: 0; min-width: 2200px;">
+            <table class="w-full text-left" style="border-collapse: separate; border-spacing: 0; min-width: 1200px;">
               <thead class="sticky top-0 z-30" style="background: #f8fafc;">
                 <tr>
                   <th style="position: sticky; left: 0; top: 0; z-index: 30; background: #f8fafc; padding: 12px 14px; width: 60px; min-width: 60px; max-width: 60px; text-align: center; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">No</th>
                   <th style="position: sticky; left: 60px; top: 0; z-index: 30; background: #f8fafc; padding: 12px 14px; width: 80px; min-width: 80px; max-width: 80px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">지역</th>
-                  <th style="position: sticky; left: 140px; top: 0; z-index: 30; background: #f8fafc; padding: 12px 14px; width: 150px; min-width: 150px; max-width: 150px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">대학명</th>
-                  <th style="padding: 12px 14px; width: 90px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">모집정원</th>
-                  <th style="padding: 12px 14px; width: 150px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">전형명</th>
-                  <th style="padding: 12px 14px; width: 120px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">인원제한</th>
-                  <th style="padding: 12px 14px; width: 180px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">대상</th>
-                  <th style="padding: 12px 14px; width: 150px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">졸업생조건</th>
-                  <th style="padding: 12px 14px; width: 240px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">수능최저학력기준</th>
-                  <th style="padding: 12px 14px; width: 220px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">전형방법</th>
-                  <th style="padding: 12px 14px; width: 160px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">반영교과</th>
-                  <th style="padding: 12px 14px; width: 140px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">반영지표</th>
-                  <th style="padding: 12px 14px; width: 130px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">이수단위 반영</th>
-                  <th style="padding: 12px 14px; width: 140px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">학년별 반영비율</th>
-                  <th style="padding: 12px 14px; width: 140px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">졸업생 반영학기</th>
-                  <th style="padding: 12px 14px; width: 200px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">진로선택과목 반영방법</th>
-                  <th style="padding: 12px 14px; width: 180px; color: #475569; border-bottom: 2px solid #cbd5e1;">비고</th>
+                  <th style="position: sticky; left: 140px; top: 0; z-index: 30; background: #f8fafc; padding: 12px 14px; width: 160px; min-width: 160px; max-width: 160px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">대학명</th>
+                  <th style="padding: 12px 14px; width: 110px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">전형구분</th>
+                  <th style="padding: 12px 14px; width: 160px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">전형명</th>
+                  <th style="padding: 12px 14px; width: 110px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">인원제한</th>
+                  <th style="padding: 12px 14px; width: 150px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">졸업년도조건</th>
+                  <th style="padding: 12px 14px; width: 180px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">수능최저학력기준</th>
+                  <th style="padding: 12px 14px; width: 130px; color: #475569; border-bottom: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">본교지원가능여부</th>
+                  <th style="padding: 12px 14px; width: 110px; color: #475569; border-bottom: 2px solid #cbd5e1;">사전마감여부</th>
                 </tr>
               </thead>
               <tbody>
@@ -126,21 +117,14 @@
                 >
                   <td class="text-center font-medium bg-white group-hover:bg-slate-50!" style="position: sticky; left: 0; z-index: 20; padding: 12px 14px; width: 60px; min-width: 60px; max-width: 60px; color: #64748b; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.seq_no }}</td>
                   <td class="bg-white group-hover:bg-slate-50!" style="position: sticky; left: 60px; z-index: 20; padding: 12px 14px; width: 80px; min-width: 80px; max-width: 80px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.region }}</td>
-                  <td class="font-bold bg-white group-hover:bg-slate-50! cursor-pointer text-blue-600 hover:underline" style="position: sticky; left: 140px; z-index: 20; padding: 12px 14px; width: 150px; min-width: 150px; max-width: 150px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;" @click="openEditRegionalModal(r)">{{ r.univ_name }}</td>
-                  <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.recruitment_quota }}</td>
+                  <td class="font-bold bg-white group-hover:bg-slate-50! cursor-pointer text-blue-600 hover:underline" style="position: sticky; left: 140px; z-index: 20; padding: 12px 14px; width: 160px; min-width: 160px; max-width: 160px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;" @click="openEditRegionalModal(r)">{{ r.univ_name }}</td>
+                  <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.recruitment_quota || '-' }}</td>
                   <td class="font-medium" style="padding: 12px 14px; color: #2563eb; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.track_name }}</td>
                   <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ formatQuotaLimit(r.quota_limit) }}</td>
-                  <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.target_students }}</td>
-                  <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.grad_condition }}</td>
-                  <td style="padding: 12px 14px; color: #1e293b; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;" class="font-medium">{{ r.csat_min }}</td>
-                  <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.evaluation_method }}</td>
-                  <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.reflected_subjects }}</td>
-                  <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.reflected_indicators }}</td>
-                  <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.course_unit_reflection }}</td>
-                  <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.grade_ratio }}</td>
-                  <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.grad_semesters }}</td>
-                  <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.career_elective_method }}</td>
-                  <td style="padding: 12px 14px; color: #64748b; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0;">{{ r.remarks }}</td>
+                  <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.grad_condition || '-' }}</td>
+                  <td style="padding: 12px 14px; color: #1e293b; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;" class="font-medium">{{ r.csat_min || '-' }}</td>
+                  <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.target_students || '-' }}</td>
+                  <td style="padding: 12px 14px; color: #64748b; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0;">{{ r.remarks || '-' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -150,7 +134,7 @@
 
   <!-- ── 1단계 추천전형 상세 보기 / 수정 모달 ────────────────────────────── -->
   <div v-if="editRegionalModal.open" class="fixed inset-0 flex items-center justify-center z-50" style="background: rgba(0,0,0,0.4);" @click.self="editRegionalModal.open = false">
-    <div class="bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden" style="width: 720px; max-height: 88vh;">
+    <div class="bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden" style="width: 640px; max-height: 88vh;">
       
       <!-- 헤더 -->
       <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
@@ -169,7 +153,7 @@
         <!-- 핵심 요약 카운터 카드 -->
         <div class="grid grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
           <div>
-            <span class="text-slate-500 block mb-0.5 font-medium">모집정원</span>
+            <span class="text-slate-500 block mb-0.5 font-medium">전형구분</span>
             <span class="text-sm font-bold text-slate-800">{{ editRegionalModal.form.recruitment_quota || '미지정' }}</span>
           </div>
           <div>
@@ -177,61 +161,26 @@
             <span class="text-sm font-bold text-blue-600">{{ formatQuotaLimit(editRegionalModal.form.quota_limit) || '없음' }}</span>
           </div>
           <div>
-            <span class="text-slate-500 block mb-0.5 font-medium">졸업생 조건</span>
+            <span class="text-slate-500 block mb-0.5 font-medium">졸업년도 조건</span>
             <span class="text-sm font-bold text-emerald-600">{{ editRegionalModal.form.grad_condition || '제한없음' }}</span>
           </div>
         </div>
 
-        <div class="space-y-3 pt-1">
-          <div class="p-3 bg-blue-50/60 rounded-xl border border-blue-100">
-            <span class="block font-bold text-blue-900 mb-1">🎯 지원 자격 대상</span>
-            <p class="text-blue-950 font-medium whitespace-pre-line leading-relaxed m-0">{{ editRegionalModal.form.target_students || '-' }}</p>
+        <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <div>
+            <span class="text-slate-500 block mb-0.5 font-medium">본교지원가능여부</span>
+            <span class="text-sm font-bold text-slate-800">{{ editRegionalModal.form.target_students || '-' }}</span>
           </div>
+          <div>
+            <span class="text-slate-500 block mb-0.5 font-medium">사전마감여부</span>
+            <span class="text-sm font-bold text-slate-800">{{ editRegionalModal.form.remarks || '-' }}</span>
+          </div>
+        </div>
 
+        <div class="space-y-3 pt-1">
           <div class="p-3 bg-amber-50/70 rounded-xl border border-amber-200">
             <span class="block font-bold text-amber-900 mb-1">⚡ 수능최저학력기준</span>
             <p class="text-amber-950 font-semibold whitespace-pre-line leading-relaxed m-0">{{ editRegionalModal.form.csat_min || '없음' }}</p>
-          </div>
-
-          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
-            <span class="block font-bold text-slate-700 mb-1">📝 전형방법</span>
-            <p class="text-slate-800 whitespace-pre-line leading-relaxed m-0">{{ editRegionalModal.form.evaluation_method || '-' }}</p>
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
-              <span class="block font-bold text-slate-700 mb-1">📚 반영교과</span>
-              <p class="text-slate-800 m-0">{{ editRegionalModal.form.reflected_subjects || '-' }}</p>
-            </div>
-            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
-              <span class="block font-bold text-slate-700 mb-1">📊 반영지표</span>
-              <p class="text-slate-800 m-0">{{ editRegionalModal.form.reflected_indicators || '-' }}</p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-3 gap-3">
-            <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-              <span class="block text-slate-500 mb-0.5">이수단위 반영</span>
-              <p class="text-slate-800 font-medium m-0">{{ editRegionalModal.form.course_unit_reflection || '-' }}</p>
-            </div>
-            <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-              <span class="block text-slate-500 mb-0.5">학년별 비율</span>
-              <p class="text-slate-800 font-medium m-0">{{ editRegionalModal.form.grade_ratio || '-' }}</p>
-            </div>
-            <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-              <span class="block text-slate-500 mb-0.5">졸업생 반영학기</span>
-              <p class="text-slate-800 font-medium m-0">{{ editRegionalModal.form.grad_semesters || '-' }}</p>
-            </div>
-          </div>
-
-          <div v-if="editRegionalModal.form.career_elective_method" class="p-3 bg-slate-50 rounded-xl border border-slate-200">
-            <span class="block font-bold text-slate-700 mb-1">🎓 진로선택과목 반영방법</span>
-            <p class="text-slate-800 whitespace-pre-line leading-relaxed m-0">{{ editRegionalModal.form.career_elective_method }}</p>
-          </div>
-
-          <div v-if="editRegionalModal.form.remarks" class="p-3 bg-slate-50 rounded-xl border border-slate-200">
-            <span class="block font-bold text-slate-500 mb-1">💬 비고</span>
-            <p class="text-slate-600 whitespace-pre-line m-0">{{ editRegionalModal.form.remarks }}</p>
           </div>
         </div>
       </div>
@@ -248,7 +197,7 @@
             <input v-model="editRegionalModal.form.univ_name" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm font-bold text-slate-900" />
           </div>
           <div>
-            <label class="block font-bold text-slate-600 mb-1">모집정원</label>
+            <label class="block font-bold text-slate-600 mb-1">전형구분</label>
             <input v-model="editRegionalModal.form.recruitment_quota" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
           </div>
           <div>
@@ -260,42 +209,22 @@
             <input v-model="editRegionalModal.form.quota_limit" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
           </div>
           <div>
-            <label class="block font-bold text-slate-600 mb-1">대상 (지원자격)</label>
-            <input v-model="editRegionalModal.form.target_students" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
-          </div>
-          <div>
-            <label class="block font-bold text-slate-600 mb-1">졸업생 조건</label>
+            <label class="block font-bold text-slate-600 mb-1">졸업년도 조건</label>
             <input v-model="editRegionalModal.form.grad_condition" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
           </div>
           <div>
-            <label class="block font-bold text-slate-600 mb-1">반영지표</label>
-            <input v-model="editRegionalModal.form.reflected_indicators" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
+            <label class="block font-bold text-slate-600 mb-1">본교지원가능여부</label>
+            <input v-model="editRegionalModal.form.target_students" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">사전마감여부</label>
+            <input v-model="editRegionalModal.form.remarks" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
           </div>
         </div>
 
         <div>
           <label class="block font-bold text-slate-600 mb-1">수능최저학력기준</label>
           <textarea v-model="editRegionalModal.form.csat_min" rows="2" class="w-full p-2 border border-slate-300 rounded-lg text-sm font-medium"></textarea>
-        </div>
-
-        <div>
-          <label class="block font-bold text-slate-600 mb-1">전형방법</label>
-          <textarea v-model="editRegionalModal.form.evaluation_method" rows="2" class="w-full p-2 border border-slate-300 rounded-lg text-sm"></textarea>
-        </div>
-
-        <div>
-          <label class="block font-bold text-slate-600 mb-1">반영교과</label>
-          <input v-model="editRegionalModal.form.reflected_subjects" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
-        </div>
-
-        <div>
-          <label class="block font-bold text-slate-600 mb-1">진로선택과목 반영방법</label>
-          <textarea v-model="editRegionalModal.form.career_elective_method" rows="2" class="w-full p-2 border border-slate-300 rounded-lg text-sm"></textarea>
-        </div>
-
-        <div>
-          <label class="block font-bold text-slate-600 mb-1">비고</label>
-          <input v-model="editRegionalModal.form.remarks" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
         </div>
       </div>
 
@@ -320,7 +249,6 @@
 
     </div>
   </div>
-</div>
 </template>
 
 <script setup>
