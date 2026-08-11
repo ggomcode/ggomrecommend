@@ -331,6 +331,7 @@ BEGIN
         user_id,
         identity_data,
         provider,
+        provider_id,
         last_sign_in_at,
         created_at,
         updated_at
@@ -339,6 +340,7 @@ BEGIN
         v_user_id,
         jsonb_build_object('sub', v_user_id, 'email', v_email),
         'email',
+        v_email,
         now(),
         now(),
         now()
@@ -447,6 +449,7 @@ BEGIN
         user_id,
         identity_data,
         provider,
+        provider_id,
         last_sign_in_at,
         created_at,
         updated_at
@@ -455,6 +458,7 @@ BEGIN
         v_user_id,
         jsonb_build_object('sub', v_user_id, 'email', v_email),
         'email',
+        v_email,
         now(),
         now(),
         now()
@@ -593,6 +597,7 @@ BEGIN
         user_id,
         identity_data,
         provider,
+        provider_id,
         last_sign_in_at,
         created_at,
         updated_at
@@ -601,6 +606,7 @@ BEGIN
         v_user_id,
         jsonb_build_object('sub', v_user_id, 'email', v_email),
         'email',
+        v_email,
         now(),
         now(),
         now()
