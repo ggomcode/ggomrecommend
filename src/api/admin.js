@@ -3619,9 +3619,10 @@ export const getDisclosureCount = async () => {
 
 export const setDisclosureCount = async (count) => {
   if (!supabase) return
+  const targetVal = String(count).trim()
   const { error } = await supabase
     .from('config')
-    .upsert({ key: 'disclosure_student_count', value: String(count) })
+    .upsert({ key: 'disclosure_student_count', value: targetVal }, { onConflict: 'key' })
   if (error) throw error
 }
 

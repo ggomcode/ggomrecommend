@@ -851,17 +851,17 @@ async function saveClassCount() {
 
 async function saveDisclosureCount() {
   if (!disclosureCount.value || disclosureCount.value < 1) {
-    alert('재학생 수를 1명 이상으로 입력해 주세요.')
+    dialog.alert('재학생 수를 1명 이상으로 입력해 주세요.')
     return
   }
   disclosureCountLoading.value = true
   try {
     await setDisclosureCount(disclosureCount.value)
     syncResult.value = ''
-    alert(`정보공시 재학생 수가 ${disclosureCount.value}명으로 저장되었습니다.`)
+    dialog.alert(`정보공시 재학생 수가 ${disclosureCount.value}명으로 저장되었습니다.`)
   } catch (e) {
-    console.error(e)
-    alert('저장 도중 오류가 발생했습니다.')
+    console.error('saveDisclosureCount error:', e)
+    dialog.alert(`저장 도중 오류가 발생했습니다: ${e.message || e}`)
   } finally {
     disclosureCountLoading.value = false
   }
