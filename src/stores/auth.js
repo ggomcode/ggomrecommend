@@ -587,13 +587,12 @@ export const useAuthStore = defineStore('auth', () => {
     // 3. 농어촌 지원 및 본인 확인 체크 시 student_rural_eligibility 테이블에 즉시 등록/업데이트
     if (applyRural && ruralSelfCheck && targetId) {
       try {
+        const ruralTypeVal = (ruralType === '유형II' || ruralType === 'TYPE_2') ? 'TYPE_2' : 'TYPE_1'
         await supabase.from('student_rural_eligibility').upsert({
           student_id: targetId,
           is_eligible: true,
           is_manual_approved: true,
-          is_type1_eligible: (ruralType || '유형I') === '유형I',
-          is_type2_eligible: (ruralType || '유형I') === '유형II',
-          rural_type: ruralType || '유형I',
+          rural_type: ruralTypeVal,
           manual_reason: '본인 자격 요건 직접 확인 및 신청',
           updated_at: new Date().toISOString()
         }, { onConflict: 'student_id' })
