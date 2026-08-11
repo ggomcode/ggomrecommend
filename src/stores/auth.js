@@ -367,8 +367,12 @@ export const useAuthStore = defineStore('auth', () => {
       if (profiles && profiles.length > 0) {
         for (const p of profiles) {
           const decName = p.name === '관리자' ? '관리자' : await decryptText(p.name)
-          if (decName && decName.trim() === rawInput && p.grade && p.class_no) {
-            email = `teacher_${p.grade}_${p.class_no}@ggomrecommend.ggomcode`
+          if (decName && decName.trim() === rawInput) {
+            if (p.grade != null && p.class_no != null) {
+              email = `teacher_${p.grade}_${p.class_no}@ggomrecommend.ggomcode`
+            } else {
+              email = `teacher@ggomrecommend.ggomcode`
+            }
             break
           }
         }
