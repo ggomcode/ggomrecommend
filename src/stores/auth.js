@@ -356,11 +356,17 @@ export const useAuthStore = defineStore('auth', () => {
     const rawInput = (teacherId || '').trim()
     let email = `${rawInput}@ggomrecommend.ggomcode`
     
-    // 1. "3-1", "3학년 1반", "301" 형식 파싱 -> teacher_3_1
-    const classMatch = rawInput.match(/^(\d)[학년\s\-_]*(\d{1,2})[반\s]*$/)
+    // 1. "3학년 1반 담임", "3-1", "3학년 1반", "301" 형식 파싱 -> teacher_3_1
+    const classMatch = rawInput.match(/(\d)[학년\s\-_]*(\d{1,2})/)
+    const threeDigitMatch = !classMatch ? rawInput.match(/^(\d)(\d{2})$/) : null
+    
     if (classMatch) {
       const g = classMatch[1]
-      const c = classMatch[2]
+      const c = Number(classMatch[2])
+      email = `teacher_${g}_${c}@ggomrecommend.ggomcode`
+    } else if (threeDigitMatch) {
+      const g = threeDigitMatch[1]
+      const c = Number(threeDigitMatch[2])
       email = `teacher_${g}_${c}@ggomrecommend.ggomcode`
     } else if (rawInput.toLowerCase().startsWith('teacher_')) {
       email = `${rawInput.toLowerCase()}@ggomrecommend.ggomcode`

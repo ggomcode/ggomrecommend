@@ -273,6 +273,8 @@ BEGIN
     
     -- 이미 존재하는 경우 비밀번호와 메타데이터 업데이트
     IF EXISTS (SELECT 1 FROM auth.users WHERE email = v_email) THEN
+        SELECT id INTO v_user_id FROM auth.users WHERE email = v_email;
+
         UPDATE auth.users 
         SET encrypted_password = crypt(p_password, gen_salt('bf')),
             raw_user_meta_data = jsonb_build_object(
@@ -285,6 +287,14 @@ BEGIN
             updated_at = now()
         WHERE email = v_email;
         
+        INSERT INTO public.profiles (id, name, role, status, grade, class_no, phone_last4, is_enrolled)
+        VALUES (v_user_id, p_name, 'teacher', 'approved', p_grade, p_class_no, '0000', true)
+        ON CONFLICT (id) DO UPDATE SET 
+            name = EXCLUDED.name,
+            grade = EXCLUDED.grade,
+            class_no = EXCLUDED.class_no,
+            status = 'approved';
+
         RETURN TRUE;
     END IF;
     
@@ -345,6 +355,14 @@ BEGIN
         now(),
         now()
     );
+
+    INSERT INTO public.profiles (id, name, role, status, grade, class_no, phone_last4, is_enrolled)
+    VALUES (v_user_id, p_name, 'teacher', 'approved', p_grade, p_class_no, '0000', true)
+    ON CONFLICT (id) DO UPDATE SET 
+        name = EXCLUDED.name,
+        grade = EXCLUDED.grade,
+        class_no = EXCLUDED.class_no,
+        status = 'approved';
 
     RETURN TRUE;
 END;
