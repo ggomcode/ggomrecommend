@@ -349,54 +349,77 @@ export const useAuthStore = defineStore('auth', () => {
     await fetchProfile(data.user.id)
   }
 
-  // 교사 로그인
+  // 교사 로그인 (profiles 테이블의 암호화된 담임명 복호화 대조 방식)
   async function loginTeacher(teacherId, password) {
     if (!supabase) throw new Error('Supabase가 설정되지 않았습니다.')
     
     const rawInput = (teacherId || '').trim()
-    let email = `${rawInput}@ggomrecommend.ggomcode`
-    
-    // 1. "3학년 1반 담임", "3-1", "3학년 1반", "301" 형식 파싱 -> teacher_3_1
-    const classMatch = rawInput.match(/(\d)[학년\s\-_]*(\d{1,2})/)
-    const threeDigitMatch = !classMatch ? rawInput.match(/^(\d)(\d{2})$/) : null
-    
-    if (classMatch) {
-      const g = classMatch[1]
-      const c = Number(classMatch[2])
-      email = `teacher_${g}_${c}@ggomrecommend.ggomcode`
-    } else if (threeDigitMatch) {
-      const g = threeDigitMatch[1]
-      const c = Number(threeDigitMatch[2])
-      email = `teacher_${g}_${c}@ggomrecommend.ggomcode`
-    } else if (rawInput.toLowerCase().startsWith('teacher_')) {
-      email = `${rawInput.toLowerCase()}@ggomrecommend.ggomcode`
-    } else {
-      // 2. 담임명(교사 이름)으로 입력한 경우 profiles에서 검색하여 해당 학년/반 이메일 매칭
-      try {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('grade, class_no, name')
-          .eq('role', 'teacher')
-        if (profiles && profiles.length > 0) {
-          for (const p of profiles) {
-            const decName = p.name === '관리자' ? '관리자' : await decryptText(p.name)
-            if (decName && decName.trim() === rawInput && p.grade && p.class_no) {
-              email = `teacher_${p.grade}_${p.class_no}@ggomrecommend.ggomcode`
-              break
-            }
+    if (!rawInput) throw new Error('아이디(담임명)를 입력해 주세요.')
+
+    let email = null
+
+    // 1. profiles 테이블에서 담임명(AES-256 복호화)으로 학년/반 이메일 대조
+    try {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('grade, class_no, name')
+        .eq('role', 'teacher')
+      if (profiles && profiles.length > 0) {
+        for (const p of profiles) {
+          const decName = p.name === '관리자' ? '관리자' : await decryptText(p.name)
+          if (decName && decName.trim() === rawInput && p.grade && p.class_no) {
+            email = `teacher_${p.grade}_${p.class_no}@ggomrecommend.ggomcode`
+            break
           }
         }
-      } catch (e) {
-        console.warn('Teacher name resolution warning:', e)
+      }
+    } catch (e) {
+      console.warn('Teacher name resolution warning:', e)
+    }
+
+    // 2. 담임명으로 찾지 못했거나 학급 형태(3-1, 3학년 1반, 301, teacher_3_1)로 입력된 경우 fallback
+    if (!email) {
+      const classMatch = rawInput.match(/(\d)[학년\s\-_]*(\d{1,2})/)
+      const threeDigitMatch = !classMatch ? rawInput.match(/^(\d)(\d{2})$/) : null
+
+      if (classMatch) {
+        email = `teacher_${classMatch[1]}_${Number(classMatch[2])}@ggomrecommend.ggomcode`
+      } else if (threeDigitMatch) {
+        email = `teacher_${threeDigitMatch[1]}_${Number(threeDigitMatch[2])}@ggomrecommend.ggomcode`
+      } else if (rawInput.toLowerCase().startsWith('teacher_')) {
+        email = `${rawInput.toLowerCase()}@ggomrecommend.ggomcode`
+      } else {
+        email = `${rawInput}@ggomrecommend.ggomcode`
       }
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // 3. Supabase Auth 로그인 시도
+    let { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     })
 
-    if (error) throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.')
+    // 로그인 실패 시 추가 fallback 시도 (학급 번호 추출)
+    if (error) {
+      const fallbackClassMatch = rawInput.match(/(\d)[학년\s\-_]*(\d{1,2})/)
+      if (fallbackClassMatch) {
+        const fallbackEmail = `teacher_${fallbackClassMatch[1]}_${Number(fallbackClassMatch[2])}@ggomrecommend.ggomcode`
+        if (fallbackEmail !== email) {
+          const retryRes = await supabase.auth.signInWithPassword({
+            email: fallbackEmail,
+            password
+          })
+          if (!retryRes.error && retryRes.data?.session) {
+            data = retryRes.data
+            error = null
+          }
+        }
+      }
+    }
+
+    if (error || !data?.session) {
+      throw new Error('아이디(담임명) 또는 비밀번호가 올바르지 않습니다.')
+    }
 
     token.value = data.session.access_token
     await fetchProfile(data.user.id)
