@@ -567,7 +567,9 @@ function saveSettingsBlob(response, fallback) {
 async function dlSettingsTemplate() {
   try {
     const a = document.createElement('a')
-    a.href = encodeURI('/data/학교장추천전형_대학설정_양식.xlsx')
+    const baseUrl = import.meta.env.BASE_URL || '/'
+    const targetDataPath = baseUrl.endsWith('/') ? `${baseUrl}data/` : `${baseUrl}/data/`
+    a.href = encodeURI(`${targetDataPath}학교장추천전형_대학설정_양식.xlsx`)
     a.download = '학교장추천전형_대학설정_양식.xlsx'
     a.click()
   } catch (e) { error.value = await blobErrMsg(e) }

@@ -673,7 +673,7 @@
             <div class="flex items-center justify-between mb-1">
               <label class="block text-[10px] font-bold text-slate-500">포기원 PDF 서류 선택 (필수)</label>
               <a
-                href="/ggomrecommend/data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%99%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%A7%80%EC%9B%90%20%ED%8F%AC%EA%B8%B0%EC%9B%90_%EC%96%91%EC%8B%9D.hwp"
+                :href="`${baseUrl}data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%99%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%A7%80%EC%9B%90%20%ED%8F%AC%EA%B8%B0%EC%9B%90_%EC%96%91%EC%8B%9D.hwp`"
                 download
                 class="text-[10px] text-blue-600 hover:underline font-bold cursor-pointer"
               >
@@ -745,6 +745,8 @@ import { roundStatusLabel } from '../../data/roundStatus.js'
 import { computeRoundDisplayStatus } from '../../utils/roundSchedule.js'
 import { formatScore } from '../../utils/scorePreviewShared.js'
 import { convertPdfToImages, analyzeDocumentWithAI } from '../../utils/ocrParser.js'
+
+const baseUrl = import.meta.env.BASE_URL || '/'
 
 const HELP_EMPTY = {
   title: '도움말 — 첫 선발 차수 추가 전 확인하세요',

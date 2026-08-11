@@ -802,7 +802,9 @@ async function toggleEnableRuralSystem() {
       if (error) throw error
       alert(`농어촌 전형 시스템이 ${enableRuralSystem.value ? '활성화' : '비활성화'}되었습니다. 전체 화면을 새로고침하고 로그아웃합니다.`)
       await auth.logout()
-      window.location.href = '/login'
+      const baseUrl = import.meta.env.BASE_URL || '/'
+      const targetPath = baseUrl.endsWith('/') ? `${baseUrl}login` : `${baseUrl}/login`
+      window.location.href = targetPath
     } catch (e) {
       console.error(e)
       alert('농어촌 시스템 설정 저장 중 오류가 발생했습니다.')

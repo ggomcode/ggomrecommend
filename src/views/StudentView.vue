@@ -263,7 +263,7 @@
               </span>
 
               <a
-                href="/ggomrecommend/data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%99%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%84%A0%EC%A0%95%20%EC%8B%A0%EC%B2%AD%EC%84%9C_%EC%96%91%EC%8B%9D.hwp"
+                :href="`${baseUrl}data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%99%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%84%A0%EC%A0%95%20%EC%8B%A0%EC%B2%AD%EC%84%9C_%EC%96%91%EC%8B%9D.hwp`"
                 download
                 class="text-blue-600 dark:text-blue-400 hover:underline font-bold text-[10px] cursor-pointer whitespace-nowrap ml-2"
               >
@@ -842,6 +842,8 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { safeAsyncComponent } from '../utils/asyncComponent'
+
+const baseUrl = import.meta.env.BASE_URL || '/'
 
 const RuralMyPageTab = safeAsyncComponent(() => import('../components/rural/RuralMyPageTab.vue'))
 const showMyPageModal = ref(false)

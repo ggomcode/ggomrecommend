@@ -93,6 +93,43 @@ export const useAuthStore = defineStore('auth', () => {
       adminTeacherData = data
     }
 
+    // [프로필 자동 복구/생성] Supabase Auth 로그인은 성공했으나 profiles 테이블에 레코드가 없는 경우
+    if (!adminTeacherData && uId) {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (authUser) {
+          const meta = authUser.user_metadata || {}
+          const userEmail = authUser.email || ''
+          let inferredRole = meta.role
+          if (!inferredRole) {
+            if (userEmail.startsWith('admin') || userEmail.includes('admin@')) inferredRole = 'admin'
+            else if (userEmail.startsWith('teacher') || userEmail.includes('teacher')) inferredRole = 'teacher'
+          }
+
+          if (inferredRole === 'admin' || inferredRole === 'teacher') {
+            const newProfile = {
+              id: uId,
+              name: inferredRole === 'admin' ? '관리자' : (meta.name || '교사'),
+              phone_last4: meta.phone_last4 || '0000',
+              role: inferredRole,
+              status: 'approved',
+              is_enrolled: true,
+              grade: meta.grade != null ? Number(meta.grade) : null,
+              class_no: meta.class_no != null ? Number(meta.class_no) : null
+            }
+            try {
+              await supabase.from('profiles').upsert(newProfile, { onConflict: 'id' })
+            } catch (e) {
+              console.warn('Auto-repair profile upsert warning:', e)
+            }
+            adminTeacherData = newProfile
+          }
+        }
+      } catch (e) {
+        console.warn('Profile recovery error during fetchProfile:', e)
+      }
+    }
+
     if (adminTeacherData && (adminTeacherData.role === 'admin' || adminTeacherData.role === 'teacher')) {
       role.value = adminTeacherData.role
       status.value = adminTeacherData.status
