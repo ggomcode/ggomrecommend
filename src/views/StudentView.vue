@@ -351,13 +351,12 @@
                 <div v-for="info in selectedUnivRegionalInfo" :key="info.id || info.seq_no" class="space-y-1.5">
                   <div class="font-bold text-blue-700 dark:text-blue-300 flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-1">
                     <span>{{ info.univ_name }} - {{ info.track_name }}</span>
-                    <span class="text-[11px] text-slate-500 font-normal">정원: {{ info.recruitment_quota || '—' }} (제한: {{ formatQuotaLimit(info.quota_limit) || '—' }})</span>
+                    <span class="text-[11px] text-slate-500 font-normal">구분: {{ info.recruitment_quota || '—' }} (제한: {{ formatQuotaLimit(info.quota_limit) || '—' }})</span>
                   </div>
+                  <div v-if="info.grad_condition"><strong class="text-slate-700 dark:text-slate-300">졸업년도조건:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.grad_condition }}</span></div>
                   <div v-if="info.csat_min"><strong class="text-slate-700 dark:text-slate-300">수능최저:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.csat_min }}</span></div>
-                  <div v-if="info.evaluation_method"><strong class="text-slate-700 dark:text-slate-300">전형방법:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.evaluation_method }}</span></div>
-                  <div v-if="info.grad_condition"><strong class="text-slate-700 dark:text-slate-300">졸업생조건:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.grad_condition }}</span></div>
-                  <div v-if="info.career_elective_method"><strong class="text-slate-700 dark:text-slate-300">진로선택과목:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.career_elective_method }}</span></div>
-                  <div v-if="info.remarks"><strong class="text-slate-700 dark:text-slate-300">비고:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.remarks }}</span></div>
+                  <div v-if="info.target_students"><strong class="text-slate-700 dark:text-slate-300">본교지원가능여부:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.target_students }}</span></div>
+                  <div v-if="info.remarks"><strong class="text-slate-700 dark:text-slate-300">사전마감여부:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.remarks }}</span></div>
                 </div>
               </div>
             </div>
@@ -513,28 +512,24 @@
         <!-- 본문 테이블 -->
         <div class="overflow-x-auto flex-1 p-4">
           <div class="overflow-y-auto h-full max-h-[calc(85vh-130px)]">
-            <table class="w-full text-left text-xs" style="border-collapse: separate; border-spacing: 0; min-width: 1800px;">
+            <table class="w-full text-left text-xs" style="border-collapse: separate; border-spacing: 0; min-width: 1000px;">
             <thead class="sticky top-0 bg-slate-100 z-30 border-b border-slate-200 text-slate-600">
               <tr>
                 <th class="p-2.5 w-12 text-center sticky left-0 top-0 z-30 bg-slate-100 border-b border-r border-slate-200" style="min-width: 48px; max-width: 48px;">No</th>
                 <th class="p-2.5 w-20 sticky left-12 top-0 z-30 bg-slate-100 border-b border-r border-slate-200" style="min-width: 80px; max-width: 80px;">지역</th>
                 <th class="p-2.5 w-32 sticky left-32 top-0 z-30 bg-slate-100 border-b border-r border-slate-200" style="min-width: 130px; max-width: 130px;">대학명</th>
-                <th class="p-2.5 w-20 border-b border-r border-slate-200">모집정원</th>
-                <th class="p-2.5 w-32 border-b border-r border-slate-200">전형명</th>
+                <th class="p-2.5 w-28 border-b border-r border-slate-200">전형구분</th>
+                <th class="p-2.5 w-36 border-b border-r border-slate-200">전형명</th>
                 <th class="p-2.5 w-28 border-b border-r border-slate-200">인원제한</th>
-                <th class="p-2.5 w-40 border-b border-r border-slate-200">대상</th>
-                <th class="p-2.5 w-32 border-b border-r border-slate-200">졸업생조건</th>
-                <th class="p-2.5 w-52 border-b border-r border-slate-200">수능최저학력기준</th>
-                <th class="p-2.5 w-48 border-b border-r border-slate-200">전형방법</th>
-                <th class="p-2.5 w-36 border-b border-r border-slate-200">반영교과</th>
-                <th class="p-2.5 w-32 border-b border-r border-slate-200">반영지표</th>
-                <th class="p-2.5 w-32 border-b border-r border-slate-200">진로선택과목 반영</th>
-                <th class="p-2.5 w-40 border-b border-slate-200">비고</th>
+                <th class="p-2.5 w-32 border-b border-r border-slate-200">졸업년도조건</th>
+                <th class="p-2.5 w-44 border-b border-r border-slate-200">수능최저학력기준</th>
+                <th class="p-2.5 w-32 border-b border-r border-slate-200">본교지원가능여부</th>
+                <th class="p-2.5 w-28 border-b border-slate-200">사전마감여부</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
               <tr v-if="filteredRegionalRecs.length === 0">
-                <td colspan="14" class="text-center py-12 text-slate-400">
+                <td colspan="10" class="text-center py-12 text-slate-400">
                   조건에 일치하는 추천전형 정보가 없습니다.
                 </td>
               </tr>
@@ -542,17 +537,13 @@
                 <td class="p-2.5 text-center font-medium text-slate-400 sticky left-0 z-20 bg-white group-hover:bg-slate-50! border-b border-b-slate-100 border-r border-r-slate-200" style="min-width: 48px; max-width: 48px;">{{ r.seq_no }}</td>
                 <td class="p-2.5 text-slate-500 sticky left-12 z-20 bg-white group-hover:bg-slate-50! border-b border-b-slate-100 border-r border-r-slate-200" style="min-width: 80px; max-width: 80px;">{{ r.region }}</td>
                 <td class="p-2.5 font-bold text-slate-800 sticky left-32 z-20 bg-white group-hover:bg-slate-50! border-b border-b-slate-100 border-r border-r-slate-200" style="min-width: 130px; max-width: 130px;">{{ r.univ_name }}</td>
-                <td class="p-2.5 text-slate-600 dark:text-slate-400">{{ r.recruitment_quota }}</td>
+                <td class="p-2.5 text-slate-600 dark:text-slate-400">{{ r.recruitment_quota || '-' }}</td>
                 <td class="p-2.5 font-semibold text-blue-600 dark:text-blue-400">{{ r.track_name }}</td>
                 <td class="p-2.5 text-slate-600 dark:text-slate-400">{{ formatQuotaLimit(r.quota_limit) }}</td>
-                <td class="p-2.5 text-slate-600 dark:text-slate-400 whitespace-pre-line">{{ r.target_students }}</td>
-                <td class="p-2.5 text-slate-600 dark:text-slate-400 whitespace-pre-line">{{ r.grad_condition }}</td>
-                <td class="p-2.5 font-medium text-slate-800 dark:text-slate-200 whitespace-pre-line">{{ r.csat_min }}</td>
-                <td class="p-2.5 text-slate-600 dark:text-slate-400 whitespace-pre-line">{{ r.evaluation_method }}</td>
-                <td class="p-2.5 text-slate-600 dark:text-slate-400 whitespace-pre-line">{{ r.reflected_subjects }}</td>
-                <td class="p-2.5 text-slate-600 dark:text-slate-400">{{ r.reflected_indicators }}</td>
-                <td class="p-2.5 text-slate-600 dark:text-slate-400 whitespace-pre-line">{{ r.career_elective_method }}</td>
-                <td class="p-2.5 text-slate-500 whitespace-pre-line">{{ r.remarks }}</td>
+                <td class="p-2.5 text-slate-600 dark:text-slate-400 whitespace-pre-line">{{ r.grad_condition || '-' }}</td>
+                <td class="p-2.5 font-medium text-slate-800 dark:text-slate-200 whitespace-pre-line">{{ r.csat_min || '-' }}</td>
+                <td class="p-2.5 text-slate-600 dark:text-slate-400 whitespace-pre-line">{{ r.target_students || '-' }}</td>
+                <td class="p-2.5 text-slate-500 whitespace-pre-line">{{ r.remarks || '-' }}</td>
               </tr>
             </tbody>
             </table>
