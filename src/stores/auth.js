@@ -349,91 +349,34 @@ export const useAuthStore = defineStore('auth', () => {
     await fetchProfile(data.user.id)
   }
 
-  // 교사 로그인 (profiles 테이블의 암호화된 담임명 복호화 대조 방식)
+  // 교사 로그인 (단일/개별 teacher 아이디 로그인)
   async function loginTeacher(teacherId, password) {
     if (!supabase) throw new Error('Supabase가 설정되지 않았습니다.')
     
     const rawInput = (teacherId || '').trim()
-    if (!rawInput) throw new Error('아이디(담임명)를 입력해 주세요.')
+    if (!rawInput) throw new Error('아이디를 입력해 주세요.')
 
-    const normInput = rawInput.replace(/\s+/g, '')
-    let email = null
+    let email = rawInput.includes('@') ? rawInput : `${rawInput}@ggomrecommend.ggomcode`
 
-    // 1. profiles 테이블에서 담임명(AES-256 복호화)으로 학년/반 이메일 대조
-    try {
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('grade, class_no, name')
-        .eq('role', 'teacher')
-      if (profiles && profiles.length > 0) {
-        for (const p of profiles) {
-          const decName = p.name === '관리자' ? '관리자' : await decryptText(p.name)
-          const normDec = (decName || '').trim().replace(/\s+/g, '')
-          if (normDec && normDec === normInput) {
-            if (p.grade != null && p.class_no != null) {
-              email = `teacher_${p.grade}_${p.class_no}@ggomrecommend.ggomcode`
-            } else {
-              email = `teacher@ggomrecommend.ggomcode`
-            }
-            break
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Teacher name resolution warning:', e)
-    }
-
-    // 2. 담임명으로 찾지 못했거나 학급 형태(3-1, 3학년 1반, 301, teacher_3_1)로 입력된 경우 fallback
-    if (!email) {
-      const classMatch = rawInput.match(/(\d)[학년\s\-_]*(\d{1,2})/)
-      const threeDigitMatch = !classMatch ? rawInput.match(/^(\d)(\d{2})$/) : null
-
-      if (classMatch) {
-        email = `teacher_${classMatch[1]}_${Number(classMatch[2])}@ggomrecommend.ggomcode`
-      } else if (threeDigitMatch) {
-        email = `teacher_${threeDigitMatch[1]}_${Number(threeDigitMatch[2])}@ggomrecommend.ggomcode`
-      } else if (rawInput.toLowerCase().startsWith('teacher_')) {
-        email = `${rawInput.toLowerCase()}@ggomrecommend.ggomcode`
-      } else {
-        email = `${rawInput}@ggomrecommend.ggomcode`
-      }
-    }
-
-    // 3. Supabase Auth 로그인 시도
     let { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     })
 
-    // 4. 로그인 실패 시 스마트 fallback 시도 (학급 번호 및 담임교사 기본 계정 시도)
-    if (error) {
-      const candidates = []
-      const fallbackClassMatch = rawInput.match(/(\d)[학년\s\-_]*(\d{1,2})/)
-      if (fallbackClassMatch) {
-        candidates.push(`teacher_${fallbackClassMatch[1]}_${Number(fallbackClassMatch[2])}@ggomrecommend.ggomcode`)
-      }
-      if (normInput === '담임교사' || normInput === '교사' || normInput.includes('담임')) {
-        candidates.push('teacher_3_1@ggomrecommend.ggomcode')
-        candidates.push('teacher_0_0@ggomrecommend.ggomcode')
-        candidates.push('teacher@ggomrecommend.ggomcode')
-      }
-
-      for (const candEmail of candidates) {
-        if (candEmail === email) continue
-        const retryRes = await supabase.auth.signInWithPassword({
-          email: candEmail,
-          password
-        })
-        if (!retryRes.error && retryRes.data?.session) {
-          data = retryRes.data
-          error = null
-          break
-        }
+    // 입력된 아이디 실패 시 통합 teacher@ggomrecommend.ggomcode fallback
+    if (error && email !== 'teacher@ggomrecommend.ggomcode') {
+      const fallbackRes = await supabase.auth.signInWithPassword({
+        email: 'teacher@ggomrecommend.ggomcode',
+        password
+      })
+      if (!fallbackRes.error && fallbackRes.data?.session) {
+        data = fallbackRes.data
+        error = null
       }
     }
 
     if (error || !data?.session) {
-      throw new Error('아이디(담임명) 또는 비밀번호가 올바르지 않습니다.')
+      throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.')
     }
 
     token.value = data.session.access_token

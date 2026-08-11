@@ -221,7 +221,7 @@
               type="text"
               required
               autocomplete="off"
-              placeholder="아이디, 학급(3-1) 또는 담임명 입력"
+              placeholder="아이디 입력 (예: teacher)"
               class="w-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white text-slate-800"
               style="border: 1px solid #cbd5e1; border-radius: 10px; padding: 11px 14px; box-sizing: border-box;"
             />
