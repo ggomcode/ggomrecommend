@@ -2849,9 +2849,9 @@ export function sortRegionalRows(rows) {
     if (clean.includes('서울')) return 1
     if (clean.includes('경기')) return 2
     if (clean.includes('인천')) return 3
-    if (clean.includes('사관')) return 4
-    if (clean.includes('경찰')) return 5
-    return 999
+    if (clean.includes('사관')) return 5
+    if (clean.includes('경찰')) return 6
+    return 4 // 기타지역
   }
 
   const sorted = [...rows].sort((a, b) => {
@@ -2865,7 +2865,7 @@ export function sortRegionalRows(rows) {
       return prioA - prioB
     }
 
-    if (prioA === 999 && prioB === 999 && regA !== regB) {
+    if (prioA === 4 && prioB === 4 && regA !== regB) {
       return regA.localeCompare(regB, 'ko')
     }
 
