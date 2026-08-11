@@ -234,7 +234,7 @@ BEGIN
 
     RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- auth.users 트리거 바인딩
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
@@ -251,7 +251,7 @@ BEGIN
     SELECT value INTO stored_code FROM public.config WHERE key = 'registration_code';
     RETURN COALESCE(stored_code = input_code, FALSE);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 교사 계정 생성 RPC 함수 (pgcrypto 사용)
 CREATE OR REPLACE FUNCTION public.create_teacher_account(
@@ -683,26 +683,26 @@ DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Anyone can select profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Anyone can modify profiles" ON public.profiles;
-CREATE POLICY "Allow select profiles" ON public.profiles FOR SELECT USING (true);
-CREATE POLICY "Allow auth modify profiles" ON public.profiles FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "Anyone can select profiles" ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Anyone can modify profiles" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.applications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Anyone can select applications" ON public.applications;
 DROP POLICY IF EXISTS "Anyone can modify applications" ON public.applications;
-CREATE POLICY "Allow select applications" ON public.applications FOR SELECT USING (true);
-CREATE POLICY "Allow auth modify applications" ON public.applications FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "Anyone can select applications" ON public.applications FOR SELECT USING (true);
+CREATE POLICY "Anyone can modify applications" ON public.applications FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.universities ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Anyone can select universities" ON public.universities;
 DROP POLICY IF EXISTS "Anyone can modify universities" ON public.universities;
-CREATE POLICY "Allow select universities" ON public.universities FOR SELECT USING (true);
-CREATE POLICY "Allow auth modify universities" ON public.universities FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "Anyone can select universities" ON public.universities FOR SELECT USING (true);
+CREATE POLICY "Anyone can modify universities" ON public.universities FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.regional_recommendations ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Anyone can select regional_recommendations" ON public.regional_recommendations;
 DROP POLICY IF EXISTS "Anyone can modify regional_recommendations" ON public.regional_recommendations;
-CREATE POLICY "Allow select regional_recommendations" ON public.regional_recommendations FOR SELECT USING (true);
-CREATE POLICY "Allow auth modify regional_recommendations" ON public.regional_recommendations FOR ALL TO authenticated USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "Anyone can select regional_recommendations" ON public.regional_recommendations FOR SELECT USING (true);
+CREATE POLICY "Anyone can modify regional_recommendations" ON public.regional_recommendations FOR ALL USING (true) WITH CHECK (true);
 
 -- 15. ENROLLED_STUDENTS (단일 통합 학생 원장 마스터 테이블 - 재학생/졸업생/회원가입/로그인 통합)
 CREATE TABLE IF NOT EXISTS public.enrolled_students (
