@@ -379,10 +379,10 @@ watch([selectedGrade, selectedClassNo], ([g, c]) => {
 }, { immediate: true })
 
 // ── 탭 컴포넌트 ──────────────────────────────────────────────
-const ClassTab       = safeAsyncComponent(() => import('../components/teacher/ClassTab.vue'))
-const ApplicationTab = safeAsyncComponent(() => import('../components/teacher/ApplicationTab.vue'))
-const ResultsTab     = safeAsyncComponent(() => import('../components/teacher/ResultsTab.vue'))
-const ReportsTab     = safeAsyncComponent(() => import('../components/admin/ReportsTab.vue'))
+import ClassTab       from '../components/teacher/ClassTab.vue'
+import ApplicationTab from '../components/teacher/ApplicationTab.vue'
+import ResultsTab     from '../components/teacher/ResultsTab.vue'
+import ReportsTab     from '../components/admin/ReportsTab.vue'
 
 // ── 메뉴 정의 ────────────────────────────────────────────────
 const pendingAbandonCount = ref(0)

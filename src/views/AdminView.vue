@@ -281,17 +281,17 @@ const auth = useAuthStore()
 const isRuralSystemEnabled = ref(localStorage.getItem('pcm_enable_rural_system') === 'true')
 
 // ── 탭 컴포넌트 ──────────────────────────────────────────────
-const OverviewTab = safeAsyncComponent(() => import('../components/admin/OverviewTab.vue'))
-const ApprovalTab = safeAsyncComponent(() => import('../components/teacher/ApprovalTab.vue'))
-const RoundsTab   = safeAsyncComponent(() => import('../components/admin/RoundsTab.vue'))
-const ClassesTab  = safeAsyncComponent(() => import('../components/admin/ClassesTab.vue'))
-const StudentsTab = safeAsyncComponent(() => import('../components/admin/StudentsTab.vue'))
-const GradesTab   = safeAsyncComponent(() => import('../components/admin/GradesTab.vue'))
-const AreasTab    = safeAsyncComponent(() => import('../components/admin/AreasTab.vue'))
-const UnivTab     = safeAsyncComponent(() => import('../components/admin/UniversitiesTab.vue'))
-const ReportsTab  = safeAsyncComponent(() => import('../components/admin/ReportsTab.vue'))
-const SettingsTab = safeAsyncComponent(() => import('../components/admin/SettingsTab.vue'))
-const AuditTab    = safeAsyncComponent(() => import('../components/admin/AuditTab.vue'))
+import OverviewTab from '../components/admin/OverviewTab.vue'
+import ApprovalTab from '../components/teacher/ApprovalTab.vue'
+import RoundsTab   from '../components/admin/RoundsTab.vue'
+import ClassesTab  from '../components/admin/ClassesTab.vue'
+import StudentsTab from '../components/admin/StudentsTab.vue'
+import GradesTab   from '../components/admin/GradesTab.vue'
+import AreasTab    from '../components/admin/AreasTab.vue'
+import UnivTab     from '../components/admin/UniversitiesTab.vue'
+import ReportsTab  from '../components/admin/ReportsTab.vue'
+import SettingsTab from '../components/admin/SettingsTab.vue'
+import AuditTab    from '../components/admin/AuditTab.vue'
 
 // ── 메뉴 정의 ────────────────────────────────────────────────
 const pendingAbandonCount = ref(0)

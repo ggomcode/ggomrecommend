@@ -253,12 +253,12 @@ const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 
-const RuralTab = safeAsyncComponent(() => import('../components/teacher/RuralTab.vue'))
-const RuralTracksTab = safeAsyncComponent(() => import('../components/rural/RuralTracksTab.vue'))
-const RuralApplyTab = safeAsyncComponent(() => import('../components/rural/RuralApplyTab.vue'))
-const RuralApplicationsTab = safeAsyncComponent(() => import('../components/rural/RuralApplicationsTab.vue'))
-const RuralSettingsTab = safeAsyncComponent(() => import('../components/rural/RuralSettingsTab.vue'))
-const RuralMyPageTab = safeAsyncComponent(() => import('../components/rural/RuralMyPageTab.vue'))
+import RuralTab from '../components/teacher/RuralTab.vue'
+import RuralTracksTab from '../components/rural/RuralTracksTab.vue'
+import RuralApplyTab from '../components/rural/RuralApplyTab.vue'
+import RuralApplicationsTab from '../components/rural/RuralApplicationsTab.vue'
+import RuralSettingsTab from '../components/rural/RuralSettingsTab.vue'
+import RuralMyPageTab from '../components/rural/RuralMyPageTab.vue'
 
 const collapsed = ref(false)
 const showMyPageModal = ref(false)

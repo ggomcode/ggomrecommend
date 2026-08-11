@@ -845,7 +845,7 @@ import { safeAsyncComponent } from '../utils/asyncComponent'
 
 const baseUrl = import.meta.env.BASE_URL || '/'
 
-const RuralMyPageTab = safeAsyncComponent(() => import('../components/rural/RuralMyPageTab.vue'))
+import RuralMyPageTab from '../components/rural/RuralMyPageTab.vue'
 const showMyPageModal = ref(false)
 import { supabase } from '../utils/supabaseClient'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
