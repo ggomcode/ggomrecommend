@@ -164,6 +164,7 @@ import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../../utils/supabaseClient'
 import { teacherGetStudents } from '../../api/teacher'
 import { deleteStudent, upsertClass } from '../../api/admin'
+import { decryptText } from '../../utils/cryptoUtils'
 
 const students = ref([])
 const loading = ref(true)
@@ -217,8 +218,31 @@ async function loadStudents() {
   loading.value = true
   try {
     if (!supabase) return
-    const result = await teacherGetStudents()
-    students.value = Array.isArray(result) ? result : (result.rows || [])
+    const { data, error } = await supabase
+      .from('enrolled_students')
+      .select('*')
+      .order('is_enrolled', { ascending: false })
+      .order('grade', { ascending: true })
+      .order('class_no', { ascending: true })
+      .order('student_no', { ascending: true })
+      .order('student_code', { ascending: true })
+
+    if (error) throw error
+
+    students.value = await Promise.all((data || []).map(async s => ({
+      id: s.id,
+      student_code: s.student_code || `${s.grade}${String(s.class_no).padStart(2, '0')}${String(s.student_no || s.seq_no).padStart(2, '0')}`,
+      name: await decryptText(s.name),
+      parent_name: await decryptText(s.parent_name),
+      is_enrolled: s.is_enrolled !== false,
+      grade: s.grade,
+      class_no: s.class_no,
+      seq_no: s.student_no || s.seq_no,
+      phone_last4: s.student_phone_hash ? '****' : '0000',
+      status: s.status || 'approved',
+      rejection_reason: s.rejection_reason || null,
+      grad_year: s.grad_year
+    })))
   } catch (e) {
     console.error('Error loading students for approval:', e)
   } finally {

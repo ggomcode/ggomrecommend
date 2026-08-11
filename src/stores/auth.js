@@ -545,14 +545,13 @@ export const useAuthStore = defineStore('auth', () => {
     let targetId = matchedStudent?.id
 
     if (matchedStudent) {
-      // 기존 enrolled_students 원장에 학생이 있는 경우: 승인절차 없이 학생이 새로 입력한 전화번호 업데이트 및 자동 승인(approved)
-      isAutoApproved = true
+      isAutoApproved = matchedStudent.status === 'approved'
       const updatePayload = {
         name: encName,
         name_hash: nameHash,
         student_phone_hash: pHash,
         parent_phone_hash: pPhoneHash,
-        status: 'approved', // 승인절차 없이 즉시 승인!
+        status: matchedStudent.status === 'approved' ? 'approved' : 'pending',
         rejection_reason: null,
         is_enrolled: Boolean(enrolled),
         grade: enrolled ? parsedGrade : (matchedStudent.grade || null),
