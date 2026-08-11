@@ -41,7 +41,7 @@
           />
           <span class="text-base" style="color: #64748b;">총 {{ filteredRegionalRecs.length }}건</span>
           <span v-if="filteredRegionalRecs.length > 0" class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md border border-slate-200">
-            📋 9개 핵심 전형 정보 항목
+            ↔️ 표를 좌우로 스크롤하여 9개 전형 정보 항목(A~I)을 확인하세요
           </span>
         </div>
 
