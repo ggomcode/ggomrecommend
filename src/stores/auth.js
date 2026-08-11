@@ -558,19 +558,9 @@ export const useAuthStore = defineStore('auth', () => {
         class_no: enrolled ? parsedClass : (matchedStudent.class_no || null),
         student_no: enrolled ? parsedSeq : (matchedStudent.student_no || null),
         seq_no: enrolled ? parsedSeq : (matchedStudent.seq_no || null),
-        grad_year: !enrolled && gYear ? Number(gYear) : (matchedStudent.grad_year || null),
-        apply_school_recommend: applySchoolRecommend !== false,
-        apply_rural: Boolean(applyRural),
-        rural_type: applyRural ? (ruralType || '유형I') : null,
+        grad_year: !enrolled && gYear ? Number(gYear) : (matchedStudent.grad_year || null)
       }
-      let { error: updErr } = await supabase.from('enrolled_students').update(updatePayload).eq('id', matchedStudent.id)
-      if (updErr && (updErr.message?.includes('column') || updErr.message?.includes('apply_rural') || updErr.code === 'PGRST204')) {
-        delete updatePayload.apply_school_recommend
-        delete updatePayload.apply_rural
-        delete updatePayload.rural_type
-        const retryRes = await supabase.from('enrolled_students').update(updatePayload).eq('id', matchedStudent.id)
-        updErr = retryRes.error
-      }
+      const { error: updErr } = await supabase.from('enrolled_students').update(updatePayload).eq('id', matchedStudent.id)
       if (updErr) throw updErr
     } else {
       // enrolled_students 원장에 없는 학생인 경우: 승인 절차(pending) 필요
@@ -587,27 +577,14 @@ export const useAuthStore = defineStore('auth', () => {
         student_no: enrolled ? parsedSeq : null,
         seq_no: enrolled ? parsedSeq : null,
         grad_year: !enrolled && gYear ? Number(gYear) : null,
-        status: 'pending', // 승인 절차 필요
-        apply_school_recommend: applySchoolRecommend !== false,
-        apply_rural: Boolean(applyRural),
-        rural_type: applyRural ? (ruralType || '유형I') : null,
-        rural_self_check: Boolean(ruralSelfCheck)
+        status: 'pending' // 승인 절차 필요
       }
-      let { data: inserted, error: insErr } = await supabase.from('enrolled_students').insert(insertPayload).select('id').maybeSingle()
-      if (insErr && (insErr.message?.includes('column') || insErr.message?.includes('apply_rural') || insErr.code === 'PGRST204')) {
-        delete insertPayload.apply_school_recommend
-        delete insertPayload.apply_rural
-        delete insertPayload.rural_type
-        delete insertPayload.rural_self_check
-        const retryIns = await supabase.from('enrolled_students').insert(insertPayload).select('id').maybeSingle()
-        inserted = retryIns.data
-        insErr = retryIns.error
-      }
+      const { data: inserted, error: insErr } = await supabase.from('enrolled_students').insert(insertPayload).select('id').maybeSingle()
       if (insErr) throw insErr
       if (inserted) targetId = inserted.id
     }
 
-    // 3. 농어촌 지원 및 본인 확인 체크 시 student_rural_eligibility 자동 승인 데이터 생성
+    // 3. 농어촌 지원 및 본인 확인 체크 시 student_rural_eligibility 테이블에 즉시 등록/업데이트
     if (applyRural && ruralSelfCheck && targetId) {
       try {
         await supabase.from('student_rural_eligibility').upsert({
@@ -616,6 +593,7 @@ export const useAuthStore = defineStore('auth', () => {
           is_manual_approved: true,
           is_type1_eligible: (ruralType || '유형I') === '유형I',
           is_type2_eligible: (ruralType || '유형I') === '유형II',
+          rural_type: ruralType || '유형I',
           manual_reason: '본인 자격 요건 직접 확인 및 신청',
           updated_at: new Date().toISOString()
         }, { onConflict: 'student_id' })

@@ -1103,13 +1103,13 @@ WITH CHECK (true);
 GRANT ALL ON TABLE public.config TO anon, authenticated, service_role;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 
--- 21. ENROLLED_STUDENTS RLS 통합 정책 및 컬럼 확장 (학생 회원가입 anon 권한 보장)
+-- 21. ENROLLED_STUDENTS & STUDENT_RURAL_ELIGIBILITY RLS 통합 정책 (학생 회원가입 anon 권한 보장)
 ALTER TABLE public.enrolled_students ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Enable all access to enrolled_students" ON public.enrolled_students;
 CREATE POLICY "Enable all access to enrolled_students" ON public.enrolled_students FOR ALL TO public USING (true) WITH CHECK (true);
 GRANT ALL ON TABLE public.enrolled_students TO anon, authenticated, service_role;
 
-ALTER TABLE public.enrolled_students ADD COLUMN IF NOT EXISTS apply_school_recommend BOOLEAN DEFAULT TRUE;
-ALTER TABLE public.enrolled_students ADD COLUMN IF NOT EXISTS apply_rural BOOLEAN DEFAULT FALSE;
-ALTER TABLE public.enrolled_students ADD COLUMN IF NOT EXISTS rural_type TEXT DEFAULT '유형I';
-ALTER TABLE public.enrolled_students ADD COLUMN IF NOT EXISTS rural_self_check BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.student_rural_eligibility ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable all access to student_rural_eligibility" ON public.student_rural_eligibility;
+CREATE POLICY "Enable all access to student_rural_eligibility" ON public.student_rural_eligibility FOR ALL TO public USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.student_rural_eligibility TO anon, authenticated, service_role;
