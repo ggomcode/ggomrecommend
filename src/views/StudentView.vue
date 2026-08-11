@@ -1527,9 +1527,9 @@ async function executeApply() {
           round: currentRound.value,
           department_name: departmentName.value
         }
-      }).catch(e => console.warn('감사 로그 작성 스킵:', e))
+      })
     } catch (e) {
-      console.warn('감사 로그 작성 실패:', e)
+      console.warn('감사 로그 작성 스킵/실패:', e)
     }
 
     formSuccess.value = '추천 희망원이 성공적으로 제출되었습니다!'
@@ -1585,9 +1585,9 @@ async function handleCancelApplication(id) {
           round: ap.round,
           department_name: ap.department_name
         }
-      }).catch(e => console.warn('감사 로그 작성 스킵:', e))
+      })
     } catch (e) {
-      console.warn('감사 로그 작성 실패:', e)
+      console.warn('감사 로그 작성 스킵/실패:', e)
     }
 
     formSuccess.value = '신청이 취소되었습니다.'

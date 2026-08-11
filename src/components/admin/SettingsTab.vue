@@ -961,7 +961,7 @@ async function resetApplicationsOnly() {
       const { data: rList1 } = await supabase.from('timeline_rounds').select('id')
       if (rList1 && rList1.length > 0) {
         for (const r of rList1) {
-          await supabase.from('timeline_rounds').update({ status: 'DRAFT' }).eq('id', r.id).catch(() => {})
+          try { await supabase.from('timeline_rounds').update({ status: 'DRAFT' }).eq('id', r.id) } catch {}
         }
       }
     } catch {}
@@ -1013,7 +1013,7 @@ async function resetAllSystemData() {
       const { data: rList2 } = await supabase.from('timeline_rounds').select('id')
       if (rList2 && rList2.length > 0) {
         for (const r of rList2) {
-          await supabase.from('timeline_rounds').update({ status: 'DRAFT' }).eq('id', r.id).catch(() => {})
+          try { await supabase.from('timeline_rounds').update({ status: 'DRAFT' }).eq('id', r.id) } catch {}
         }
       }
     } catch {}
