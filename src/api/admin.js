@@ -2843,16 +2843,23 @@ export const getAuditLogs = async (params = {}) => {
 export const exportAuditLogs = () => { }
 export const adminAreaScorePreview = async () => ({ score: 0 })
 
-// 30. 수도권 학교장추천전형 (regional_recommendations) API
 export function sortRegionalRows(rows) {
-  const REGION_PRIORITY = { '서울': 1, '경기': 2, '인천': 3 }
+  function getRegionPriority(regStr) {
+    const clean = String(regStr || '').trim()
+    if (clean.includes('서울')) return 1
+    if (clean.includes('경기')) return 2
+    if (clean.includes('인천')) return 3
+    if (clean.includes('사관')) return 4
+    if (clean.includes('경찰')) return 5
+    return 999
+  }
 
   const sorted = [...rows].sort((a, b) => {
     const regA = String(a.region || '').trim()
     const regB = String(b.region || '').trim()
 
-    const prioA = REGION_PRIORITY[regA] ?? 999
-    const prioB = REGION_PRIORITY[regB] ?? 999
+    const prioA = getRegionPriority(regA)
+    const prioB = getRegionPriority(regB)
 
     if (prioA !== prioB) {
       return prioA - prioB
