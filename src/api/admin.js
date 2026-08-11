@@ -221,7 +221,7 @@ export const getClasses = async () => {
 // 3. 학급(교사) 추가 및 비밀번호 설정 (교사 이름 AES-256 암호화 저장)
 export const upsertClass = async (grade, classNo, body) => {
   if (!supabase) return
-  const rawName = (body.teacher_name || '').trim() || '담임교사'
+  const rawName = (body.teacher_name || '').trim() || `${grade}학년 ${classNo}반 담임`
   const encName = rawName === '관리자' ? '관리자' : await encryptText(rawName)
 
   // 1. 비밀번호가 넘어왔거나 신규 계정 생성 시 RPC 호출
