@@ -172,7 +172,7 @@ export async function getOrFetchSchoolInfo(schoolName) {
 export async function getGrade3Students() {
   const { data: enrolled } = await supabase
     .from('enrolled_students')
-    .select('id, student_code, name, grade, class_no, student_no, seq_no, is_enrolled, apply_school_recommend, apply_rural, rural_type, rural_self_check')
+    .select('id, student_code, name, grade, class_no, student_no, seq_no, is_enrolled')
     .eq('is_enrolled', true)
     .eq('grade', 3)
     .order('class_no', { ascending: true })
@@ -958,7 +958,7 @@ export async function evaluateStudentRuralEligibility(studentId, profileId = nul
 export async function getRuralEligibilityList() {
   const { data: enrolledStudents } = await supabase
     .from('enrolled_students')
-    .select('id, user_id, student_code, name, grade, class_no, student_no, seq_no, is_enrolled, is_rural_eligible, apply_school_recommend, apply_rural, rural_type, rural_self_check')
+    .select('id, user_id, student_code, name, grade, class_no, student_no, seq_no, is_enrolled, is_rural_eligible')
 
   const { data: allProfs } = await supabase
     .from('profiles')
@@ -1153,75 +1153,21 @@ export async function getRuralEligibilityList() {
 export async function updateStudentApplicationPreference(studentId, { applySchoolRecommend, applyRural, ruralType, ruralSelfCheck }, studentCode = null) {
   if (!studentId && !studentCode) throw new Error('학생 식별 ID가 필요합니다.');
 
-  const updatePayload = {
-    apply_school_recommend: applySchoolRecommend !== false,
-    apply_rural: Boolean(applyRural),
-    rural_type: applyRural ? (ruralType || '유형I') : null,
-    rural_self_check: Boolean(ruralSelfCheck)
-  };
+  const targetId = studentId
 
-  const { data: userAuth } = await supabase.auth.getUser();
-  const authUser = userAuth?.user;
-  if (authUser?.id) {
-    updatePayload.user_id = authUser.id;
-  }
-
-  let isUpdated = false;
-
-  // 1-1. studentId로 id 일치건 업데이트 시도
-  if (studentId) {
-    const { data: d1 } = await supabase
-      .from('enrolled_students')
-      .update(updatePayload)
-      .eq('id', studentId)
-      .select('id');
-    if (d1 && d1.length > 0) isUpdated = true;
-  }
-
-  // 1-2. user_id로 일치건 업데이트 시도
-  if (!isUpdated && authUser?.id) {
-    const { data: d2 } = await supabase
-      .from('enrolled_students')
-      .update(updatePayload)
-      .eq('user_id', authUser.id)
-      .select('id');
-    if (d2 && d2.length > 0) isUpdated = true;
-  }
-
-  // 1-3. studentCode로 일치건 업데이트 시도
-  const codeToMatch = studentCode || authUser?.user_metadata?.student_code || authUser?.user_metadata?.studentCode;
-  if (!isUpdated && codeToMatch) {
-    const cleanCode = String(codeToMatch).trim();
-    const { data: d3 } = await supabase
-      .from('enrolled_students')
-      .update(updatePayload)
-      .eq('student_code', cleanCode)
-      .select('id');
-    if (d3 && d3.length > 0) isUpdated = true;
-  }
-
-  // 2. 만약 어떤 조건으로도 업데이트되지 않은 경우 업서트 (졸업생 등)
-  if (!isUpdated) {
-    const sName = authUser?.user_metadata?.name || authUser?.user_metadata?.studentName || '졸업생';
-    const sCode = codeToMatch || '';
-
-    const targetId = studentId || authUser?.id;
-    if (targetId) {
-      const { error: upsertErr } = await supabase
-        .from('enrolled_students')
-        .upsert({
-          id: targetId,
-          user_id: authUser?.id || targetId,
-          name: sName,
-          student_code: sCode,
-          grade: 3,
-          is_enrolled: false,
-          ...updatePayload
-        }, { onConflict: 'id' });
-
-      if (upsertErr) {
-        console.warn('Failed to upsert enrolled_students:', upsertErr);
-      }
+  if (applyRural && ruralSelfCheck && targetId) {
+    try {
+      const ruralTypeVal = (ruralType === '유형II' || ruralType === 'TYPE_2') ? 'TYPE_2' : 'TYPE_1'
+      await supabase.from('student_rural_eligibility').upsert({
+        student_id: targetId,
+        is_eligible: true,
+        is_manual_approved: true,
+        rural_type: ruralTypeVal,
+        manual_reason: '본인 자격 요건 직접 확인 및 신청',
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'student_id' })
+    } catch (e) {
+      console.warn('Auto rural eligibility creation error:', e)
     }
   }
 }
