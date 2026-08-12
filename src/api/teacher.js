@@ -559,6 +559,99 @@ const studentIds = students.map(s => s.id)
 
 if (!allApps) return { rounds: rounds || [], results: [] }
 
+async function autoProcessUnselectedApps(allApps, schoolStudentsMap, univsMap, rounds) {
+  if (!supabase || !allApps || allApps.length === 0) return
+
+  const roundStatusMap = {}
+  ;(rounds || []).forEach(r => { roundStatusMap[r.id] = r.status })
+
+  // OPEN 상태인 차수의 경우 선발 확정 상태를 리셋하여 접수 완료 상태로 유지
+  for (const ap of allApps) {
+    if (roundStatusMap[ap.round] === 'OPEN' && (ap.is_recommended || ap.is_excluded)) {
+      ap.is_recommended = false
+      ap.is_excluded = false
+      ap.excluded_reason = null
+      await supabase
+        .from('applications')
+        .update({ is_recommended: false, is_excluded: false, excluded_reason: null })
+        .eq('id', ap.id)
+    }
+  }
+
+  // CLOSED 또는 FINALIZED 상태인 차수만 자동 선발 수행 (OPEN인 경우 접수 중이므로 선발 미진행)
+  const targetRoundIds = [
+    ...new Set(
+      allApps
+        .filter(ap => !ap.is_abandoned && (roundStatusMap[ap.round] === 'CLOSED' || roundStatusMap[ap.round] === 'FINALIZED'))
+        .map(ap => ap.round)
+    )
+  ]
+
+  if (targetRoundIds.length === 0) return
+
+  for (const rId of targetRoundIds) {
+    const roundApps = allApps.filter(ap => ap.round === rId && !ap.is_abandoned)
+    if (roundApps.length === 0) continue
+
+    const grouped = {}
+    roundApps.forEach(ap => {
+      if (!grouped[ap.univ_id]) grouped[ap.univ_id] = []
+      grouped[ap.univ_id].push(ap)
+    })
+
+    for (const uId of Object.keys(grouped)) {
+      const uApps = grouped[uId]
+      const univ = univsMap[uId] || {}
+      const hasQuota = univ.has_quota !== false && univ.quota_limit > 0
+      const limit = hasQuota ? Number(univ.quota_limit) : 99999
+
+      uApps.sort((a, b) => {
+        const stA = schoolStudentsMap[a.student_id] || {}
+        const stB = schoolStudentsMap[b.student_id] || {}
+
+        const scoreA = a.univ_calc_score != null ? Number(a.univ_calc_score) : (a.manual_score != null ? Number(a.manual_score) : null)
+        const scoreB = b.univ_calc_score != null ? Number(b.univ_calc_score) : (b.manual_score != null ? Number(b.manual_score) : null)
+
+        if (scoreA !== null && scoreB !== null && scoreA !== scoreB) {
+          return scoreB - scoreA
+        }
+
+        const gpaA = stA.gpa_overall != null ? Number(stA.gpa_overall) : 99
+        const gpaB = stB.gpa_overall != null ? Number(stB.gpa_overall) : 99
+
+        if (gpaA !== gpaB) {
+          return gpaA - gpaB
+        }
+
+        return new Date(a.created_at || 0) - new Date(b.created_at || 0)
+      })
+
+      for (let idx = 0; idx < uApps.length; idx++) {
+        const ap = uApps[idx]
+        const rank = idx + 1
+
+        if (rank <= limit) {
+          ap.is_recommended = true
+          ap.is_excluded = false
+          ap.excluded_reason = null
+          await supabase
+            .from('applications')
+            .update({ is_recommended: true, is_excluded: false, excluded_reason: null })
+            .eq('id', ap.id)
+        } else {
+          ap.is_recommended = false
+          ap.is_excluded = true
+          ap.excluded_reason = '추천인원 초과 (성적 미달)'
+          await supabase
+            .from('applications')
+            .update({ is_recommended: false, is_excluded: true, excluded_reason: '추천인원 초과 (성적 미달)' })
+            .eq('id', ap.id)
+        }
+      }
+    }
+  }
+}
+
 const schoolStudentsMap = {}
 for (const s of (allStudents || [])) {
 const decName = await decryptText(s.name)
@@ -573,6 +666,9 @@ grade: s.grade,
 class_no: s.class_no
 }
 }
+
+// 마감된 차수(CLOSED / FINALIZED)만 자동 선발 처리 (OPEN 차수는 접수 완료 상태 유지)
+await autoProcessUnselectedApps(allApps, schoolStudentsMap, univsMap, rounds)
 
 // 2. 대학(univ_id) & 라운드(round)별로 모든 학교 지원서를 그룹화하여 학교 단위 석차 계산
 const grouped = {}

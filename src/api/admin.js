@@ -409,7 +409,8 @@ function makeExcelBlobResponse(headers, sampleRows = []) {
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1')
   const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-  return { data: wbout }
+  const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  return { data: blob }
 }
 
 export const downloadAreaScoreTemplate = async (id) => {
@@ -1740,6 +1741,81 @@ export const getResults = async (roundId, trackId) => {
   const studentMap = new Map((studentsData || []).map(s => [s.id, s]))
   const profileMap = new Map((profilesData || []).map(p => [p.id, p]))
 
+  // 차수 일정 및 상태 계산
+  const { data: rawRounds } = await supabase.from('timeline_rounds').select('*')
+  const schedulesMap = await fetchRoundSchedulesMap()
+  const roundStatusMap = {}
+  ;(rawRounds || []).forEach(r => {
+    const sched = schedulesMap[r.id]
+    roundStatusMap[r.id] = computeRoundDisplayStatus(r, sched)
+  })
+
+  // OPEN 차수는 추천 확정/미선발 리셋 (접수 중 상태 유지)
+  for (const ap of apps) {
+    if (roundStatusMap[ap.round] === 'OPEN' && (ap.is_recommended || ap.is_excluded)) {
+      ap.is_recommended = false
+      ap.is_excluded = false
+      ap.excluded_reason = null
+      await supabase.from('applications').update({ is_recommended: false, is_excluded: false, excluded_reason: null }).eq('id', ap.id)
+    }
+  }
+
+  // CLOSED 또는 FINALIZED 마감 차수: 정원 및 성적(경합)에 따른 자동 추천 선발 적용
+  const closedOrFinalizedRounds = [...new Set(apps.filter(ap => !ap.is_abandoned && (roundStatusMap[ap.round] === 'CLOSED' || roundStatusMap[ap.round] === 'FINALIZED')).map(ap => ap.round))]
+
+  for (const rId of closedOrFinalizedRounds) {
+    const rApps = apps.filter(ap => ap.round === rId && !ap.is_abandoned)
+    const uGroup = {}
+    rApps.forEach(ap => {
+      if (!uGroup[ap.univ_id]) uGroup[ap.univ_id] = []
+      uGroup[ap.univ_id].push(ap)
+    })
+
+    for (const uId of Object.keys(uGroup)) {
+      const targetApps = uGroup[uId]
+      const sampleUniv = targetApps[0]?.universities || {}
+      const hasQuota = sampleUniv.has_quota !== false && sampleUniv.quota_limit > 0
+      const limit = hasQuota ? Number(sampleUniv.quota_limit) : 99999
+
+      targetApps.sort((a, b) => {
+        const stA = studentMap.get(a.student_id) || profileMap.get(a.student_id) || {}
+        const stB = studentMap.get(b.student_id) || profileMap.get(b.student_id) || {}
+
+        if (stA.is_enrolled !== stB.is_enrolled) {
+          return stA.is_enrolled ? -1 : 1
+        }
+        const scoreA = a.manual_score != null ? Number(a.manual_score) : 0
+        const scoreB = b.manual_score != null ? Number(b.manual_score) : 0
+        if (scoreA !== scoreB) return scoreB - scoreA
+
+        const gpaA = (stA.gpa_overall != null && Number(stA.gpa_overall) > 0) ? Number(stA.gpa_overall) : 99
+        const gpaB = (stB.gpa_overall != null && Number(stB.gpa_overall) > 0) ? Number(stB.gpa_overall) : 99
+        if (gpaA !== gpaB) return gpaA - gpaB
+
+        return (stA.student_code || '').localeCompare(stB.student_code || '')
+      })
+
+      for (let idx = 0; idx < targetApps.length; idx++) {
+        const ap = targetApps[idx]
+        const rank = idx + 1
+        const isRec = rank <= limit
+        const isExc = !isRec
+        const excReason = isExc ? '추천인원 초과 (성적 미달)' : null
+
+        if (ap.is_recommended !== isRec || ap.is_excluded !== isExc) {
+          ap.is_recommended = isRec
+          ap.is_excluded = isExc
+          ap.excluded_reason = excReason
+          await supabase.from('applications').update({
+            is_recommended: isRec,
+            is_excluded: isExc,
+            excluded_reason: excReason
+          }).eq('id', ap.id)
+        }
+      }
+    }
+  }
+
   // 대학교(univ_id) & 라운드(round)별로 묶어 랭킹 부여
   const grouped = {}
   apps.forEach(ap => {
@@ -2030,9 +2106,143 @@ export const clearApplicationExclusion = async (sid, tid, rid) => {
   if (error) throw error
 }
 
-// 결과 엑셀 / 리포트 Mocking
-export const exportResultsExcel = () => { }
-export const exportRoundSummary = () => { }
+// 25. 선발 차수 결과/현황 엑셀 내보내기
+export const exportResultsExcel = async (roundId) => {
+  if (!supabase || !roundId) return { data: new Uint8Array() }
+
+  const { data: apps, error: err1 } = await supabase
+    .from('applications')
+    .select('*, universities:univ_id(*)')
+    .eq('round', roundId)
+
+  if (err1 || !apps || apps.length === 0) {
+    return makeExcelBlobResponse(['대학명', '전형명', '지원학과', '순위', '학번', '성명', '학년', '반', '번호', '점수/등급', '선발상태', '비고'], [])
+  }
+
+  const studentIds = [...new Set(apps.map(ap => ap.student_id))]
+  const [{ data: students }, { data: profiles }] = await Promise.all([
+    supabase.from('enrolled_students').select('*').in('id', studentIds),
+    supabase.from('profiles').select('*').in('id', studentIds)
+  ])
+
+  const studentMap = new Map((students || []).map(s => [s.id, s]))
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]))
+
+  const grouped = {}
+  apps.forEach(ap => {
+    if (!grouped[ap.univ_id]) grouped[ap.univ_id] = []
+    grouped[ap.univ_id].push(ap)
+  })
+
+  const rankMap = {}
+  for (const uId of Object.keys(grouped)) {
+    const uApps = grouped[uId]
+    uApps.sort((a, b) => {
+      const stA = studentMap.get(a.student_id) || profileMap.get(a.student_id) || {}
+      const stB = studentMap.get(b.student_id) || profileMap.get(b.student_id) || {}
+      const scoreA = a.univ_calc_score != null ? Number(a.univ_calc_score) : (a.manual_score != null ? Number(a.manual_score) : null)
+      const scoreB = b.univ_calc_score != null ? Number(b.univ_calc_score) : (b.manual_score != null ? Number(b.manual_score) : null)
+      if (scoreA !== null && scoreB !== null && scoreA !== scoreB) return scoreB - scoreA
+      const gpaA = stA.gpa_overall != null ? Number(stA.gpa_overall) : 99
+      const gpaB = stB.gpa_overall != null ? Number(stB.gpa_overall) : 99
+      if (gpaA !== gpaB) return gpaA - gpaB
+      return new Date(a.created_at || 0) - new Date(b.created_at || 0)
+    })
+    uApps.forEach((ap, idx) => {
+      rankMap[ap.id] = idx + 1
+    })
+  }
+
+  const exportRows = await Promise.all(apps.map(async ap => {
+    const st = studentMap.get(ap.student_id) || profileMap.get(ap.student_id) || {}
+    let name = st.name || ''
+    if (name.startsWith('enc:')) {
+      try { name = await decryptText(name) } catch {}
+    }
+
+    let statusText = '접수완료'
+    if (ap.is_abandoned) statusText = '추천포기'
+    else if (ap.is_recommended) statusText = '추천확정'
+    else if (ap.is_excluded) statusText = '미선발'
+
+    const scoreText = ap.univ_calc_score != null
+      ? `${formatScore(ap.univ_calc_score)}점`
+      : (ap.manual_score != null ? `${formatScore(ap.manual_score)}점` : (st.gpa_overall ? `${st.gpa_overall}등급` : '-'))
+
+    return {
+      '대학명': ap.universities?.univ_name || ap.univ_name || '',
+      '전형명': ap.universities?.track_name || ap.track_name || '',
+      '지원학과': ap.department_name || '',
+      '순위': `${rankMap[ap.id] || 1}위`,
+      '학번': st.student_code || '',
+      '성명': name,
+      '학년': st.grade || 3,
+      '반': st.class_no || '',
+      '번호': st.seq_no || '',
+      '점수/등급': scoreText,
+      '선발상태': statusText,
+      '비고': ap.excluded_reason || ''
+    }
+  }))
+
+  exportRows.sort((a, b) => {
+    if (a['대학명'] !== b['대학명']) return a['대학명'].localeCompare(b['대학명'], 'ko')
+    return parseInt(a['순위']) - parseInt(b['순위'])
+  })
+
+  const headers = ['대학명', '전형명', '지원학과', '순위', '학번', '성명', '학년', '반', '번호', '점수/등급', '선발상태', '비고']
+  return makeExcelBlobResponse(headers, exportRows)
+}
+
+export const exportRoundSummary = async (roundId) => {
+  if (!supabase || !roundId) return { data: new Uint8Array() }
+
+  const [{ data: univs }, { data: apps }] = await Promise.all([
+    supabase.from('universities').select('*'),
+    supabase.from('applications').select('*').eq('round', roundId)
+  ])
+
+  if (!univs) return makeExcelBlobResponse(['지역', '대학명', '전형명', '추천 제한인원', '총 지원자수', '추천 확정인원', '추천 포기인원', '미선발인원', '잔여 T/O'], [])
+
+  const appGroup = {}
+  ;(apps || []).forEach(ap => {
+    if (!appGroup[ap.univ_id]) appGroup[ap.univ_id] = []
+    appGroup[ap.univ_id].push(ap)
+  })
+
+  const exportRows = univs.map(u => {
+    const uApps = appGroup[u.id] || []
+    const totalCount = uApps.length
+    const activeApps = uApps.filter(ap => !ap.is_abandoned)
+    const recCount = activeApps.filter(ap => ap.is_recommended).length
+    const abandonCount = uApps.filter(ap => ap.is_abandoned).length
+    const excCount = activeApps.filter(ap => ap.is_excluded).length
+
+    const hasQuota = u.has_quota !== false && u.quota_limit > 0
+    const quotaLimitText = hasQuota ? `${u.quota_limit}명` : '제한없음'
+    const remainingTo = hasQuota ? Math.max(0, u.quota_limit - recCount) : '제한없음'
+
+    return {
+      '지역': u.region || '',
+      '대학명': u.univ_name || '',
+      '전형명': u.track_name || '',
+      '추천 제한인원': quotaLimitText,
+      '총 지원자수': totalCount,
+      '추천 확정인원': recCount,
+      '추천 포기인원': abandonCount,
+      '미선발인원': excCount,
+      '잔여 T/O': remainingTo
+    }
+  })
+
+  exportRows.sort((a, b) => {
+    if (a['지역'] !== b['지역']) return a['지역'].localeCompare(b['지역'], 'ko')
+    return a['대학명'].localeCompare(b['대학명'], 'ko')
+  })
+
+  const headers = ['지역', '대학명', '전형명', '추천 제한인원', '총 지원자수', '추천 확정인원', '추천 포기인원', '미선발인원', '잔여 T/O']
+  return makeExcelBlobResponse(headers, exportRows)
+}
 
 // 26. 비밀번호 변경 (관리자)
 export const changeAdminPassword = async (currentPassword, newPassword) => {

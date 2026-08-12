@@ -72,9 +72,9 @@
           </p>
         </div>
         <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
-          <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">3️⃣ 3차 추천 선발 (최종 미달)</p>
+          <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">3️⃣ 3차 추천 선발 (최종 선정)</p>
           <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
-            추가 모집 및 잔여 미달 모집단위 최종 접수 및 마무리 선발
+            추가 모집 및 잔여 모집단위 최종 접수 및 마무리 선발
           </p>
         </div>
       </div>

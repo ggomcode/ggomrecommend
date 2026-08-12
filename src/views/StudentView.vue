@@ -100,9 +100,9 @@
               </p>
             </div>
             <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
-              <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">3️⃣ 3차 추천 선발 (최종 미달)</p>
+              <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">3️⃣ 3차 추천 선발 (최종 선정)</p>
               <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
-                추가 모집 및 잔여 미달 모집단위 최종 접수 및 마무리 선발
+                추가 모집 및 잔여 모집단위 최종 접수 및 마무리 선발
               </p>
             </div>
           </div>
@@ -181,8 +181,9 @@
                 <div><span class="text-slate-400">수능 최저:</span> {{ ap.universities.csat_min }}</div>
                 <div><span class="text-slate-400">학부모명:</span> {{ ap.parent_name }}</div>
                 <div><span class="text-slate-400">내신 총점:</span> <span class="font-semibold text-slate-700 dark:text-slate-300">{{ ap.manual_score ? ap.manual_score + '점' : '미입력' }}</span></div>
-                <div class="text-right flex items-center justify-end gap-2">
-                  <a v-if="ap.student_signature_url" :href="ap.student_signature_url" target="_blank" class="text-blue-500 hover:underline font-bold">서명 확인</a>
+                <div class="text-right flex items-center justify-end gap-2 flex-wrap">
+                  <a v-if="ap.student_signature_url" :href="ap.student_signature_url" target="_blank" class="text-blue-500 hover:underline font-bold whitespace-nowrap">학생 서명 확인</a>
+                  <a v-if="ap.parent_signature_url || ap.student_signature_url" :href="ap.parent_signature_url || ap.student_signature_url" target="_blank" class="text-blue-500 hover:underline font-bold whitespace-nowrap">학부모 서명 확인</a>
                 </div>
               </div>
 
@@ -262,7 +263,9 @@
                 ⏳ 접수 대기 중: {{ totalRounds === 1 ? '학교장 추천' : `${currentRound}차 추천` }} 신청 시작 전입니다
               </span>
 
+              <!-- 추천서 HWP 양식 다운로드 링크 (임시 숨김 — 필요 시 v-if="true"로 변경 가능) -->
               <a
+                v-if="false"
                 :href="`${baseUrl}data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%99%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%84%A0%EC%A0%95%20%EC%8B%A0%EC%B2%AD%EC%84%9C_%EC%96%91%EC%8B%9D.hwp`"
                 download
                 class="text-blue-600 dark:text-blue-400 hover:underline font-bold text-[10px] cursor-pointer whitespace-nowrap ml-2"

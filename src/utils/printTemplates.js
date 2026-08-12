@@ -182,9 +182,9 @@ td { padding:7px 8px; font-size:13px; vertical-align:middle; }
     <col style="width:12%;" />
     <col style="width:8%;" />
     <col style="width:6%;" />
-    <col style="width:26%;" />
-    <col style="width:24%;" />
-    <col style="width:14%;" />
+    <col style="width:21.33%;" />
+    <col style="width:21.33%;" />
+    <col style="width:21.34%;" />
     <col style="width:10%;" />
   </colgroup>
   <tbody>

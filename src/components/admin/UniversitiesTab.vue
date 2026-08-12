@@ -31,41 +31,43 @@
       </div>
     </div>
 
-        <div class="flex items-center gap-3">
-          <input
-            v-model="regionalSearch"
-            type="text"
-            placeholder="대학명, 전형명, 지역 검색…"
-            class="text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
-            style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 7px 14px; width: 260px; background: white;"
-          />
-          <span class="text-base" style="color: #64748b;">총 {{ filteredRegionalRecs.length }}건</span>
-          <span v-if="filteredRegionalRecs.length > 0" class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md border border-slate-200">
-            ↔️ 표를 좌우로 스크롤하여 9개 항목을 모두 확인하세요
-          </span>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-          <button
-            v-if="regionalRecs.length > 0"
-            class="text-base font-medium rounded-lg"
-            style="padding: 7px 16px; border: 1px solid #86efac; background: #f0fdf4; color: #16a34a; cursor: pointer;"
-            :disabled="saving"
-            @click="downloadRegionalBackup"
-          >
-            📥 현재 데이터 백업 (엑셀)
-          </button>
-          <button
-            v-if="regionalRecs.length > 0"
-            class="text-base font-medium rounded-lg"
-            style="padding: 7px 16px; border: 1px solid #fca5a5; background: #fef2f2; color: #dc2626; cursor: pointer;"
-            :disabled="saving"
-            @click="clearRegionalRecs"
-          >
-            🗑️ 데이터 전체 삭제
-          </button>
-        </div>
+    <!-- 검색 및 액션 버튼 가로 바 -->
+    <div class="shrink-0 flex items-center justify-between mb-3 flex-wrap gap-3">
+      <div class="flex items-center gap-3">
+        <input
+          v-model="regionalSearch"
+          type="text"
+          placeholder="대학명, 전형명, 지역 검색…"
+          class="text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+          style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 7px 14px; width: 260px; background: white;"
+        />
+        <span class="text-base" style="color: #64748b;">총 {{ filteredRegionalRecs.length }}건</span>
+        <span v-if="filteredRegionalRecs.length > 0" class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md border border-slate-200">
+          ↔️ 표를 좌우로 스크롤하여 9개 항목을 모두 확인하세요
+        </span>
       </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          v-if="regionalRecs.length > 0"
+          class="text-base font-medium rounded-lg"
+          style="padding: 7px 16px; border: 1px solid #86efac; background: #f0fdf4; color: #16a34a; cursor: pointer;"
+          :disabled="saving"
+          @click="downloadRegionalBackup"
+        >
+          📥 현재 데이터 백업 (엑셀)
+        </button>
+        <button
+          v-if="regionalRecs.length > 0"
+          class="text-base font-medium rounded-lg"
+          style="padding: 7px 16px; border: 1px solid #fca5a5; background: #fef2f2; color: #dc2626; cursor: pointer;"
+          :disabled="saving"
+          @click="clearRegionalRecs"
+        >
+          🗑️ 데이터 전체 삭제
+        </button>
+      </div>
+    </div>
 
       <p v-if="error" class="shrink-0 text-base mb-2" style="color: #ef4444;">{{ error }}</p>
       
@@ -249,6 +251,7 @@
 
     </div>
   </div>
+</div>
 </template>
 
 <script setup>
