@@ -17,7 +17,7 @@
       <div>
         <h2 class="text-sm font-bold" style="color: #1e3a8a; margin: 0;">대학별 추천전형 요강 구글 스프레드시트 동기화</h2>
         <p class="text-xs mt-0.5" style="color: #2563eb; margin: 2px 0 0;">
-          구글 스프레드시트를 동기화하시면 대학별 모집정원, 전형방법, 수능최저학력기준, 반영교과 정보와 우리 고등학교 추천 정원이 자동으로 연동됩니다.
+          구글 스프레드시트를 동기화하시면 지역, 대학명, 전형구분, 전형명, 인원제한, 졸업년도조건, 수능최저학력기준, 본교지원가능여부, 사전마감여부 9개 핵심 전형 정보가 자동으로 연동됩니다.
         </p>
       </div>
       <div class="flex items-center gap-2 shrink-0">
