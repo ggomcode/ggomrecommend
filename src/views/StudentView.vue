@@ -623,6 +623,80 @@
         </div>
       </div>
     </div>
+
+    <!-- 🖨️ 학교장추천 신청서 인쇄 모달 -->
+    <div
+      v-if="showHakchuPrintModal"
+      class="fixed inset-0 flex items-center justify-center z-50 p-4"
+      style="background: rgba(0,0,0,0.6);"
+      @click.self="showHakchuPrintModal = false"
+    >
+      <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-5 border border-slate-200 dark:border-slate-700">
+        <div class="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400 mx-auto flex items-center justify-center shadow-xs">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+        </div>
+
+        <div class="space-y-1.5 text-center">
+          <h3 class="text-xl font-extrabold text-slate-900 dark:text-white m-0">
+            학교장추천전형 신청서 인쇄
+          </h3>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed m-0">
+            인쇄물 서명란 아래에 표기될 학생 및 보호자 연락처를 확인해 주세요.
+          </p>
+        </div>
+
+        <!-- 연락처 입력 폼 -->
+        <div class="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-left space-y-3 text-xs">
+          <p class="font-extrabold text-slate-800 dark:text-slate-200 m-0 flex items-center gap-1.5 text-xs">
+            📞 인쇄용 연락처 입력 (서명란 아래에 출력)
+          </p>
+          <div class="space-y-2.5">
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">학생 연락처</label>
+              <input
+                v-model="hakchuStudentPhone"
+                type="text"
+                placeholder="예: 010-1234-5678"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+              />
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">비상용 연락처 (학부모/보호자)</label>
+              <input
+                v-model="hakchuParentPhone"
+                type="text"
+                placeholder="예: 010-9876-5432"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 pt-2">
+          <button
+            @click="showHakchuPrintModal = false"
+            class="flex-1 py-3 px-4 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl transition-all cursor-pointer border border-slate-300 dark:border-slate-600"
+          >
+            취소
+          </button>
+          <button
+            @click="executeHakchuPrint"
+            class="flex-1 py-3 px-4 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-md cursor-pointer border-none flex items-center justify-center gap-1.5"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 6 2 18 2 18 9"></polyline>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+              <rect x="6" y="14" width="12" height="8"></rect>
+            </svg>
+            인쇄하기
+          </button>
+        </div>
+      </div>
+    </div>
       </section>
     </main>
     <!-- 추천 포기 신청 모달 -->
@@ -877,6 +951,11 @@ const univCalcScore = ref('')
 // 서약 동의 팝업 모달
 const showOathModal = ref(false)
 const agreedOath = ref(false)
+
+// 학교장추천 신청서 인쇄 모달
+const showHakchuPrintModal = ref(false)
+const hakchuStudentPhone = ref('')
+const hakchuParentPhone = ref('')
 
 // 학생 서명 캔버스
 const studentCanvasRef = ref(null)
@@ -1625,7 +1704,23 @@ async function handleCancelApplication(id) {
 }
 
 function handlePrint() {
-  // 모든 지원 내역을 한 장에 인쇄
+  const firstAp = myApplications.value[0] || {}
+  const cachedS = localStorage.getItem('print_student_phone') || auth.studentPhone || firstAp.student_phone || firstAp.phone || ''
+  const cachedP = localStorage.getItem('print_parent_phone') || auth.parentPhone || firstAp.parent_phone || ''
+  hakchuStudentPhone.value = cachedS
+  hakchuParentPhone.value = cachedP
+  showHakchuPrintModal.value = true
+}
+
+function executeHakchuPrint() {
+  showHakchuPrintModal.value = false
+  if (hakchuStudentPhone.value) {
+    localStorage.setItem('print_student_phone', hakchuStudentPhone.value)
+  }
+  if (hakchuParentPhone.value) {
+    localStorage.setItem('print_parent_phone', hakchuParentPhone.value)
+  }
+
   const firstAp = myApplications.value[0] || {}
   const studentInfo = {
     name: auth.studentName || firstAp.name || '',
@@ -1635,9 +1730,9 @@ function handlePrint() {
     grade: auth.grade || firstAp.grade,
     class_no: auth.classNo || firstAp.class_no,
     seq_no: auth.seqNo || firstAp.seq_no,
-    student_phone: auth.studentPhone || firstAp.student_phone || '',
+    student_phone: hakchuStudentPhone.value || auth.studentPhone || firstAp.student_phone || '',
     parent_name: firstAp.parent_name || '',
-    parent_phone: firstAp.parent_phone || '',
+    parent_phone: hakchuParentPhone.value || auth.parentPhone || firstAp.parent_phone || '',
     student_signature_url: firstAp.student_signature_url,
     parent_signature_url: firstAp.parent_signature_url
   }
