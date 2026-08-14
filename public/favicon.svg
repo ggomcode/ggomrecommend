@@ -1,20 +1,83 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
-  <!-- black outline layer (slightly thicker) -->
-  <g stroke="#000000" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M14 21v-3a2 2 0 0 0-4 0v3"/>
-    <path d="M18 4.933V21"/>
-    <path d="m4 6 7.106-3.79a2 2 0 0 1 1.788 0L20 6"/>
-    <path d="m6 11-3.52 2.147a1 1 0 0 0-.48.854V19a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a1 1 0 0 0-.48-.853L18 11"/>
-    <path d="M6 4.933V21"/>
-    <circle cx="12" cy="9" r="2"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- 프리미엄 블루-인디고 리치 그라데이션 배경 -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E1B4B" />
+      <stop offset="45%" stop-color="#2563EB" />
+      <stop offset="100%" stop-color="#0EA5E9" />
+    </linearGradient>
+
+    <!-- 학사모 상단 화이트-스카이 그라데이션 -->
+    <linearGradient id="cap-top" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#E2E8F0" />
+    </linearGradient>
+
+    <!-- 학사모 하단 & 수술 골드 그라데이션 -->
+    <linearGradient id="gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE047" />
+      <stop offset="100%" stop-color="#F59E0B" />
+    </linearGradient>
+
+    <!-- 은은한 라이트 글로우 림 -->
+    <linearGradient id="rim-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#CBD5E1" stop-opacity="0.4" />
+    </linearGradient>
+
+    <!-- 그림자 필터 (드롭 섀도우) -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#0F172A" flood-opacity="0.4" />
+    </filter>
+
+    <filter id="badge-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#1E1B4B" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- 모던 앱 파비콘 스쿼클 배경 (Rounded Rect) -->
+  <rect width="512" height="512" rx="120" fill="url(#bg-grad)" />
+
+  <!-- 은은한 조명 효과 내부 원 -->
+  <circle cx="256" cy="180" r="170" fill="#FFFFFF" opacity="0.07" />
+
+  <!-- 학사모 아이콘 그룹 (Graduation Cap) -->
+  <g filter="url(#shadow)">
+    <!-- 1. 학사모 다이아몬드 상단 판 -->
+    <polygon points="256,105 428,190 256,275 84,190" fill="url(#cap-top)" />
+
+    <!-- 2. 학사모 판 아래 입체 음영 림 -->
+    <polygon points="256,275 428,190 428,202 256,287" fill="#CBD5E1" opacity="0.7" />
+
+    <!-- 3. 모자 하단 받침대 (Cap Base Rim) -->
+    <path d="M152,235 L152,310 C152,345 198,368 256,368 C314,368 360,345 360,310 L360,235" 
+          fill="none" 
+          stroke="url(#rim-grad)" 
+          stroke-width="26" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
+
+    <!-- 4. 학사모 수술 (Tassel) -->
+    <path d="M386,196 L386,285 C386,305 370,318 355,318" 
+          fill="none" 
+          stroke="url(#gold-grad)" 
+          stroke-width="12" 
+          stroke-linecap="round" />
+    <circle cx="355" cy="328" r="14" fill="url(#gold-grad)" />
   </g>
-  <!-- white icon layer -->
-  <g stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M14 21v-3a2 2 0 0 0-4 0v3"/>
-    <path d="M18 4.933V21"/>
-    <path d="m4 6 7.106-3.79a2 2 0 0 1 1.788 0L20 6"/>
-    <path d="m6 11-3.52 2.147a1 1 0 0 0-.48.854V19a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a1 1 0 0 0-.48-.853L18 11"/>
-    <path d="M6 4.933V21"/>
-    <circle cx="12" cy="9" r="2"/>
+
+  <!-- 추천(Check/Star) 승인 상징 골드 배지 -->
+  <g filter="url(#badge-shadow)">
+    <!-- 골드 뱃지 서클 배경 -->
+    <circle cx="365" cy="365" r="68" fill="url(#gold-grad)" />
+    <circle cx="365" cy="365" r="60" fill="none" stroke="#FFFFFF" stroke-width="4" opacity="0.5" />
+    
+    <!-- 뱃지 내부 굵은 시인성 체크 마크 -->
+    <path d="M334,365 L356,387 L400,343" 
+          fill="none" 
+          stroke="#1E1B4B" 
+          stroke-width="16" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
   </g>
 </svg>
