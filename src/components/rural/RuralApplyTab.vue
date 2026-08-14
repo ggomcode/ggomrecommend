@@ -364,6 +364,33 @@
           </p>
         </div>
 
+        <!-- 연락처 입력 폼 -->
+        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-left space-y-3 text-xs">
+          <p class="font-extrabold text-slate-800 m-0 flex items-center gap-1.5 text-xs">
+            📞 인쇄용 연락처 확인 (서명란 아래에 출력)
+          </p>
+          <div class="space-y-2.5">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">학생 연락처</label>
+              <input
+                v-model="printStudentPhone"
+                type="text"
+                placeholder="예: 010-1234-5678"
+                class="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+              />
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">비상용 연락처 (학부모/보호자)</label>
+              <input
+                v-model="printParentPhone"
+                type="text"
+                placeholder="예: 010-9876-5432"
+                class="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+              />
+            </div>
+          </div>
+        </div>
+
         <!-- 인쇄 팁 안내 상자 -->
         <div class="bg-indigo-50/70 p-4 rounded-2xl border border-indigo-100 text-left text-xs space-y-2 text-indigo-950">
           <p class="font-extrabold text-indigo-900 m-0 flex items-center gap-1.5 text-xs">
@@ -454,6 +481,8 @@ const parentSig = ref(null);
 const parentName = ref('');
 const showSigModal = ref(false);
 const showPrintModal = ref(false);
+const printStudentPhone = ref('');
+const printParentPhone = ref('');
 
 const studentCanvasRef = ref(null);
 const parentCanvasRef = ref(null);
@@ -1053,12 +1082,23 @@ async function confirmSignatures() {
 }
 
 function triggerPrintConfirmation() {
+  const cachedS = localStorage.getItem('print_student_phone') || auth.studentPhone || (myApplications.value[0]?.student_phone) || '';
+  const cachedP = localStorage.getItem('print_parent_phone') || auth.parentPhone || (myApplications.value[0]?.parent_phone) || '';
+  printStudentPhone.value = cachedS;
+  printParentPhone.value = cachedP;
   showPrintModal.value = true;
 }
 
 async function executePrintFromModal() {
   showPrintModal.value = false;
   try {
+    if (printStudentPhone.value) {
+      localStorage.setItem('print_student_phone', printStudentPhone.value);
+    }
+    if (printParentPhone.value) {
+      localStorage.setItem('print_parent_phone', printParentPhone.value);
+    }
+
     const studentId = await resolveStudentId();
     const eligibilityList = await getRuralEligibilityList();
     const myInfo = eligibilityList.find(s =>
@@ -1085,6 +1125,8 @@ async function executePrintFromModal() {
         grade,
         classNo,
         seqNo,
+        studentPhone: printStudentPhone.value,
+        parentPhone: printParentPhone.value,
         gradYear: auth.gradYear || 2026,
         ruralType: prefRuralType.value === '유형II' ? 'TYPE_2' : 'TYPE_1',
         isWarningAcknowledged: warningAcknowledged.value || prefRuralSelfCheck.value

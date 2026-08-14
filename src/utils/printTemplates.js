@@ -241,8 +241,14 @@ td { padding:7px 8px; font-size:13px; vertical-align:middle; }
 <div class="bottom-section">
   <div class="sig-date">${yyyy}년 &nbsp;&nbsp; ${mm}월 &nbsp;&nbsp; ${dd}일</div>
   <div class="sig-row">
-    <div class="sig-item"><span>지원자 : ${studentInfo.name || ''}</span>${studentSig}</div>
-    <div class="sig-item"><span>학부모 : ${studentInfo.parent_name || ''}</span>${parentSig}</div>
+    <div class="sig-item-box" style="display:flex; flex-direction:column; align-items:flex-end;">
+      <div class="sig-item"><span>지원자 : ${studentInfo.name || ''}</span>${studentSig}</div>
+      <div style="font-size:11.5px; color:#333; font-weight:normal; margin-top:4px; text-align:right;">(연락처: ${studentPhoneFmt})</div>
+    </div>
+    <div class="sig-item-box" style="display:flex; flex-direction:column; align-items:flex-end;">
+      <div class="sig-item"><span>학부모 : ${studentInfo.parent_name || ''}</span>${parentSig}</div>
+      <div style="font-size:11.5px; color:#333; font-weight:normal; margin-top:4px; text-align:right;">(비상연락처: ${parentPhoneFmt})</div>
+    </div>
   </div>
   <div class="principal">${principalTitle}</div>
 </div>

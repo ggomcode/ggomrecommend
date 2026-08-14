@@ -22,6 +22,17 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
   const sSig = studentSig || info.studentSignature || info.studentSig || null;
   const pSig = parentSig || info.parentSignature || info.parentSig || null;
 
+  // 연락처 포맷
+  function fmtPhone(raw) {
+    if (!raw) return '';
+    const d = String(raw).replace(/\D/g, '');
+    if (d.length === 11) return d.replace(/(\d{3})(\d{4})(\d{4})/, '$1 - $2 - $3');
+    if (d.length === 10) return d.replace(/(\d{3})(\d{3})(\d{4})/, '$1 - $2 - $3');
+    return raw;
+  }
+  const sPhoneFmt = fmtPhone(info.studentPhone || info.student_phone || info.phone) || '010 -&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -';
+  const pPhoneFmt = fmtPhone(info.parentPhone || info.parent_phone || info.emergencyPhone) || '010 -&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -';
+
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     alert('팝업 차단이 설정되어 있어 인쇄 창을 열 수 없습니다.');
@@ -280,13 +291,19 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
 
           <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
             <tr>
-              <td style="width: 50%; text-align: left; font-size: 13px;">
-                지원 학생: <strong style="font-size: 14px;">${sNameVal}</strong>
-                ${sSig ? `<img src="${sSig}" class="sig-img" alt="서명" />` : '(서명 / 인)'}
+              <td style="width: 50%; text-align: left; font-size: 13px; vertical-align: top;">
+                <div>
+                  지원 학생: <strong style="font-size: 14px;">${sNameVal}</strong>
+                  ${sSig ? `<img src="${sSig}" class="sig-img" alt="서명" />` : '(서명 / 인)'}
+                </div>
+                <div style="font-size: 11.5px; color: #475569; margin-top: 4px;">(연락처: ${sPhoneFmt})</div>
               </td>
-              <td style="width: 50%; text-align: right; font-size: 13px;">
-                학부모(보호자): ${parentName || '____________________'}
-                ${pSig ? `<img src="${pSig}" class="sig-img" alt="서명" />` : '(서명 / 인)'}
+              <td style="width: 50%; text-align: right; font-size: 13px; vertical-align: top;">
+                <div>
+                  학부모(보호자): ${parentName || '____________________'}
+                  ${pSig ? `<img src="${pSig}" class="sig-img" alt="서명" />` : '(서명 / 인)'}
+                </div>
+                <div style="font-size: 11.5px; color: #475569; margin-top: 4px;">(비상연락처: ${pPhoneFmt})</div>
               </td>
             </tr>
           </table>
