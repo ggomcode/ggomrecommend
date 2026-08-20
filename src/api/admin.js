@@ -2199,11 +2199,15 @@ export const exportResultsExcel = async (roundId) => {
       ? `${formatScore(ap.univ_calc_score)}점`
       : (ap.manual_score != null ? `${formatScore(ap.manual_score)}점` : (st.gpa_overall ? `${st.gpa_overall}등급` : '-'))
 
+    const univObj = ap.universities || {}
+    const hasQuota = univObj.has_quota !== false && univObj.quota_limit != null
+    const rankStr = hasQuota && rankMap[ap.id] != null ? `${rankMap[ap.id]}위` : '-'
+
     return {
-      '대학명': ap.universities?.univ_name || ap.univ_name || '',
-      '전형명': ap.universities?.track_name || ap.track_name || '',
+      '대학명': univObj.univ_name || ap.univ_name || '',
+      '전형명': univObj.track_name || ap.track_name || '',
       '지원학과': ap.department_name || '',
-      '순위': `${rankMap[ap.id] || 1}위`,
+      '순위': rankStr,
       '학번': st.student_code || '',
       '성명': name,
       '학년': st.grade || 3,
@@ -2217,7 +2221,22 @@ export const exportResultsExcel = async (roundId) => {
 
   exportRows.sort((a, b) => {
     if (a['대학명'] !== b['대학명']) return a['대학명'].localeCompare(b['대학명'], 'ko')
-    return parseInt(a['순위']) - parseInt(b['순위'])
+    if (a['전형명'] !== b['전형명']) return a['전형명'].localeCompare(b['전형명'], 'ko')
+
+    // 학번순 정렬 (학년 -> 반 -> 번호 -> 학번)
+    const aGrade = Number(a['학년']) || 0
+    const bGrade = Number(b['학년']) || 0
+    if (aGrade !== bGrade) return aGrade - bGrade
+
+    const aClass = Number(a['반']) || 0
+    const bClass = Number(b['반']) || 0
+    if (aClass !== bClass) return aClass - bClass
+
+    const aSeq = Number(a['번호']) || 0
+    const bSeq = Number(b['번호']) || 0
+    if (aSeq !== bSeq) return aSeq - bSeq
+
+    return String(a['학번'] || '').localeCompare(String(b['학번'] || ''), 'ko', { numeric: true })
   })
 
   const headers = ['대학명', '전형명', '지원학과', '순위', '학번', '성명', '학년', '반', '번호', '점수/등급', '선발상태', '비고']

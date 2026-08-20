@@ -340,7 +340,7 @@
           </div>
 
           <p class="text-[11px] text-slate-500 leading-normal m-0 pt-1">
-            * 정렬: 구분 ➔ 전형유형 ➔ 학급 ➔ 학번 ➔ 전형명 ➔ 자격상태 ➔ 지망 ➔ 대학 ➔ 학과 순 오름차순
+            * 정렬: 재학생 ➔ 졸업생 ➔ 학급 ➔ 학번 ➔ 지망순(1지망~6지망) 오름차순
           </p>
         </div>
 
@@ -453,8 +453,44 @@ const customStudentsCount = computed(() => {
   return new Set(customApps.map(a => a.student_id)).size;
 });
 
+function sortRuralApplications(a, b) {
+  // 1. 구분 (재학생: 0, 졸업생: 1) -> 졸업생은 재학생 뒤로
+  const enrolledA = a.is_enrolled !== false ? 0 : 1;
+  const enrolledB = b.is_enrolled !== false ? 0 : 1;
+  if (enrolledA !== enrolledB) return enrolledA - enrolledB;
+
+  // 2. 학급 (1~11반, 없거나 졸업생은 999)
+  const classA = a.student_class != null ? Number(a.student_class) : 999;
+  const classB = b.student_class != null ? Number(b.student_class) : 999;
+  if (classA !== classB) return classA - classB;
+
+  // 3. 번호 (student_seq)
+  const seqA = a.student_seq != null ? Number(a.student_seq) : 999;
+  const seqB = b.student_seq != null ? Number(b.student_seq) : 999;
+  if (seqA !== seqB) return seqA - seqB;
+
+  // 4. 학번 (student_code)
+  const codeA = String(a.student_code || '');
+  const codeB = String(b.student_code || '');
+  if (codeA !== codeB) return codeA.localeCompare(codeB, 'ko', { numeric: true });
+
+  // 5. 지망 순위 (choice_number: 1지망 -> 2지망...)
+  const choiceA = Number(a.choice_number || 0);
+  const choiceB = Number(b.choice_number || 0);
+  if (choiceA !== choiceB) return choiceA - choiceB;
+
+  // 6. 대학명 -> 학과명
+  const univA = String(a.univ_name || '').trim();
+  const univB = String(b.univ_name || '').trim();
+  if (univA !== univB) return univA.localeCompare(univB, 'ko');
+
+  const deptA = String(a.department || '').trim();
+  const deptB = String(b.department || '').trim();
+  return deptA.localeCompare(deptB, 'ko');
+}
+
 const filteredApplications = computed(() => {
-  return enrichedApplications.value.filter(app => {
+  const filtered = enrichedApplications.value.filter(app => {
     if (filterClass.value !== 'all') {
       if (filterClass.value === 'grad' && app.student_class != null) return false;
       if (filterClass.value !== 'grad' && app.student_class !== Number(filterClass.value)) return false;
@@ -471,6 +507,8 @@ const filteredApplications = computed(() => {
 
     return true;
   });
+
+  return [...filtered].sort(sortRuralApplications);
 });
 
 function openEditModal(app) {
@@ -539,52 +577,7 @@ const printFilterClass = ref('all');
 const printFilterStatus = ref('all');
 
 function sortRuralApplicationsForPrint(apps) {
-  return [...apps].sort((a, b) => {
-    // 1. 구분 (재학생: 0, 졸업생: 1)
-    const enrolledA = a.is_enrolled !== false ? 0 : 1;
-    const enrolledB = b.is_enrolled !== false ? 0 : 1;
-    if (enrolledA !== enrolledB) return enrolledA - enrolledB;
-
-    // 2. 전형유형 (term_type or track_type)
-    const typeA = String(a.track_type || a.term_type || '').trim();
-    const typeB = String(b.track_type || b.term_type || '').trim();
-    if (typeA !== typeB) return typeA.localeCompare(typeB, 'ko');
-
-    // 3. 학급 (1~11, 없거나 졸업생은 999)
-    const classA = a.student_class != null ? Number(a.student_class) : 999;
-    const classB = b.student_class != null ? Number(b.student_class) : 999;
-    if (classA !== classB) return classA - classB;
-
-    // 4. 학번 (5자리 학번 오름차순)
-    const codeA = String(a.student_code || '').slice(-5);
-    const codeB = String(b.student_code || '').slice(-5);
-    if (codeA !== codeB) return codeA.localeCompare(codeB, 'ko', { numeric: true });
-
-    // 5. 전형명 (track_name)
-    const trackA = String(a.track_name || '').trim();
-    const trackB = String(b.track_name || '').trim();
-    if (trackA !== trackB) return trackA.localeCompare(trackB, 'ko');
-
-    // 6. 자격상태 (적격: 0, 자격주의: 1)
-    const warnA = a.is_warning ? 1 : 0;
-    const warnB = b.is_warning ? 1 : 0;
-    if (warnA !== warnB) return warnA - warnB;
-
-    // 7. 지망 (choice_number)
-    const choiceA = Number(a.choice_number || 0);
-    const choiceB = Number(b.choice_number || 0);
-    if (choiceA !== choiceB) return choiceA - choiceB;
-
-    // 8. 대학 (univ_name)
-    const univA = String(a.univ_name || '').trim();
-    const univB = String(b.univ_name || '').trim();
-    if (univA !== univB) return univA.localeCompare(univB, 'ko');
-
-    // 9. 학과 (department)
-    const deptA = String(a.department || '').trim();
-    const deptB = String(b.department || '').trim();
-    return deptA.localeCompare(deptB, 'ko');
-  });
+  return [...apps].sort(sortRuralApplications);
 }
 
 const printTargetApplications = computed(() => {
