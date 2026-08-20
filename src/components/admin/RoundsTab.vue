@@ -335,36 +335,45 @@
                 
                 <!-- 모집단위별 보기일 때 -->
                 <div v-if="rankView === 'track'" class="flex items-center gap-2.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 flex-wrap">
-                  <span v-if="group.unitQuota != null" class="text-emerald-700 dark:text-emerald-400">
-                    🎯 모집단위 정원: {{ group.unitQuota }}명 (잔여: {{ group.remaining }}석)
+                  <span v-if="group.unitQuota != null" :class="group.results.length > group.unitQuota ? 'text-amber-700 font-bold' : 'text-emerald-700'">
+                    🎯 모집단위: 지원 {{ group.results.length }}명 / 정원 {{ group.unitQuota }}명
+                    <span v-if="group.unitQuota - group.results.length > 0" class="text-emerald-600 font-bold">({{ group.unitQuota - group.results.length }}자리 남음)</span>
+                    <span v-else-if="group.unitQuota === group.results.length" class="text-slate-500 font-normal">(정원 충족)</span>
+                    <span v-else class="text-rose-600 font-bold">({{ group.results.length - group.unitQuota }}명 초과)</span>
                   </span>
-                  <span v-else class="text-slate-400">
-                    🎯 모집단위 정원: 제한 없음
-                  </span>
-
-                  <span class="text-slate-300">|</span>
-
-                  <span v-if="group.totalQuota != null" class="text-indigo-700 dark:text-indigo-400">
-                    🏫 대학 전체 정원: {{ group.totalQuota }}명 (잔여: {{ group.univRemaining }}석)
-                  </span>
-                  <span v-else class="text-slate-400">
-                    🏫 대학 전체 정원: 제한 없음
+                  <span v-else class="text-slate-500">
+                    🎯 모집단위: 지원 {{ group.results.length }}명 (정원 제한 없음)
                   </span>
 
                   <span class="text-slate-300">|</span>
 
-                  <span :class="group.gradAllowed ? 'text-blue-600 dark:text-blue-400' : 'text-rose-600 dark:text-rose-400'">
-                    🎓 졸업생 지원: {{ group.gradAllowed ? '허용' : '제한 (재학생 전용)' }}
+                  <span v-if="group.totalQuota != null" :class="group.univAppliedCount > group.totalQuota ? 'text-indigo-800 font-bold' : 'text-indigo-700'">
+                    🏫 대학 전체: 지원 {{ group.univAppliedCount }}명 / 정원 {{ group.totalQuota }}명
+                    <span v-if="group.totalQuota - group.univAppliedCount > 0" class="text-indigo-600 font-bold">({{ group.totalQuota - group.univAppliedCount }}자리 남음)</span>
+                    <span v-else-if="group.totalQuota === group.univAppliedCount" class="text-slate-500 font-normal">(정원 충족)</span>
+                    <span v-else class="text-rose-600 font-bold">({{ group.univAppliedCount - group.totalQuota }}명 초과)</span>
+                  </span>
+                  <span v-else class="text-slate-500">
+                    🏫 대학 전체: 지원 {{ group.univAppliedCount }}명 (정원 제한 없음)
+                  </span>
+
+                  <span class="text-slate-300">|</span>
+
+                  <span :class="group.gradAllowed ? 'text-blue-600' : 'text-rose-600'">
+                    🎓 졸업생: {{ group.gradAllowed ? '지원 허용' : '제한 (재학생 전용)' }}
                   </span>
                 </div>
 
                 <!-- 대학별 보기일 때 -->
-                <div v-else class="flex items-center gap-2.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-600">
-                  <span v-if="group.totalQuota != null" class="text-indigo-700 dark:text-indigo-400">
-                    🏫 대학 전체 정원: {{ group.totalQuota }}명 (잔여: {{ group.univRemaining }}석)
+                <div v-else class="flex items-center gap-2.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 flex-wrap">
+                  <span v-if="group.totalQuota != null" :class="group.results.length > group.totalQuota ? 'text-indigo-800 font-bold' : 'text-indigo-700'">
+                    🏫 대학 전체: 지원 {{ group.results.length }}명 / 정원 {{ group.totalQuota }}명
+                    <span v-if="group.totalQuota - group.results.length > 0" class="text-indigo-600 font-bold">({{ group.totalQuota - group.results.length }}자리 남음)</span>
+                    <span v-else-if="group.totalQuota === group.results.length" class="text-slate-500 font-normal">(정원 충족)</span>
+                    <span v-else class="text-rose-600 font-bold">({{ group.results.length - group.totalQuota }}명 초과)</span>
                   </span>
-                  <span v-else class="text-slate-400">
-                    🏫 대학 전체 정원: 제한 없음
+                  <span v-else class="text-slate-500">
+                    🏫 대학 전체: 지원 {{ group.results.length }}명 (정원 제한 없음)
                   </span>
                 </div>
                 <button
@@ -1157,6 +1166,13 @@ function isAbandonRequested(r) {
 const resultsByUniv = computed(() => {
   const map = {}
   const source = showAbandonOnly.value ? results.value.filter(hasPendingAbandon) : results.value
+  
+  // 대학별 전체 지원자 수 사전 집계
+  const univAppCount = {}
+  for (const r of results.value) {
+    univAppCount[r.univ_name] = (univAppCount[r.univ_name] || 0) + 1
+  }
+
   for (const r of source) {
     const key = `${r.univ_name} ${r.track_name}`
     if (!map[key]) {
@@ -1166,10 +1182,14 @@ const resultsByUniv = computed(() => {
       map[key] = {
         univId: q?.univId ?? null,
         univName: r.univ_name,
+        trackId: r.track_id,
         unitQuota,
         totalQuota,
+        unitUsed: q?.unitUsed ?? 0,
+        totalUsed: q?.totalUsed ?? 0,
         remaining: unitQuota != null ? Math.max(0, unitQuota - (q?.unitUsed ?? 0)) : null,
         univRemaining: totalQuota != null ? Math.max(0, totalQuota - (q?.totalUsed ?? 0)) : null,
+        univAppliedCount: univAppCount[r.univ_name] || 0,
         gradAllowed: r.grad_allowed,
         results: [],
       }
@@ -1191,6 +1211,7 @@ const resultsByUnivOnly = computed(() => {
         univId: q?.univId ?? null,
         univName: r.univ_name,
         totalQuota,
+        totalUsed: q?.totalUsed ?? 0,
         univRemaining: totalQuota != null ? Math.max(0, totalQuota - (q?.totalUsed ?? 0)) : null,
         results: [],
       }
