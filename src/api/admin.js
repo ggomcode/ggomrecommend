@@ -2083,6 +2083,8 @@ export const getApplications = async (roundId, trackId) => {
       univ_name: ap.universities?.univ_name || '',
       track_name: ap.universities?.track_name || '',
       recommended: ap.is_recommended,
+      student_signature_url: ap.student_signature_url || null,
+      parent_signature_url: ap.parent_signature_url || null,
       round_status: 'CLOSED'
     }
   }))

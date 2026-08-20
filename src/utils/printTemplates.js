@@ -1,7 +1,8 @@
 import { schoolName, formatSchoolPrincipalTitle } from './schoolConfig.js'
 
 function getFormattedSchoolName(rawInput) {
-  let name = String(rawInput || '').trim()
+  const unwrapped = rawInput && typeof rawInput === 'object' && 'value' in rawInput ? rawInput.value : rawInput
+  let name = String(unwrapped || '').trim()
   if (!name || name === '우리학교' || name === '우리고등학교') return '우리고등학교'
   if (name.endsWith('고') && !name.endsWith('고등학교')) {
     return name.slice(0, -1) + '고등학교'
@@ -386,6 +387,9 @@ export function printClassApplicationsReport({
       } else {
         // 지원 학생 (지망 수만큼 행 생성)
         const spanCount = apps.length
+        const sigUrl = apps.find(a => a.student_signature_url)?.student_signature_url || st.student_signature_url
+        const sigImgHtml = sigUrl ? `<img src="${sigUrl}" style="max-height: 24px; max-width: 44px; object-fit: contain; display: block; margin: 0 auto;" />` : ''
+
         apps.forEach((app, idx) => {
           const prefNo = idx + 1
           const univName = app.univ_name || '—'
@@ -421,7 +425,7 @@ export function printClassApplicationsReport({
                 <td class="text-left">${deptName || '—'}</td>
                 <td rowspan="${spanCount}" class="text-center tabular-nums bg-st font-bold">${gpaStr}</td>
                 <td class="text-center"><span class="badge ${statusClass}">${statusText}</span></td>
-                <td class="text-center"></td>
+                <td rowspan="${spanCount}" class="text-center" style="padding: 2px;">${sigImgHtml}</td>
               </tr>
             `
           } else {
@@ -432,7 +436,6 @@ export function printClassApplicationsReport({
                 <td class="text-left">${trackName}</td>
                 <td class="text-left">${deptName || '—'}</td>
                 <td class="text-center"><span class="badge ${statusClass}">${statusText}</span></td>
-                <td class="text-center"></td>
               </tr>
             `
           }
@@ -442,19 +445,12 @@ export function printClassApplicationsReport({
     }
   }
 
-  const todayStr = new Date().toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short'
-  })
-
   win.document.write(`
     <!DOCTYPE html>
     <html lang="ko">
     <head>
       <meta charset="UTF-8">
-      <title>${className} 학교장추천전형 지원 현황 대장</title>
+      <title>&nbsp;</title>
       <style>
         @page {
           size: A4 landscape;
@@ -491,12 +487,6 @@ export function printClassApplicationsReport({
           color: #0f172a;
           margin: 0 0 4px 0;
           letter-spacing: -0.02em;
-        }
-        .title-area .school-badge {
-          font-size: 11px;
-          color: #2563eb;
-          font-weight: 700;
-          margin-bottom: 2px;
         }
         .title-area .sub-meta {
           font-size: 11px;
@@ -626,14 +616,6 @@ export function printClassApplicationsReport({
           color: #b45309;
           border: 1px solid #fde68a;
         }
-
-        .footer-note {
-          margin-top: 10px;
-          display: flex;
-          justify-content: space-between;
-          font-size: 9.5px;
-          color: #64748b;
-        }
       </style>
     </head>
     <body>
@@ -641,12 +623,9 @@ export function printClassApplicationsReport({
         <!-- 상단 헤더 & 결재란 -->
         <div class="top-header">
           <div class="title-area">
-            <div class="school-badge">${formattedSchoolName}</div>
             <h1>2027학년도 대입 학교장추천전형 학급별 지원 현황 대장</h1>
             <div class="sub-meta">
               <span><strong>학급:</strong> ${className}</span>
-              &nbsp;|&nbsp;
-              <span><strong>담임/담당:</strong> ${teacherName || '관리자'}</span>
               &nbsp;|&nbsp;
               <span><strong>선발 차수:</strong> ${roundTitle} (<span style="color:#2563eb; font-weight:700;">${roundStatus}</span>)</span>
             </div>
@@ -676,9 +655,6 @@ export function printClassApplicationsReport({
             <span class="summary-item">미지원 학생: <strong>${unappliedStudentsCount}명</strong></span>
             <span class="summary-item">총 지원 건수: <strong>${totalAppsCount}건</strong></span>
           </div>
-          <div style="color:#64748b;">
-            출력 일시: ${todayStr}
-          </div>
         </div>
 
         <!-- 지원 현황 테이블 -->
@@ -695,19 +671,13 @@ export function printClassApplicationsReport({
               <th>세부 학과명</th>
               <th style="width: 55px;">전체내신</th>
               <th style="width: 68px;">선발 상태</th>
-              <th style="width: 48px;">서명확인</th>
+              <th style="width: 54px;">서명확인</th>
             </tr>
           </thead>
           <tbody>
             ${tableRowsHtml}
           </tbody>
         </table>
-
-        <!-- 하단 안내 -->
-        <div class="footer-note">
-          <span>※ 본 문서는 학교장추천전형 지원 접수 및 심의를 위한 교내 확인용 공식 출력물입니다.</span>
-          <span>${formattedSchoolName} 진학지도부</span>
-        </div>
       </div>
       <script>
         window.onload = function() {
@@ -742,14 +712,6 @@ export function printAllClassesApplicationsReport({
     alert('팝업 차단이 설정되어 있어 인쇄 창을 열 수 없습니다. 팝업 차단을 해제해 주세요.')
     return
   }
-
-  const formattedSchoolName = getFormattedSchoolName(schoolName)
-  const todayStr = new Date().toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short'
-  })
 
   // 각 학급별 HTML 생성
   const sectionsHtml = classesData.map((cls, clsIdx) => {
@@ -799,6 +761,9 @@ export function printAllClassesApplicationsReport({
           `
         } else {
           const spanCount = apps.length
+          const sigUrl = apps.find(a => a.student_signature_url)?.student_signature_url || st.student_signature_url
+          const sigImgHtml = sigUrl ? `<img src="${sigUrl}" style="max-height: 24px; max-width: 44px; object-fit: contain; display: block; margin: 0 auto;" />` : ''
+
           apps.forEach((app, idx) => {
             const prefNo = idx + 1
             const univName = app.univ_name || '—'
@@ -834,7 +799,7 @@ export function printAllClassesApplicationsReport({
                   <td class="text-left">${deptName || '—'}</td>
                   <td rowspan="${spanCount}" class="text-center tabular-nums bg-st font-bold">${gpaStr}</td>
                   <td class="text-center"><span class="badge ${statusClass}">${statusText}</span></td>
-                  <td class="text-center"></td>
+                  <td rowspan="${spanCount}" class="text-center" style="padding: 2px;">${sigImgHtml}</td>
                 </tr>
               `
             } else {
@@ -845,7 +810,6 @@ export function printAllClassesApplicationsReport({
                   <td class="text-left">${trackName}</td>
                   <td class="text-left">${deptName || '—'}</td>
                   <td class="text-center"><span class="badge ${statusClass}">${statusText}</span></td>
-                  <td class="text-center"></td>
                 </tr>
               `
             }
@@ -861,12 +825,9 @@ export function printAllClassesApplicationsReport({
         <!-- 상단 헤더 & 결재란 -->
         <div class="top-header">
           <div class="title-area">
-            <div class="school-badge">${formattedSchoolName}</div>
             <h1>2027학년도 대입 학교장추천전형 학급별 지원 현황 대장</h1>
             <div class="sub-meta">
               <span><strong>학급:</strong> ${className}</span>
-              &nbsp;|&nbsp;
-              <span><strong>담임/담당:</strong> ${teacherName || '관리자'}</span>
               &nbsp;|&nbsp;
               <span><strong>선발 차수:</strong> ${roundTitle} (<span style="color:#2563eb; font-weight:700;">${roundStatus}</span>)</span>
             </div>
@@ -896,9 +857,6 @@ export function printAllClassesApplicationsReport({
             <span class="summary-item">미지원 학생: <strong>${unappliedStudentsCount}명</strong></span>
             <span class="summary-item">총 지원 건수: <strong>${totalAppsCount}건</strong></span>
           </div>
-          <div style="color:#64748b;">
-            출력 일시: ${todayStr}
-          </div>
         </div>
 
         <!-- 지원 현황 테이블 -->
@@ -915,19 +873,13 @@ export function printAllClassesApplicationsReport({
               <th>세부 학과명</th>
               <th style="width: 55px;">전체내신</th>
               <th style="width: 68px;">선발 상태</th>
-              <th style="width: 48px;">서명확인</th>
+              <th style="width: 54px;">서명확인</th>
             </tr>
           </thead>
           <tbody>
             ${tableRowsHtml}
           </tbody>
         </table>
-
-        <!-- 하단 안내 -->
-        <div class="footer-note">
-          <span>※ 본 문서는 학교장추천전형 지원 접수 및 심의를 위한 교내 확인용 공식 출력물입니다.</span>
-          <span>${formattedSchoolName} 진학지도부</span>
-        </div>
       </div>
     `
   }).join('')
@@ -937,7 +889,7 @@ export function printAllClassesApplicationsReport({
     <html lang="ko">
     <head>
       <meta charset="UTF-8">
-      <title>전체 학급 학교장추천전형 지원 현황 일괄 대장</title>
+      <title>&nbsp;</title>
       <style>
         @page {
           size: A4 landscape;
@@ -984,12 +936,6 @@ export function printAllClassesApplicationsReport({
           color: #0f172a;
           margin: 0 0 4px 0;
           letter-spacing: -0.02em;
-        }
-        .title-area .school-badge {
-          font-size: 11px;
-          color: #2563eb;
-          font-weight: 700;
-          margin-bottom: 2px;
         }
         .title-area .sub-meta {
           font-size: 11px;
@@ -1118,14 +1064,6 @@ export function printAllClassesApplicationsReport({
           background: #fffbeb;
           color: #b45309;
           border: 1px solid #fde68a;
-        }
-
-        .footer-note {
-          margin-top: 10px;
-          display: flex;
-          justify-content: space-between;
-          font-size: 9.5px;
-          color: #64748b;
         }
       </style>
     </head>
