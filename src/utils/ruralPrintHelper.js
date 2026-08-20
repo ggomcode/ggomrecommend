@@ -446,11 +446,14 @@ export function printRuralClassRoster(title, rosterRows) {
       codeDisplay += `<div style="font-size: 9.5px; color: #475569; font-weight: normal; margin-top: 1px;">(졸업년도 ${gradYearVal})</div>`;
     }
 
+    const choiceStr = r.choice_number ? `${r.choice_number}지망` : '-'
+
     return `
       <tr>
         <td style="text-align: center;">${idx + 1}</td>
         <td style="text-align: center; line-height: 1.2;">${codeDisplay}</td>
         <td style="text-align: center; font-weight: bold;">${r.student_name || '-'}</td>
+        <td style="text-align: center; font-weight: bold; color: #2563eb;">${choiceStr}</td>
         <td style="text-align: center;">${r.track_type || '-'}</td>
         <td style="font-weight: bold;">${r.univ_name || '-'}</td>
         <td style="color: #1e3a8a; font-weight: bold;">${r.department || '-'}</td>
@@ -556,20 +559,21 @@ export function printRuralClassRoster(title, rosterRows) {
         </tr>
       </table>
 
-      <!-- 대장 테이블 (전형명 컬럼 제외 6개 컬럼) -->
+      <!-- 대장 테이블 (7개 컬럼) -->
       <table class="roster-table">
         <thead>
           <tr>
-            <th style="width: 40px;">순번</th>
-            <th style="width: 100px;">학번</th>
-            <th style="width: 80px;">이름</th>
-            <th style="width: 70px;">전형유형</th>
-            <th style="width: 180px;">대학</th>
+            <th style="width: 36px;">순번</th>
+            <th style="width: 90px;">학번</th>
+            <th style="width: 75px;">이름</th>
+            <th style="width: 55px;">지망</th>
+            <th style="width: 65px;">전형유형</th>
+            <th style="width: 170px;">대학</th>
             <th>학과</th>
           </tr>
         </thead>
         <tbody>
-          ${rowsHtml || '<tr><td colspan="6" style="text-align:center; padding: 20px; color:#94a3b8;">신청 내역이 없습니다.</td></tr>'}
+          ${rowsHtml || '<tr><td colspan="7" style="text-align:center; padding: 20px; color:#94a3b8;">신청 내역이 없습니다.</td></tr>'}
         </tbody>
       </table>
 

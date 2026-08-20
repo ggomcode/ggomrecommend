@@ -431,7 +431,14 @@
                           <td class="text-base text-center" style="padding: 12px 8px; color: #94a3b8; user-select: none;">
                             {{ expandedRows[`${r.student_id}-${r.track_id}`] ? '▼' : '▶' }}
                           </td>
-                          <td class="text-base text-center" style="padding: 12px 16px; color: #475569;">{{ rankView === 'track' ? (r.track_rank ?? '-') : (r.ranking ?? '-') }}</td>
+                          <td class="text-base text-center" style="padding: 12px 16px; color: #475569;">
+                            <template v-if="rankView === 'track'">
+                              {{ group.unitQuota != null ? (r.track_rank ?? r.ranking ?? '-') : '-' }}
+                            </template>
+                            <template v-else>
+                              {{ group.totalQuota != null ? (r.ranking ?? '-') : '-' }}
+                            </template>
+                          </td>
                           <td class="text-base" style="padding: 12px 18px; color: #475569; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                             <span v-if="r.is_enrolled">{{ r.grade }}학년 {{ r.class_no }}반 {{ r.seq_no }}번</span>
                             <span v-else class="font-mono">{{ r.student_code }}</span>
@@ -456,7 +463,9 @@
                             <span v-else class="text-base" style="color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;">{{ r.department_name }}</span>
                           </td>
                           <td class="text-base text-left font-semibold" style="padding: 12px 18px; color: #1e293b;">
-                             {{ r.ranking != null ? `${r.ranking}위` : '-' }}
+                             <template v-if="(rankView === 'track' ? group.unitQuota != null : group.totalQuota != null) && r.ranking != null">
+                               {{ r.ranking }}위
+                             </template>
                              ({{ r.manual_score != null && Number(r.manual_score) > 0 ? `${formatScore(r.manual_score)}점` : (r.gpa_overall != null ? `${Number(r.gpa_overall).toFixed(2)}등급` : '-') }})
                            </td>
                           <td class="text-center" style="padding: 12px 18px;" @click.stop>
@@ -1163,6 +1172,26 @@ function isAbandonRequested(r) {
   return false
 }
 
+function sortRoundApplicants(a, b) {
+  // 1. 재학생 우선 (재학생 -> 졸업생)
+  const aEnrolled = a.is_enrolled !== false
+  const bEnrolled = b.is_enrolled !== false
+  if (aEnrolled !== bEnrolled) return aEnrolled ? -1 : 1
+
+  // 2. 재학생인 경우 학년, 반, 번호 순
+  if (aEnrolled) {
+    const gradeDiff = (Number(a.grade) || 0) - (Number(b.grade) || 0)
+    if (gradeDiff !== 0) return gradeDiff
+    const classDiff = (Number(a.class_no) || 0) - (Number(b.class_no) || 0)
+    if (classDiff !== 0) return classDiff
+    const seqDiff = (Number(a.seq_no) || 0) - (Number(b.seq_no) || 0)
+    if (seqDiff !== 0) return seqDiff
+  }
+
+  // 3. 학번/코드 오름차순
+  return String(a.student_code || '').localeCompare(String(b.student_code || ''), 'ko', { numeric: true })
+}
+
 const resultsByUniv = computed(() => {
   const map = {}
   const source = showAbandonOnly.value ? results.value.filter(hasPendingAbandon) : results.value
@@ -1196,6 +1225,12 @@ const resultsByUniv = computed(() => {
     }
     map[key].results.push(r)
   }
+
+  // 각 그룹별 학번순 정렬 (재학생 -> 졸업생)
+  for (const g of Object.values(map)) {
+    g.results.sort(sortRoundApplicants)
+  }
+
   return map
 })
 
@@ -1219,12 +1254,7 @@ const resultsByUnivOnly = computed(() => {
     map[key].results.push(r)
   }
   for (const g of Object.values(map)) {
-    g.results.sort((a, b) => {
-      if (a.ranking == null && b.ranking == null) return 0
-      if (a.ranking == null) return 1
-      if (b.ranking == null) return -1
-      return a.ranking - b.ranking
-    })
+    g.results.sort(sortRoundApplicants)
   }
   return map
 })
