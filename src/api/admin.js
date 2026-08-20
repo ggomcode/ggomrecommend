@@ -123,18 +123,19 @@ export const getOverview = async () => {
   // [2] 현재 진행 중인 라운드가 있는 경우, 지원서와 재학생 매핑 정보를 단 1회의 병렬 쿼리로 조회
   const appCountByUniv = new Map()
   const appCountByClass = new Map()
+  const gradApplicantsSet = new Set()
 
   if (round) {
     const [appsRes, studentsRes] = await Promise.all([
       supabase.from('applications').select('univ_id, student_id').lte('round', round.id),
-      supabase.from('enrolled_students').select('id, grade, class_no').eq('is_enrolled', true)
+      supabase.from('enrolled_students').select('id, grade, class_no, is_enrolled')
     ])
     const roundApps = appsRes.data || []
     const students = studentsRes.data || []
 
     const enrolledMap = new Map()
     for (const s of students) {
-      enrolledMap.set(s.id, { grade: s.grade, class_no: s.class_no })
+      enrolledMap.set(s.id, { grade: s.grade, class_no: s.class_no, is_enrolled: s.is_enrolled !== false })
     }
 
     for (const app of roundApps) {
@@ -143,15 +144,32 @@ export const getOverview = async () => {
       }
       const st = enrolledMap.get(app.student_id)
       if (st) {
-        const key = `${st.grade}_${st.class_no}`
-        if (!appCountByClass.has(key)) appCountByClass.set(key, new Set())
-        appCountByClass.get(key).add(app.student_id)
+        if (!st.is_enrolled || !st.grade || Number(st.grade) === 0) {
+          gradApplicantsSet.add(app.student_id)
+        } else {
+          const key = `${st.grade}_${st.class_no}`
+          if (!appCountByClass.has(key)) appCountByClass.set(key, new Set())
+          appCountByClass.get(key).add(app.student_id)
+        }
+      } else {
+        gradApplicantsSet.add(app.student_id)
       }
     }
   }
 
-  // [3] 학급 배열 생성 (교사 이름 복호화)
-  const classes = await Promise.all(teachers.map(async t => {
+  // [3] 일반 학급과 졸업생 담당 교사 분리 생성 (교사 이름 복호화)
+  const regularTeachers = []
+  let graduatedTeacher = null
+
+  for (const t of teachers) {
+    if (!t.grade || Number(t.grade) === 0) {
+      graduatedTeacher = t
+    } else {
+      regularTeachers.push(t)
+    }
+  }
+
+  const classes = await Promise.all(regularTeachers.map(async t => {
     const key = `${t.grade}_${t.class_no}`
     const count = appCountByClass.has(key) ? appCountByClass.get(key).size : 0
     const decName = t.name === '관리자' ? '관리자' : await decryptText(t.name)
@@ -164,6 +182,15 @@ export const getOverview = async () => {
       confirmed: true
     }
   }))
+
+  const graduatedObj = graduatedTeacher ? {
+    grade: 0,
+    class_no: 0,
+    teacher_name: (graduatedTeacher.name === '관리자' ? '관리자' : await decryptText(graduatedTeacher.name)) || '졸업생 담당',
+    submitted: gradApplicantsSet.size,
+    count: gradApplicantsSet.size,
+    confirmed: true
+  } : null
 
   // [4] 대학/모집단위 배열 생성 (정원 계산 헬퍼 getQuotaStats와 연동하여 정밀한 정원 계산 반영)
   const quotaStats = await getQuotaStats()
@@ -190,6 +217,7 @@ export const getOverview = async () => {
     round,
     student_count: studentCount,
     classes,
+    graduated: graduatedObj,
     universities,
     all_time: {
       total_rounds: totalRounds,

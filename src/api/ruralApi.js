@@ -1286,14 +1286,14 @@ export async function checkRuralSystemOpenStatus() {
     let activeTerm = '수시';
     let reason = '';
 
-    // 1. 수시 원서접수 기간 검사 (수시 시작일 15일 전부터 마감일까지)
+    // 1. 수시 원서접수 기간 검사 (수시 시작일 18일 전부터 마감일까지)
     if (susiStartStr && susiEndStr) {
       const susiStart = new Date(`${susiStartStr}T00:00:00`);
       const susiEnd = new Date(`${susiEndStr}T23:59:59`);
 
       if (!isNaN(susiStart.getTime()) && !isNaN(susiEnd.getTime())) {
         const susiOpenStart = new Date(susiStart);
-        susiOpenStart.setDate(susiOpenStart.getDate() - 15);
+        susiOpenStart.setDate(susiOpenStart.getDate() - 18);
 
         if (now >= susiOpenStart && now <= susiEnd) {
           isSusiOpen = true;
@@ -1344,7 +1344,7 @@ export async function checkRuralSystemOpenStatus() {
         const susiStart = new Date(`${susiStartStr}T00:00:00`);
         if (!isNaN(susiStart.getTime())) {
           const susiOpenStart = new Date(susiStart);
-          susiOpenStart.setDate(susiOpenStart.getDate() - 15);
+          susiOpenStart.setDate(susiOpenStart.getDate() - 18);
           if (now < susiOpenStart) {
             isBeforeSusi = true;
           }

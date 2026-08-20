@@ -312,3 +312,837 @@ export function printRoundsReport(roundId, results) {
   `)
   win.document.close()
 }
+
+/**
+ * 학급별 학교장추천전형 지원 현황 대장 인쇄
+ * @param {Object} params
+ * @param {string} params.className 학급명 (예: '3학년 1반' 또는 '졸업생')
+ * @param {string} params.teacherName 담임/담당 교사 성명
+ * @param {string} params.roundTitle 선발 차수 명칭 (예: '1차 추천 선발' 또는 '추천 선발')
+ * @param {string} params.roundStatus 진행 상태 (예: '접수 중', '심의 중', '마감' 등)
+ * @param {Array}  params.students 학급 학생 목록 (apps 배열 포함)
+ * @param {boolean} params.appliedOnly 지원자만 인쇄할지 여부 (기본 false: 전체 명단)
+ */
+export function printClassApplicationsReport({
+  className = '',
+  teacherName = '',
+  roundTitle = '추천 선발',
+  roundStatus = '접수 중',
+  students = [],
+  appliedOnly = false
+}) {
+  const win = window.open('', '_blank')
+  if (!win) {
+    alert('팝업 차단이 설정되어 있어 인쇄 창을 열 수 없습니다. 팝업 차단을 해제해 주세요.')
+    return
+  }
+
+  const formattedSchoolName = getFormattedSchoolName(schoolName)
+  const printTargetStudents = appliedOnly
+    ? students.filter(s => s.apps && s.apps.length > 0)
+    : students
+
+  const totalStudentsCount = students.length
+  const appliedStudentsCount = students.filter(s => s.apps && s.apps.length > 0).length
+  const unappliedStudentsCount = totalStudentsCount - appliedStudentsCount
+  const totalAppsCount = students.reduce((sum, s) => sum + (s.apps ? s.apps.length : 0), 0)
+
+  // 행 생성 (학생당 지원 대학이 여러 개인 경우 rowspan 적용)
+  let tableRowsHtml = ''
+  let rowSeq = 1
+
+  if (printTargetStudents.length === 0) {
+    tableRowsHtml = `
+      <tr>
+        <td colspan="9" style="text-align:center; padding: 25px; color:#64748b; font-size:12px;">
+          해당 학급에 등록된 지원/학생 데이터가 없습니다.
+        </td>
+      </tr>
+    `
+  } else {
+    for (const st of printTargetStudents) {
+      const apps = st.apps || []
+      const studentNo = st.seq_no || rowSeq
+      const studentCode = st.student_code || '—'
+      const studentName = st.name || '미명학생'
+      const isEnrolledStr = st.is_enrolled === false ? '<span class="tag-grad">졸업생</span>' : '재학생'
+      const gpaStr = st.gpa_overall != null ? Number(st.gpa_overall).toFixed(2) : '—'
+
+      if (apps.length === 0) {
+        // 미지원 학생
+        tableRowsHtml += `
+          <tr class="student-row unapplied-row">
+            <td class="text-center font-mono">${studentNo}</td>
+            <td class="text-center font-mono">${studentCode}</td>
+            <td class="text-center font-bold">${studentName}</td>
+            <td class="text-center">${isEnrolledStr}</td>
+            <td class="text-center text-muted">—</td>
+            <td colspan="3" class="text-center text-muted" style="color:#94a3b8; font-style:italic;">(미지원)</td>
+            <td class="text-center tabular-nums">${gpaStr}</td>
+            <td class="text-center text-muted">미지원</td>
+            <td class="text-center"></td>
+          </tr>
+        `
+      } else {
+        // 지원 학생 (지망 수만큼 행 생성)
+        const spanCount = apps.length
+        apps.forEach((app, idx) => {
+          const prefNo = idx + 1
+          const univName = app.univ_name || '—'
+          const trackName = app.track_name || '—'
+          const deptName = app.department_name ? ` (${app.department_name})` : ''
+          
+          let statusText = '접수완료'
+          let statusClass = 'status-open'
+          if (app.abandoned) {
+            statusText = '포기'
+            statusClass = 'status-abandoned'
+          } else if (app.excluded) {
+            statusText = `미선발(${app.excluded_reason || '제외'})`
+            statusClass = 'status-excluded'
+          } else if (app.recommended) {
+            statusText = '추천확정'
+            statusClass = 'status-recommended'
+          } else if (roundStatus === 'FINALIZED' || roundStatus === '마감') {
+            statusText = '미선발'
+            statusClass = 'status-unselected'
+          }
+
+          if (idx === 0) {
+            tableRowsHtml += `
+              <tr class="student-row">
+                <td rowspan="${spanCount}" class="text-center font-mono bg-st">${studentNo}</td>
+                <td rowspan="${spanCount}" class="text-center font-mono bg-st">${studentCode}</td>
+                <td rowspan="${spanCount}" class="text-center font-bold bg-st">${studentName}</td>
+                <td rowspan="${spanCount}" class="text-center bg-st">${isEnrolledStr}</td>
+                <td class="text-center font-bold text-blue">${prefNo}지망</td>
+                <td class="text-left font-bold">${univName}</td>
+                <td class="text-left">${trackName}</td>
+                <td class="text-left">${deptName || '—'}</td>
+                <td rowspan="${spanCount}" class="text-center tabular-nums bg-st font-bold">${gpaStr}</td>
+                <td class="text-center"><span class="badge ${statusClass}">${statusText}</span></td>
+                <td class="text-center"></td>
+              </tr>
+            `
+          } else {
+            tableRowsHtml += `
+              <tr>
+                <td class="text-center font-bold text-blue">${prefNo}지망</td>
+                <td class="text-left font-bold">${univName}</td>
+                <td class="text-left">${trackName}</td>
+                <td class="text-left">${deptName || '—'}</td>
+                <td class="text-center"><span class="badge ${statusClass}">${statusText}</span></td>
+                <td class="text-center"></td>
+              </tr>
+            `
+          }
+        })
+      }
+      rowSeq++
+    }
+  }
+
+  const todayStr = new Date().toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short'
+  })
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+      <meta charset="UTF-8">
+      <title>${className} 학교장추천전형 지원 현황 대장</title>
+      <style>
+        @page {
+          size: A4 landscape;
+          margin: 10mm 12mm;
+        }
+        * {
+          box-sizing: border-box;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        body {
+          font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif;
+          color: #1e293b;
+          margin: 0;
+          padding: 0;
+          font-size: 11px;
+          line-height: 1.35;
+          background: #fff;
+        }
+        .page-container {
+          width: 100%;
+        }
+        .top-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 12px;
+          border-bottom: 2px solid #0f172a;
+          padding-bottom: 8px;
+        }
+        .title-area h1 {
+          font-size: 19px;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0 0 4px 0;
+          letter-spacing: -0.02em;
+        }
+        .title-area .school-badge {
+          font-size: 11px;
+          color: #2563eb;
+          font-weight: 700;
+          margin-bottom: 2px;
+        }
+        .title-area .sub-meta {
+          font-size: 11px;
+          color: #475569;
+          font-weight: 500;
+          margin-top: 3px;
+        }
+        .title-area .sub-meta strong {
+          color: #0f172a;
+        }
+
+        /* 결재란 */
+        .sign-table {
+          border-collapse: collapse;
+          text-align: center;
+          font-size: 10px;
+          border: 1px solid #64748b;
+        }
+        .sign-table th, .sign-table td {
+          border: 1px solid #64748b;
+          padding: 2px 6px;
+        }
+        .sign-table th.header-th {
+          background: #f1f5f9;
+          font-weight: 700;
+          width: 20px;
+          line-height: 1.2;
+        }
+        .sign-table .role-title {
+          background: #f8fafc;
+          font-weight: 600;
+          width: 50px;
+          height: 18px;
+        }
+        .sign-table .sign-box {
+          height: 38px;
+        }
+
+        /* 통계 요약 바 */
+        .summary-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 4px;
+          padding: 6px 12px;
+          margin-bottom: 10px;
+          font-size: 11px;
+        }
+        .summary-items {
+          display: flex;
+          gap: 16px;
+        }
+        .summary-item strong {
+          color: #2563eb;
+          font-size: 12px;
+        }
+
+        /* 데이터 테이블 */
+        table.data-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 10.5px;
+          border: 1px solid #334155;
+        }
+        table.data-table th, table.data-table td {
+          border: 1px solid #cbd5e1;
+          padding: 5.5px 6px;
+        }
+        table.data-table th {
+          background: #f1f5f9;
+          color: #1e293b;
+          font-weight: 700;
+          text-align: center;
+          border-top: 1px solid #334155;
+          border-bottom: 1.5px solid #334155;
+        }
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+        .font-mono { font-family: 'Consolas', 'Courier New', monospace; }
+        .font-bold { font-weight: 700; }
+        .text-blue { color: #1d4ed8; }
+        .text-muted { color: #94a3b8; }
+        .bg-st { background: #fafafa; }
+        .tag-grad {
+          display: inline-block;
+          font-size: 9px;
+          font-weight: 700;
+          color: #b45309;
+          background: #fef3c7;
+          border: 1px solid #fde68a;
+          padding: 1px 3px;
+          border-radius: 2px;
+        }
+        .badge {
+          display: inline-block;
+          font-size: 9.5px;
+          font-weight: 700;
+          padding: 1.5px 5px;
+          border-radius: 3px;
+          white-space: nowrap;
+        }
+        .status-open {
+          background: #eff6ff;
+          color: #1d4ed8;
+          border: 1px solid #bfdbfe;
+        }
+        .status-recommended {
+          background: #ecfdf5;
+          color: #047857;
+          border: 1px solid #a7f3d0;
+        }
+        .status-unselected {
+          background: #f1f5f9;
+          color: #64748b;
+          border: 1px solid #cbd5e1;
+        }
+        .status-abandoned {
+          background: #fef2f2;
+          color: #b91c1c;
+          border: 1px solid #fecaca;
+        }
+        .status-excluded {
+          background: #fffbeb;
+          color: #b45309;
+          border: 1px solid #fde68a;
+        }
+
+        .footer-note {
+          margin-top: 10px;
+          display: flex;
+          justify-content: space-between;
+          font-size: 9.5px;
+          color: #64748b;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="page-container">
+        <!-- 상단 헤더 & 결재란 -->
+        <div class="top-header">
+          <div class="title-area">
+            <div class="school-badge">${formattedSchoolName}</div>
+            <h1>2027학년도 대입 학교장추천전형 학급별 지원 현황 대장</h1>
+            <div class="sub-meta">
+              <span><strong>학급:</strong> ${className}</span>
+              &nbsp;|&nbsp;
+              <span><strong>담임/담당:</strong> ${teacherName || '관리자'}</span>
+              &nbsp;|&nbsp;
+              <span><strong>선발 차수:</strong> ${roundTitle} (<span style="color:#2563eb; font-weight:700;">${roundStatus}</span>)</span>
+            </div>
+          </div>
+          <table class="sign-table">
+            <tr>
+              <th rowspan="2" class="header-th">결<br>재</th>
+              <td class="role-title">담 임</td>
+              <td class="role-title">부 장</td>
+              <td class="role-title">교 감</td>
+              <td class="role-title">교 장</td>
+            </tr>
+            <tr>
+              <td class="sign-box"></td>
+              <td class="sign-box"></td>
+              <td class="sign-box"></td>
+              <td class="sign-box"></td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- 요약 바 -->
+        <div class="summary-bar">
+          <div class="summary-items">
+            <span class="summary-item">학급 총원: <strong>${totalStudentsCount}명</strong></span>
+            <span class="summary-item">지원 학생: <strong>${appliedStudentsCount}명</strong></span>
+            <span class="summary-item">미지원 학생: <strong>${unappliedStudentsCount}명</strong></span>
+            <span class="summary-item">총 지원 건수: <strong>${totalAppsCount}건</strong></span>
+          </div>
+          <div style="color:#64748b;">
+            출력 일시: ${todayStr}
+          </div>
+        </div>
+
+        <!-- 지원 현황 테이블 -->
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 32px;">번호</th>
+              <th style="width: 58px;">학번</th>
+              <th style="width: 65px;">성명</th>
+              <th style="width: 48px;">구분</th>
+              <th style="width: 48px;">지망</th>
+              <th style="width: 140px;">지원 대학명</th>
+              <th style="width: 150px;">전형명 (모집단위)</th>
+              <th>세부 학과명</th>
+              <th style="width: 55px;">전체내신</th>
+              <th style="width: 68px;">선발 상태</th>
+              <th style="width: 48px;">서명확인</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRowsHtml}
+          </tbody>
+        </table>
+
+        <!-- 하단 안내 -->
+        <div class="footer-note">
+          <span>※ 본 문서는 학교장추천전형 지원 접수 및 심의를 위한 교내 확인용 공식 출력물입니다.</span>
+          <span>${formattedSchoolName} 진학지도부</span>
+        </div>
+      </div>
+      <script>
+        window.onload = function() {
+          setTimeout(function() {
+            window.print();
+            window.close();
+          }, 500);
+        };
+      <\/script>
+    </body>
+    </html>
+  `)
+  win.document.close()
+}
+
+/**
+ * 전 학급 학교장추천전형 지원 현황 일괄 대장 인쇄 (반별 자동 페이지 분할)
+ * @param {Object} params
+ * @param {Array}  params.classesData [{ className, teacherName, students }]
+ * @param {string} params.roundTitle 선발 차수 명칭
+ * @param {string} params.roundStatus 진행 상태
+ * @param {boolean} params.appliedOnly 지원자만 인쇄할지 여부
+ */
+export function printAllClassesApplicationsReport({
+  classesData = [],
+  roundTitle = '추천 선발',
+  roundStatus = '접수 중',
+  appliedOnly = false
+}) {
+  const win = window.open('', '_blank')
+  if (!win) {
+    alert('팝업 차단이 설정되어 있어 인쇄 창을 열 수 없습니다. 팝업 차단을 해제해 주세요.')
+    return
+  }
+
+  const formattedSchoolName = getFormattedSchoolName(schoolName)
+  const todayStr = new Date().toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short'
+  })
+
+  // 각 학급별 HTML 생성
+  const sectionsHtml = classesData.map((cls, clsIdx) => {
+    const { className, teacherName, students = [] } = cls
+    const printTargetStudents = appliedOnly
+      ? students.filter(s => s.apps && s.apps.length > 0)
+      : students
+
+    const totalStudentsCount = students.length
+    const appliedStudentsCount = students.filter(s => s.apps && s.apps.length > 0).length
+    const unappliedStudentsCount = totalStudentsCount - appliedStudentsCount
+    const totalAppsCount = students.reduce((sum, s) => sum + (s.apps ? s.apps.length : 0), 0)
+
+    let tableRowsHtml = ''
+    let rowSeq = 1
+
+    if (printTargetStudents.length === 0) {
+      tableRowsHtml = `
+        <tr>
+          <td colspan="11" style="text-align:center; padding: 25px; color:#64748b; font-size:12px;">
+            해당 학급에 등록된 지원/학생 데이터가 없습니다.
+          </td>
+        </tr>
+      `
+    } else {
+      for (const st of printTargetStudents) {
+        const apps = st.apps || []
+        const studentNo = st.seq_no || rowSeq
+        const studentCode = st.student_code || '—'
+        const studentName = st.name || '미명학생'
+        const isEnrolledStr = st.is_enrolled === false ? '<span class="tag-grad">졸업생</span>' : '재학생'
+        const gpaStr = st.gpa_overall != null ? Number(st.gpa_overall).toFixed(2) : '—'
+
+        if (apps.length === 0) {
+          tableRowsHtml += `
+            <tr class="student-row unapplied-row">
+              <td class="text-center font-mono">${studentNo}</td>
+              <td class="text-center font-mono">${studentCode}</td>
+              <td class="text-center font-bold">${studentName}</td>
+              <td class="text-center">${isEnrolledStr}</td>
+              <td class="text-center text-muted">—</td>
+              <td colspan="3" class="text-center text-muted" style="color:#94a3b8; font-style:italic;">(미지원)</td>
+              <td class="text-center tabular-nums">${gpaStr}</td>
+              <td class="text-center text-muted">미지원</td>
+              <td class="text-center"></td>
+            </tr>
+          `
+        } else {
+          const spanCount = apps.length
+          apps.forEach((app, idx) => {
+            const prefNo = idx + 1
+            const univName = app.univ_name || '—'
+            const trackName = app.track_name || '—'
+            const deptName = app.department_name ? ` (${app.department_name})` : ''
+            
+            let statusText = '접수완료'
+            let statusClass = 'status-open'
+            if (app.abandoned) {
+              statusText = '포기'
+              statusClass = 'status-abandoned'
+            } else if (app.excluded) {
+              statusText = `미선발(${app.excluded_reason || '제외'})`
+              statusClass = 'status-excluded'
+            } else if (app.recommended) {
+              statusText = '추천확정'
+              statusClass = 'status-recommended'
+            } else if (roundStatus === 'FINALIZED' || roundStatus === '마감') {
+              statusText = '미선발'
+              statusClass = 'status-unselected'
+            }
+
+            if (idx === 0) {
+              tableRowsHtml += `
+                <tr class="student-row">
+                  <td rowspan="${spanCount}" class="text-center font-mono bg-st">${studentNo}</td>
+                  <td rowspan="${spanCount}" class="text-center font-mono bg-st">${studentCode}</td>
+                  <td rowspan="${spanCount}" class="text-center font-bold bg-st">${studentName}</td>
+                  <td rowspan="${spanCount}" class="text-center bg-st">${isEnrolledStr}</td>
+                  <td class="text-center font-bold text-blue">${prefNo}지망</td>
+                  <td class="text-left font-bold">${univName}</td>
+                  <td class="text-left">${trackName}</td>
+                  <td class="text-left">${deptName || '—'}</td>
+                  <td rowspan="${spanCount}" class="text-center tabular-nums bg-st font-bold">${gpaStr}</td>
+                  <td class="text-center"><span class="badge ${statusClass}">${statusText}</span></td>
+                  <td class="text-center"></td>
+                </tr>
+              `
+            } else {
+              tableRowsHtml += `
+                <tr>
+                  <td class="text-center font-bold text-blue">${prefNo}지망</td>
+                  <td class="text-left font-bold">${univName}</td>
+                  <td class="text-left">${trackName}</td>
+                  <td class="text-left">${deptName || '—'}</td>
+                  <td class="text-center"><span class="badge ${statusClass}">${statusText}</span></td>
+                  <td class="text-center"></td>
+                </tr>
+              `
+            }
+          })
+        }
+        rowSeq++
+      }
+    }
+
+    const isLast = clsIdx === classesData.length - 1
+    return `
+      <div class="page-container ${isLast ? '' : 'page-break'}">
+        <!-- 상단 헤더 & 결재란 -->
+        <div class="top-header">
+          <div class="title-area">
+            <div class="school-badge">${formattedSchoolName}</div>
+            <h1>2027학년도 대입 학교장추천전형 학급별 지원 현황 대장</h1>
+            <div class="sub-meta">
+              <span><strong>학급:</strong> ${className}</span>
+              &nbsp;|&nbsp;
+              <span><strong>담임/담당:</strong> ${teacherName || '관리자'}</span>
+              &nbsp;|&nbsp;
+              <span><strong>선발 차수:</strong> ${roundTitle} (<span style="color:#2563eb; font-weight:700;">${roundStatus}</span>)</span>
+            </div>
+          </div>
+          <table class="sign-table">
+            <tr>
+              <th rowspan="2" class="header-th">결<br>재</th>
+              <td class="role-title">담 임</td>
+              <td class="role-title">부 장</td>
+              <td class="role-title">교 감</td>
+              <td class="role-title">교 장</td>
+            </tr>
+            <tr>
+              <td class="sign-box"></td>
+              <td class="sign-box"></td>
+              <td class="sign-box"></td>
+              <td class="sign-box"></td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- 요약 바 -->
+        <div class="summary-bar">
+          <div class="summary-items">
+            <span class="summary-item">학급 총원: <strong>${totalStudentsCount}명</strong></span>
+            <span class="summary-item">지원 학생: <strong>${appliedStudentsCount}명</strong></span>
+            <span class="summary-item">미지원 학생: <strong>${unappliedStudentsCount}명</strong></span>
+            <span class="summary-item">총 지원 건수: <strong>${totalAppsCount}건</strong></span>
+          </div>
+          <div style="color:#64748b;">
+            출력 일시: ${todayStr}
+          </div>
+        </div>
+
+        <!-- 지원 현황 테이블 -->
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 32px;">번호</th>
+              <th style="width: 58px;">학번</th>
+              <th style="width: 65px;">성명</th>
+              <th style="width: 48px;">구분</th>
+              <th style="width: 48px;">지망</th>
+              <th style="width: 140px;">지원 대학명</th>
+              <th style="width: 150px;">전형명 (모집단위)</th>
+              <th>세부 학과명</th>
+              <th style="width: 55px;">전체내신</th>
+              <th style="width: 68px;">선발 상태</th>
+              <th style="width: 48px;">서명확인</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRowsHtml}
+          </tbody>
+        </table>
+
+        <!-- 하단 안내 -->
+        <div class="footer-note">
+          <span>※ 본 문서는 학교장추천전형 지원 접수 및 심의를 위한 교내 확인용 공식 출력물입니다.</span>
+          <span>${formattedSchoolName} 진학지도부</span>
+        </div>
+      </div>
+    `
+  }).join('')
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+      <meta charset="UTF-8">
+      <title>전체 학급 학교장추천전형 지원 현황 일괄 대장</title>
+      <style>
+        @page {
+          size: A4 landscape;
+          margin: 10mm 12mm;
+        }
+        * {
+          box-sizing: border-box;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        body {
+          font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', '맑은 고딕', sans-serif;
+          color: #1e293b;
+          margin: 0;
+          padding: 0;
+          font-size: 11px;
+          line-height: 1.35;
+          background: #fff;
+        }
+        .page-container {
+          width: 100%;
+        }
+        .page-break {
+          page-break-after: always;
+          break-after: page;
+          margin-bottom: 24px;
+        }
+        @media print {
+          .page-break {
+            margin-bottom: 0;
+          }
+        }
+        .top-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 12px;
+          border-bottom: 2px solid #0f172a;
+          padding-bottom: 8px;
+        }
+        .title-area h1 {
+          font-size: 19px;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0 0 4px 0;
+          letter-spacing: -0.02em;
+        }
+        .title-area .school-badge {
+          font-size: 11px;
+          color: #2563eb;
+          font-weight: 700;
+          margin-bottom: 2px;
+        }
+        .title-area .sub-meta {
+          font-size: 11px;
+          color: #475569;
+          font-weight: 500;
+          margin-top: 3px;
+        }
+        .title-area .sub-meta strong {
+          color: #0f172a;
+        }
+
+        /* 결재란 */
+        .sign-table {
+          border-collapse: collapse;
+          text-align: center;
+          font-size: 10px;
+          border: 1px solid #64748b;
+        }
+        .sign-table th, .sign-table td {
+          border: 1px solid #64748b;
+          padding: 2px 6px;
+        }
+        .sign-table th.header-th {
+          background: #f1f5f9;
+          font-weight: 700;
+          width: 20px;
+          line-height: 1.2;
+        }
+        .sign-table .role-title {
+          background: #f8fafc;
+          font-weight: 600;
+          width: 50px;
+          height: 18px;
+        }
+        .sign-table .sign-box {
+          height: 38px;
+        }
+
+        /* 통계 요약 바 */
+        .summary-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 4px;
+          padding: 6px 12px;
+          margin-bottom: 10px;
+          font-size: 11px;
+        }
+        .summary-items {
+          display: flex;
+          gap: 16px;
+        }
+        .summary-item strong {
+          color: #2563eb;
+          font-size: 12px;
+        }
+
+        /* 데이터 테이블 */
+        table.data-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 10.5px;
+          border: 1px solid #334155;
+        }
+        table.data-table th, table.data-table td {
+          border: 1px solid #cbd5e1;
+          padding: 5.5px 6px;
+        }
+        table.data-table th {
+          background: #f1f5f9;
+          color: #1e293b;
+          font-weight: 700;
+          text-align: center;
+          border-top: 1px solid #334155;
+          border-bottom: 1.5px solid #334155;
+        }
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+        .font-mono { font-family: 'Consolas', 'Courier New', monospace; }
+        .font-bold { font-weight: 700; }
+        .text-blue { color: #1d4ed8; }
+        .text-muted { color: #94a3b8; }
+        .bg-st { background: #fafafa; }
+        .tag-grad {
+          display: inline-block;
+          font-size: 9px;
+          font-weight: 700;
+          color: #b45309;
+          background: #fef3c7;
+          border: 1px solid #fde68a;
+          padding: 1px 3px;
+          border-radius: 2px;
+        }
+        .badge {
+          display: inline-block;
+          font-size: 9.5px;
+          font-weight: 700;
+          padding: 1.5px 5px;
+          border-radius: 3px;
+          white-space: nowrap;
+        }
+        .status-open {
+          background: #eff6ff;
+          color: #1d4ed8;
+          border: 1px solid #bfdbfe;
+        }
+        .status-recommended {
+          background: #ecfdf5;
+          color: #047857;
+          border: 1px solid #a7f3d0;
+        }
+        .status-unselected {
+          background: #f1f5f9;
+          color: #64748b;
+          border: 1px solid #cbd5e1;
+        }
+        .status-abandoned {
+          background: #fef2f2;
+          color: #b91c1c;
+          border: 1px solid #fecaca;
+        }
+        .status-excluded {
+          background: #fffbeb;
+          color: #b45309;
+          border: 1px solid #fde68a;
+        }
+
+        .footer-note {
+          margin-top: 10px;
+          display: flex;
+          justify-content: space-between;
+          font-size: 9.5px;
+          color: #64748b;
+        }
+      </style>
+    </head>
+    <body>
+      ${sectionsHtml}
+      <script>
+        window.onload = function() {
+          setTimeout(function() {
+            window.print();
+            window.close();
+          }, 600);
+        };
+      <\/script>
+    </body>
+    </html>
+  `)
+  win.document.close()
+}
+
+

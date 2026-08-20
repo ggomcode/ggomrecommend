@@ -71,11 +71,27 @@
           <div class="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
 
           <div>
-            <div class="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-6 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm border border-blue-100">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-              </svg>
+            <div class="flex items-center justify-between mb-6">
+              <div class="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm border border-blue-100">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                  <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                </svg>
+              </div>
+              <span
+                :class="[
+                  'px-3 py-1 rounded-full text-xs font-bold shadow-xs',
+                  principalPeriodState === 'OPEN'
+                    ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                    : (principalPeriodState === 'DRAFT'
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : (principalPeriodState === 'CLOSED'
+                            ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                            : 'bg-slate-100 text-slate-700 border border-slate-200'))
+                ]"
+              >
+                {{ principalStatusText }}
+              </span>
             </div>
 
             <div class="inline-block px-2.5 py-1 rounded-md text-xs font-extrabold bg-blue-100 text-blue-700 mb-3">
@@ -189,10 +205,15 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { checkRuralSystemOpenStatus, getRuralEligibilityList } from '../api/ruralApi'
+import { supabase } from '../utils/supabaseClient'
+import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../utils/roundSchedule'
 import { dialog } from '../components/common/dialog'
 
 const router = useRouter()
 const auth = useAuthStore()
+
+const principalPeriodState = ref('OPEN')
+const principalStatusText = ref('🟢 접수 진행 중')
 
 const isRuralSystemOpen = ref(true)
 const isRuralSystemEnabled = ref(false)
@@ -273,42 +294,122 @@ async function handleLogout() {
   router.push('/login')
 }
 
+async function loadPrincipalStatus() {
+  try {
+    let totalRounds = 3
+    if (supabase) {
+      const { data: cfg } = await supabase.from('config').select('value').eq('key', 'total_rounds').maybeSingle()
+      if (cfg && cfg.value) totalRounds = parseInt(cfg.value, 10) || 3
+    }
+    const schedulesMap = await fetchRoundSchedulesMap()
+    let roundsList = []
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('timeline_rounds')
+        .select('*')
+        .order('id', { ascending: true })
+      if (!error && data && data.length > 0) {
+        roundsList = data
+      }
+    }
+
+    if (roundsList.length === 0) {
+      for (let i = 1; i <= totalRounds; i++) {
+        roundsList.push({ id: i, status: 'DRAFT' })
+      }
+    }
+
+    const processedRounds = roundsList.map(r => {
+      const sched = schedulesMap[r.id]
+      const dispStatus = computeRoundDisplayStatus(r, sched)
+      return {
+        ...r,
+        computedStatus: dispStatus
+      }
+    })
+
+    // 1. 접수 진행 중인 라운드
+    const openRound = processedRounds.find(r => r.computedStatus === 'OPEN')
+    if (openRound) {
+      principalPeriodState.value = 'OPEN'
+      principalStatusText.value = totalRounds === 1 ? '🟢 접수 진행 중' : `🟢 접수 진행 중 (${openRound.id}차)`
+      return
+    }
+
+    // 2. 심사 진행 중인 라운드
+    const closedRound = processedRounds.find(r => r.computedStatus === 'CLOSED')
+    if (closedRound) {
+      principalPeriodState.value = 'CLOSED'
+      principalStatusText.value = totalRounds === 1 ? '🟡 심사 진행 중' : `🟡 심사 진행 중 (${closedRound.id}차)`
+      return
+    }
+
+    // 3. 접수 전(DRAFT) 상태인 라운드
+    const draftRound = processedRounds.find(r => r.computedStatus === 'DRAFT')
+    if (draftRound) {
+      principalPeriodState.value = 'DRAFT'
+      principalStatusText.value = totalRounds === 1 ? '⚪ 접수 전' : `⚪ 접수 전 (${draftRound.id}차)`
+      return
+    }
+
+    // 4. 모든 라운드 마감(FINALIZED)
+    const finalizedRounds = processedRounds.filter(r => r.computedStatus === 'FINALIZED')
+    if (finalizedRounds.length === processedRounds.length) {
+      principalPeriodState.value = 'FINALIZED'
+      principalStatusText.value = '🔒 최종 마감'
+      return
+    }
+
+    principalPeriodState.value = 'DRAFT'
+    principalStatusText.value = '⚪ 접수 전'
+  } catch (e) {
+    console.warn('Failed to load principal status:', e)
+    principalPeriodState.value = 'OPEN'
+    principalStatusText.value = '🟢 접수 진행 중'
+  }
+}
+
 onMounted(async () => {
   fetchSchoolName()
   isPortalLoading.value = true
   try {
-    const status = await checkRuralSystemOpenStatus()
-    isRuralSystemEnabled.value = status.isEnabled === true
-    isRuralSystemOpen.value = status.isOpen
-    activeRuralTerm.value = status.activeTerm
-    ruralClosedReason.value = status.reason
-    ruralPeriodState.value = status.periodState || 'open'
-    ruralStatusText.value = status.statusText || '🟢 접수 진행 중 (수시)'
+    await Promise.all([
+      loadPrincipalStatus(),
+      (async () => {
+        const status = await checkRuralSystemOpenStatus()
+        isRuralSystemEnabled.value = status.isEnabled === true
+        isRuralSystemOpen.value = status.isOpen
+        activeRuralTerm.value = status.activeTerm
+        ruralClosedReason.value = status.reason
+        ruralPeriodState.value = status.periodState || 'open'
+        ruralStatusText.value = status.statusText || '🟢 접수 진행 중 (수시)'
 
-    if (auth.isStudent) {
-      const studentId = auth.user?.id || auth.userId || auth.studentId
-      const sCode = auth.studentCode ? String(auth.studentCode).trim() : null
-      const list = await getRuralEligibilityList()
-      const myInfo = list.find(s =>
-        (studentId && (s.id === studentId || s.user_id === studentId)) ||
-        (sCode && s.student_code && String(s.student_code).trim() === sCode)
-      )
+        if (auth.isStudent) {
+          const studentId = auth.user?.id || auth.userId || auth.studentId
+          const sCode = auth.studentCode ? String(auth.studentCode).trim() : null
+          const list = await getRuralEligibilityList()
+          const myInfo = list.find(s =>
+            (studentId && (s.id === studentId || s.user_id === studentId)) ||
+            (sCode && s.student_code && String(s.student_code).trim() === sCode)
+          )
 
-      if (myInfo) {
-        const elig = myInfo.eligibility
-        const isEligible = Boolean(myInfo.is_rural_eligible || elig?.is_eligible || elig?.is_manual_approved)
-        isRuralEligible.value = isEligible
-        studentApplyRural.value = isEligible
-      } else {
-        isRuralEligible.value = false
-        studentApplyRural.value = false
-      }
-    } else {
-      isRuralEligible.value = true
-      studentApplyRural.value = true
-    }
+          if (myInfo) {
+            const elig = myInfo.eligibility
+            const isEligible = Boolean(myInfo.is_rural_eligible || elig?.is_eligible || elig?.is_manual_approved)
+            isRuralEligible.value = isEligible
+            studentApplyRural.value = isEligible
+          } else {
+            isRuralEligible.value = false
+            studentApplyRural.value = false
+          }
+        } else {
+          isRuralEligible.value = true
+          studentApplyRural.value = true
+        }
+      })()
+    ])
   } catch (e) {
-    console.warn('Failed to load rural eligibility in portal:', e)
+    console.warn('Failed to load portal data:', e)
     isRuralEligible.value = false
   } finally {
     isPortalLoading.value = false

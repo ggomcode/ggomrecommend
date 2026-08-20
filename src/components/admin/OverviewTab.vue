@@ -124,8 +124,23 @@
       <!-- ④ 학급별 지원자 현황 (라운드 있을 때만) -->
       <template v-if="data.round">
         <div class="rounded-xl overflow-hidden flex flex-col" style="min-height: 200px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
-          <div style="padding: 20px 24px 0;">
+          <div class="flex items-center justify-between flex-wrap gap-2" style="padding: 20px 24px 0;">
             <SectionLabel :title="totalRounds === 1 ? '학급별 지원자 현황' : '이번 추천 선발 · 학급별 지원자 현황'" />
+            <div class="flex items-center gap-2 mb-4 flex-wrap">
+              <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1.5 rounded-full border border-blue-100 flex items-center gap-1">
+                💡 학급 행을 클릭하면 지원자 상세 명단을 확인할 수 있습니다
+              </span>
+              <button
+                class="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-sm flex items-center gap-1.5 transition-all cursor-pointer border-none disabled:opacity-50"
+                title="전체 학급의 지원 현황 대장을 반별로 자동 분할하여 일괄 인쇄합니다"
+                :disabled="allClassesPrintLoading"
+                @click="handlePrintAllClasses(false)"
+              >
+                <RefreshCw v-if="allClassesPrintLoading" :size="13" class="animate-spin text-white" />
+                <Printer v-else :size="13" />
+                <span>{{ allClassesPrintLoading ? '전체 데이터 불러오는 중…' : '전체 학급 대장 일괄 인쇄' }}</span>
+              </button>
+            </div>
           </div>
 
           <div v-if="data.classes.length === 0" class="flex-1 flex items-center justify-center text-base" style="color: #94a3b8;">
@@ -162,18 +177,21 @@
                     <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">학급</th>
                     <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">담임</th>
                     <th class="text-base font-semibold text-right" style="padding: 14px 20px; color: #475569;">지원자 수</th>
+                    <th class="text-base font-semibold text-center w-20" style="padding: 14px 16px; color: #475569;">인쇄</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr
                     v-for="c in data.classes"
                     :key="`${c.grade}-${c.class_no}`"
-                    style="border-bottom: 1px solid #f1f5f9; transition: background 0.1s;"
+                    style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;"
                     :style="c.submitted === 0 ? { background: '#fef2f2' } : {}"
-                    class="hover:bg-slate-50"
+                    class="hover:bg-blue-50/70 cursor-pointer group"
+                    @click="openClassDetailModal(c)"
                   >
-                    <td class="text-base font-semibold" style="padding: 14px 20px; color: #1e293b;">
-                      {{ c.grade }}학년 {{ c.class_no }}반
+                    <td class="text-base font-semibold flex items-center gap-1.5" style="padding: 14px 20px; color: #1e293b;">
+                      <span class="group-hover:text-blue-600 transition-colors">{{ c.grade }}학년 {{ c.class_no }}반</span>
+                      <ArrowRight :size="14" class="text-slate-300 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-0.5" />
                     </td>
                     <td class="text-base" style="padding: 14px 20px; color: #475569;">
                       {{ c.teacher_name ?? '—' }}
@@ -183,24 +201,50 @@
                         <AlertTriangle :size="16" />
                         0명
                       </span>
-                      <span v-else class="font-semibold" style="color: #1e293b;">{{ c.submitted }}명</span>
+                      <span v-else class="font-semibold group-hover:text-blue-600" style="color: #1e293b;">{{ c.submitted }}명</span>
+                    </td>
+                    <td class="text-center" style="padding: 14px 16px;" @click.stop>
+                      <button
+                        class="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 hover:text-blue-600 text-slate-500 transition-all shadow-sm cursor-pointer"
+                        :title="`${c.grade}학년 ${c.class_no}반 지원현황 인쇄`"
+                        :disabled="directPrintLoadingKey === `${c.grade}-${c.class_no}-false`"
+                        @click="handleDirectPrintClass(c, false, $event)"
+                      >
+                        <RefreshCw v-if="directPrintLoadingKey === `${c.grade}-${c.class_no}-false`" :size="15" class="animate-spin text-blue-500" />
+                        <Printer v-else :size="15" />
+                      </button>
                     </td>
                   </tr>
                   <!-- 졸업생 행 -->
                   <tr
                     v-if="data.graduated"
-                    style="border-bottom: 1px solid #f1f5f9; transition: background 0.1s;"
+                    style="border-bottom: 1px solid #f1f5f9; transition: background 0.15s;"
                     :style="data.graduated.submitted === 0 ? { background: '#fef2f2' } : {}"
-                    class="hover:bg-slate-50"
+                    class="hover:bg-blue-50/70 cursor-pointer group"
+                    @click="openClassDetailModal(data.graduated, true)"
                   >
-                    <td class="text-base font-semibold" style="padding: 14px 20px; color: #1e293b;">졸업생 담당</td>
+                    <td class="text-base font-semibold flex items-center gap-1.5" style="padding: 14px 20px; color: #1e293b;">
+                      <span class="group-hover:text-blue-600 transition-colors">졸업생 담당</span>
+                      <ArrowRight :size="14" class="text-slate-300 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-0.5" />
+                    </td>
                     <td class="text-base" style="padding: 14px 20px; color: #475569;">{{ data.graduated.teacher_name ?? '관리자' }}</td>
                     <td class="text-base text-right" style="padding: 14px 20px;">
                       <span v-if="data.graduated.submitted === 0" class="flex items-center justify-end gap-1 font-bold" style="color: #ef4444;">
                         <AlertTriangle :size="16" />
                         0명
                       </span>
-                      <span v-else class="font-semibold" style="color: #1e293b;">{{ data.graduated.submitted }}명</span>
+                      <span v-else class="font-semibold group-hover:text-blue-600" style="color: #1e293b;">{{ data.graduated.submitted }}명</span>
+                    </td>
+                    <td class="text-center" style="padding: 14px 16px;" @click.stop>
+                      <button
+                        class="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 hover:text-blue-600 text-slate-500 transition-all shadow-sm cursor-pointer"
+                        title="졸업생 지원현황 인쇄"
+                        :disabled="directPrintLoadingKey === `0-0-true`"
+                        @click="handleDirectPrintClass(data.graduated, true, $event)"
+                      >
+                        <RefreshCw v-if="directPrintLoadingKey === `0-0-true`" :size="15" class="animate-spin text-blue-500" />
+                        <Printer v-else :size="15" />
+                      </button>
                     </td>
                   </tr>
                 </tbody>
@@ -322,16 +366,300 @@
       </div>
 
     </div>
+
+    <!-- ── 학급별 지원자 현황 상세 모달 ── -->
+    <Teleport to="body">
+      <div
+        v-if="classModalOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+        style="background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);"
+        @click.self="classModalOpen = false"
+        @keydown.escape="classModalOpen = false"
+      >
+        <div
+          class="bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden w-full max-w-4xl max-h-[88vh] border border-slate-200"
+        >
+          <!-- 모달 헤더 -->
+          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg shadow-sm">
+                <Users :size="20" />
+              </div>
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h2 class="text-lg font-bold text-slate-800 m-0">
+                    <template v-if="selectedClass?.isGraduated">졸업생 지원자 현황</template>
+                    <template v-else>{{ selectedClass?.grade }}학년 {{ selectedClass?.class_no }}반 지원자 현황</template>
+                  </h2>
+                  <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                    {{ totalRounds === 1 ? '추천 선발' : `${data?.round?.id}차 추천 선발` }}
+                  </span>
+                  <span class="text-xs font-medium px-2 py-0.5 rounded bg-slate-200/70 text-slate-700">
+                    {{ selectedClass?.isGraduated ? `담당: ${selectedClass?.teacher_name ?? '관리자'}` : `담임: ${selectedClass?.teacher_name ?? '미배정'}` }}
+                  </span>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5 m-0">
+                  해당 학급 학생들의 이번 차수 추천 지원 및 선발 현황을 확인합니다.
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="학급 지원 현황 대장 인쇄 (A4 가로 양식)"
+                @click="handlePrintClassRoster(false)"
+              >
+                <Printer :size="14" class="text-slate-600" />
+                <span>현황 인쇄</span>
+              </button>
+              <button
+                class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors cursor-pointer"
+                @click="classModalOpen = false"
+                title="닫기 (ESC)"
+              >
+                <X :size="20" />
+              </button>
+            </div>
+          </div>
+
+          <!-- 모달 상단 통계 카드 & 필터 바 -->
+          <div class="px-6 py-3 bg-white border-b border-slate-100 flex flex-col gap-3">
+            <!-- 요약 지표 -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-center">
+                <div class="text-xs text-slate-400 font-medium">학급 인원</div>
+                <div class="text-lg font-bold text-slate-800">{{ classStudents.length }}명</div>
+              </div>
+              <div class="p-2.5 rounded-xl bg-blue-50 border border-blue-100 text-center">
+                <div class="text-xs text-blue-500 font-medium">지원 학생</div>
+                <div class="text-lg font-bold text-blue-700">{{ classAppliedStudents.length }}명</div>
+              </div>
+              <div class="p-2.5 rounded-xl bg-amber-50 border border-amber-100 text-center">
+                <div class="text-xs text-amber-600 font-medium">미지원 학생</div>
+                <div class="text-lg font-bold text-amber-700">{{ classUnappliedStudents.length }}명</div>
+              </div>
+              <div class="p-2.5 rounded-xl bg-indigo-50 border border-indigo-100 text-center">
+                <div class="text-xs text-indigo-500 font-medium">총 지원 건수</div>
+                <div class="text-lg font-bold text-indigo-700">{{ totalClassAppsCount }}건</div>
+              </div>
+            </div>
+
+            <!-- 필터 및 검색 툴바 -->
+            <div class="flex items-center justify-between gap-3 flex-wrap pt-1">
+              <!-- 필터 탭 -->
+              <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                <button
+                  class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer"
+                  :class="classModalFilterTab === 'applied' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+                  @click="classModalFilterTab = 'applied'"
+                >
+                  지원 학생 ({{ classAppliedStudents.length }})
+                </button>
+                <button
+                  class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer"
+                  :class="classModalFilterTab === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+                  @click="classModalFilterTab = 'all'"
+                >
+                  전체 학생 ({{ classStudents.length }})
+                </button>
+                <button
+                  class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer"
+                  :class="classModalFilterTab === 'unapplied' ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+                  @click="classModalFilterTab = 'unapplied'"
+                >
+                  미지원 ({{ classUnappliedStudents.length }})
+                </button>
+              </div>
+
+              <!-- 검색 인풋 -->
+              <div class="relative flex-1 max-w-xs min-w-[200px]">
+                <Search :size="15" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  v-model="classModalSearch"
+                  type="text"
+                  placeholder="이름, 학번, 대학명 검색..."
+                  class="w-full text-xs pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- 모달 본문 (테이블) -->
+          <div class="flex-1 overflow-y-auto min-h-[260px] max-h-[50vh] p-6 bg-slate-50/50">
+            <!-- 로딩 중 -->
+            <div v-if="classModalLoading" class="flex flex-col items-center justify-center py-16 text-slate-400">
+              <RefreshCw :size="28" class="animate-spin text-blue-500 mb-2" />
+              <p class="text-sm font-medium">학급 지원자 데이터를 불러오는 중입니다...</p>
+            </div>
+
+            <!-- 데이터 없음 -->
+            <div v-else-if="filteredClassStudents.length === 0" class="flex flex-col items-center justify-center py-14 bg-white rounded-xl border border-slate-200 text-slate-400">
+              <Users :size="36" class="text-slate-300 mb-2" />
+              <p class="text-sm font-semibold text-slate-600 mb-1">
+                <template v-if="classModalSearch">검색 조건에 맞는 학생이 없습니다.</template>
+                <template v-else-if="classModalFilterTab === 'applied'">해당 학급에 지원한 학생이 없습니다.</template>
+                <template v-else-if="classModalFilterTab === 'unapplied'">미지원 학생이 없습니다 (전원 지원 완료).</template>
+                <template v-else>등록된 학생 데이터가 없습니다.</template>
+              </p>
+              <p class="text-xs text-slate-400">
+                <template v-if="classModalSearch">다른 검색어로 다시 시도해 보세요.</template>
+                <template v-else>담임교사가 입력을 진행하거나 학생 데이터를 먼저 등록해주세요.</template>
+              </p>
+            </div>
+
+            <!-- 학생 목록 테이블 -->
+            <div v-else class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-50/90 border-b border-slate-200 text-slate-600 text-xs font-semibold">
+                    <th class="py-3 px-4 w-14 text-center">번호</th>
+                    <th class="py-3 px-4 w-24">학번</th>
+                    <th class="py-3 px-4 w-28">이름</th>
+                    <th class="py-3 px-4">지원 대학 및 모집단위</th>
+                    <th class="py-3 px-4 w-24 text-right">전체내신</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-sm">
+                  <tr
+                    v-for="(s, sIdx) in filteredClassStudents"
+                    :key="s.id"
+                    class="hover:bg-slate-50/80 transition-colors"
+                  >
+                    <td class="py-3.5 px-4 text-center text-xs font-semibold text-slate-400">
+                      {{ s.seq_no || sIdx + 1 }}
+                    </td>
+                    <td class="py-3.5 px-4 font-mono text-xs text-slate-500">
+                      {{ s.student_code || '—' }}
+                    </td>
+                    <td class="py-3.5 px-4 font-bold text-slate-800">
+                      <div class="flex items-center gap-1.5">
+                        <span>{{ s.name }}</span>
+                        <span v-if="!s.is_enrolled" class="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded">졸업생</span>
+                      </div>
+                    </td>
+                    <td class="py-3.5 px-4">
+                      <!-- 지원 내역이 없을 때 -->
+                      <div v-if="!s.apps || s.apps.length === 0" class="text-xs font-medium text-slate-400 flex items-center gap-1">
+                        <span>미지원</span>
+                      </div>
+
+                      <!-- 지원 내역 목록 -->
+                      <div v-else class="flex flex-col gap-1.5">
+                        <div
+                          v-for="(app, aIdx) in s.apps"
+                          :key="`${app.student_id}-${app.univ_id || app.track_id}-${aIdx}`"
+                          class="flex items-center gap-2 flex-wrap text-xs"
+                        >
+                          <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+                            지망 {{ aIdx + 1 }}
+                          </span>
+                          <span
+                            class="font-semibold text-slate-800"
+                            :class="{ 'line-through opacity-50': app.abandoned || app.excluded }"
+                          >
+                            {{ app.univ_name }} — {{ app.track_name }}
+                            <span v-if="app.department_name" class="font-normal text-slate-500">({{ app.department_name }})</span>
+                          </span>
+
+                          <!-- 상태 뱃지 -->
+                          <span
+                            v-if="app.abandoned"
+                            class="font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded text-[10px]"
+                          >
+                            포기됨
+                          </span>
+                          <span
+                            v-else-if="app.excluded"
+                            class="font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded text-[10px]"
+                          >
+                            미선발 ({{ app.excluded_reason || '제외' }})
+                          </span>
+                          <span
+                            v-else-if="app.recommended"
+                            class="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[10px]"
+                          >
+                            추천 확정
+                          </span>
+                          <span
+                            v-else-if="effectiveRoundStatus === 'FINALIZED'"
+                            class="font-medium text-slate-400 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-[10px]"
+                          >
+                            미선발
+                          </span>
+                          <span
+                            v-else
+                            class="font-medium text-blue-600 bg-blue-50/80 border border-blue-100 px-1.5 py-0.5 rounded text-[10px]"
+                          >
+                            접수 완료
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="py-3.5 px-4 text-right tabular-nums text-xs">
+                      <span v-if="s.gpa_overall != null" class="font-semibold text-slate-700">
+                        {{ Number(s.gpa_overall).toFixed(2) }}
+                      </span>
+                      <span v-else class="text-slate-300">—</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 모달 푸터 -->
+          <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
+            <div class="text-xs text-slate-500">
+              💡 지원자 추천 확정 및 상세 관리는 <strong class="text-slate-700">[학교장 추천 선발]</strong> 탭에서 수행할 수 있습니다.
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <button
+                class="px-3.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="지원한 학생들만 인쇄"
+                :disabled="classAppliedStudents.length === 0"
+                @click="handlePrintClassRoster(true)"
+              >
+                <Printer :size="13" class="text-slate-600" />
+                <span>지원자만 인쇄 ({{ classAppliedStudents.length }}명)</span>
+              </button>
+              <button
+                class="px-3.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="학급 전체 학생 명단 및 지원 현황 인쇄"
+                :disabled="classStudents.length === 0"
+                @click="handlePrintClassRoster(false)"
+              >
+                <Printer :size="13" class="text-slate-600" />
+                <span>전체 인쇄 (대장)</span>
+              </button>
+              <button
+                class="px-3.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                @click="classModalOpen = false"
+              >
+                닫기
+              </button>
+              <button
+                class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1 cursor-pointer"
+                @click="classModalOpen = false; setActiveTab('rounds')"
+              >
+                추천 선발 관리로 이동 <ArrowRight :size="13" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, inject, h } from 'vue'
 import { supabase } from '../../utils/supabaseClient.js'
-import { Copy, Check, AlertTriangle, CheckCircle2, XCircle, ArrowRight } from 'lucide-vue-next'
-import { getOverview, getClasses, getStudents, getAreas, getUniversities } from '../../api/admin.js'
+import { Copy, Check, AlertTriangle, CheckCircle2, XCircle, ArrowRight, Users, X, Search, RefreshCw, Printer } from 'lucide-vue-next'
+import { getOverview, getClasses, getStudents, getAreas, getUniversities, getApplications } from '../../api/admin.js'
 import { roundStatusLabel } from '../../data/roundStatus.js'
 import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../../utils/roundSchedule.js'
+import { printClassApplicationsReport, printAllClassesApplicationsReport } from '../../utils/printTemplates.js'
 import MiniPie from './MiniPie.vue'
 import HelpBox from '../common/HelpBox.vue'
 
@@ -567,6 +895,334 @@ function handleCopy() {
     document.execCommand('copy')
     document.body.removeChild(el)
     markCopied()
+  }
+}
+
+// ── 학급별 지원자 상세 모달 상태 및 로직 ───────────────────────
+const classModalOpen = ref(false)
+const classModalLoading = ref(false)
+const selectedClass = ref(null)
+const classStudents = ref([])
+const classModalFilterTab = ref('applied') // 'applied' | 'all' | 'unapplied'
+const classModalSearch = ref('')
+
+async function openClassDetailModal(classObj, isGraduated = false) {
+  selectedClass.value = {
+    ...classObj,
+    isGraduated: isGraduated || (classObj.grade === 0 && classObj.class_no === 0)
+  }
+  classModalOpen.value = true
+  classModalLoading.value = true
+  classModalFilterTab.value = (classObj.submitted > 0) ? 'applied' : 'all'
+  classModalSearch.value = ''
+  classStudents.value = []
+
+  try {
+    const isGrad = selectedClass.value.isGraduated
+    const roundId = data.value?.round?.id
+
+    const studentParams = {
+      per_page: 300,
+      page: 1,
+    }
+    if (isGrad) {
+      studentParams.is_enrolled = 0
+    } else {
+      studentParams.is_enrolled = 1
+      studentParams.grade = classObj.grade
+      studentParams.class_no = classObj.class_no
+    }
+
+    const [studentsRes, appsRes] = await Promise.all([
+      getStudents(studentParams),
+      roundId ? getApplications(roundId) : Promise.resolve([])
+    ])
+
+    const allStudents = studentsRes?.rows || []
+    const roundApps = appsRes || []
+
+    const appsByStudentId = new Map()
+    for (const app of roundApps) {
+      if (!appsByStudentId.has(app.student_id)) {
+        appsByStudentId.set(app.student_id, [])
+      }
+      appsByStudentId.get(app.student_id).push(app)
+    }
+
+    const mapped = allStudents.map(s => ({
+      ...s,
+      apps: appsByStudentId.get(s.id) || []
+    }))
+
+    // 혹시 enrolled_students에 누락되었으나 지원서에만 등록된 학생이 있는 경우 fallback 추가
+    const knownStudentIds = new Set(allStudents.map(s => s.id))
+    for (const app of roundApps) {
+      const matchGrad = isGrad && (!app.is_enrolled || app.grade === 0)
+      const matchClass = !isGrad && app.grade === classObj.grade && app.class_no === classObj.class_no
+      if ((matchGrad || matchClass) && !knownStudentIds.has(app.student_id)) {
+        knownStudentIds.add(app.student_id)
+        mapped.push({
+          id: app.student_id,
+          student_code: app.student_code || '',
+          name: app.name || '미명학생',
+          grade: app.grade,
+          class_no: app.class_no,
+          seq_no: app.seq_no,
+          is_enrolled: app.is_enrolled,
+          gpa_overall: app.gpa_overall,
+          apps: appsByStudentId.get(app.student_id) || [app]
+        })
+      }
+    }
+
+    mapped.sort((a, b) => {
+      const noA = Number(a.seq_no) || 0
+      const noB = Number(b.seq_no) || 0
+      if (noA !== noB) return noA - noB
+      return (a.student_code || '').localeCompare(b.student_code || '')
+    })
+
+    classStudents.value = mapped
+  } catch (err) {
+    console.error('Failed to load class detail:', err)
+  } finally {
+    classModalLoading.value = false
+  }
+}
+
+const classAppliedStudents = computed(() => {
+  return classStudents.value.filter(s => s.apps && s.apps.length > 0)
+})
+
+const classUnappliedStudents = computed(() => {
+  return classStudents.value.filter(s => !s.apps || s.apps.length === 0)
+})
+
+const totalClassAppsCount = computed(() => {
+  return classStudents.value.reduce((sum, s) => sum + (s.apps ? s.apps.length : 0), 0)
+})
+
+const filteredClassStudents = computed(() => {
+  let list = classStudents.value
+  if (classModalFilterTab.value === 'applied') {
+    list = classAppliedStudents.value
+  } else if (classModalFilterTab.value === 'unapplied') {
+    list = classUnappliedStudents.value
+  }
+
+  const q = classModalSearch.value.trim().toLowerCase()
+  if (!q) return list
+
+  return list.filter(s => {
+    const matchName = s.name?.toLowerCase().includes(q)
+    const matchCode = s.student_code?.toLowerCase().includes(q)
+    const matchApps = s.apps?.some(a =>
+      a.univ_name?.toLowerCase().includes(q) ||
+      a.track_name?.toLowerCase().includes(q) ||
+      a.department_name?.toLowerCase().includes(q)
+    )
+    return matchName || matchCode || matchApps
+  })
+})
+
+// ── 학급 지원현황 인쇄 처리 ───────────────────────────────────
+function handlePrintClassRoster(appliedOnly = false) {
+  if (!selectedClass.value) return
+  const isGrad = selectedClass.value.isGraduated
+  const className = isGrad
+    ? '졸업생'
+    : `${selectedClass.value.grade}학년 ${selectedClass.value.class_no}반`
+  const teacherName = selectedClass.value.teacher_name || (isGrad ? '관리자' : '')
+  const roundTitle = totalRounds.value === 1 ? '추천 선발' : `${data.value?.round?.id || 1}차 추천 선발`
+  const roundStatus = roundStatusLabel(effectiveRoundStatus.value)
+
+  printClassApplicationsReport({
+    className,
+    teacherName,
+    roundTitle,
+    roundStatus,
+    students: classStudents.value,
+    appliedOnly
+  })
+}
+
+const directPrintLoadingKey = ref(null)
+
+async function handleDirectPrintClass(classObj, isGraduated = false, event) {
+  if (event) event.stopPropagation()
+  const key = isGraduated ? '0-0-true' : `${classObj.grade}-${classObj.class_no}-false`
+  directPrintLoadingKey.value = key
+
+  try {
+    const isGrad = isGraduated || (classObj.grade === 0 && classObj.class_no === 0)
+    const roundId = data.value?.round?.id
+
+    const studentParams = {
+      per_page: 300,
+      page: 1,
+    }
+    if (isGrad) {
+      studentParams.is_enrolled = 0
+    } else {
+      studentParams.is_enrolled = 1
+      studentParams.grade = classObj.grade
+      studentParams.class_no = classObj.class_no
+    }
+
+    const [studentsRes, appsRes] = await Promise.all([
+      getStudents(studentParams),
+      roundId ? getApplications(roundId) : Promise.resolve([])
+    ])
+
+    const allStudents = studentsRes?.rows || []
+    const roundApps = appsRes || []
+
+    const appsByStudentId = new Map()
+    for (const app of roundApps) {
+      if (!appsByStudentId.has(app.student_id)) {
+        appsByStudentId.set(app.student_id, [])
+      }
+      appsByStudentId.get(app.student_id).push(app)
+    }
+
+    const mapped = allStudents.map(s => ({
+      ...s,
+      apps: appsByStudentId.get(s.id) || []
+    }))
+
+    const knownStudentIds = new Set(allStudents.map(s => s.id))
+    for (const app of roundApps) {
+      const matchGrad = isGrad && (!app.is_enrolled || app.grade === 0)
+      const matchClass = !isGrad && app.grade === classObj.grade && app.class_no === classObj.class_no
+      if ((matchGrad || matchClass) && !knownStudentIds.has(app.student_id)) {
+        knownStudentIds.add(app.student_id)
+        mapped.push({
+          id: app.student_id,
+          student_code: app.student_code || '',
+          name: app.name || '미명학생',
+          grade: app.grade,
+          class_no: app.class_no,
+          seq_no: app.seq_no,
+          is_enrolled: app.is_enrolled,
+          gpa_overall: app.gpa_overall,
+          apps: appsByStudentId.get(app.student_id) || [app]
+        })
+      }
+    }
+
+    mapped.sort((a, b) => {
+      const noA = Number(a.seq_no) || 0
+      const noB = Number(b.seq_no) || 0
+      if (noA !== noB) return noA - noB
+      return (a.student_code || '').localeCompare(b.student_code || '')
+    })
+
+    const className = isGrad ? '졸업생' : `${classObj.grade}학년 ${classObj.class_no}반`
+    const teacherName = classObj.teacher_name || (isGrad ? '관리자' : '')
+    const roundTitle = totalRounds.value === 1 ? '추천 선발' : `${data.value?.round?.id || 1}차 추천 선발`
+    const roundStatus = roundStatusLabel(effectiveRoundStatus.value)
+
+    printClassApplicationsReport({
+      className,
+      teacherName,
+      roundTitle,
+      roundStatus,
+      students: mapped,
+      appliedOnly: false
+    })
+  } catch (err) {
+    console.error('Failed to direct print:', err)
+  } finally {
+    directPrintLoadingKey.value = null
+  }
+}
+
+// ── 전체 학급 일괄 인쇄 처리 ──────────────────────────────────
+const allClassesPrintLoading = ref(false)
+
+async function handlePrintAllClasses(appliedOnly = false) {
+  if (!data.value?.classes) return
+  allClassesPrintLoading.value = true
+
+  try {
+    const roundId = data.value?.round?.id
+    const [studentsRes, appsRes] = await Promise.all([
+      getStudents({ per_page: 2000, page: 1 }),
+      roundId ? getApplications(roundId) : Promise.resolve([])
+    ])
+
+    const allStudents = studentsRes?.rows || []
+    const roundApps = appsRes || []
+
+    const appsByStudentId = new Map()
+    for (const app of roundApps) {
+      if (!appsByStudentId.has(app.student_id)) {
+        appsByStudentId.set(app.student_id, [])
+      }
+      appsByStudentId.get(app.student_id).push(app)
+    }
+
+    const studentsWithApps = allStudents.map(s => ({
+      ...s,
+      apps: appsByStudentId.get(s.id) || []
+    }))
+
+    // 학급 목록 구성
+    const classesData = []
+
+    // 1. 일반 재학생 학급들
+    for (const c of data.value.classes) {
+      const classStudentsList = studentsWithApps.filter(s =>
+        s.is_enrolled && Number(s.grade) === Number(c.grade) && Number(s.class_no) === Number(c.class_no)
+      )
+
+      classStudentsList.sort((a, b) => {
+        const noA = Number(a.seq_no) || 0
+        const noB = Number(b.seq_no) || 0
+        if (noA !== noB) return noA - noB
+        return (a.student_code || '').localeCompare(b.student_code || '')
+      })
+
+      classesData.push({
+        className: `${c.grade}학년 ${c.class_no}반`,
+        teacherName: c.teacher_name || '',
+        students: classStudentsList
+      })
+    }
+
+    // 2. 졸업생 학급
+    if (data.value.graduated) {
+      const gradStudentsList = studentsWithApps.filter(s =>
+        !s.is_enrolled || s.grade === 0 || s.class_no === 0
+      )
+
+      gradStudentsList.sort((a, b) => {
+        const noA = Number(a.seq_no) || 0
+        const noB = Number(b.seq_no) || 0
+        if (noA !== noB) return noA - noB
+        return (a.student_code || '').localeCompare(b.student_code || '')
+      })
+
+      classesData.push({
+        className: '졸업생',
+        teacherName: data.value.graduated.teacher_name || '관리자',
+        students: gradStudentsList
+      })
+    }
+
+    const roundTitle = totalRounds.value === 1 ? '추천 선발' : `${data.value?.round?.id || 1}차 추천 선발`
+    const roundStatus = roundStatusLabel(effectiveRoundStatus.value)
+
+    printAllClassesApplicationsReport({
+      classesData,
+      roundTitle,
+      roundStatus,
+      appliedOnly
+    })
+  } catch (err) {
+    console.error('Failed to batch print all classes:', err)
+  } finally {
+    allClassesPrintLoading.value = false
   }
 }
 </script>
