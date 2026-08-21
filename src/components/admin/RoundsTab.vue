@@ -443,9 +443,12 @@
                             <span v-if="r.is_enrolled">{{ r.grade }}학년 {{ r.class_no }}반 {{ r.seq_no }}번</span>
                             <span v-else class="font-mono">{{ r.student_code }}</span>
                           </td>
-                          <td class="text-base font-medium" style="padding: 12px 18px; color: #1e293b; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                            <span v-if="showAbandonOnly" class="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 mr-1 border border-slate-200">
-                              {{ r.round }}차
+                          <td class="text-base font-medium" style="padding: 12px 18px; color: #1e293b; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            <span v-if="showAbandonOnly" class="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 mr-1 border border-rose-200">
+                              {{ r.round || selected?.id }}차 포기
+                            </span>
+                            <span v-else-if="totalRounds > 1 && (r.round || selected?.id)" class="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 mr-1 border border-indigo-200">
+                              {{ r.round || selected?.id }}차 지원
                             </span>
                             {{ r.name }}
                           </td>
@@ -470,10 +473,16 @@
                            </td>
                           <td class="text-center" style="padding: 12px 18px;" @click.stop>
                             <div class="flex flex-col items-center gap-1">
-                            <span v-if="r.abandoned" class="text-base font-semibold" style="color: #ef4444;">포기됨</span>
-                            <span v-else-if="isAbandonRequested(r)" class="text-base font-semibold text-rose-500" style="color: #f43f5e;">포기 신청중</span>
+                            <span v-if="r.abandoned" class="text-base font-semibold" style="color: #ef4444;">
+                              {{ totalRounds > 1 && (r.abandoned_round || r.round || selected?.id) ? `${r.abandoned_round || r.round || selected?.id}차 포기됨` : '포기됨' }}
+                            </span>
+                            <span v-else-if="isAbandonRequested(r)" class="text-base font-semibold text-rose-500" style="color: #f43f5e;">
+                              {{ totalRounds > 1 && (r.round || selected?.id) ? `${r.round || selected?.id}차 포기신청` : '포기 신청중' }}
+                            </span>
                             <template v-else-if="r.recommended">
-                              <span class="text-base font-semibold" style="color: #16a34a;">추천 확정됨</span>
+                              <span class="text-base font-semibold" style="color: #16a34a;">
+                                {{ totalRounds > 1 && (r.recommended_round || r.round || selected?.id) ? `${r.recommended_round || r.round || selected?.id}차 추천 확정됨` : '추천 확정됨' }}
+                              </span>
                               <button
                                 v-if="selected.status === 'CLOSED'"
                                 class="text-base rounded-lg whitespace-nowrap"
@@ -489,7 +498,9 @@
                               @click="handleRecommend(r)"
                             >추천 확정</button>
                             <span v-else-if="selected.status === 'CLOSED' && r.excluded" style="color: #cbd5e1;">-</span>
-                            <span v-else-if="selected.status === 'FINALIZED'" class="text-base font-semibold" style="color: #ef4444;">미선발</span>
+                            <span v-else-if="selected.status === 'FINALIZED'" class="text-base font-semibold" style="color: #ef4444;">
+                              {{ totalRounds > 1 && (r.round || selected?.id) ? `${r.round || selected?.id}차 미선발` : '미선발' }}
+                            </span>
                             <span v-else class="text-base font-semibold" style="color: #94a3b8;">-</span>
                             </div>
                           </td>
@@ -511,7 +522,9 @@
                           <td class="text-center" style="padding: 12px 18px;" @click.stop>
                             <div class="flex flex-col items-center gap-1">
                             <template v-if="r.excluded">
-                              <span class="text-base font-semibold" :title="r.excluded_reason" style="color: #d97706;">미선발</span>
+                              <span class="text-base font-semibold" :title="r.excluded_reason" style="color: #d97706;">
+                                {{ totalRounds > 1 && (r.round || selected?.id) ? `${r.round || selected?.id}차 미선발` : '미선발' }}
+                              </span>
                               <button
                                 v-if="selected.status === 'CLOSED'"
                                 class="text-base rounded-lg whitespace-nowrap disabled:opacity-40"
@@ -530,14 +543,34 @@
                             </div>
                           </td>
                         </tr>
-                        <!-- 전형요소 점수 상세 -->
+                        <!-- 전형요소 점수 상세 및 차수 요약 -->
                         <tr v-if="expandedRows[`${r.student_id}-${r.track_id}`]"
                           style="border-bottom: 1px solid #f1f5f9; background: #f8fafc;">
                           <td colspan="10" style="padding: 14px 36px;">
-                            <div class="flex flex-wrap gap-x-6 gap-y-2">
-                              <div v-for="area in areas" :key="area.id" class="flex items-center gap-2">
-                                <span class="text-base" style="color: #64748b;">{{ area.name }}</span>
-                                <span class="text-base font-semibold" style="color: #1e293b;">{{ getAreaScore(r, area.id) }}</span>
+                            <div class="flex flex-col gap-2">
+                              <div v-if="totalRounds > 1" class="flex items-center gap-3 text-xs pb-2 border-b border-slate-200/80 flex-wrap">
+                                <span class="font-bold text-slate-700">📌 차수 정보:</span>
+                                <span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">
+                                  지원: {{ r.round || selected?.id }}차 지원
+                                </span>
+                                <span v-if="r.recommended" class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
+                                  선발: {{ r.recommended_round || r.round || selected?.id }}차 추천 확정됨
+                                </span>
+                                <span v-else-if="r.abandoned" class="px-2 py-0.5 rounded bg-rose-50 text-rose-700 font-semibold border border-rose-200">
+                                  포기: {{ r.abandoned_round || r.round || selected?.id }}차 포기 처리됨
+                                </span>
+                                <span v-else-if="r.excluded" class="px-2 py-0.5 rounded bg-amber-50 text-amber-700 font-semibold border border-amber-200">
+                                  미선발: {{ r.round || selected?.id }}차 제외 ({{ r.excluded_reason || '사유 없음' }})
+                                </span>
+                                <span v-else-if="selected.status === 'FINALIZED'" class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold border border-slate-200">
+                                  선발 결과: {{ r.round || selected?.id }}차 미선발
+                                </span>
+                              </div>
+                              <div class="flex flex-wrap gap-x-6 gap-y-2">
+                                <div v-for="area in areas" :key="area.id" class="flex items-center gap-2">
+                                  <span class="text-base" style="color: #64748b;">{{ area.name }}</span>
+                                  <span class="text-base font-semibold" style="color: #1e293b;">{{ getAreaScore(r, area.id) }}</span>
+                                </div>
                               </div>
                             </div>
                           </td>
@@ -1104,7 +1137,16 @@ const appsByUniv = computed(() => {
       return a.track_name.localeCompare(b.track_name, 'ko')
     })
   }
-  return map
+
+  // 대학명 가나다순 정렬 객체 생성
+  const sortedEntries = Object.entries(map).sort(([keyA], [keyB]) => {
+    return keyA.localeCompare(keyB, 'ko')
+  })
+  const sortedMap = {}
+  for (const [k, v] of sortedEntries) {
+    sortedMap[k] = v
+  }
+  return sortedMap
 })
 
 function appTotalScore(app) {
@@ -1211,6 +1253,7 @@ const resultsByUniv = computed(() => {
       map[key] = {
         univId: q?.univId ?? null,
         univName: r.univ_name,
+        trackName: r.track_name,
         trackId: r.track_id,
         unitQuota,
         totalQuota,
@@ -1231,7 +1274,18 @@ const resultsByUniv = computed(() => {
     g.results.sort(sortRoundApplicants)
   }
 
-  return map
+  // 대학명 가나다순 -> 모집단위명 가나다순으로 정렬된 정렬 객체 생성
+  const sortedEntries = Object.entries(map).sort(([keyA, gA], [keyB, gB]) => {
+    const uCmp = (gA.univName || '').localeCompare(gB.univName || '', 'ko')
+    if (uCmp !== 0) return uCmp
+    return (gA.trackName || '').localeCompare(gB.trackName || '', 'ko')
+  })
+
+  const sortedMap = {}
+  for (const [k, v] of sortedEntries) {
+    sortedMap[k] = v
+  }
+  return sortedMap
 })
 
 const resultsByUnivOnly = computed(() => {
@@ -1256,7 +1310,17 @@ const resultsByUnivOnly = computed(() => {
   for (const g of Object.values(map)) {
     g.results.sort(sortRoundApplicants)
   }
-  return map
+
+  // 대학명 가나다순 정렬 객체 생성
+  const sortedEntries = Object.entries(map).sort(([keyA, gA], [keyB, gB]) => {
+    return (gA.univName || '').localeCompare(gB.univName || '', 'ko')
+  })
+
+  const sortedMap = {}
+  for (const [k, v] of sortedEntries) {
+    sortedMap[k] = v
+  }
+  return sortedMap
 })
 
 const resultsByView = computed(() => rankView.value === 'track' ? resultsByUniv.value : resultsByUnivOnly.value)
@@ -1406,9 +1470,15 @@ async function loadResults() {
   // 필터 없이 전체 결과를 불러올 때만 드롭다운 목록 갱신
   if (!selectedTrackId.value) {
     const seen = new Set()
-    allTracksInRound.value = results.value
+    const list = results.value
       .filter(r => { if (seen.has(r.track_id)) return false; seen.add(r.track_id); return true })
       .map(r => ({ id: r.track_id, univ_name: r.univ_name, track_name: r.track_name }))
+    list.sort((a, b) => {
+      const u = (a.univ_name || '').localeCompare(b.univ_name || '', 'ko')
+      if (u !== 0) return u
+      return (a.track_name || '').localeCompare(b.track_name || '', 'ko')
+    })
+    allTracksInRound.value = list
   }
   expandedRows.value = {}
 }

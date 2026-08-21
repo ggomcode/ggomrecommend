@@ -25,6 +25,7 @@
       <div class="p-6 flex flex-col gap-4 overflow-y-auto max-h-[70vh]">
         <!-- 대학/전형 기본 요약 -->
         <div class="rounded-xl bg-slate-50 dark:bg-slate-900/50 p-4 border border-slate-200/60 dark:border-slate-700 space-y-2 text-xs">
+          <div class="flex justify-between"><span class="text-slate-400 font-semibold">지원 차수:</span> <span class="font-bold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 px-1.5 py-0.5 rounded border border-indigo-200">{{ app.round_id || app.round || 1 }}차 접수 지원</span></div>
           <div class="flex justify-between"><span class="text-slate-400 font-semibold">지원 대학:</span> <span class="font-bold text-slate-800 dark:text-white">{{ app.univ_name }}</span></div>
           <div class="flex justify-between"><span class="text-slate-400 font-semibold">지원 전형:</span> <span class="font-bold text-slate-800 dark:text-white">{{ app.track_name }}</span></div>
           <div class="flex justify-between"><span class="text-slate-400 font-semibold">지원 학과:</span> <span class="font-bold text-slate-800 dark:text-white">{{ app.department_name }}</span></div>
@@ -37,22 +38,22 @@
           :class="app.abandoned ? 'bg-rose-50 border-rose-200 text-rose-800' : isAbandonRequested ? 'bg-rose-50 border-rose-200 border-dashed text-rose-800' : (app.excluded || app.is_excluded) ? 'bg-amber-50 border-amber-200 text-amber-900' : (app.recommended || app.is_recommended) ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-50 border-slate-200 text-slate-700'"
         >
           <div v-if="app.abandoned" class="space-y-1.5">
-            <p>⚠️ <strong>추천 포기 완료 건:</strong> 이 지원서는 학생/학부모의 추천 포기 서신이 제출되어 반려 및 종료되었습니다.</p>
+            <p>⚠️ <strong>추천 포기 완료 건:</strong> 이 지원서는 학생/학부모의 추천 포기 서신이 제출되어 반려 및 종료되었습니다. ({{ app.abandoned_round || app.round_id || app.round }}차 포기)</p>
             <div v-if="docUrl || app.abandoned_doc_url" class="mt-2 text-right">
               <a :href="docUrl || app.abandoned_doc_url" target="_blank" class="text-rose-600 underline font-bold">📄 업로드된 포기원 문서 보기</a>
             </div>
           </div>
           <div v-else-if="isAbandonRequested" class="space-y-1.5">
-            <p>⚠️ <strong>추천 포기 신청 대기 건:</strong> 학생이 추천 포기 신청서(포기원)를 작성 및 서명 제출했습니다. 관리자의 최종 승인 및 처리 대기 상태입니다.</p>
+            <p>⚠️ <strong>추천 포기 신청 대기 건:</strong> 학생이 추천 포기 신청서(포기원)를 작성 및 서명 제출했습니다. 관리자의 최종 승인 및 처리 대기 상태입니다. ({{ app.round_id || app.round }}차 신청)</p>
             <div v-if="app.scanned_doc_url" class="mt-2 text-right">
               <a :href="typeof app.scanned_doc_url === 'string' ? JSON.parse(app.scanned_doc_url).doc_url : app.scanned_doc_url.doc_url" target="_blank" class="text-rose-600 underline font-bold">📄 학생 제출 포기원 서류 보기</a>
             </div>
           </div>
           <div v-else-if="app.excluded || app.is_excluded">
-            <p>⛔ <strong>추천 보류 (성적 미달):</strong> 현재 전학급 성적순 {{ app.univ_rank || 1 }}위로 대학교 추천 제한 인원({{ app.quota_limit ? app.quota_limit + '명' : '제한없음' }})을 초과하여 성적순 보류 상태입니다.</p>
+            <p>⛔ <strong>추천 보류 (성적 미달):</strong> 현재 전학급 성적순 {{ app.univ_rank || 1 }}위로 대학교 추천 제한 인원({{ app.quota_limit ? app.quota_limit + '명' : '제한없음' }})을 초과하여 성적순 보류 상태입니다. ({{ app.round_id || app.round }}차 미선발)</p>
           </div>
           <div v-else-if="app.recommended || app.is_recommended">
-            <p>🎉 <strong>추천 대상:</strong> 현재 전학급 성적순 {{ app.univ_rank || 1 }}위로 대학교 추천 대상자(정원 {{ app.quota_limit ? app.quota_limit + '명' : '제한없음' }})로 지정되었습니다.</p>
+            <p>🎉 <strong>추천 대상 (선발):</strong> 현재 전학급 성적순 {{ app.univ_rank || 1 }}위로 {{ app.recommended_round || app.round_id || app.round }}차 대학교 추천 대상자(정원 {{ app.quota_limit ? app.quota_limit + '명' : '제한없음' }})로 지정되었습니다.</p>
           </div>
           <div v-else>
             <p>⏱️ <strong>추천 대기 상태:</strong> 담임교사의 추천 선택 대기 중입니다 (현재 전학급 성적순 {{ app.univ_rank || 1 }}위 / 정원 {{ app.quota_limit ? app.quota_limit + '명' : '제한없음' }}). 추천 대상 등록 시 실시간으로 추천 상태가 반영됩니다.</p>

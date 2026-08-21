@@ -378,6 +378,8 @@ import {
   teacherCreateApplication,
 } from '../../api/teacher.js'
 import ApplicationDetailModal from './ApplicationDetailModal.vue'
+import { dialog } from '../common/dialog.js'
+import { isUndecidedDepartment } from '../../utils/departmentValidation.js'
 
 import { supabase } from '../../utils/supabaseClient.js'
 
@@ -575,6 +577,22 @@ async function onUnivChange() {
 }
 
 async function saveApplication() {
+  let finalDept = form.departmentName?.trim() || ''
+
+  if (isUndecidedDepartment(finalDept)) {
+    const inputDisplay = finalDept ? `"${finalDept}"` : '미입력(공백)'
+    const proceed = await dialog.confirm({
+      title: '지원 학과(모집단위) 미지정 확인',
+      message: `지원 모집단위(학과/학부)가 명확히 지정되지 않았습니다.\n(입력값: ${inputDisplay})\n\n정확한 추천 선발 및 심사를 위해 학과명을 입력하는 것을 권장합니다.\n\n학과를 미지정한 상태("-" 처리)로 저장하시겠습니까?`,
+      confirmText: '미지정("-"로 저장)',
+      cancelText: '학과 다시 입력하기',
+      level: 'warn',
+    })
+
+    if (!proceed) return
+    finalDept = '-'
+  }
+
   saving.value = true
   try {
     const scoreVal = Number(form.univCalcScore || form.manualScore || 0)
@@ -582,7 +600,7 @@ async function saveApplication() {
       student_id: selectedStudent.value.id,
       track_id: form.trackId,
       round_id: currentRound.value.id,
-      department_name: form.departmentName,
+      department_name: finalDept,
       manual_score: scoreVal,
       univ_calc_score: scoreVal,
       parent_name: form.parentName,
@@ -594,7 +612,7 @@ async function saveApplication() {
     applications.value = await teacherGetApplications(currentRound.value.id)
     closeForm()
   } catch (e) {
-    alert(e.message || '제출 오류가 발생했습니다.')
+    await dialog.alert({ title: '저장 오류', message: e.message || '제출 오류가 발생했습니다.', level: 'error' })
   } finally {
     saving.value = false
   }

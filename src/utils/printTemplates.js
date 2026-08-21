@@ -116,10 +116,12 @@ export function printApplicationForm(apps, studentInfo) {
     }
     const rowStyle = isAbandonRequested ? ' class="abandoned-row"' : ''
     const abandonNote = isAbandonRequested ? ' <span style="font-size:10px;color:#b91c1c;font-weight:bold;">(포기 신청)</span>' : ''
+    const appRound = ap.round || ap.round_id
+    const roundTag = appRound ? ` <span style="font-size:10px;color:#1d4ed8;font-weight:bold;">[${appRound}차]</span>` : ''
 
     return `<tr${rowStyle}>
       <td style="text-align:center;">${i + 1}</td>
-      <td>${univName}${abandonNote}</td>
+      <td>${univName}${roundTag}${abandonNote}</td>
       <td>${trackName}</td>
       <td>${dept}</td>
       <td style="text-align:center;font-weight:bold;">${quotaDisplay}</td>
