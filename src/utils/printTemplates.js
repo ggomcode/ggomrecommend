@@ -396,7 +396,7 @@ export function printClassApplicationsReport({
           const prefNo = idx + 1
           const univName = app.univ_name || '—'
           const trackName = app.track_name || '—'
-          const deptName = app.department_name ? ` (${app.department_name})` : ''
+          const deptName = app.department_name || '—'
           
           let statusText = '접수완료'
           let statusClass = 'status-open'
@@ -777,7 +777,7 @@ export function printAllClassesApplicationsReport({
             const prefNo = idx + 1
             const univName = app.univ_name || '—'
             const trackName = app.track_name || '—'
-            const deptName = app.department_name ? ` (${app.department_name})` : ''
+            const deptName = app.department_name || '—'
             
             let statusText = '접수완료'
             let statusClass = 'status-open'

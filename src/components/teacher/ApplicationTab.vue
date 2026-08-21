@@ -168,7 +168,7 @@
                   <span class="text-sm font-bold text-slate-800 dark:text-white">
                     [{{ app.univ_name }}] {{ app.track_name }}
                   </span>
-                  <span class="text-xs text-slate-400 ml-2">({{ app.department_name }})</span>
+                  <span class="text-xs text-slate-400 ml-2">{{ app.department_name }}</span>
                 </div>
                 <div class="flex items-center gap-3">
                   <span class="text-xs font-bold text-slate-700 dark:text-slate-300">

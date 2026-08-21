@@ -163,7 +163,7 @@
                     {{ ap.round }}차 접수
                   </span>
                   <strong class="text-base text-slate-800 dark:text-white">{{ ap.universities.univ_name }}</strong>
-                  <span class="text-sm text-slate-400 dark:text-slate-500 ml-2">({{ ap.universities.track_name }} | {{ ap.department_name }})</span>
+                  <span class="text-sm text-slate-400 dark:text-slate-500 ml-2">[{{ ap.universities.track_name }}] {{ ap.department_name }}</span>
                 </div>
                 
                 <!-- 추천 상태 배지 -->

@@ -115,7 +115,7 @@
                     :class="{ 'line-through opacity-50': app.abandoned || (!app.recommended && app.round_status === 'FINALIZED') }"
                     :style="{ color: (app.abandoned || (!app.recommended && app.round_status === 'FINALIZED')) ? '#94a3b8' : '#1e293b' }"
                   >
-                    {{ app.univ_name }} — {{ app.track_name }}<template v-if="app.department_name"> ({{ app.department_name }})</template>
+                    {{ app.univ_name }} — {{ app.track_name }}<template v-if="app.department_name"> {{ app.department_name }}</template>
                   </span>
                   <!-- 환산점수 배지 -->
                   <span
