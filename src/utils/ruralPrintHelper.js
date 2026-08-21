@@ -420,7 +420,7 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
 }
 
 /**
- * 교사/관리자용 '2027학년도 대입 농어촌 전형 추천 대장' (학급별/전체) 인쇄
+ * 교사/관리자용 '2027학년도 대입 농어촌 전형 추천 대장' (가로 인쇄 & 학급별 페이지 분리) 인쇄
  */
 export function printRuralClassRoster(title, rosterRows) {
   const sName = schoolName.value || '우리고등학교';
@@ -431,33 +431,148 @@ export function printRuralClassRoster(title, rosterRows) {
     return;
   }
 
-  // 제목의 옵션 문구 제거 후 깨끗한 대제목으로 고정
-  const cleanTitle = '2027학년도 대입 농어촌 전형 추천 대장';
-
-  const rowsHtml = (rosterRows || []).map((r, idx) => {
+  // 1. 학급별 그룹핑
+  const groupsMap = new Map();
+  (rosterRows || []).forEach(r => {
     const rawCode = String(r.student_code || '').trim();
-    const code5 = rawCode ? rawCode.slice(-5) : '-';
-
     const isGrad = r.is_enrolled === false || Boolean(r.grad_year) || (rawCode.length > 5);
-    const gradYearVal = r.grad_year || (rawCode.length > 5 ? rawCode.slice(0, 4) : '');
+    
+    let groupKey = 'grad';
+    let groupLabel = '졸업생';
 
-    let codeDisplay = `<div style="font-family: monospace; font-weight: bold; font-size: 11px;">${code5}</div>`;
-    if (isGrad && gradYearVal) {
-      codeDisplay += `<div style="font-size: 9.5px; color: #475569; font-weight: normal; margin-top: 1px;">(졸업년도 ${gradYearVal})</div>`;
+    if (!isGrad) {
+      let classNo = r.student_class != null ? Number(r.student_class) : null;
+      if (classNo == null && rawCode.length === 5) {
+        const cParsed = parseInt(rawCode.substring(1, 3), 10);
+        if (!isNaN(cParsed) && cParsed > 0) classNo = cParsed;
+      }
+      if (classNo != null && classNo > 0) {
+        groupKey = `class_${classNo}`;
+        groupLabel = `3학년 ${classNo}반`;
+      } else {
+        groupKey = 'class_etc';
+        groupLabel = '재학생 (학급미지정)';
+      }
     }
 
-    const choiceStr = r.choice_number ? `${r.choice_number}지망` : '-'
+    if (!groupsMap.has(groupKey)) {
+      groupsMap.set(groupKey, {
+        key: groupKey,
+        label: groupLabel,
+        isGrad: isGrad,
+        classNo: groupKey.startsWith('class_') ? parseInt(groupKey.replace('class_', ''), 10) : 999,
+        rows: []
+      });
+    }
+    groupsMap.get(groupKey).rows.push(r);
+  });
+
+  // 그룹 정렬: 3학년 1반, 2반, ..., 기타, 졸업생
+  const sortedGroups = Array.from(groupsMap.values()).sort((a, b) => {
+    if (a.isGrad !== b.isGrad) return a.isGrad ? 1 : -1;
+    return (a.classNo || 999) - (b.classNo || 999);
+  });
+
+  // 데이터가 없을 때 기본 빈 그룹
+  if (sortedGroups.length === 0) {
+    sortedGroups.push({
+      key: 'empty',
+      label: '전체',
+      isGrad: false,
+      rows: []
+    });
+  }
+
+  // 각 학급별 페이지 HTML 렌더링
+  const pagesHtml = sortedGroups.map(group => {
+    const pageRowsHtml = group.rows.map((r, idx) => {
+      const rawCode = String(r.student_code || '').trim();
+      const code5 = rawCode ? (rawCode.length > 5 ? rawCode.slice(-5) : rawCode) : '-';
+
+      const isGrad = r.is_enrolled === false || Boolean(r.grad_year) || (rawCode.length > 5);
+      const gradYearVal = r.grad_year || (rawCode.length > 5 ? rawCode.slice(0, 4) : '');
+
+      let codeDisplay = `<span style="font-family: monospace; font-weight: bold; font-size: 11px;">${code5}</span>`;
+      if (isGrad && gradYearVal) {
+        codeDisplay += ` <span style="font-size: 9.5px; color: #475569; font-weight: normal;">(${gradYearVal}년 졸)</span>`;
+      }
+
+      const choiceStr = r.choice_number ? `${r.choice_number}지망` : '-';
+
+      return `
+        <tr>
+          <td style="text-align: center; color: #64748b;">${idx + 1}</td>
+          <td style="text-align: center;">${codeDisplay}</td>
+          <td style="text-align: center; font-weight: bold; color: #0f172a;">${r.student_name || '-'}</td>
+          <td style="text-align: center; font-weight: 800; color: #2563eb;">${choiceStr}</td>
+          <td style="text-align: center; font-size: 10.5px;">${r.term_type || '수시'}</td>
+          <td style="text-align: center; font-size: 10.5px;">${r.track_type || '-'}</td>
+          <td style="font-weight: 800; color: #0f172a;">${r.univ_name || '-'}</td>
+          <td style="color: #1e3a8a; font-weight: 800;">${r.department || '-'}</td>
+          <td style="font-size: 10.5px; color: #334155;">${r.track_name || '-'}</td>
+        </tr>
+      `;
+    }).join('');
 
     return `
-      <tr>
-        <td style="text-align: center;">${idx + 1}</td>
-        <td style="text-align: center; line-height: 1.2;">${codeDisplay}</td>
-        <td style="text-align: center; font-weight: bold;">${r.student_name || '-'}</td>
-        <td style="text-align: center; font-weight: bold; color: #2563eb;">${choiceStr}</td>
-        <td style="text-align: center;">${r.track_type || '-'}</td>
-        <td style="font-weight: bold;">${r.univ_name || '-'}</td>
-        <td style="color: #1e3a8a; font-weight: bold;">${r.department || '-'}</td>
-      </tr>
+      <div class="class-page">
+        <!-- 1행: 헤더 (대제목 및 결재란) -->
+        <div class="page-header-row">
+          <div class="title-area">
+            <div class="school-name-tag">${sName}</div>
+            <h1 class="main-title">2027학년도 대입 농어촌 전형 추천 대장</h1>
+            <div class="sub-title">학급: <strong>${group.label}</strong> (신청 건수: 총 ${group.rows.length}건)</div>
+          </div>
+
+          <!-- 4단 결재란 (단일 tbody 구성) -->
+          <div class="approval-area">
+            <table class="stamp-box">
+              <tbody>
+                <tr>
+                  <th rowspan="2" class="stamp-side-th">결<br>재</th>
+                  <td class="stamp-header-td">담임</td>
+                  <td class="stamp-header-td">부장</td>
+                  <td class="stamp-header-td">교감</td>
+                  <td class="stamp-header-td">교장</td>
+                </tr>
+                <tr>
+                  <td class="stamp-sign-td"></td>
+                  <td class="stamp-sign-td"></td>
+                  <td class="stamp-sign-td"></td>
+                  <td class="stamp-sign-td"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2행: 대장 테이블 (A4 가로 9개 컬럼 규격) -->
+        <table class="roster-table">
+          <thead>
+            <tr>
+              <th style="width: 40px;">No</th>
+              <th style="width: 90px;">학번</th>
+              <th style="width: 80px;">성명</th>
+              <th style="width: 55px;">지망</th>
+              <th style="width: 60px;">시기</th>
+              <th style="width: 85px;">전형유형</th>
+              <th style="width: 170px;">대학명</th>
+              <th style="width: 200px;">모집단위 (학과)</th>
+              <th>세부 전형명</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pageRowsHtml || '<tr><td colspan="9" style="text-align:center; padding: 28px; color:#94a3b8; font-weight:600;">신청 내역이 없습니다.</td></tr>'}
+          </tbody>
+        </table>
+
+        <!-- 하단 푸터 -->
+        <div class="page-footer-row">
+          <span>출력일시: ${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+          <span>${sName} 대입 추천 관리 시스템</span>
+          <span>구분: ${group.label}</span>
+        </div>
+      </div>
     `;
   }).join('');
 
@@ -466,116 +581,145 @@ export function printRuralClassRoster(title, rosterRows) {
     <html lang="ko">
     <head>
       <meta charset="UTF-8">
-      <title>${cleanTitle}</title>
+      <title>2027학년도 대입 농어촌 전형 추천 대장</title>
       <style>
         @page {
-          size: A4 portrait;
-          margin: 15mm 20mm;
+          size: A4 landscape;
+          margin: 12mm 15mm 12mm 15mm;
+        }
+        * {
+          box-sizing: border-box;
         }
         body {
-          font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
+          font-family: 'Pretendard', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
           color: #0f172a;
           margin: 0;
           padding: 0;
           font-size: 11px;
+          background: #ffffff;
         }
-        .header-title-box {
-          text-align: center;
-          font-size: 21px;
+
+        /* 각 학급별 페이지 분할 (A4 가로 1장 단위) */
+        .class-page {
+          page-break-after: always;
+          break-after: page;
+          min-height: 180mm;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-start;
+          box-sizing: border-box;
+        }
+        .class-page:last-child {
+          page-break-after: auto;
+          break-after: auto;
+        }
+
+        /* 헤더 영역 */
+        .page-header-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          border-bottom: 2px solid #0f172a;
+          padding-bottom: 10px;
+          margin-bottom: 14px;
+        }
+        .title-area {
+          flex: 1;
+        }
+        .school-name-tag {
+          font-size: 12px;
           font-weight: 800;
+          color: #047857;
           letter-spacing: 0.04em;
-          margin-bottom: 24px;
-          color: #0f172a;
+          margin-bottom: 3px;
         }
-        .header-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 20px;
+        .main-title {
+          font-size: 19px;
+          font-weight: 900;
+          color: #0f172a;
+          margin: 0;
+          letter-spacing: -0.02em;
+        }
+        .sub-title {
+          font-size: 11.5px;
+          color: #475569;
+          margin-top: 4px;
+        }
+
+        /* 결재란 */
+        .approval-area {
+          margin-left: 16px;
         }
         .stamp-box {
-          border: 1px solid #334155;
           border-collapse: collapse;
           text-align: center;
-          font-size: 11px;
-          margin-left: auto;
-        }
-        .stamp-box th, .stamp-box td {
           border: 1px solid #334155;
-          padding: 4px 8px;
+          background: #ffffff;
         }
-        .stamp-box th {
-          background-color: #f1f5f9;
+        .stamp-side-th {
+          padding: 2px 6px;
+          border: 1px solid #334155;
+          background: #f1f5f9;
+          font-weight: 800;
+          font-size: 11px;
+          line-height: 1.2;
+          width: 22px;
+        }
+        .stamp-header-td {
+          padding: 3px 8px;
+          border: 1px solid #334155;
+          background: #f8fafc;
           font-weight: bold;
+          font-size: 11px;
+          width: 52px;
+          text-align: center;
         }
-        .stamp-box td {
-          height: 38px;
-          width: 48px;
+        .stamp-sign-td {
+          height: 40px;
+          border: 1px solid #334155;
+          min-width: 52px;
         }
+
+        /* 테이블 */
         .roster-table {
           width: 100%;
           border-collapse: collapse;
+          font-size: 11px;
+          border: 1px solid #94a3b8;
         }
-        .roster-table th, .roster-table td {
+        .roster-table thead tr {
+          background-color: #e2e8f0;
+          border-bottom: 1.5px solid #64748b;
+        }
+        .roster-table th {
+          border: 1px solid #cbd5e1;
+          padding: 6px 8px;
+          font-weight: 800;
+          color: #1e293b;
+          text-align: center;
+        }
+        .roster-table td {
           border: 1px solid #cbd5e1;
           padding: 6px 8px;
           vertical-align: middle;
+          color: #1e293b;
         }
-        .roster-table th {
-          background-color: #f8fafc;
-          font-weight: bold;
-          text-align: center;
+
+        /* 푸터 */
+        .page-footer-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 10px;
+          color: #64748b;
+          border-top: 1px solid #cbd5e1;
+          padding-top: 8px;
+          margin-top: auto;
         }
       </style>
     </head>
     <body>
-      <!-- 1행: 대제목 (단독 1행 배치로 끊김 방지) -->
-      <div class="header-title-box">${cleanTitle}</div>
-
-      <!-- 2행: 학교 정보 & 4단 결재란 -->
-      <table class="header-table">
-        <tr>
-          <td style="vertical-align: bottom; padding-bottom: 4px;">
-            <div style="font-size: 11px; color: #475569; font-weight: 600;">
-              학교명: ${sName} | 총 ${rosterRows.length}건
-            </div>
-          </td>
-          <td style="text-align: right; vertical-align: bottom;">
-            <table class="stamp-box">
-              <tr>
-                <th rowspan="2" style="width: 18px; background:#f1f5f9;">결<br>재</th>
-                <th>담임</th>
-                <th>부장</th>
-                <th>교감</th>
-                <th>교장</th>
-              </tr>
-              <tr>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-
-      <!-- 대장 테이블 (7개 컬럼) -->
-      <table class="roster-table">
-        <thead>
-          <tr>
-            <th style="width: 36px;">순번</th>
-            <th style="width: 90px;">학번</th>
-            <th style="width: 75px;">이름</th>
-            <th style="width: 55px;">지망</th>
-            <th style="width: 65px;">전형유형</th>
-            <th style="width: 170px;">대학</th>
-            <th>학과</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rowsHtml || '<tr><td colspan="7" style="text-align:center; padding: 20px; color:#94a3b8;">신청 내역이 없습니다.</td></tr>'}
-        </tbody>
-      </table>
+      ${pagesHtml}
 
       <script>
         window.onload = function() {

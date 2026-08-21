@@ -18,7 +18,7 @@
           class="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors cursor-pointer border-none"
         >
           <Printer class="w-4 h-4" />
-          2027 농어촌 전형 추천 대장 인쇄 (4단 결재)
+          2027 농어촌 전형 추천 대장 인쇄
         </button>
         <button
           @click="loadData"
@@ -280,7 +280,7 @@
       </div>
     </div>
 
-    <!-- 🖨️ 추천 대장 인쇄 옵션 모달 (4단 결재) -->
+    <!-- 🖨️ 추천 대장 인쇄 옵션 모달 -->
     <div v-if="showPrintModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-slate-200">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -357,7 +357,7 @@
             class="px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-xs cursor-pointer border-none disabled:opacity-40 flex items-center gap-1.5"
           >
             <Printer class="w-3.5 h-3.5" />
-            추천 대장 인쇄하기 (4단 결재)
+            추천 대장 인쇄하기
           </button>
         </div>
       </div>
