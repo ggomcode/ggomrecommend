@@ -168,10 +168,10 @@
                 
                 <!-- 추천 상태 배지 -->
                 <div class="flex items-center gap-1.5">
-                  <span v-if="ap.is_abandoned" class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-500 dark:bg-rose-950/20 dark:text-rose-400">포기 완료</span>
-                  <span v-else-if="getAbandonRequest(ap)" class="px-2.5 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400">⚠️ 포기 신청 접수중</span>
-                  <span v-else-if="ap.is_excluded" class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400" :title="'부적합 사유: ' + ap.excluded_reason">부적합 (원 {{ ap.original_rank }}위)</span>
-                  <span v-else-if="ap.is_recommended" class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-500 dark:bg-emerald-950/20 dark:text-emerald-400">추천 확정</span>
+                  <span v-if="ap.is_abandoned" class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-500 dark:bg-rose-950/20 dark:text-rose-400">{{ ap.abandoned_round || ap.round }}차 포기 완료</span>
+                  <span v-else-if="getAbandonRequest(ap)" class="px-2.5 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400">⚠️ {{ ap.round }}차 포기 신청 접수중</span>
+                  <span v-else-if="ap.is_excluded" class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400" :title="'부적합 사유: ' + ap.excluded_reason">{{ ap.round }}차 미선발 (원 {{ ap.original_rank }}위)</span>
+                  <span v-else-if="ap.is_recommended" class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-500 dark:bg-emerald-950/20 dark:text-emerald-400">{{ ap.recommended_round || ap.round }}차 추천 확정</span>
                   <span v-else class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-500 dark:bg-amber-950/20 dark:text-amber-400">심의 대기</span>
                 </div>
               </div>
@@ -920,6 +920,8 @@ import { printApplicationForm } from '../utils/printTemplates'
 import { getDisclosureCount } from '../api/admin.js'
 import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../utils/roundSchedule'
 import { deleteApplicationStorageFiles } from '../utils/storageUtils'
+import { dialog } from '../components/common/dialog.js'
+import { isUndecidedDepartment } from '../utils/departmentValidation.js'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -1199,10 +1201,10 @@ async function loadData() {
       if (matched.length === 0) return false
 
       return matched.some(r => {
-        const elig = String(r.target_students || '').trim().toUpperCase()
+        const elig = String(r.target_students || '').trim()
         const remarks = String(r.remarks || '').trim()
 
-        const isEligX = elig === 'X' || elig.includes('X') || elig.includes('불가')
+        const isEligX = /[×Xx✕✖]|불가/.test(elig)
         const isPreClosed = remarks.includes('마감')
 
         return isEligX || isPreClosed
@@ -1542,6 +1544,24 @@ async function executeApply() {
     return
   }
 
+  // 학과(학부) 미지정("상관없음", "미정", 공백 등) 검증 및 확인 팝업
+  let finalDept = departmentName.value?.trim() || ''
+  if (isUndecidedDepartment(finalDept)) {
+    const inputDisplay = finalDept ? `"${finalDept}"` : '미입력(공백)'
+    const proceed = await dialog.confirm({
+      title: '지원 학과(모집단위) 미지정 확인',
+      message: `지원 모집단위(학과/학부)가 명확히 지정되지 않았습니다.\n(입력값: ${inputDisplay})\n\n정확한 추천 선발 및 심사를 위해 학과명을 입력하는 것을 권장합니다.\n\n학과를 미지정한 상태("-" 처리)로 그대로 제출하시겠습니까?`,
+      confirmText: '미지정("-"로 제출)',
+      cancelText: '학과 다시 입력하기',
+      level: 'warn',
+    })
+
+    if (!proceed) {
+      return
+    }
+    finalDept = '-'
+  }
+
   submitLoading.value = true
   try {
     const { data: userData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }))
@@ -1594,7 +1614,7 @@ async function executeApply() {
       student_id: userId,
       univ_id: selectedUnivId.value,
       round: currentRound.value,
-      department_name: departmentName.value,
+      department_name: finalDept,
       parent_name: parentName.value,
       parent_phone: parentPhone.value,
       student_signature_url: studentSigUrl,

@@ -178,40 +178,70 @@ grad_year: s.grad_year
 
 // 3. 대학 목록 (고유 대학명 리스트)
 export const teacherGetUniversities = async () => {
-if (!supabase) return []
-const { data, error } = await supabase
-.from('universities')
-.select('univ_name')
+  if (!supabase) return []
+  const [{ data, error }, { data: regRecs }] = await Promise.all([
+    supabase.from('universities').select('*'),
+    supabase.from('regional_recommendations').select('univ_name, track_name, target_students, remarks')
+  ])
 
-if (error) throw error
+  if (error) throw error
 
-// 중복 제거 및 이름순 정렬
-const uniqueNames = [...new Set(data.map(u => u.univ_name))].sort()
-return uniqueNames.map(name => ({ id: name, univ_name: name }))
+  const blockedMap = new Set()
+  for (const r of (regRecs || [])) {
+    const isX = /[×Xx✕✖]|불가/.test(String(r.target_students || '').trim())
+    const isClosed = String(r.remarks || '').trim().includes('마감')
+    if (isX || isClosed) {
+      blockedMap.add(`${String(r.univ_name || '').trim()}__${String(r.track_name || '').trim()}`)
+    }
+  }
+
+  // 차단되지 않은 대학/전형만 남김
+  const validUnivs = (data || []).filter(u => {
+    const k = `${String(u.univ_name || '').trim()}__${String(u.track_name || '').trim()}`
+    return !blockedMap.has(k)
+  })
+
+  // 중복 제거 및 이름순 정렬
+  const uniqueNames = [...new Set(validUnivs.map(u => u.univ_name))].sort()
+  return uniqueNames.map(name => ({ id: name, univ_name: name }))
 }
 
 // 4. 특정 대학의 모집단위(트랙) 목록
 export const teacherGetUnivTracks = async (univName) => {
-if (!supabase) return []
-const { data, error } = await supabase
-.from('universities')
-.select('*')
-.eq('univ_name', univName)
-.order('track_name', { ascending: true })
+  if (!supabase) return []
+  const [{ data, error }, { data: regRecs }] = await Promise.all([
+    supabase.from('universities').select('*').eq('univ_name', univName).order('track_name', { ascending: true }),
+    supabase.from('regional_recommendations').select('univ_name, track_name, target_students, remarks')
+  ])
 
-if (error) throw error
-return data.map(u => ({
-id: u.id,
-univ_id: u.id,
-univ_name: u.univ_name,
-track_name: u.track_name,
-track_type: u.track_type,
-grad_allowed: u.grad_allowed,
-csat_min: u.csat_min,
-has_quota: u.has_quota,
-quota_limit: u.quota_limit,
-remarks: u.remarks
-}))
+  if (error) throw error
+
+  const blockedMap = new Set()
+  for (const r of (regRecs || [])) {
+    const isX = /[×Xx✕✖]|불가/.test(String(r.target_students || '').trim())
+    const isClosed = String(r.remarks || '').trim().includes('마감')
+    if (isX || isClosed) {
+      blockedMap.add(`${String(r.univ_name || '').trim()}__${String(r.track_name || '').trim()}`)
+    }
+  }
+
+  const validTracks = (data || []).filter(u => {
+    const k = `${String(u.univ_name || '').trim()}__${String(u.track_name || '').trim()}`
+    return !blockedMap.has(k)
+  })
+
+  return validTracks.map(u => ({
+    id: u.id,
+    univ_id: u.id,
+    univ_name: u.univ_name,
+    track_name: u.track_name,
+    track_type: u.track_type,
+    grad_allowed: u.grad_allowed,
+    csat_min: u.csat_min,
+    has_quota: u.has_quota,
+    quota_limit: u.quota_limit,
+    remarks: u.remarks
+  }))
 }
 
 // 5. 전형요소 컨텍스트 (수동 성적 입력으로 전환되어 더미 데이터 반환)

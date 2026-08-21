@@ -96,11 +96,38 @@
           :items="helpBox.items"
       />
 
-      <!-- ③ 현재 라운드 -->
+      <!-- ③ 현재 라운드 및 차수 선택 -->
       <div class="rounded-xl" style="padding: 20px 24px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
-        <SectionLabel title="현재 추천 선발" />
+        <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <SectionLabel title="추천 선발 현황" />
+
+          <!-- 다차수일 때 차수 선택 탭 버튼 -->
+          <div v-if="totalRounds > 1" class="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-xl border border-slate-200/80 flex-wrap">
+            <button
+              v-for="rId in totalRounds"
+              :key="rId"
+              type="button"
+              @click="handleSelectRound(rId)"
+              class="px-3.5 py-1.5 text-xs rounded-lg font-bold transition-all cursor-pointer border-none flex items-center gap-1.5"
+              :class="currentViewingRoundId === rId
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 bg-transparent'"
+            >
+              <span>{{ rId }}차 선발</span>
+              <span
+                class="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                :style="getRoundBadgeStyle(rId)"
+              >
+                {{ getRoundStatusText(rId) }}
+              </span>
+            </button>
+          </div>
+        </div>
+
         <div v-if="data.round" class="flex items-center gap-3 flex-wrap">
-          <span class="text-3xl font-bold" style="color: #1e293b;">{{ totalRounds === 1 ? '추천 선발' : `${data.round.id}차 추천 선발` }}</span>
+          <span class="text-3xl font-bold" style="color: #1e293b;">
+            {{ totalRounds === 1 ? '추천 선발' : `${data.round.id}차 추천 선발` }}
+          </span>
           <span
             class="text-base font-semibold"
             style="padding: 4px 14px; border-radius: 999px;"
@@ -114,10 +141,12 @@
           >
             {{ roundStatusLabel(effectiveRoundStatus) }}
           </span>
-          <span v-if="data.round.opened_at" class="text-base ml-auto" style="color: #94a3b8;">접수 시작일 {{ data.round.opened_at.slice(0, 10) }}</span>
+          <span v-if="data.round.opened_at" class="text-base ml-auto" style="color: #94a3b8;">
+            접수 시작일 {{ data.round.opened_at.slice(0, 10) }}
+          </span>
         </div>
         <div v-else class="flex items-center justify-between">
-          <p class="text-base" style="color: #94a3b8;">현재 진행 중인 추천 선발이 없습니다.</p>
+          <p class="text-base" style="color: #94a3b8;">조회된 추천 선발 데이터가 없습니다.</p>
         </div>
       </div>
 
@@ -125,7 +154,7 @@
       <template v-if="data.round">
         <div class="rounded-xl overflow-hidden flex flex-col" style="min-height: 200px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
           <div class="flex items-center justify-between flex-wrap gap-2" style="padding: 20px 24px 0;">
-            <SectionLabel :title="totalRounds === 1 ? '학급별 지원자 현황' : '이번 추천 선발 · 학급별 지원자 현황'" />
+            <SectionLabel :title="totalRounds === 1 ? '학급별 지원자 현황' : `${currentViewingRoundId}차 추천 선발 · 학급별 지원자 현황`" />
             <div class="flex items-center gap-2 mb-4 flex-wrap">
               <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1.5 rounded-full border border-blue-100 flex items-center gap-1">
                 💡 학급 행을 클릭하면 지원자 상세 명단을 확인할 수 있습니다
@@ -472,7 +501,7 @@
               </div>
 
               <!-- 검색 인풋 -->
-              <div class="relative flex-1 max-w-xs min-w-[200px]">
+              <div class="relative flex-1 max-w-xs min-w-50">
                 <Search :size="15" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   v-model="classModalSearch"
@@ -485,7 +514,7 @@
           </div>
 
           <!-- 모달 본문 (테이블) -->
-          <div class="flex-1 overflow-y-auto min-h-[260px] max-h-[50vh] p-6 bg-slate-50/50">
+          <div class="flex-1 overflow-y-auto min-h-65 max-h-[50vh] p-6 bg-slate-50/50">
             <!-- 로딩 중 -->
             <div v-if="classModalLoading" class="flex flex-col items-center justify-center py-16 text-slate-400">
               <RefreshCw :size="28" class="animate-spin text-blue-500 mb-2" />
@@ -554,6 +583,12 @@
                             지망 {{ aIdx + 1 }}
                           </span>
                           <span
+                            v-if="totalRounds > 1 && (app.round || app.round_id)"
+                            class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0"
+                          >
+                            {{ app.round || app.round_id }}차 지원
+                          </span>
+                          <span
                             class="font-semibold text-slate-800"
                             :class="{ 'line-through opacity-50': app.abandoned || app.excluded }"
                           >
@@ -566,25 +601,25 @@
                             v-if="app.abandoned"
                             class="font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded text-[10px]"
                           >
-                            포기됨
+                            {{ totalRounds > 1 && (app.abandoned_round || app.round || app.round_id) ? `${app.abandoned_round || app.round || app.round_id}차 포기` : '포기됨' }}
                           </span>
                           <span
                             v-else-if="app.excluded"
                             class="font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded text-[10px]"
                           >
-                            미선발 ({{ app.excluded_reason || '제외' }})
+                            {{ totalRounds > 1 && (app.round || app.round_id) ? `${app.round || app.round_id}차 미선발` : '미선발' }} ({{ app.excluded_reason || '제외' }})
                           </span>
                           <span
                             v-else-if="app.recommended"
                             class="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[10px]"
                           >
-                            추천 확정
+                            {{ totalRounds > 1 && (app.recommended_round || app.round || app.round_id) ? `${app.recommended_round || app.round || app.round_id}차 선발(추천확정)` : '추천 확정' }}
                           </span>
                           <span
                             v-else-if="effectiveRoundStatus === 'FINALIZED'"
                             class="font-medium text-slate-400 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-[10px]"
                           >
-                            미선발
+                            {{ totalRounds > 1 && (app.round || app.round_id) ? `${app.round || app.round_id}차 미선발` : '미선발' }}
                           </span>
                           <span
                             v-else
@@ -766,6 +801,49 @@ const unconfirmedCount = computed(() => {
   return count
 })
 const schedulesMap = ref({})
+const selectedRoundId = ref(null)
+const overviewLoading = ref(false)
+
+const currentViewingRoundId = computed(() => {
+  if (selectedRoundId.value) return selectedRoundId.value
+  return data.value?.round?.id || 1
+})
+
+function getRoundInfo(rId) {
+  const found = data.value?.all_rounds?.find(r => r.id === rId)
+  return found || { id: rId, status: 'OPEN' }
+}
+
+function getRoundComputedStatus(rId) {
+  const r = getRoundInfo(rId)
+  const sched = schedulesMap.value[rId]
+  return computeRoundDisplayStatus(r, sched)
+}
+
+function getRoundStatusText(rId) {
+  return roundStatusLabel(getRoundComputedStatus(rId))
+}
+
+function getRoundBadgeStyle(rId) {
+  const st = getRoundComputedStatus(rId)
+  if (st === 'OPEN') return { background: '#dcfce7', color: '#15803d' }
+  if (st === 'FINALIZED') return { background: '#f3e8ff', color: '#7e22ce' }
+  if (st === 'CLOSED') return { background: '#dbeafe', color: '#1d4ed8' }
+  return { background: '#fef9c3', color: '#a16207' }
+}
+
+async function handleSelectRound(rId) {
+  if (selectedRoundId.value === rId) return
+  selectedRoundId.value = rId
+  overviewLoading.value = true
+  try {
+    data.value = await getOverview(rId)
+  } catch (e) {
+    error.value = e.message || '차수 데이터를 불러오지 못했습니다.'
+  } finally {
+    overviewLoading.value = false
+  }
+}
 
 const effectiveRoundStatus = computed(() => {
   if (!data.value?.round) return 'DRAFT'
@@ -870,6 +948,9 @@ onMounted(async () => {
   try {
     schedulesMap.value = await fetchRoundSchedulesMap()
     data.value = await getOverview()
+    if (data.value?.round?.id) {
+      selectedRoundId.value = data.value.round.id
+    }
   } catch (e) {
     error.value = e.response?.data ?? e.message ?? '데이터를 불러오지 못했습니다.'
   } finally {

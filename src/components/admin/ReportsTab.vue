@@ -115,8 +115,13 @@
                 </td>
                 <td class="p-3 text-left font-medium text-slate-800 whitespace-nowrap" style="min-width: 260px;">
                   <div v-if="item.students && item.students.length > 0" class="flex flex-col gap-0.5">
-                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap">
-                      <span class="font-mono">{{ std.student_code }}</span> <span class="font-bold">{{ std.name }}</span> <span class="text-slate-500 font-normal text-[11px]">{{ std.suffix }}</span>
+                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap flex items-center gap-1.5">
+                      <span class="font-mono">{{ std.student_code }}</span>
+                      <span class="font-bold">{{ std.name }}</span>
+                      <span v-if="totalRounds > 1" class="text-indigo-700 font-bold text-[10px] bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">
+                        {{ std.round }}차 지원 / {{ std.recommended_round }}차 선발
+                      </span>
+                      <span class="text-slate-500 font-normal text-[11px]">{{ std.suffix }}</span>
                     </div>
                   </div>
                   <span v-else class="text-slate-400">-</span>
@@ -256,7 +261,15 @@
                 <td class="text-center">{{ std.grade_type }}</td>
                 <td class="text-center font-medium">{{ std.score_text || '-' }}</td>
                 <td class="text-center text-slate-600 text-xs">
-                  {{ item.unit_quota != null ? (std.rank <= item.unit_quota ? '추천 대상 (선발)' : '정원 초과 (대기)') : '추천 대상 (선발)' }}
+                  <template v-if="item.unit_quota != null">
+                    {{ std.rank <= item.unit_quota ? '추천 대상 (선발)' : '정원 초과 (대기)' }}
+                  </template>
+                  <template v-else>
+                    추천 대상 (선발)
+                  </template>
+                  <span v-if="totalRounds > 1" class="font-bold text-slate-800 ml-1">
+                    ({{ std.round }}차 지원 / {{ std.recommended_round }}차 선발)
+                  </span>
                 </td>
               </tr>
             </tbody>
@@ -286,6 +299,7 @@ import { formatScore } from '../../utils/scorePreviewShared.js'
 const loading = ref(false)
 const downloading = ref(false)
 const stats = ref([])
+const totalRounds = ref(1)
 const disclosureCount = ref(null)
 const recommendedList = ref([])
 const allApplicantsMap = ref({})
@@ -366,6 +380,8 @@ const flatStats = computed(() => {
         if (isGrad && stInfo.grad_year) {
           displayCode = `${code5}(${stInfo.grad_year})`
         }
+        const appRound = ap.round || 1
+        const recRound = ap.recommended_round || ap.round || 1
         return {
           id: ap.id,
           student_id: ap.student_id,
@@ -374,6 +390,8 @@ const flatStats = computed(() => {
           name: ap.name,
           rank: ap.rank,
           score_text: ap.score_text,
+          round: appRound,
+          recommended_round: recRound,
           grade_type: isGrad ? '졸업생' : '재학생',
           suffix: hasQuota ? `(${ap.rank}위, ${ap.score_text})` : ''
         }
@@ -624,6 +642,17 @@ async function printReportRecommendOnly() {
 }
 
 onMounted(async () => {
+  try {
+    const localTR = localStorage.getItem('total_rounds')
+    if (localTR) totalRounds.value = parseInt(localTR, 10) || 1
+    if (supabase) {
+      const { data: cfg } = await supabase.from('config').select('value').eq('key', 'total_rounds').single()
+      if (cfg?.value) {
+        totalRounds.value = parseInt(cfg.value, 10) || 1
+        localStorage.setItem('total_rounds', String(totalRounds.value))
+      }
+    }
+  } catch {}
   disclosureCount.value = await getDisclosureCount()
   loadData()
   window.addEventListener('afterprint', () => {

@@ -105,6 +105,12 @@
                     지원 {{ idx + 1 }}
                   </span>
                   <span
+                    v-if="app.round_id || app.round"
+                    class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 whitespace-nowrap"
+                  >
+                    {{ app.round_id || app.round }}차 지원
+                  </span>
+                  <span
                     class="font-medium"
                     :class="{ 'line-through opacity-50': app.abandoned || (!app.recommended && app.round_status === 'FINALIZED') }"
                     :style="{ color: (app.abandoned || (!app.recommended && app.round_status === 'FINALIZED')) ? '#94a3b8' : '#1e293b' }"
@@ -116,9 +122,9 @@
                     v-if="app.univ_calc_score != null"
                     class="text-xs font-semibold px-2 py-0.5 rounded border border-violet-200 bg-violet-50 text-violet-700 whitespace-nowrap"
                   >환산 {{ app.univ_calc_score }}점</span>
-                  <span v-if="app.abandoned" class="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200">(포기됨)</span>
-                  <span v-else-if="app.recommended && app.round_status === 'FINALIZED'" class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">추천 확정</span>
-                  <span v-else-if="!app.recommended && app.round_status === 'FINALIZED'" class="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">미선발</span>
+                  <span v-if="app.abandoned" class="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200">({{ app.abandoned_round || app.round_id || app.round }}차 포기됨)</span>
+                  <span v-else-if="app.recommended && app.round_status === 'FINALIZED'" class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">{{ app.recommended_round || app.round_id || app.round }}차 추천 확정</span>
+                  <span v-else-if="!app.recommended && app.round_status === 'FINALIZED'" class="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">{{ app.round_id || app.round }}차 미선발</span>
                   <!-- 수정 버튼 -->
                   <button
                     v-if="currentRound && app.round_id === currentRound.id && !app.abandoned"
@@ -226,6 +232,7 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useAuthStore } from '../../stores/auth.js'
 import { dialog } from '../common/dialog.js'
+import { isUndecidedDepartment } from '../../utils/departmentValidation.js'
 import HelpBox from '../common/HelpBox.vue'
 import {
   getCurrentRound,
@@ -367,11 +374,27 @@ async function onEditUnivChange() {
 
 async function saveEdit() {
   if (!editModal.selectedTrackId) return
+
+  let finalDept = editModal.departmentName?.trim() || ''
+  if (isUndecidedDepartment(finalDept)) {
+    const inputDisplay = finalDept ? `"${finalDept}"` : '미입력(공백)'
+    const proceed = await dialog.confirm({
+      title: '지원 학과(모집단위) 미지정 확인',
+      message: `지원 모집단위(학과/학부)가 명확히 지정되지 않았습니다.\n(입력값: ${inputDisplay})\n\n정확한 추천 선발 및 심사를 위해 학과명을 입력하는 것을 권장합니다.\n\n학과를 미지정한 상태("-" 처리)로 저장하시겠습니까?`,
+      confirmText: '미지정("-"로 저장)',
+      cancelText: '학과 다시 입력하기',
+      level: 'warn',
+    })
+
+    if (!proceed) return
+    finalDept = '-'
+  }
+
   editModal.saving = true
   try {
     await teacherUpdateApplication(editModal.appId, {
       univ_id:         Number(editModal.selectedTrackId),
-      department_name: editModal.departmentName || null,
+      department_name: finalDept,
       univ_calc_score: editModal.univCalcScore !== '' ? Number(editModal.univCalcScore) : '',
     })
     editModal.open = false
