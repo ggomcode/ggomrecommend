@@ -34,7 +34,7 @@
             <div>
               <span class="text-slate-400 font-semibold">포기 대상:</span>
               <strong class="ml-1 text-slate-900 dark:text-white">{{ item.univ_name }} - {{ item.track_name }}</strong>
-              <span v-if="item.department_name" class="text-slate-500"> ({{ item.department_name }})</span>
+              <span v-if="item.department_name" class="text-slate-500"> {{ item.department_name }}</span>
             </div>
             <div>
               <span class="text-slate-400 font-semibold">포기 사유:</span>

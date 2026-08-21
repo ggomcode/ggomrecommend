@@ -593,7 +593,7 @@
                             :class="{ 'line-through opacity-50': app.abandoned || app.excluded }"
                           >
                             {{ app.univ_name }} — {{ app.track_name }}
-                            <span v-if="app.department_name" class="font-normal text-slate-500">({{ app.department_name }})</span>
+                            <span v-if="app.department_name" class="font-normal text-slate-500"> {{ app.department_name }}</span>
                           </span>
 
                           <!-- 상태 뱃지 -->
