@@ -132,9 +132,9 @@
               </span>
               <button
                 class="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-sm flex items-center gap-1.5 transition-all cursor-pointer border-none disabled:opacity-50"
-                title="전체 학급의 지원 현황 대장을 반별로 자동 분할하여 일괄 인쇄합니다"
+                title="전체 학급의 지원자 대장을 반별로 자동 분할하여 일괄 인쇄합니다"
                 :disabled="allClassesPrintLoading"
-                @click="handlePrintAllClasses(false)"
+                @click="handlePrintAllClasses(true)"
               >
                 <RefreshCw v-if="allClassesPrintLoading" :size="13" class="animate-spin text-white" />
                 <Printer v-else :size="13" />
@@ -1128,7 +1128,7 @@ async function handleDirectPrintClass(classObj, isGraduated = false, event) {
       roundTitle,
       roundStatus,
       students: mapped,
-      appliedOnly: false
+      appliedOnly: true
     })
   } catch (err) {
     console.error('Failed to direct print:', err)
@@ -1140,7 +1140,7 @@ async function handleDirectPrintClass(classObj, isGraduated = false, event) {
 // ── 전체 학급 일괄 인쇄 처리 ──────────────────────────────────
 const allClassesPrintLoading = ref(false)
 
-async function handlePrintAllClasses(appliedOnly = false) {
+async function handlePrintAllClasses(appliedOnly = true) {
   if (!data.value?.classes) return
   allClassesPrintLoading.value = true
 

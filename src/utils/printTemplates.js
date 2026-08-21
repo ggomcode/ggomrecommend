@@ -713,8 +713,15 @@ export function printAllClassesApplicationsReport({
     return
   }
 
+  // appliedOnly일 경우 지원자가 1명 이상 있는 학급만 필터링 (전체 0명일 때는 기본 목록 유지)
+  const targetClassesList = appliedOnly
+    ? (classesData.filter(cls => (cls.students || []).some(s => s.apps && s.apps.length > 0)).length > 0
+        ? classesData.filter(cls => (cls.students || []).some(s => s.apps && s.apps.length > 0))
+        : classesData)
+    : classesData
+
   // 각 학급별 HTML 생성
-  const sectionsHtml = classesData.map((cls, clsIdx) => {
+  const sectionsHtml = targetClassesList.map((cls, clsIdx) => {
     const { className, teacherName, students = [] } = cls
     const printTargetStudents = appliedOnly
       ? students.filter(s => s.apps && s.apps.length > 0)
@@ -819,7 +826,7 @@ export function printAllClassesApplicationsReport({
       }
     }
 
-    const isLast = clsIdx === classesData.length - 1
+    const isLast = clsIdx === targetClassesList.length - 1
     return `
       <div class="page-container ${isLast ? '' : 'page-break'}">
         <!-- 상단 헤더 & 결재란 -->
@@ -911,15 +918,29 @@ export function printAllClassesApplicationsReport({
         }
         .page-container {
           width: 100%;
+          box-sizing: border-box;
         }
         .page-break {
-          page-break-after: always;
-          break-after: page;
+          page-break-after: always !important;
+          break-after: page !important;
           margin-bottom: 24px;
         }
         @media print {
+          body {
+            background: #fff;
+          }
+          .page-container {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
           .page-break {
-            margin-bottom: 0;
+            page-break-after: always !important;
+            break-after: page !important;
+            margin-bottom: 0 !important;
+          }
+          .page-container:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
           }
         }
         .top-header {
