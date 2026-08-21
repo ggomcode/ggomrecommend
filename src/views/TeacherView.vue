@@ -176,18 +176,33 @@
     </aside>
 
     <!-- 메인 콘텐츠 -->
-    <main class="flex-1 overflow-y-auto" style="scrollbar-gutter: stable;">
-      <!-- 탭 전환 페이드. key를 active로 잡아야 탭이 바뀔 때 트랜지션이 걸린다 -->
-      <Transition name="tab-fade" mode="out-in">
-        <div :key="active">
-          <Suspense v-if="currentTab">
-            <component :is="currentTab" :key="selectedGrade + '-' + selectedClassNo" />
-          </Suspense>
-          <div v-else class="flex items-center justify-center" style="height: 320px;">
-            <p class="text-base" style="color: #94a3b8;">{{ currentMenuItem?.label ?? '' }} 탭 준비 중</p>
-          </div>
+    <main class="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden bg-slate-100">
+      <!-- 상단 헤더 배너 (고정) -->
+      <header class="bg-white border-b border-slate-200 px-6 py-3.5 flex items-center justify-between shrink-0 shadow-2xs no-print">
+        <div class="flex items-center gap-2">
+          <h1 class="text-base font-bold text-slate-900 m-0">학교장 추천자 선발 시스템</h1>
+          <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+            지역균형 포함
+          </span>
         </div>
-      </Transition>
+        <div class="text-xs font-bold text-slate-500">
+          {{ schoolName }}
+        </div>
+      </header>
+
+      <div class="flex-1 min-h-0 flex flex-col overflow-y-auto" style="scrollbar-gutter: stable;">
+        <!-- 탭 전환 페이드. key를 active로 잡아야 탭이 바뀔 때 트랜지션이 걸린다 -->
+        <Transition name="tab-fade" mode="out-in">
+          <div :key="active">
+            <Suspense v-if="currentTab">
+              <component :is="currentTab" :key="selectedGrade + '-' + selectedClassNo" />
+            </Suspense>
+            <div v-else class="flex items-center justify-center" style="height: 320px;">
+              <p class="text-base" style="color: #94a3b8;">{{ currentMenuItem?.label ?? '' }} 탭 준비 중</p>
+            </div>
+          </div>
+        </Transition>
+      </div>
     </main>
 
     <!-- 비밀번호 변경 모달 -->

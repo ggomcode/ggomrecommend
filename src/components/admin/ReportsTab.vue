@@ -72,31 +72,46 @@
                 <th class="p-3 font-bold w-10 text-center">No</th>
                 <th class="p-3 font-bold whitespace-nowrap w-28">대학명</th>
                 <th class="p-3 font-bold whitespace-nowrap">모집단위 (전형명)</th>
+                <th class="p-3 font-bold whitespace-nowrap w-36">졸업년도 조건</th>
                 <th class="p-3 font-bold text-center w-24 whitespace-nowrap">추천 제한 정원</th>
-                <th class="p-3 font-bold text-center w-22 whitespace-nowrap">추천 현황 인원</th>
-                <th class="p-3 font-bold text-center w-14 whitespace-nowrap">(재학생)</th>
-                <th class="p-3 font-bold text-center w-14 whitespace-nowrap">(졸업생)</th>
+                <th class="p-3 font-bold text-center w-28 whitespace-nowrap">추천 현황(지원)</th>
+                <th class="p-3 font-bold text-center w-16 whitespace-nowrap">(재학생)</th>
+                <th class="p-3 font-bold text-center w-16 whitespace-nowrap">(졸업생)</th>
                 <th class="p-3 font-bold text-left whitespace-nowrap" style="min-width: 260px;">추천 학생 (학번/성명)</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200">
-              <tr v-for="item in displayedStats" :key="item.no" class="hover:bg-slate-50/80 text-slate-700 transition-colors">
+              <tr v-for="item in displayedStats" :key="item.no" class="hover:bg-slate-50/80 text-slate-700 transition-colors" :class="item.is_over_quota ? 'bg-rose-50/30' : ''">
                 <td class="p-3 text-center text-slate-500 font-medium">{{ item.no }}</td>
                 <td class="p-3 font-bold text-slate-900 whitespace-nowrap w-28">
                   <span class="text-sm font-extrabold text-blue-950">{{ item.univ_name }}</span>
                 </td>
                 <td class="p-3 font-bold text-slate-800 text-sm whitespace-nowrap">{{ item.track_name }}</td>
+                <td class="p-3 text-slate-600 text-xs whitespace-pre-line font-medium leading-tight">
+                  <span :class="item.grad_condition && item.grad_condition.includes('재학생') ? 'text-amber-700 font-semibold' : 'text-slate-600'">
+                    {{ item.grad_condition || '제한없음' }}
+                  </span>
+                </td>
                 <td class="p-3 text-center font-semibold text-slate-700">
                   {{ formatQuotaDisplay(item.unit_quota, item.raw_quota_limit) }}
                 </td>
-                <td class="p-3 text-center font-extrabold text-blue-600">
-                  {{ item.unit_used > 0 ? item.unit_used + '명' : '-' }}
+                <td class="p-3 text-center">
+                  <div v-if="item.is_over_quota" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-100/80 text-rose-700 border border-rose-200 text-xs font-black">
+                    <span>{{ item.unit_used }}명</span>
+                    <span class="text-[11px] font-bold text-rose-600">(지원 {{ item.total_applied }}명)</span>
+                  </div>
+                  <span v-else-if="item.unit_used > 0" class="font-extrabold text-blue-600">
+                    {{ item.unit_used }}명
+                  </span>
+                  <span v-else class="text-slate-400">-</span>
                 </td>
-                <td class="p-3 text-center font-semibold text-slate-700">
+                <td class="p-3 text-center font-semibold" :class="item.is_over_quota ? 'text-rose-600 font-bold' : 'text-slate-700'">
                   {{ item.enrolled_used > 0 ? item.enrolled_used + '명' : '-' }}
+                  <span v-if="item.is_over_quota && item.enrolled_applied > item.enrolled_used" class="text-[10px] text-rose-500 block">({{ item.enrolled_applied }}지원)</span>
                 </td>
-                <td class="p-3 text-center font-semibold text-slate-700">
+                <td class="p-3 text-center font-semibold" :class="item.is_over_quota ? 'text-rose-600 font-bold' : 'text-slate-700'">
                   {{ item.grad_used > 0 ? item.grad_used + '명' : '-' }}
+                  <span v-if="item.is_over_quota && item.grad_applied > item.grad_used" class="text-[10px] text-rose-500 block">({{ item.grad_applied }}지원)</span>
                 </td>
                 <td class="p-3 text-left font-medium text-slate-800 whitespace-nowrap" style="min-width: 260px;">
                   <div v-if="item.students && item.students.length > 0" class="flex flex-col gap-0.5">
@@ -152,16 +167,14 @@
           <!-- 결재란: 계 - 부장 - 교감 - 교장 -->
           <div class="print-approval-box">
             <table class="approval-table">
-              <thead>
+              <tbody>
                 <tr>
                   <th rowspan="2" class="approval-th-title">결<br>재</th>
-                  <th class="approval-cell-header">계</th>
-                  <th class="approval-cell-header">부장</th>
-                  <th class="approval-cell-header">교감</th>
-                  <th class="approval-cell-header">교장</th>
+                  <td class="approval-cell-header">계</td>
+                  <td class="approval-cell-header">부장</td>
+                  <td class="approval-cell-header">교감</td>
+                  <td class="approval-cell-header">교장</td>
                 </tr>
-              </thead>
-              <tbody>
                 <tr>
                   <td class="approval-cell-sign"></td>
                   <td class="approval-cell-sign"></td>
@@ -186,11 +199,20 @@
               <tr>
                 <th class="info-th">추천 제한 정원</th>
                 <td class="info-td font-bold">{{ formatQuotaDisplay(item.unit_quota, item.raw_quota_limit) }}</td>
+                <th class="info-th">졸업년도 조건</th>
+                <td class="info-td font-bold text-slate-800">{{ item.grad_condition || '제한없음' }}</td>
+              </tr>
+              <tr>
                 <th class="info-th">추천 인원 현황</th>
-                <td class="info-td">
-                  <span class="font-extrabold text-blue-700">{{ item.unit_used }}명</span>
-                  <span class="info-sub"> (재학생: {{ item.enrolled_used }}명 / 졸업생: {{ item.grad_used }}명)</span>
-                  <span v-if="item.unit_quota != null" class="info-sub font-semibold text-slate-600"> | 잔여: {{ item.remaining_quota }}명</span>
+                <td class="info-td" colspan="3">
+                  <span class="font-extrabold" :class="item.is_over_quota ? 'text-rose-600 font-black' : 'text-blue-700'">
+                    {{ item.unit_used }}명
+                    <span v-if="item.is_over_quota" class="text-rose-600 font-bold"> (총 지원 {{ item.total_applied }}명 - 정원 초과)</span>
+                  </span>
+                  <span class="info-sub" :class="item.is_over_quota ? 'text-rose-600 font-bold' : ''">
+                    (재학생 지원: {{ item.enrolled_applied }}명 / 졸업생 지원: {{ item.grad_applied }}명)
+                  </span>
+                  <span v-if="item.unit_quota != null" class="info-sub font-semibold text-slate-600"> | 잔여 정원: {{ item.remaining_quota }}명</span>
                 </td>
               </tr>
             </tbody>
@@ -266,7 +288,9 @@ const downloading = ref(false)
 const stats = ref([])
 const disclosureCount = ref(null)
 const recommendedList = ref([])
+const allApplicantsMap = ref({})
 const studentMap = ref({})
+const gradConditionMap = ref({})
 
 /**
  * 표시용 인원 포맷 함수
@@ -305,11 +329,13 @@ function formatQuotaDisplay(unitQuota, rawQuotaLimit) {
  */
 const flatStats = computed(() => {
   const list = []
+  const normKey = s => (s || '').trim().toLowerCase().replace(/\s+/g, '')
   
   for (const u of (stats.value || [])) {
     for (const t of (u.tracks || [])) {
       // 해당 트랙에 배정된 현 상황 추천 대상 학생들
       const trackApps = recommendedList.value.filter(ap => ap.univ_id === t.track_id)
+      const allTrackApps = allApplicantsMap.value[t.track_id] || []
       
       const hasQuota = t.unit_quota != null
       
@@ -355,16 +381,40 @@ const flatStats = computed(() => {
 
       const usedCount = studentsArray.length
 
+      // 전체 지원자 통계 (재학생/졸업생 지원수)
+      let totalApplied = allTrackApps.length
+      let enrolledApplied = 0
+      let gradApplied = 0
+      for (const ap of allTrackApps) {
+        const stInfo = studentMap.value[ap.student_id] || {}
+        const isGrad = stInfo.is_graduated || (!stInfo.grade && stInfo.grad_year)
+        if (isGrad) gradApplied++
+        else enrolledApplied++
+      }
+
+      // 추천 제한 인원이 있는 경우, 지원수(재학생+졸업생)가 제한 인원을 넘었는지 여부
+      const isOverQuota = hasQuota && t.unit_quota > 0 && totalApplied > t.unit_quota
+
+      // 졸업년도 조건 매핑 (1순위: 대학_전형 정확 매칭, 2순위: 대학명 fallback)
+      const uNorm = normKey(u.univ_name)
+      const tNorm = normKey(t.track_name)
+      const gradCond = gradConditionMap.value[`${uNorm}__${tNorm}`] || gradConditionMap.value[uNorm] || ''
+
       list.push({
         univ_name: u.univ_name,
         region: u.region,
         track_name: t.track_name,
         track_id: t.track_id,
+        grad_condition: gradCond,
         unit_quota: t.unit_quota,
         raw_quota_limit: t.raw_quota_limit ?? null,
         unit_used: usedCount,
         enrolled_used: enrolledCount,
         grad_used: gradCount,
+        total_applied: totalApplied,
+        enrolled_applied: enrolledApplied,
+        grad_applied: gradApplied,
+        is_over_quota: isOverQuota,
         remaining_quota: t.unit_quota != null ? Math.max(0, t.unit_quota - usedCount) : null,
         students: studentsArray
       })
@@ -391,7 +441,7 @@ const printOnlyWithRecommendations = ref(false)
 const displayedStats = computed(() => {
   if (printOnlyWithRecommendations.value) {
     return flatStats.value
-      .filter(item => item.unit_used > 0)
+      .filter(item => item.unit_used > 0 || item.total_applied > 0)
       .map((item, idx) => ({ ...item, no: idx + 1 }))
   }
   return flatStats.value
@@ -419,11 +469,25 @@ async function loadData() {
   try {
     stats.value = await getQuotaStats()
     if (supabase) {
-      // 1. 순위 계산 및 현 상황 판단을 위해 포기하지 않은 모든 지원서 및 학생 데이터 로드
-      const [{ data: allApps }, { data: students }] = await Promise.all([
+      // 1. 지원서, 학생 마스터, 수도권/지역 추천 전형(졸업조건) 로드
+      const [{ data: allApps }, { data: students }, { data: regRecs }] = await Promise.all([
         supabase.from('applications').select('*').eq('is_abandoned', false),
-        supabase.from('enrolled_students').select('id, name, student_code, gpa_overall, grad_year, grade, is_enrolled')
+        supabase.from('enrolled_students').select('id, name, student_code, gpa_overall, grad_year, grade, is_enrolled'),
+        supabase.from('regional_recommendations').select('univ_name, track_name, grad_condition')
       ])
+
+      // 졸업년도 조건 맵 구성
+      const normKey = s => (s || '').trim().toLowerCase().replace(/\s+/g, '')
+      const gMap = {}
+      for (const r of (regRecs || [])) {
+        if (r.grad_condition) {
+          const uKey = normKey(r.univ_name)
+          const tKey = normKey(r.track_name)
+          gMap[`${uKey}__${tKey}`] = r.grad_condition
+          if (!gMap[uKey]) gMap[uKey] = r.grad_condition
+        }
+      }
+      gradConditionMap.value = gMap
 
       const studentMapLocal = {}
       for (const s of (students || [])) {
@@ -455,6 +519,7 @@ async function loadData() {
         if (!groupedByTrack[key]) groupedByTrack[key] = []
         groupedByTrack[key].push(ap)
       })
+      allApplicantsMap.value = groupedByTrack
 
       const rankMap = {}
       const selectedApps = []
