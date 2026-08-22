@@ -237,36 +237,64 @@
               <tr v-if="!displayedStats || displayedStats.length === 0">
                 <td colspan="10" class="print-empty-cell">등록된 추천 전형 및 학생 데이터가 없습니다.</td>
               </tr>
-              <tr v-for="item in displayedStats" :key="item.no" :class="item.is_over_quota ? 'bg-rose-50/40' : ''">
-                <td class="text-center font-medium text-slate-500">{{ item.no }}</td>
-                <td class="font-extrabold text-blue-950">{{ item.univ_name }}</td>
-                <td class="font-bold text-slate-800">{{ item.track_name }}</td>
-                <td class="text-xs text-slate-600 leading-tight whitespace-pre-line">{{ item.grad_condition || '제한없음' }}</td>
-                <td class="text-center font-bold">{{ formatQuotaDisplay(item.unit_quota, item.raw_quota_limit) }}</td>
-                <td class="text-center font-extrabold" :class="item.is_over_quota ? 'text-rose-600' : 'text-blue-700'">
-                  {{ item.unit_used }}명
-                  <span v-if="item.is_over_quota" class="text-[10px] text-rose-500 block">({{ item.total_applied }}지원)</span>
-                </td>
-                <td class="text-center font-medium">{{ item.enrolled_used > 0 ? item.enrolled_used + '명' : '-' }}</td>
-                <td class="text-center font-medium">{{ item.grad_used > 0 ? item.grad_used + '명' : '-' }}</td>
-                <td class="text-center text-xs py-1">
-                  <template v-if="item.students && item.students.length > 0">
-                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap my-0.5 leading-tight font-bold text-indigo-700">
-                      {{ (std.recommended_round || std.round) ? `${std.recommended_round || std.round}차` : '-' }}
-                    </div>
-                  </template>
-                  <span v-else class="text-slate-400">-</span>
-                </td>
-                <td class="text-left text-xs leading-snug py-1">
-                  <template v-if="item.students && item.students.length > 0">
-                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap my-0.5 leading-tight">
-                      <span class="font-mono text-slate-600">{{ std.student_code }}</span>
-                      <strong class="text-slate-900 ml-1.5">{{ std.name }}</strong>
-                    </div>
-                  </template>
-                  <span v-else class="text-slate-400">-</span>
-                </td>
-              </tr>
+              <template v-for="item in displayedStats" :key="item.no">
+                <!-- 학생이 없는 경우: 1행 표시 -->
+                <tr v-if="!item.students || item.students.length === 0" :class="item.is_over_quota ? 'bg-rose-50/40' : ''">
+                  <td class="text-center font-medium text-slate-500">{{ item.no }}</td>
+                  <td class="font-extrabold text-blue-950">{{ item.univ_name }}</td>
+                  <td class="font-bold text-slate-800">{{ item.track_name }}</td>
+                  <td class="text-xs text-slate-600 leading-tight whitespace-pre-line">{{ item.grad_condition || '제한없음' }}</td>
+                  <td class="text-center font-bold">{{ formatQuotaDisplay(item.unit_quota, item.raw_quota_limit) }}</td>
+                  <td class="text-center font-extrabold" :class="item.is_over_quota ? 'text-rose-600' : 'text-blue-700'">
+                    {{ item.unit_used }}명
+                    <span v-if="item.is_over_quota" class="text-[10px] text-rose-500 block">({{ item.total_applied }}지원)</span>
+                  </td>
+                  <td class="text-center font-medium">{{ item.enrolled_used > 0 ? item.enrolled_used + '명' : '-' }}</td>
+                  <td class="text-center font-medium">{{ item.grad_used > 0 ? item.grad_used + '명' : '-' }}</td>
+                  <td class="text-center text-xs py-1 text-slate-400">-</td>
+                  <td class="text-left text-xs leading-snug py-1 text-slate-400">-</td>
+                </tr>
+
+                <!-- 학생이 1개 이상의 차수 그룹으로 있는 경우: 첫 그룹은 기본 행, 이후 그룹은 추가 행 -->
+                <template v-else>
+                  <tr :class="item.is_over_quota ? 'bg-rose-50/40' : ''">
+                    <td :rowspan="getRoundGroups(item.students).length" class="text-center font-medium text-slate-500 align-middle">{{ item.no }}</td>
+                    <td :rowspan="getRoundGroups(item.students).length" class="font-extrabold text-blue-950 align-middle">{{ item.univ_name }}</td>
+                    <td :rowspan="getRoundGroups(item.students).length" class="font-bold text-slate-800 align-middle">{{ item.track_name }}</td>
+                    <td :rowspan="getRoundGroups(item.students).length" class="text-xs text-slate-600 leading-tight whitespace-pre-line align-middle">{{ item.grad_condition || '제한없음' }}</td>
+                    <td :rowspan="getRoundGroups(item.students).length" class="text-center font-bold align-middle">{{ formatQuotaDisplay(item.unit_quota, item.raw_quota_limit) }}</td>
+                    <td :rowspan="getRoundGroups(item.students).length" class="text-center font-extrabold align-middle" :class="item.is_over_quota ? 'text-rose-600' : 'text-blue-700'">
+                      {{ item.unit_used }}명
+                      <span v-if="item.is_over_quota" class="text-[10px] text-rose-500 block">({{ item.total_applied }}지원)</span>
+                    </td>
+                    <td :rowspan="getRoundGroups(item.students).length" class="text-center font-medium align-middle">{{ item.enrolled_used > 0 ? item.enrolled_used + '명' : '-' }}</td>
+                    <td :rowspan="getRoundGroups(item.students).length" class="text-center font-medium align-middle">{{ item.grad_used > 0 ? item.grad_used + '명' : '-' }}</td>
+                    <!-- 1번째 차수 그룹 -->
+                    <td class="text-center text-xs py-1 font-bold text-indigo-700 align-middle">
+                      {{ getRoundGroups(item.students)[0].roundText }}
+                    </td>
+                    <td class="text-left text-xs leading-snug py-1">
+                      <div v-for="std in getRoundGroups(item.students)[0].students" :key="std.id || std.student_code" class="whitespace-nowrap my-0.5 leading-tight">
+                        <span class="font-mono text-slate-600">{{ std.student_code }}</span>
+                        <strong class="text-slate-900 ml-1.5">{{ std.name }}</strong>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- 2번째 이후 차수 그룹이 있을 때 행 추가 -->
+                  <tr v-for="(rg, rgIdx) in getRoundGroups(item.students).slice(1)" :key="rgIdx" :class="item.is_over_quota ? 'bg-rose-50/40' : ''">
+                    <td class="text-center text-xs py-1 font-bold text-indigo-700 align-middle">
+                      {{ rg.roundText }}
+                    </td>
+                    <td class="text-left text-xs leading-snug py-1">
+                      <div v-for="std in rg.students" :key="std.id || std.student_code" class="whitespace-nowrap my-0.5 leading-tight">
+                        <span class="font-mono text-slate-600">{{ std.student_code }}</span>
+                        <strong class="text-slate-900 ml-1.5">{{ std.name }}</strong>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </template>
             </tbody>
           </table>
         </div>
@@ -578,6 +606,24 @@ const totalRecommendedStats = computed(() => {
   }
   return { total, enrolled, grad }
 })
+
+function getRoundGroups(students) {
+  if (!students || students.length === 0) return []
+  const map = new Map()
+  for (const std of students) {
+    const r = std.recommended_round || std.round || 1
+    const roundKey = Number(r) || 1
+    if (!map.has(roundKey)) {
+      map.set(roundKey, {
+        roundKey,
+        roundText: `${roundKey}차`,
+        students: []
+      })
+    }
+    map.get(roundKey).students.push(std)
+  }
+  return Array.from(map.values()).sort((a, b) => a.roundKey - b.roundKey)
+}
 
 const currentDate = computed(() => {
   const now = new Date()
