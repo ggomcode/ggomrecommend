@@ -229,12 +229,13 @@
                 <th style="width: 75px;">추천(지원)</th>
                 <th style="width: 50px;">재학생</th>
                 <th style="width: 50px;">졸업생</th>
-                <th>추천 대상 학생 명단 (학번/성명)</th>
+                <th style="width: 65px;">선발 차수</th>
+                <th>추천 학생</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="!displayedStats || displayedStats.length === 0">
-                <td colspan="9" class="print-empty-cell">등록된 추천 전형 및 학생 데이터가 없습니다.</td>
+                <td colspan="10" class="print-empty-cell">등록된 추천 전형 및 학생 데이터가 없습니다.</td>
               </tr>
               <tr v-for="item in displayedStats" :key="item.no" :class="item.is_over_quota ? 'bg-rose-50/40' : ''">
                 <td class="text-center font-medium text-slate-500">{{ item.no }}</td>
@@ -248,14 +249,20 @@
                 </td>
                 <td class="text-center font-medium">{{ item.enrolled_used > 0 ? item.enrolled_used + '명' : '-' }}</td>
                 <td class="text-center font-medium">{{ item.grad_used > 0 ? item.grad_used + '명' : '-' }}</td>
-                <td class="text-left text-xs leading-snug">
+                <td class="text-center text-xs py-1">
                   <template v-if="item.students && item.students.length > 0">
-                    <span v-for="(std, sIdx) in item.students" :key="std.id || std.student_code" class="inline-block mr-2">
+                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap my-0.5 leading-tight font-bold text-indigo-700">
+                      {{ (std.recommended_round || std.round) ? `${std.recommended_round || std.round}차` : '-' }}
+                    </div>
+                  </template>
+                  <span v-else class="text-slate-400">-</span>
+                </td>
+                <td class="text-left text-xs leading-snug py-1">
+                  <template v-if="item.students && item.students.length > 0">
+                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap my-0.5 leading-tight">
                       <span class="font-mono text-slate-600">{{ std.student_code }}</span>
-                      <strong class="text-slate-900 ml-0.5">{{ std.name }}</strong>
-                      <span v-if="totalRounds > 1" class="text-[10px] text-indigo-700 font-bold ml-0.5">({{ std.round }}차/{{ std.recommended_round }}차)</span>
-                      <span v-if="sIdx < item.students.length - 1" class="text-slate-300">,</span>
-                    </span>
+                      <strong class="text-slate-900 ml-1.5">{{ std.name }}</strong>
+                    </div>
                   </template>
                   <span v-else class="text-slate-400">-</span>
                 </td>
@@ -265,23 +272,18 @@
         </div>
       </div>
 
-      <!-- 1. [이후 페이지들] 각 전형별 상세 페이지 (결재란 없음) -->
+      <!-- 1. [이후 페이지들] 각 전형별 상세 페이지 (결재란 및 우측 상단 박스 없음) -->
       <div
         v-for="item in displayedStats"
         :key="item.track_id || item.no"
         class="print-page print-detail-page"
       >
-        <!-- 1. 페이지 상단 헤더 (결재란 제거됨) -->
+        <!-- 1. 페이지 상단 헤더 (우측 상단 비움) -->
         <div class="print-header-row print-detail-header-row">
           <div class="print-title-box">
             <div class="print-school-label">{{ schoolName }}</div>
             <h1 class="print-main-title">학교장추천전형 결과 보고서</h1>
             <div class="print-sub-desc">대입 학교장추천전형 추천 명단 및 정원 관리 대장 (전형별 상세)</div>
-          </div>
-
-          <div class="print-detail-tag-box">
-            <div class="text-xs font-bold text-slate-700">전형 순번: <span class="text-blue-700 font-extrabold text-sm">{{ item.no }}</span> / {{ displayedStats.length }}</div>
-            <div class="text-[11px] text-slate-400 mt-0.5">{{ currentDate }}</div>
           </div>
         </div>
 
@@ -790,6 +792,11 @@ onMounted(async () => {
     padding: 0 !important;
   }
 
+  @page {
+    size: A4 landscape;
+    margin: 8mm 10mm;
+  }
+
   body * {
     visibility: hidden;
   }
@@ -807,13 +814,13 @@ onMounted(async () => {
     display: block !important;
   }
 
-  /* 각 전형별 페이지 분할 (A4 1장 단위) */
+  /* 각 전형별 페이지 분할 (A4 가로 1장 단위) */
   .print-page {
     page-break-after: always;
     break-after: page;
     box-sizing: border-box;
     padding: 0;
-    min-height: 270mm;
+    min-height: 180mm;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -836,14 +843,6 @@ onMounted(async () => {
 
   .print-detail-header-row {
     margin-bottom: 16px;
-  }
-
-  .print-detail-tag-box {
-    text-align: right;
-    padding: 6px 12px;
-    background: #f8fafc;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
   }
 
   .print-title-box {
