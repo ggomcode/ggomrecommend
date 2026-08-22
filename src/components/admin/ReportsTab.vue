@@ -156,17 +156,14 @@
 
     <!-- ── 인쇄 전용 영역 (Print Only Pages) ─────────────────── -->
     <div class="print-only-container" id="report-print-area">
-      <div
-        v-for="item in displayedStats"
-        :key="item.track_id || item.no"
-        class="print-page"
-      >
-        <!-- 1. 페이지 상단 헤더 & 결재란 -->
+      <!-- 0. [첫 페이지] 전체 통계 및 총괄 종합 현황 페이지 (우측 상단 결재란 포함) -->
+      <div class="print-page print-summary-page">
+        <!-- 1. 상단 헤더 & 결재란 (총괄 페이지에만 결재란 배치) -->
         <div class="print-header-row">
           <div class="print-title-box">
             <div class="print-school-label">{{ schoolName }}</div>
             <h1 class="print-main-title">학교장추천전형 결과 보고서</h1>
-            <div class="print-sub-desc">대입 학교장추천전형 추천 명단 및 정원 관리 대장</div>
+            <div class="print-sub-desc">대입 학교장추천전형 추천 명단 및 정원 관리 종합 대장</div>
           </div>
 
           <!-- 결재란: 계 - 부장 - 교감 - 교장 -->
@@ -188,6 +185,103 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- 2. 종합 요약 통계 박스 -->
+        <div class="print-summary-stat-box">
+          <div class="summary-stat-item">
+            <span class="stat-label">총 추천 대상 전형</span>
+            <span class="stat-val text-blue-900">{{ displayedStats.length }}개</span>
+          </div>
+          <div class="summary-stat-item">
+            <span class="stat-label">총 지원 학생 수</span>
+            <span class="stat-val">{{ totalAppliedCount }}명</span>
+          </div>
+          <div class="summary-stat-item">
+            <span class="stat-label">총 추천 선발 인원</span>
+            <span class="stat-val text-blue-700">{{ totalRecommendedStats.total }}명</span>
+          </div>
+          <div class="summary-stat-item">
+            <span class="stat-label">재학생 선발</span>
+            <span class="stat-val text-emerald-700">{{ totalRecommendedStats.enrolled }}명</span>
+          </div>
+          <div class="summary-stat-item">
+            <span class="stat-label">졸업생 선발</span>
+            <span class="stat-val text-slate-700">{{ totalRecommendedStats.grad }}명</span>
+          </div>
+        </div>
+
+        <!-- 3. 전체 추천 현황 종합 테이블 -->
+        <div class="print-summary-table-section">
+          <div class="print-section-header">
+            <span class="print-section-title">■ 대학별 추천 전형 및 선발 학생 현황 총괄표</span>
+          </div>
+
+          <table class="print-summary-table">
+            <thead>
+              <tr>
+                <th style="width: 30px;">No</th>
+                <th style="width: 100px;">대학명</th>
+                <th style="width: 130px;">모집단위 (전형명)</th>
+                <th style="width: 90px;">졸업년도 조건</th>
+                <th style="width: 80px;">추천 정원</th>
+                <th style="width: 75px;">추천(지원)</th>
+                <th style="width: 50px;">재학생</th>
+                <th style="width: 50px;">졸업생</th>
+                <th>추천 대상 학생 명단 (학번/성명)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="!displayedStats || displayedStats.length === 0">
+                <td colspan="9" class="print-empty-cell">등록된 추천 전형 및 학생 데이터가 없습니다.</td>
+              </tr>
+              <tr v-for="item in displayedStats" :key="item.no" :class="item.is_over_quota ? 'bg-rose-50/40' : ''">
+                <td class="text-center font-medium text-slate-500">{{ item.no }}</td>
+                <td class="font-extrabold text-blue-950">{{ item.univ_name }}</td>
+                <td class="font-bold text-slate-800">{{ item.track_name }}</td>
+                <td class="text-xs text-slate-600 leading-tight whitespace-pre-line">{{ item.grad_condition || '제한없음' }}</td>
+                <td class="text-center font-bold">{{ formatQuotaDisplay(item.unit_quota, item.raw_quota_limit) }}</td>
+                <td class="text-center font-extrabold" :class="item.is_over_quota ? 'text-rose-600' : 'text-blue-700'">
+                  {{ item.unit_used }}명
+                  <span v-if="item.is_over_quota" class="text-[10px] text-rose-500 block">({{ item.total_applied }}지원)</span>
+                </td>
+                <td class="text-center font-medium">{{ item.enrolled_used > 0 ? item.enrolled_used + '명' : '-' }}</td>
+                <td class="text-center font-medium">{{ item.grad_used > 0 ? item.grad_used + '명' : '-' }}</td>
+                <td class="text-left text-xs leading-snug">
+                  <template v-if="item.students && item.students.length > 0">
+                    <span v-for="(std, sIdx) in item.students" :key="std.id || std.student_code" class="inline-block mr-2">
+                      <span class="font-mono text-slate-600">{{ std.student_code }}</span>
+                      <strong class="text-slate-900 ml-0.5">{{ std.name }}</strong>
+                      <span v-if="totalRounds > 1" class="text-[10px] text-indigo-700 font-bold ml-0.5">({{ std.round }}차/{{ std.recommended_round }}차)</span>
+                      <span v-if="sIdx < item.students.length - 1" class="text-slate-300">,</span>
+                    </span>
+                  </template>
+                  <span v-else class="text-slate-400">-</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 1. [이후 페이지들] 각 전형별 상세 페이지 (결재란 없음) -->
+      <div
+        v-for="item in displayedStats"
+        :key="item.track_id || item.no"
+        class="print-page print-detail-page"
+      >
+        <!-- 1. 페이지 상단 헤더 (결재란 제거됨) -->
+        <div class="print-header-row print-detail-header-row">
+          <div class="print-title-box">
+            <div class="print-school-label">{{ schoolName }}</div>
+            <h1 class="print-main-title">학교장추천전형 결과 보고서</h1>
+            <div class="print-sub-desc">대입 학교장추천전형 추천 명단 및 정원 관리 대장 (전형별 상세)</div>
+          </div>
+
+          <div class="print-detail-tag-box">
+            <div class="text-xs font-bold text-slate-700">전형 순번: <span class="text-blue-700 font-extrabold text-sm">{{ item.no }}</span> / {{ displayedStats.length }}</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">{{ currentDate }}</div>
           </div>
         </div>
 
@@ -242,7 +336,7 @@
                 <th style="width: 90px;">성명</th>
                 <th style="width: 75px;">재학구분</th>
                 <th style="width: 140px;">환산점수 / 석차등급</th>
-                <th>비고</th>
+                <th>추천 선발</th>
               </tr>
             </thead>
             <tbody>
@@ -276,10 +370,8 @@
           </table>
         </div>
 
-        <!-- 4. 페이지 하단 푸터 -->
+        <!-- 4. 페이지 하단 푸터 (우측 전형 순번만 표시) -->
         <div class="print-footer-row">
-          <div class="print-footer-left">출력일시: {{ currentDate }}</div>
-          <div class="print-footer-center">{{ schoolName }} 학업성적관리위원회</div>
           <div class="print-footer-right">전형 순번: {{ item.no }} / {{ displayedStats.length }}</div>
         </div>
       </div>
@@ -463,6 +555,14 @@ const displayedStats = computed(() => {
       .map((item, idx) => ({ ...item, no: idx + 1 }))
   }
   return flatStats.value
+})
+
+const totalAppliedCount = computed(() => {
+  let total = 0
+  for (const item of flatStats.value) {
+    total += (item.total_applied || 0)
+  }
+  return total
 })
 
 const totalRecommendedStats = computed(() => {
@@ -731,7 +831,19 @@ onMounted(async () => {
     align-items: flex-start;
     border-bottom: 2px solid #0f172a;
     padding-bottom: 12px;
+    margin-bottom: 14px;
+  }
+
+  .print-detail-header-row {
     margin-bottom: 16px;
+  }
+
+  .print-detail-tag-box {
+    text-align: right;
+    padding: 6px 12px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
   }
 
   .print-title-box {
@@ -761,7 +873,7 @@ onMounted(async () => {
     margin-top: 4px;
   }
 
-  /* 결재란 */
+  /* 결재란 (총괄 첫 페이지에만 표시) */
   .print-approval-box {
     margin-left: 16px;
   }
@@ -796,6 +908,70 @@ onMounted(async () => {
     height: 44px;
     border: 1px solid #334155;
     min-width: 54px;
+  }
+
+  /* 0. 총괄 요약 통계 박스 & 종합 테이블 */
+  .print-summary-stat-box {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 14px;
+  }
+
+  .summary-stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .summary-stat-item .stat-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+  }
+
+  .summary-stat-item .stat-val {
+    font-size: 14px;
+    font-weight: 900;
+    color: #0f172a;
+  }
+
+  .print-summary-table-section {
+    flex: 1;
+    margin-bottom: 14px;
+  }
+
+  .print-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+    border: 1px solid #94a3b8;
+  }
+
+  .print-summary-table thead tr {
+    background: #e2e8f0;
+    border-bottom: 1.5px solid #64748b;
+  }
+
+  .print-summary-table th {
+    padding: 5px 4px;
+    font-weight: 800;
+    color: #1e293b;
+    border: 1px solid #cbd5e1;
+    text-align: center;
+  }
+
+  .print-summary-table td {
+    padding: 4px 5px;
+    border: 1px solid #cbd5e1;
+    color: #1e293b;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 
   /* 2. 전형 정보 요약 테이블 */
@@ -893,7 +1069,7 @@ onMounted(async () => {
   /* 4. 페이지 하단 푸터 */
   .print-footer-row {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     font-size: 10px;
     color: #64748b;
