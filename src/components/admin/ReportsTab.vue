@@ -138,15 +138,15 @@
             <div class="flex gap-6 items-center">
               <div class="flex items-center gap-1.5">
                 <span class="text-slate-400">총 추천 확정(예정):</span>
-                <span class="text-sm font-extrabold text-blue-600">{{ totalRecommendedStats.total }}명</span>
+                <span class="text-sm font-extrabold text-blue-600">{{ totalRecommendedStats.totalStudents }}명 ({{ totalRecommendedStats.totalCases }}건)</span>
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="text-slate-400">재학생:</span>
-                <span class="font-bold text-slate-800">{{ totalRecommendedStats.enrolled }}명</span>
+                <span class="font-bold text-slate-800">{{ totalRecommendedStats.enrolledStudents }}명 ({{ totalRecommendedStats.enrolledCases }}건)</span>
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="text-slate-400">졸업생:</span>
-                <span class="font-bold text-slate-800">{{ totalRecommendedStats.grad }}명</span>
+                <span class="font-bold text-slate-800">{{ totalRecommendedStats.gradStudents }}명 ({{ totalRecommendedStats.gradCases }}건)</span>
               </div>
             </div>
           </div>
@@ -196,19 +196,19 @@
           </div>
           <div class="summary-stat-item">
             <span class="stat-label">총 지원 학생 수</span>
-            <span class="stat-val">{{ totalAppliedCount }}명</span>
+            <span class="stat-val">{{ totalAppliedStats.students }}명 ({{ totalAppliedStats.cases }}건)</span>
           </div>
           <div class="summary-stat-item">
             <span class="stat-label">총 추천 선발 인원</span>
-            <span class="stat-val text-blue-700">{{ totalRecommendedStats.total }}명</span>
+            <span class="stat-val text-blue-700">{{ totalRecommendedStats.totalStudents }}명 ({{ totalRecommendedStats.totalCases }}건)</span>
           </div>
           <div class="summary-stat-item">
             <span class="stat-label">재학생 선발</span>
-            <span class="stat-val text-emerald-700">{{ totalRecommendedStats.enrolled }}명</span>
+            <span class="stat-val text-emerald-700">{{ totalRecommendedStats.enrolledStudents }}명 ({{ totalRecommendedStats.enrolledCases }}건)</span>
           </div>
           <div class="summary-stat-item">
             <span class="stat-label">졸업생 선발</span>
-            <span class="stat-val text-slate-700">{{ totalRecommendedStats.grad }}명</span>
+            <span class="stat-val text-slate-700">{{ totalRecommendedStats.gradStudents }}명 ({{ totalRecommendedStats.gradCases }}건)</span>
           </div>
         </div>
 
@@ -587,24 +587,57 @@ const displayedStats = computed(() => {
   return flatStats.value
 })
 
-const totalAppliedCount = computed(() => {
-  let total = 0
-  for (const item of flatStats.value) {
-    total += (item.total_applied || 0)
+const totalAppliedStats = computed(() => {
+  const studentSet = new Set()
+  let cases = 0
+  for (const trackId in (allApplicantsMap.value || {})) {
+    const list = allApplicantsMap.value[trackId] || []
+    for (const ap of list) {
+      if (ap.student_id) studentSet.add(ap.student_id)
+      cases++
+    }
   }
-  return total
+  return {
+    students: studentSet.size,
+    cases
+  }
 })
 
 const totalRecommendedStats = computed(() => {
-  let total = 0
-  let enrolled = 0
-  let grad = 0
+  const totalSet = new Set()
+  const enrolledSet = new Set()
+  const gradSet = new Set()
+  
+  let totalCases = 0
+  let enrolledCases = 0
+  let gradCases = 0
+
   for (const item of flatStats.value) {
-    total += item.unit_used
-    enrolled += item.enrolled_used
-    grad += item.grad_used
+    for (const std of (item.students || [])) {
+      totalCases++
+      totalSet.add(std.student_id)
+      if (std.grade_type === '졸업생') {
+        gradCases++
+        gradSet.add(std.student_id)
+      } else {
+        enrolledCases++
+        enrolledSet.add(std.student_id)
+      }
+    }
   }
-  return { total, enrolled, grad }
+
+  return {
+    totalStudents: totalSet.size,
+    totalCases,
+    enrolledStudents: enrolledSet.size,
+    enrolledCases,
+    gradStudents: gradSet.size,
+    gradCases,
+    // 레거시/단일 숫자 호환
+    total: totalCases,
+    enrolled: enrolledCases,
+    grad: gradCases
+  }
 })
 
 function getRoundGroups(students) {
