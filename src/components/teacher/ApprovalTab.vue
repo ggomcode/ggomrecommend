@@ -19,17 +19,64 @@
 
     <!-- 메인 컨텐츠 -->
     <div v-else class="flex flex-col gap-5">
-      <!-- 상태 필터 탭 -->
-      <div class="flex gap-2 p-1 bg-slate-100 border border-slate-200 rounded-xl max-w-md">
-        <button
-          v-for="s in ['all', 'pending', 'approved', 'rejected']"
-          :key="s"
-          @click="statusFilter = s"
-          class="flex-1 text-xs font-bold py-1.5 rounded-lg border-none transition-all cursor-pointer whitespace-nowrap"
-          :class="statusFilter === s ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 bg-transparent hover:text-slate-700'"
-        >
-          {{ statusLabel(s) }} ({{ filteredStudentsCount(s) }})
-        </button>
+      <!-- 상단 필터 바: 상태 탭 + 학년/반 드롭다운 + 검색창 -->
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs">
+        <!-- 상태 필터 탭 -->
+        <div class="flex gap-1.5 p-1 bg-slate-100 border border-slate-200/80 rounded-xl">
+          <button
+            v-for="s in ['all', 'pending', 'approved', 'rejected']"
+            :key="s"
+            @click="statusFilter = s"
+            class="text-xs font-bold px-3 py-1.5 rounded-lg border-none transition-all cursor-pointer whitespace-nowrap"
+            :class="statusFilter === s ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 bg-transparent hover:text-slate-700'"
+          >
+            {{ statusLabel(s) }} ({{ filteredStudentsCount(s) }})
+          </button>
+        </div>
+
+        <!-- 학년/반 드롭다운 + 검색창 -->
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- 학년 / 구분 드롭다운 -->
+          <select
+            v-model="selectedGrade"
+            @change="onGradeChange"
+            class="text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="all">전체 학년</option>
+            <option :value="3">3학년</option>
+            <option :value="0">졸업생</option>
+          </select>
+
+          <!-- 반 / 학급 드롭다운 -->
+          <select
+            v-model.number="selectedClassNo"
+            :disabled="selectedGrade === 0"
+            class="text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-slate-50 disabled:text-slate-400"
+          >
+            <template v-if="selectedGrade === 0">
+              <option :value="0">졸업생 학급</option>
+            </template>
+            <template v-else>
+              <option :value="0">전체 반</option>
+              <option v-for="c in availableClassNos" :key="c" :value="c">{{ c }}반</option>
+            </template>
+          </select>
+
+          <!-- 검색창 -->
+          <div class="relative">
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="학번/이름 검색..."
+              class="text-xs bg-white border border-slate-200 rounded-xl pl-3 pr-7 py-2 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 w-36"
+            />
+            <button
+              v-if="searchQuery"
+              @click="searchQuery = ''"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 border-none bg-transparent cursor-pointer text-xs"
+            >✕</button>
+          </div>
+        </div>
       </div>
 
       <!-- 학생 목록 테이블 카드 -->
@@ -41,7 +88,7 @@
               <th class="text-xs font-bold text-slate-500 p-4 text-left">학번</th>
               <th class="text-xs font-bold text-slate-500 p-4 text-left">이름</th>
               <th class="text-xs font-bold text-slate-500 p-4 text-left">연락처 끝 4자리</th>
-              <th class="text-xs font-bold text-slate-500 p-4 text-left">졸업년도</th>
+              <th class="text-xs font-bold text-slate-500 p-4 text-left">학년/반 또는 졸업년도</th>
               <th class="text-xs font-bold text-slate-500 p-4 text-center">상태</th>
               <th class="text-xs font-bold text-slate-500 p-4 text-center">가입 처리</th>
             </tr>
@@ -49,7 +96,7 @@
           <tbody>
             <tr v-if="filteredStudents.length === 0">
               <td colspan="7" class="text-center text-sm py-16 text-slate-400">
-                해당 필터에 속한 학생 가입 목록이 존재하지 않습니다.
+                해당 필터 조건에 일치하는 학생 가입 목록이 존재하지 않습니다.
               </td>
             </tr>
             <tr
@@ -72,7 +119,7 @@
               <td class="p-4 text-sm font-semibold text-slate-800">{{ student.name }}</td>
               <td class="p-4 text-sm font-mono text-slate-500">{{ student.phone_last4 }}</td>
               <td class="p-4 text-sm text-slate-600">
-                {{ student.is_enrolled ? `${student.grade}학년 ${student.class_no}반 ${student.seq_no}번` : `${student.grad_year}년` }}
+                {{ student.is_enrolled ? `${student.grade}학년 ${student.class_no}반 ${student.seq_no}번` : (student.grad_year ? `${student.grad_year}년 졸업` : '졸업생') }}
               </td>
               <td class="p-4 text-center">
                 <span
@@ -162,13 +209,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../../utils/supabaseClient'
-import { teacherGetStudents } from '../../api/teacher'
 import { deleteStudent, upsertClass } from '../../api/admin'
 import { decryptText } from '../../utils/cryptoUtils'
 
 const students = ref([])
 const loading = ref(true)
 const statusFilter = ref('all')
+const selectedGrade = ref('all') // 'all', 3, 0 (졸업생)
+const selectedClassNo = ref(0)   // 0 (전체/졸업생), 1, 2, ...
+const searchQuery = ref('')
 const regCode = ref('')
 
 const processingId = ref(null)
@@ -185,14 +234,91 @@ function statusLabel(s) {
   return s
 }
 
+const availableClassNos = computed(() => {
+  if (selectedGrade.value === 0) return [0]
+  const classes = new Set()
+  for (const s of students.value) {
+    if (s.is_enrolled && s.class_no) {
+      if (selectedGrade.value === 'all' || s.grade === selectedGrade.value) {
+        classes.add(s.class_no)
+      }
+    }
+  }
+  const arr = Array.from(classes).sort((a, b) => a - b)
+  if (arr.length === 0) {
+    return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  }
+  return arr
+})
+
+function onGradeChange() {
+  selectedClassNo.value = 0
+}
+
 const filteredStudents = computed(() => {
-  if (statusFilter.value === 'all') return students.value
-  return students.value.filter(s => s.status === statusFilter.value)
+  let list = students.value
+
+  // 1. 상태 필터
+  if (statusFilter.value !== 'all') {
+    list = list.filter(s => s.status === statusFilter.value)
+  }
+
+  // 2. 학년 / 졸업생 구분 필터
+  if (selectedGrade.value === 0) {
+    // 졸업생 학급
+    list = list.filter(s => !s.is_enrolled || s.grade === 0 || !s.grade)
+  } else if (selectedGrade.value === 3) {
+    // 3학년
+    list = list.filter(s => s.is_enrolled && s.grade === 3)
+    if (selectedClassNo.value > 0) {
+      list = list.filter(s => s.class_no === selectedClassNo.value)
+    }
+  } else if (selectedGrade.value === 'all') {
+    if (selectedClassNo.value > 0) {
+      list = list.filter(s => s.class_no === selectedClassNo.value)
+    }
+  }
+
+  // 3. 검색어 필터 (학번 / 이름)
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.trim().toLowerCase()
+    list = list.filter(s =>
+      (s.name && s.name.toLowerCase().includes(q)) ||
+      (s.student_code && s.student_code.toLowerCase().includes(q))
+    )
+  }
+
+  return list
 })
 
 function filteredStudentsCount(s) {
-  if (s === 'all') return students.value.length
-  return students.value.filter(item => item.status === s).length
+  let list = students.value
+  if (s !== 'all') {
+    list = list.filter(item => item.status === s)
+  }
+
+  if (selectedGrade.value === 0) {
+    list = list.filter(item => !item.is_enrolled || item.grade === 0 || !item.grade)
+  } else if (selectedGrade.value === 3) {
+    list = list.filter(item => item.is_enrolled && item.grade === 3)
+    if (selectedClassNo.value > 0) {
+      list = list.filter(item => item.class_no === selectedClassNo.value)
+    }
+  } else if (selectedGrade.value === 'all') {
+    if (selectedClassNo.value > 0) {
+      list = list.filter(item => item.class_no === selectedClassNo.value)
+    }
+  }
+
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.trim().toLowerCase()
+    list = list.filter(item =>
+      (item.name && item.name.toLowerCase().includes(q)) ||
+      (item.student_code && item.student_code.toLowerCase().includes(q))
+    )
+  }
+
+  return list.length
 }
 
 async function loadRegCode() {
@@ -229,20 +355,23 @@ async function loadStudents() {
 
     if (error) throw error
 
-    students.value = await Promise.all((data || []).map(async s => ({
-      id: s.id,
-      student_code: s.student_code || `${s.grade}${String(s.class_no).padStart(2, '0')}${String(s.student_no || s.seq_no).padStart(2, '0')}`,
-      name: await decryptText(s.name),
-      parent_name: await decryptText(s.parent_name),
-      is_enrolled: s.is_enrolled !== false,
-      grade: s.grade,
-      class_no: s.class_no,
-      seq_no: s.student_no || s.seq_no,
-      phone_last4: s.student_phone_hash ? '****' : '0000',
-      status: s.status || 'approved',
-      rejection_reason: s.rejection_reason || null,
-      grad_year: s.grad_year
-    })))
+    students.value = await Promise.all((data || []).map(async s => {
+      const isGrad = s.is_enrolled === false || s.grade === 0 || !s.grade
+      return {
+        id: s.id,
+        student_code: s.student_code || `${s.grade || ''}${s.class_no ? String(s.class_no).padStart(2, '0') : ''}${s.student_no || s.seq_no ? String(s.student_no || s.seq_no).padStart(2, '0') : ''}`,
+        name: await decryptText(s.name),
+        parent_name: await decryptText(s.parent_name),
+        is_enrolled: !isGrad,
+        grade: s.grade,
+        class_no: s.class_no,
+        seq_no: s.student_no || s.seq_no,
+        phone_last4: s.student_phone_hash ? '****' : '0000',
+        status: s.status || 'approved',
+        rejection_reason: s.rejection_reason || null,
+        grad_year: s.grad_year
+      }
+    }))
   } catch (e) {
     console.error('Error loading students for approval:', e)
   } finally {

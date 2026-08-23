@@ -255,15 +255,21 @@
               class="text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 border border-slate-200 py-2 pl-3 pr-8 text-slate-800 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="filterEnrolled === 0"
               @change="filterClass = null">
-        <option :value="null">전체 학년</option>
-        <option v-for="g in gradeOptions.grades" :key="g" :value="g">{{ g }}학년</option>
+        <option v-if="filterEnrolled === 0" :value="null">졸업생</option>
+        <template v-else>
+          <option :value="null">전체 학년</option>
+          <option v-for="g in gradeOptions.grades" :key="g" :value="g">{{ g }}학년</option>
+        </template>
       </select>
 
       <select v-model.number="filterClass"
               class="text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 border border-slate-200 py-2 pl-3 pr-8 text-slate-800 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="filterEnrolled === 0">
-        <option :value="null">전체 반</option>
-        <option v-for="c in availableClasses" :key="c" :value="c">{{ c }}반</option>
+        <option v-if="filterEnrolled === 0" :value="null">졸업생 학급</option>
+        <template v-else>
+          <option :value="null">전체 반</option>
+          <option v-for="c in availableClasses" :key="c" :value="c">{{ c }}반</option>
+        </template>
       </select>
 
       <button
