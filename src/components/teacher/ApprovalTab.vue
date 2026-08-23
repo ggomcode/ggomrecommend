@@ -35,12 +35,12 @@
         </div>
 
         <!-- 학년/반 드롭다운 + 검색창 -->
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2.5">
           <!-- 학년 / 구분 드롭다운 -->
           <select
             v-model="selectedGrade"
             @change="onGradeChange"
-            class="text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            class="text-sm font-semibold bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400 w-32 shadow-2xs cursor-pointer"
           >
             <option value="all">전체 학년</option>
             <option :value="3">3학년</option>
@@ -51,7 +51,7 @@
           <select
             v-model.number="selectedClassNo"
             :disabled="selectedGrade === 0"
-            class="text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-slate-50 disabled:text-slate-400"
+            class="text-sm font-semibold bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-slate-50 disabled:text-slate-400 w-36 shadow-2xs cursor-pointer"
           >
             <template v-if="selectedGrade === 0">
               <option :value="0">졸업생 학급</option>
@@ -67,13 +67,13 @@
             <input
               v-model="searchQuery"
               type="text"
-              placeholder="학번/이름 검색..."
-              class="text-xs bg-white border border-slate-200 rounded-xl pl-3 pr-7 py-2 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 w-36"
+              placeholder="학번 또는 성명 검색..."
+              class="text-sm bg-white border border-slate-200 rounded-xl pl-3.5 pr-8 py-2 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400 w-52 shadow-2xs"
             />
             <button
               v-if="searchQuery"
               @click="searchQuery = ''"
-              class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 border-none bg-transparent cursor-pointer text-xs"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 border-none bg-transparent cursor-pointer text-xs p-1"
             >✕</button>
           </div>
         </div>
