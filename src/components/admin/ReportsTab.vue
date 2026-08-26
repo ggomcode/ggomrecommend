@@ -14,39 +14,39 @@
         <!-- 우측 액션 버튼들 -->
         <div class="flex items-center gap-3 flex-wrap">
           <!-- 차수 선택 드롭다운 -->
-          <div class="flex items-center gap-2 bg-white px-3.5 py-2 rounded-xl border border-slate-300 shadow-sm">
+          <div class="h-[38px] flex items-center gap-2 bg-white px-3.5 rounded-xl border border-slate-300 shadow-sm box-border">
             <span class="text-xs font-bold text-slate-500 whitespace-nowrap">선택 차수:</span>
             <select
               v-model="selectedRoundFilter"
-              class="bg-transparent border-none text-xs font-black text-blue-700 focus:outline-none cursor-pointer pr-1"
+              class="bg-transparent border-none text-xs font-black text-blue-700 focus:outline-none cursor-pointer pr-1 py-0 leading-tight"
             >
-              <option value="all">전체 차수 (누적 종합)</option>
-              <option v-for="r in roundOptions" :key="r" :value="r">{{ r }}차 선발 결과</option>
+              <option value="all">전체</option>
+              <option v-for="r in roundOptions" :key="r" :value="r">{{ r }}차 선발</option>
             </select>
           </div>
 
           <button
-            class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors"
+            class="h-[38px] px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors box-border"
             :disabled="loading"
             @click="loadData"
           >
             <span>🔄 데이터 새로고침</span>
           </button>
           <button
-            class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors border-none"
+            class="h-[38px] px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors border-none box-border"
             :disabled="downloading"
             @click="downloadExcel"
           >
             <span>📥 엑셀 내보내기</span>
           </button>
           <button
-            class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors border-none"
+            class="h-[38px] px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors border-none box-border"
             @click="printReport"
           >
             <span>🖨️ 보고서 인쇄 (PDF)</span>
           </button>
           <button
-            class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors border-none"
+            class="h-[38px] px-5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors border-none box-border"
             @click="printReportRecommendOnly"
           >
             <span>🖨️ 보고서 인쇄 (PDF, 추천 대학만)</span>
@@ -92,7 +92,9 @@
                 <th class="p-3 font-bold text-center w-28 whitespace-nowrap">추천 현황(지원)</th>
                 <th class="p-3 font-bold text-center w-16 whitespace-nowrap">(재학생)</th>
                 <th class="p-3 font-bold text-center w-16 whitespace-nowrap">(졸업생)</th>
-                <th class="p-3 font-bold text-left whitespace-nowrap" style="min-width: 260px;">추천 학생 (학번/성명)</th>
+                <th class="p-3 font-bold text-left whitespace-nowrap" style="min-width: 140px;">추천 학생 (학번/성명)</th>
+                <th class="p-3 font-bold text-center whitespace-nowrap" style="min-width: 90px;">지원 / 선발</th>
+                <th class="p-3 font-bold text-center whitespace-nowrap" style="min-width: 120px;">순위 / 등급</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200">
@@ -128,15 +130,37 @@
                   {{ item.grad_used > 0 ? item.grad_used + '명' : '-' }}
                   <span v-if="item.is_over_quota && item.grad_applied > item.grad_used" class="text-[10px] text-rose-500 block">({{ item.grad_applied }}지원)</span>
                 </td>
-                <td class="p-3 text-left font-medium text-slate-800 whitespace-nowrap" style="min-width: 260px;">
-                  <div v-if="item.students && item.students.length > 0" class="flex flex-col gap-0.5">
-                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap flex items-center gap-1.5">
-                      <span class="font-mono">{{ std.student_code }}</span>
-                      <span class="font-bold">{{ std.name }}</span>
-                      <span v-if="totalRounds > 1" class="text-indigo-700 font-bold text-[10px] bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">
-                        {{ std.round }}차 지원 / {{ std.recommended_round }}차 선발
+                <!-- 1. 추천 학생 (학번 / 성명) -->
+                <td class="p-3 text-left font-medium text-slate-800 whitespace-nowrap" style="min-width: 140px;">
+                  <div v-if="item.students && item.students.length > 0" class="flex flex-col gap-1.5">
+                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap flex items-center gap-1.5 h-6">
+                      <span class="font-mono text-slate-600">{{ std.student_code }}</span>
+                      <span class="font-bold text-slate-900">{{ std.name }}</span>
+                    </div>
+                  </div>
+                  <span v-else class="text-slate-400">-</span>
+                </td>
+                <!-- 2. 지원 / 선발 구분 버튼 -->
+                <td class="p-3 text-center whitespace-nowrap" style="min-width: 90px;">
+                  <div v-if="item.students && item.students.length > 0" class="flex flex-col items-center gap-1.5">
+                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap flex items-center justify-center h-6">
+                      <span :class="getStudentRoundBadge(std).class">
+                        {{ getStudentRoundBadge(std).text }}
                       </span>
-                      <span class="text-slate-500 font-normal text-[11px]">{{ std.suffix }}</span>
+                    </div>
+                  </div>
+                  <span v-else class="text-slate-400">-</span>
+                </td>
+                <!-- 3. 순위 / 등급 -->
+                <td class="p-3 text-center whitespace-nowrap" style="min-width: 120px;">
+                  <div v-if="item.students && item.students.length > 0" class="flex flex-col items-center gap-1.5">
+                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap flex items-center justify-center h-6 text-slate-600 text-[11px]">
+                      <span v-if="item.unit_quota != null" class="font-semibold text-slate-800">
+                        {{ std.rank }}위<span v-if="std.score_text && std.score_text !== '-'" class="text-slate-500 font-normal ml-1">({{ std.score_text }})</span>
+                      </span>
+                      <span v-else class="text-slate-600 font-medium">
+                        {{ std.score_text && std.score_text !== '-' ? std.score_text : '자격 충족' }}
+                      </span>
                     </div>
                   </div>
                   <span v-else class="text-slate-400">-</span>
@@ -414,7 +438,7 @@
                     추천 대상 (선발)
                   </template>
                   <span v-if="totalRounds > 1" class="font-bold text-slate-800 ml-1">
-                    ({{ std.round }}차 지원 / {{ std.recommended_round }}차 선발)
+                    ({{ getStudentRoundBadge(std).text }})
                   </span>
                 </td>
               </tr>
@@ -439,6 +463,7 @@ import { dialog } from '../common/dialog.js'
 import { supabase } from '../../utils/supabaseClient.js'
 import { decryptText } from '../../utils/cryptoUtils.js'
 import { formatScore } from '../../utils/scorePreviewShared.js'
+import { fetchRoundSchedulesMap, DEFAULT_SCHEDULES } from '../../utils/roundSchedule.js'
 
 const loading = ref(false)
 const downloading = ref(false)
@@ -450,6 +475,65 @@ const allApplicantsMap = ref({})
 const studentMap = ref({})
 const gradConditionMap = ref({})
 const selectedRoundFilter = ref('all')
+const roundsList = ref([])
+const schedulesMap = ref({})
+
+/**
+ * 학생별 지원/선발 배지 상태 반환
+ * - 1차 선발이 확정된 경우: 'N차 선발' (초록색 계열)
+ * - 선발 진행 중인 경우(해당 차수 접수 시작부터 선정 협의일까지): 'N차 지원' (인디고 계열)
+ */
+function getStudentRoundBadge(std) {
+  const roundNum = std.round || 1
+  const sched = schedulesMap.value[roundNum] || DEFAULT_SCHEDULES[roundNum]
+  const roundObj = roundsList.value.find(r => r.id === roundNum)
+
+  // 오늘 날짜 (KST: YYYY-MM-DD)
+  const now = new Date()
+  const todayStr = now.toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
+
+  // 1. 해당 라운드가 관리자에 의해 최종 마감(FINALIZED)된 경우 -> 선발 확정
+  if (roundObj?.status === 'FINALIZED') {
+    return {
+      type: 'selected',
+      text: `${roundNum}차 선발`,
+      class: 'text-emerald-700 font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block'
+    }
+  }
+
+  // 2. 일정이 있는 경우: 접수 시작부터 선정 협의일(eval_date)까지는 '진행중(N차 지원)'
+  if (sched && sched.eval_date) {
+    if (todayStr <= sched.eval_date) {
+      return {
+        type: 'applied',
+        text: `${roundNum}차 지원`,
+        class: 'text-indigo-700 font-bold text-[10px] bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-block'
+      }
+    } else {
+      // 선정 협의일(eval_date)이 지난 후 -> 선발 확정
+      return {
+        type: 'selected',
+        text: `${roundNum}차 선발`,
+        class: 'text-emerald-700 font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block'
+      }
+    }
+  }
+
+  // 3. 일정이 없는 경우 기본 fallback: is_recommended 여부
+  if (std.is_recommended) {
+    return {
+      type: 'selected',
+      text: `${roundNum}차 선발`,
+      class: 'text-emerald-700 font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block'
+    }
+  }
+
+  return {
+    type: 'applied',
+    text: `${roundNum}차 지원`,
+    class: 'text-indigo-700 font-bold text-[10px] bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-block'
+  }
+}
 
 const roundOptions = computed(() => {
   const tr = Math.max(totalRounds.value || 1, 2)
@@ -583,6 +667,7 @@ const flatStats = computed(() => {
           score_text: ap.score_text,
           round: appRound,
           recommended_round: recRound,
+          is_recommended: !!ap.is_recommended,
           grade_type: isGrad ? '졸업생' : '재학생',
           suffix: hasQuota ? `(${ap.rank}위, ${ap.score_text})` : ''
         }
@@ -749,12 +834,17 @@ async function loadData() {
   try {
     stats.value = await getQuotaStats()
     if (supabase) {
-      // 1. 지원서, 학생 마스터, 수도권/지역 추천 전형(졸업조건) 로드
-      const [{ data: allApps }, { data: students }, { data: regRecs }] = await Promise.all([
+      // 1. 지원서, 학생 마스터, 수도권/지역 추천 전형(졸업조건), 라운드 목록, 라운드 일정 로드
+      const [{ data: allApps }, { data: students }, { data: regRecs }, { data: roundsData }, sMap] = await Promise.all([
         supabase.from('applications').select('*').eq('is_abandoned', false),
         supabase.from('enrolled_students').select('id, name, student_code, gpa_overall, grad_year, grade, is_enrolled'),
-        supabase.from('regional_recommendations').select('univ_name, track_name, grad_condition')
+        supabase.from('regional_recommendations').select('univ_name, track_name, grad_condition'),
+        supabase.from('rounds').select('*').order('id'),
+        fetchRoundSchedulesMap()
       ])
+
+      roundsList.value = roundsData || []
+      schedulesMap.value = sMap || {}
 
       // 졸업년도 조건 맵 구성
       const normKey = s => (s || '').trim().toLowerCase().replace(/\s+/g, '')
@@ -857,6 +947,7 @@ async function loadData() {
               student_id: ap.student_id,
               univ_id: ap.univ_id,
               round: ap.round,
+              is_recommended: !!ap.is_recommended,
               student_code: s.student_code || '',
               name: s.name || '',
               rank: rank,
