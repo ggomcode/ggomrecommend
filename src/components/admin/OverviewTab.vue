@@ -298,7 +298,7 @@
             <table class="w-full" style="border-collapse: collapse;">
               <thead>
                 <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                  <th style="width: 48px; padding: 14px 20px;"></th>
+                  <th style="width: 70px; min-width: 70px; padding: 14px 12px; text-align: center;"></th>
                   <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">모집단위</th>
                   <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">지원자 / 정원</th>
                   <th class="text-base font-semibold text-right" style="padding: 14px 20px; color: #475569;">현황</th>
@@ -331,7 +331,7 @@
                     style="border-bottom: 1px solid #f1f5f9; transition: background 0.1s;"
                   >
                     <!-- 파이 차트 or 무제한 표시 -->
-                    <td style="padding: 14px 20px 14px 28px;">
+                    <td style="padding: 14px 12px; width: 70px; min-width: 70px; text-align: center;">
                       <template v-if="getTrackEffectiveQuota(track) != null">
                         <MiniPie
                           v-if="getTrackEffectiveQuota(track) > 0"
@@ -339,7 +339,7 @@
                           :total="getTrackEffectiveQuota(track)"
                           :size="20"
                         />
-                        <span v-else class="text-xs font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200">
+                        <span v-else class="text-xs font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200 whitespace-nowrap inline-block">
                           0명
                         </span>
                       </template>

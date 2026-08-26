@@ -120,7 +120,27 @@
                   <td class="text-center font-medium bg-white group-hover:bg-slate-50!" style="position: sticky; left: 0; z-index: 20; padding: 12px 14px; width: 60px; min-width: 60px; max-width: 60px; color: #64748b; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.seq_no }}</td>
                   <td class="bg-white group-hover:bg-slate-50!" style="position: sticky; left: 60px; z-index: 20; padding: 12px 14px; width: 80px; min-width: 80px; max-width: 80px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.region }}</td>
                   <td class="font-bold bg-white group-hover:bg-slate-50! cursor-pointer text-blue-600 hover:underline" style="position: sticky; left: 140px; z-index: 20; padding: 12px 14px; width: 160px; min-width: 160px; max-width: 160px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;" @click="openEditRegionalModal(r)">{{ r.univ_name }}</td>
-                  <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.recruitment_quota || '-' }}</td>
+                  <td style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">
+                    <span
+                      v-if="getCategoryDisplay(r) === '교과'"
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200"
+                    >
+                      교과
+                    </span>
+                    <span
+                      v-else-if="getCategoryDisplay(r) === '종합'"
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200"
+                    >
+                      종합
+                    </span>
+                    <span
+                      v-else-if="getCategoryDisplay(r)"
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200"
+                    >
+                      {{ getCategoryDisplay(r) }}
+                    </span>
+                    <span v-else class="text-slate-400">-</span>
+                  </td>
                   <td class="font-medium" style="padding: 12px 14px; color: #2563eb; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.track_name }}</td>
                   <td style="padding: 12px 14px; color: #475569; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ formatQuotaLimit(r.quota_limit) }}</td>
                   <td style="padding: 12px 14px; color: #475569; white-space: pre-line; word-break: keep-all; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">{{ r.grad_condition || '-' }}</td>
@@ -156,7 +176,12 @@
         <div class="grid grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
           <div>
             <span class="text-slate-500 block mb-0.5 font-medium">전형구분</span>
-            <span class="text-sm font-bold text-slate-800">{{ editRegionalModal.form.recruitment_quota || '미지정' }}</span>
+            <span
+              class="text-sm font-bold"
+              :class="getCategoryDisplay(editRegionalModal.form) === '종합' ? 'text-purple-700' : 'text-blue-700'"
+            >
+              {{ getCategoryDisplay(editRegionalModal.form) || '미지정' }}
+            </span>
           </div>
           <div>
             <span class="text-slate-500 block mb-0.5 font-medium">인원제한</span>
@@ -200,7 +225,11 @@
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">전형구분</label>
-            <input v-model="editRegionalModal.form.recruitment_quota" type="text" class="w-full p-2 border border-slate-300 rounded-lg text-sm" />
+            <select v-model="editRegionalModal.form.recruitment_quota" class="w-full p-2 border border-slate-300 rounded-lg text-sm bg-white font-semibold text-slate-800">
+              <option value="교과">교과 (학생부교과)</option>
+              <option value="종합">종합 (학생부종합)</option>
+              <option value="기타">기타</option>
+            </select>
           </div>
           <div>
             <label class="block font-bold text-slate-600 mb-1">전형명</label>
@@ -399,6 +428,25 @@ function formatQuotaLimit(rawVal) {
 
   // 일반 텍스트 ("없음", "12명", "5" 등)
   return str
+}
+
+/**
+ * 전형구분 표시용 텍스트/추론 함수
+ * - DB 값(recruitment_quota) 우선
+ * - 비어있을 경우 전형명(track_name)에서 교과/종합 자동 추출
+ */
+function getCategoryDisplay(r) {
+  if (!r) return ''
+  const val = String(r.recruitment_quota || '').trim()
+  if (val && val !== '-' && val !== '—') {
+    if (val.includes('교과')) return '교과'
+    if (val.includes('종합') || val.includes('학종')) return '종합'
+    return val
+  }
+  const track = String(r.track_name || '').trim()
+  if (track.includes('학생부종합') || track.includes('종합') || track.includes('학종')) return '종합'
+  if (track.includes('학생부교과') || track.includes('교과') || track.includes('지역균형') || track.includes('학교장') || track.includes('지균')) return '교과'
+  return val && val !== '-' && val !== '—' ? val : ''
 }
 
 const selectedUnivId  = ref(null)
