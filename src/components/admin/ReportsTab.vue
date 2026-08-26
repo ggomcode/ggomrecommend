@@ -260,24 +260,25 @@
           <table class="print-summary-table">
             <thead>
               <tr>
-                <th style="width: 30px;">No</th>
-                <th style="width: 100px;">대학명</th>
-                <th style="width: 130px;">모집단위 (전형명)</th>
-                <th style="width: 90px;">졸업년도 조건</th>
-                <th style="width: 100px;">추천 정원</th>
-                <th style="width: 75px;">추천(지원)</th>
-                <th style="width: 50px;">재학생</th>
-                <th style="width: 50px;">졸업생</th>
-                <th style="width: 65px;">선발 차수</th>
-                <th>추천 학생</th>
+                <th style="width: 28px;">No</th>
+                <th style="width: 95px;">대학명</th>
+                <th style="width: 120px;">모집단위 (전형명)</th>
+                <th style="width: 85px;">졸업년도 조건</th>
+                <th style="width: 90px;">추천 정원</th>
+                <th style="width: 65px;">추천(지원)</th>
+                <th style="width: 45px;">재학생</th>
+                <th style="width: 45px;">졸업생</th>
+                <th style="width: 110px;">추천 학생 (학번/성명)</th>
+                <th style="width: 70px;">지원 / 선발</th>
+                <th style="width: 85px;">순위 / 등급</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="!displayedStats || displayedStats.length === 0">
-                <td colspan="10" class="print-empty-cell">등록된 추천 전형 및 학생 데이터가 없습니다.</td>
+                <td colspan="11" class="print-empty-cell">등록된 추천 전형 및 학생 데이터가 없습니다.</td>
               </tr>
               <template v-for="item in displayedStats" :key="item.no">
-                <!-- 학생이 없는 경우: 1행 표시 -->
+                <!-- 학생이 없는 경우 -->
                 <tr v-if="!item.students || item.students.length === 0" :class="item.is_over_quota ? 'bg-rose-50/40' : ''">
                   <td class="text-center font-medium text-slate-500">{{ item.no }}</td>
                   <td class="font-extrabold text-blue-950">{{ item.univ_name }}</td>
@@ -291,48 +292,50 @@
                   <td class="text-center font-medium">{{ item.enrolled_used > 0 ? item.enrolled_used + '명' : '-' }}</td>
                   <td class="text-center font-medium">{{ item.grad_used > 0 ? item.grad_used + '명' : '-' }}</td>
                   <td class="text-center text-xs py-1 text-slate-400">-</td>
-                  <td class="text-left text-xs leading-snug py-1 text-slate-400">-</td>
+                  <td class="text-center text-xs py-1 text-slate-400">-</td>
+                  <td class="text-center text-xs py-1 text-slate-400">-</td>
                 </tr>
 
-                <!-- 학생이 1개 이상의 차수 그룹으로 있는 경우: 첫 그룹은 기본 행, 이후 그룹은 추가 행 -->
-                <template v-else>
-                  <tr :class="item.is_over_quota ? 'bg-rose-50/40' : ''">
-                    <td :rowspan="getRoundGroups(item.students).length" class="text-center font-medium text-slate-500 align-middle">{{ item.no }}</td>
-                    <td :rowspan="getRoundGroups(item.students).length" class="font-extrabold text-blue-950 align-middle">{{ item.univ_name }}</td>
-                    <td :rowspan="getRoundGroups(item.students).length" class="font-bold text-slate-800 align-middle">{{ item.track_name }}</td>
-                    <td :rowspan="getRoundGroups(item.students).length" class="text-xs text-slate-600 leading-tight whitespace-pre-line align-middle">{{ item.grad_condition || '제한없음' }}</td>
-                    <td :rowspan="getRoundGroups(item.students).length" class="text-center font-bold align-middle whitespace-nowrap">{{ item.quota_display }}</td>
-                    <td :rowspan="getRoundGroups(item.students).length" class="text-center font-extrabold align-middle" :class="item.is_over_quota ? 'text-rose-600' : 'text-blue-700'">
-                      {{ item.unit_used }}명
-                      <span v-if="item.is_over_quota" class="text-[10px] text-rose-500 block">({{ item.total_applied }}지원)</span>
-                    </td>
-                    <td :rowspan="getRoundGroups(item.students).length" class="text-center font-medium align-middle">{{ item.enrolled_used > 0 ? item.enrolled_used + '명' : '-' }}</td>
-                    <td :rowspan="getRoundGroups(item.students).length" class="text-center font-medium align-middle">{{ item.grad_used > 0 ? item.grad_used + '명' : '-' }}</td>
-                    <!-- 1번째 차수 그룹 -->
-                    <td class="text-center text-xs py-1 font-bold text-indigo-700 align-middle">
-                      {{ getRoundGroups(item.students)[0].roundText }}
-                    </td>
-                    <td class="text-left text-xs leading-snug py-1">
-                      <div v-for="std in getRoundGroups(item.students)[0].students" :key="std.id || std.student_code" class="whitespace-nowrap my-0.5 leading-tight">
-                        <span class="font-mono text-slate-600">{{ std.student_code }}</span>
-                        <strong class="text-slate-900 ml-1.5">{{ std.name }}</strong>
-                      </div>
-                    </td>
-                  </tr>
-
-                  <!-- 2번째 이후 차수 그룹이 있을 때 행 추가 -->
-                  <tr v-for="(rg, rgIdx) in getRoundGroups(item.students).slice(1)" :key="rgIdx" :class="item.is_over_quota ? 'bg-rose-50/40' : ''">
-                    <td class="text-center text-xs py-1 font-bold text-indigo-700 align-middle">
-                      {{ rg.roundText }}
-                    </td>
-                    <td class="text-left text-xs leading-snug py-1">
-                      <div v-for="std in rg.students" :key="std.id || std.student_code" class="whitespace-nowrap my-0.5 leading-tight">
-                        <span class="font-mono text-slate-600">{{ std.student_code }}</span>
-                        <strong class="text-slate-900 ml-1.5">{{ std.name }}</strong>
-                      </div>
-                    </td>
-                  </tr>
-                </template>
+                <!-- 학생이 있는 경우 -->
+                <tr v-else :class="item.is_over_quota ? 'bg-rose-50/40' : ''">
+                  <td class="text-center font-medium text-slate-500 align-middle">{{ item.no }}</td>
+                  <td class="font-extrabold text-blue-950 align-middle">{{ item.univ_name }}</td>
+                  <td class="font-bold text-slate-800 align-middle">{{ item.track_name }}</td>
+                  <td class="text-xs text-slate-600 leading-tight whitespace-pre-line align-middle">{{ item.grad_condition || '제한없음' }}</td>
+                  <td class="text-center font-bold align-middle whitespace-nowrap">{{ item.quota_display }}</td>
+                  <td class="text-center font-extrabold align-middle" :class="item.is_over_quota ? 'text-rose-600' : 'text-blue-700'">
+                    {{ item.unit_used }}명
+                    <span v-if="item.is_over_quota" class="text-[10px] text-rose-500 block">({{ item.total_applied }}지원)</span>
+                  </td>
+                  <td class="text-center font-medium align-middle">{{ item.enrolled_used > 0 ? item.enrolled_used + '명' : '-' }}</td>
+                  <td class="text-center font-medium align-middle">{{ item.grad_used > 0 ? item.grad_used + '명' : '-' }}</td>
+                  <!-- 1. 추천 학생 (학번/성명) -->
+                  <td class="text-left text-xs py-1">
+                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap my-0.5 leading-tight flex items-center gap-1">
+                      <span class="font-mono text-slate-600">{{ std.student_code }}</span>
+                      <strong class="text-slate-900">{{ std.name }}</strong>
+                    </div>
+                  </td>
+                  <!-- 2. 지원 / 선발 배지 -->
+                  <td class="text-center text-xs py-1">
+                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap my-0.5 leading-tight flex items-center justify-center">
+                      <span :class="getStudentRoundBadge(std).class" style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
+                        {{ getStudentRoundBadge(std).text }}
+                      </span>
+                    </div>
+                  </td>
+                  <!-- 3. 순위 / 등급 -->
+                  <td class="text-center text-xs py-1">
+                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap my-0.5 leading-tight text-slate-600">
+                      <span v-if="item.unit_quota != null" class="font-semibold text-slate-800">
+                        {{ std.rank }}위<span v-if="std.score_text && std.score_text !== '-'" class="text-slate-500 font-normal ml-0.5">({{ std.score_text }})</span>
+                      </span>
+                      <span v-else class="text-slate-600 font-medium">
+                        {{ std.score_text && std.score_text !== '-' ? std.score_text : '자격충족' }}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
               </template>
             </tbody>
           </table>
@@ -1024,6 +1027,11 @@ onMounted(async () => {
 
 /* ── 인쇄(PDF) 전용 스타일 ── */
 @media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   @page {
     size: A4 portrait;
     margin: 12mm 10mm 12mm 10mm;
