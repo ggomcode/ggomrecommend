@@ -29,7 +29,7 @@ export const getCurrentRound = async () => {
       const n = parseInt(configLimit.value, 10)
       if (n >= 1 && n <= 5) limit = n
     }
-  } catch {}
+  } catch { }
 
   const { data: rounds, error } = await supabase
     .from('timeline_rounds')
@@ -82,15 +82,15 @@ export const getOverview = async (targetRoundId = null) => {
       const n = parseInt(configLimit.value, 10)
       if (n >= 1 && n <= 5) limit = n
     }
-  } catch {}
+  } catch { }
 
   const version = '0.9.99'
   const server_addr = typeof window !== 'undefined' ? window.location.host : 'localhost'
 
   // 레거시 성적 설정 키 config 테이블 자동 삭제 정리
   try {
-    supabase.from('config').delete().in('key', ['global_course_grades', 'global_course_grades_detail']).then(() => {})
-  } catch {}
+    supabase.from('config').delete().in('key', ['global_course_grades', 'global_course_grades_detail']).then(() => { })
+  } catch { }
 
   // [1] 기본 라운드, 학급(교사), 대학, 학생 수, 누적 통계 쿼리를 병렬로 한 번에 실행
   const [
@@ -265,7 +265,7 @@ export const getOverview = async (targetRoundId = null) => {
         const applicants = appCountByUniv.get(t.track_id) || 0
         const trackPriorUsed = priorConfirmedByTrack.get(t.track_id) || 0
         const remainingUnit = t.unit_quota !== null ? Math.max(0, t.unit_quota - trackPriorUsed) : null
-        
+
         let availableQuota = null
         if (remainingUnit !== null && remainingUnivTotal !== null) {
           availableQuota = Math.min(remainingUnit, remainingUnivTotal)
@@ -434,7 +434,7 @@ export const getAreas = async () => {
     try {
       const { data } = await supabase.from('config').select('value').eq('key', 'eval_areas_store').maybeSingle()
       if (data && data.value) {
-        try { list = JSON.parse(data.value) } catch {}
+        try { list = JSON.parse(data.value) } catch { }
       }
     } catch { }
   }
@@ -715,26 +715,26 @@ export const parseUnivExcel = async (fileBuffer) => {
 
     const rawGrade = String(row[colGrade] || '').trim()
     const rawClass = String(row[colClass] || '').trim()
-    const rawNum   = String(row[colNum] || '').trim()
-    const name     = String(row[colName] || '').trim()
-    const rank     = row[colRank] && String(row[colRank]).trim() !== '-' ? String(row[colRank]).trim() : ''
+    const rawNum = String(row[colNum] || '').trim()
+    const name = String(row[colName] || '').trim()
+    const rank = row[colRank] && String(row[colRank]).trim() !== '-' ? String(row[colRank]).trim() : ''
 
-    const grade   = parseInt(rawGrade, 10)
+    const grade = parseInt(rawGrade, 10)
     const classNo = parseInt(rawClass, 10)
-    const seqNo   = parseInt(rawNum, 10)
+    const seqNo = parseInt(rawNum, 10)
 
     if (isNaN(grade) || isNaN(classNo) || isNaN(seqNo) || !name) continue
 
     const studentCode = `${grade}${String(classNo).padStart(2, '0')}${String(seqNo).padStart(2, '0')}`
 
-    const gpa_1_1   = String(row[col1_1] || '').trim()
-    const gpa_1_2   = String(row[col1_2] || '').trim()
+    const gpa_1_1 = String(row[col1_1] || '').trim()
+    const gpa_1_2 = String(row[col1_2] || '').trim()
     const gpa_1_all = String(row[col1_all] || '').trim()
-    const gpa_2_1   = String(row[col2_1] || '').trim()
-    const gpa_2_2   = String(row[col2_2] || '').trim()
+    const gpa_2_1 = String(row[col2_1] || '').trim()
+    const gpa_2_2 = String(row[col2_2] || '').trim()
     const gpa_2_all = String(row[col2_all] || '').trim()
-    const gpa_3_1   = String(row[col3_1] || '').trim()
-    const gpa_3_2   = String(row[col3_2] || '').trim()
+    const gpa_3_1 = String(row[col3_1] || '').trim()
+    const gpa_3_2 = String(row[col3_2] || '').trim()
     const gpa_3_all = String(row[col3_all] || '').trim()
     let gpa_overall = String(row[colOverall] || '').trim()
 
@@ -958,21 +958,21 @@ export const parseStudentRosterExcel = async (arrayBuffer) => {
     const r = rows[i]
     if (!r || r.length === 0) continue
 
-    const seqNoRaw   = String(r[colSeq] || '').trim()
-    const gradeRaw   = String(r[colGrade] || '').trim()
-    const classRaw   = String(r[colClass] || '').trim()
-    const numRaw     = String(r[colNum] || '').trim()
-    const name       = String(r[colName] || '').trim()
-    const gender     = String(r[colGender] || '').trim()
-    const remarks    = String(r[colRemarks] || '').trim()
-    const sPhone     = cleanFullPhone(r[colSPhone])
+    const seqNoRaw = String(r[colSeq] || '').trim()
+    const gradeRaw = String(r[colGrade] || '').trim()
+    const classRaw = String(r[colClass] || '').trim()
+    const numRaw = String(r[colNum] || '').trim()
+    const name = String(r[colName] || '').trim()
+    const gender = String(r[colGender] || '').trim()
+    const remarks = String(r[colRemarks] || '').trim()
+    const sPhone = cleanFullPhone(r[colSPhone])
     const parentName = String(r[colPName] || '').trim()
-    const pPhone     = cleanFullPhone(r[colPPhone])
+    const pPhone = cleanFullPhone(r[colPPhone])
 
-    const grade     = parseInt(gradeRaw, 10)
-    const classNo   = parseInt(classRaw, 10)
+    const grade = parseInt(gradeRaw, 10)
+    const classNo = parseInt(classRaw, 10)
     const studentNo = parseInt(numRaw, 10)
-    const seqNo     = parseInt(seqNoRaw, 10) || studentNo
+    const seqNo = parseInt(seqNoRaw, 10) || studentNo
 
     if (isNaN(grade) || isNaN(classNo) || isNaN(studentNo) || !name) continue
 
@@ -1060,7 +1060,7 @@ export const downloadStudentRosterTemplate = async () => {
 
   const wsData = [headers, sample1, sample2]
   const ws = XLSX.utils.aoa_to_sheet(wsData)
-  
+
   ws['!cols'] = [
     { wch: 6 },  // 순번
     { wch: 6 },  // 학년
@@ -1130,7 +1130,7 @@ export const importDaegyo = async (areaId, file, univName = '', trackName = '') 
       const { data: existingData } = await supabase.from('config').select('value').eq('key', configKey).maybeSingle()
       let existingRows = []
       if (existingData && existingData.value) {
-        try { existingRows = JSON.parse(existingData.value) } catch {}
+        try { existingRows = JSON.parse(existingData.value) } catch { }
       }
 
       const rowMap = new Map()
@@ -1857,10 +1857,10 @@ export const getResults = async (roundId, trackId) => {
   const { data: rawRounds } = await supabase.from('timeline_rounds').select('*')
   const schedulesMap = await fetchRoundSchedulesMap()
   const roundStatusMap = {}
-  ;(rawRounds || []).forEach(r => {
-    const sched = schedulesMap[r.id]
-    roundStatusMap[r.id] = computeRoundDisplayStatus(r, sched)
-  })
+    ; (rawRounds || []).forEach(r => {
+      const sched = schedulesMap[r.id]
+      roundStatusMap[r.id] = computeRoundDisplayStatus(r, sched)
+    })
 
   // OPEN 차수는 추천 확정/미선발 리셋 (접수 중 상태 유지)
   for (const ap of apps) {
@@ -1937,7 +1937,7 @@ export const getResults = async (roundId, trackId) => {
   })
 
   const results = []
-  
+
   for (const key of Object.keys(grouped)) {
     const groupApps = grouped[key]
 
@@ -2094,7 +2094,7 @@ export const unrecommendResult = async (sid, tid, rid) => {
 // 22. 지원서 목록 조회 (라운드별)
 export const getApplications = async (roundId, trackId) => {
   if (!supabase) return []
-  
+
   // 1. 지원서 조회
   let query = supabase
     .from('applications')
@@ -2141,7 +2141,7 @@ export const getApplications = async (roundId, trackId) => {
   // 4. 데이터 가드 매핑 및 암호화 해제
   const mapped = await Promise.all(appsData.map(async ap => {
     const stInfo = studentMap.get(ap.student_id) || profileMap.get(ap.student_id) || {}
-    
+
     // 이름 복호화
     let studentName = stInfo.name || '미명학생'
     if (studentName.startsWith('enc:')) {
@@ -2276,7 +2276,7 @@ export const exportResultsExcel = async (roundId) => {
     const st = studentMap.get(ap.student_id) || profileMap.get(ap.student_id) || {}
     let name = st.name || ''
     if (name.startsWith('enc:')) {
-      try { name = await decryptText(name) } catch {}
+      try { name = await decryptText(name) } catch { }
     }
 
     let statusText = '접수완료'
@@ -2343,10 +2343,10 @@ export const exportRoundSummary = async (roundId) => {
   if (!univs) return makeExcelBlobResponse(['지역', '대학명', '전형명', '추천 제한인원', '총 지원자수', '추천 확정인원', '추천 포기인원', '미선발인원', '잔여 T/O'], [])
 
   const appGroup = {}
-  ;(apps || []).forEach(ap => {
-    if (!appGroup[ap.univ_id]) appGroup[ap.univ_id] = []
-    appGroup[ap.univ_id].push(ap)
-  })
+    ; (apps || []).forEach(ap => {
+      if (!appGroup[ap.univ_id]) appGroup[ap.univ_id] = []
+      appGroup[ap.univ_id].push(ap)
+    })
 
   const exportRows = univs.map(u => {
     const uApps = appGroup[u.id] || []
@@ -2403,8 +2403,8 @@ function detectRegion(univ_name, metaRegion) {
   if (name.includes('경기') || name.includes('가천') || name.includes('아주') || name.includes('한국공학')) return '경기'
 
   const seoulList = [
-    '연세', '고려', '서강', '성균관', '한양', '이화', '중앙', '경희', '한국외', 
-    '시립', '건국', '동국', '홍익', '국민', '숭실', '세종', '가톨릭', '서경', 
+    '연세', '고려', '서강', '성균관', '한양', '이화', '중앙', '경희', '한국외',
+    '시립', '건국', '동국', '홍익', '국민', '숭실', '세종', '가톨릭', '서경',
     '덕성', '동덕', '서울여', '성신', '삼육', '한성', '추계'
   ]
   if (seoulList.some(k => name.includes(k))) return '서울'
@@ -2485,7 +2485,7 @@ export const getQuotaStats = async () => {
       const rawStr = String(r.quota_limit).trim()
       const rawNum = parseFloat(rawStr)
       const isPercent = /^\d+(?:\.\d+)?\s*%$/.test(rawStr) ||
-                        (!isNaN(rawNum) && rawNum > 0 && rawNum < 1)
+        (!isNaN(rawNum) && rawNum > 0 && rawNum < 1)
       if (isPercent && !regRecByUniv.has(normKey(uName))) {
         regRecByUniv.set(normKey(uName), r.quota_limit)
       }
@@ -3430,6 +3430,24 @@ export const importRegionalRecommendations = async (file) => {
     }
   }
 
+  // 헤더 행 컬럼 위치(인덱스) 분석
+  const headerCells = (sheetMatrix[headerRowIndex] || []).map(c => String(c).trim().replace(/[\s_\-\(\)\[\]\/\,\.]/g, '').toLowerCase())
+  let catColIdx = -1
+  let trackColIdx = -1
+  for (let ci = 0; ci < headerCells.length; ci++) {
+    const h = headerCells[ci]
+    if (catColIdx === -1 && (h.includes('전형구분') || h.includes('전형유형') || h.includes('전형분류') || h.includes('선발유형') || h.includes('교과종합') || (h.includes('구분') && !h.includes('졸업')) || (h === '유형') || (h === '전형' && ci < 3))) {
+      catColIdx = ci
+    }
+    if (trackColIdx === -1 && (h.includes('전형명') || h.includes('세부전형') || (h === '전형' && ci >= 3))) {
+      trackColIdx = ci
+    }
+  }
+  // 기본 표준 9컬럼 포맷인 경우 (0: 지역, 1: 대학명, 2: 전형구분, 3: 전형명...)
+  if (catColIdx === -1 && headerCells.length >= 4) {
+    catColIdx = 2
+  }
+
   // 헤더 행이 인식된 상태로 JSON 객체 변환
   const rawRows = XLSX.utils.sheet_to_json(worksheet, { range: headerRowIndex, defval: '' })
 
@@ -3443,17 +3461,44 @@ export const importRegionalRecommendations = async (file) => {
 
   // 9개 지정 컬럼 유연 매핑 (A: 지역, B: 대학명, C: 전형구분, D: 전형명, E: 인원제한, F: 졸업년도조건, G: 수능최저학력기준, H: 본교지원가능여부, I: 사전마감여부)
   const mappedRows = []
-  for (const row of rawRows) {
+  for (let rIdx = 0; rIdx < rawRows.length; rIdx++) {
+    const row = rawRows[rIdx]
+    const matrixRow = sheetMatrix[headerRowIndex + 1 + rIdx] || []
+
     let reg = getExcelRowValue(row, ['지역', '권역', '소재지'])
     let rawUniv = getExcelRowValue(row, ['대학명', '대학', '학교명', '대학교'])
     let univ = normalizeUnivName(rawUniv)
-    let category = getExcelRowValue(row, ['전형구분', '전형 구분', '구분', '모집정원', '모집 정원', '전형유형'])
+    let category = getExcelRowValue(row, [
+      '전형구분', '전형 구분', '구분', '전형유형', '전형 유형', '유형', '전형분류', '전형 분류',
+      '선발유형', '선발 구분', '선발구분', '모집구분', '모집 구분', '교과종합', '교과/종합',
+      '전형(교과/종합)', '구분(교과/종합)', '전형방법', '계열'
+    ])
     let track = getExcelRowValue(row, ['전형명', '전형 명', '전형', '세부전형', '전형 유형'])
     let quotaLimit = normalizeQuotaLimitRaw(getExcelRowValue(row, ['인원제한', '인원 제한', '추천인원', '추천 인원', '추천 제한', '추천인원제한', '추천인원 제한', '제한인원']))
     let gradCond = getExcelRowValue(row, ['졸업년도조건', '졸업년도 조건', '졸업생조건', '졸업생 조건', '졸업조건'])
     let csatMin = getExcelRowValue(row, ['수능최저학력기준', '수능최저학력 기준', '수능최저', '수능 최저', '수능최저기준', '수능 최저학력기준', '수능 최저 기준'])
     let schoolElig = getExcelRowValue(row, ['본교지원가능여부', '본교 지원가능여부', '본교지원가능 여부', '본교지원 여부', '본교지원가능', '지원가능여부', '대상', '지원자격'])
     let preClose = getExcelRowValue(row, ['사전마감여부', '사전 마감여부', '사전마감 여부', '사전마감', '마감여부', '비고'])
+
+    // 위치 기반 fallback 매핑
+    if (!category && catColIdx !== -1 && matrixRow[catColIdx] != null) {
+      category = String(matrixRow[catColIdx]).trim()
+    }
+    if (!track && trackColIdx !== -1 && matrixRow[trackColIdx] != null) {
+      track = String(matrixRow[trackColIdx]).trim()
+    }
+
+    // 전형구분(교과/종합) 정규화 및 전형명 기반 자동 추론
+    if (category) {
+      if (category.includes('교과')) category = '교과'
+      else if (category.includes('종합') || category.includes('학종')) category = '종합'
+    } else if (track) {
+      if (track.includes('학생부종합') || track.includes('종합') || track.includes('학종')) {
+        category = '종합'
+      } else if (track.includes('학생부교과') || track.includes('교과') || track.includes('지역균형') || track.includes('학교장') || track.includes('지균')) {
+        category = '교과'
+      }
+    }
 
     if (!track && !univ) continue
 
@@ -3606,7 +3651,7 @@ export const syncRegionalToUniversities = async () => {
           try {
             await deleteUniversity(existing.id)
             existingMap.delete(key)
-          } catch (_) {}
+          } catch (_) { }
         }
       }
       // 신규 등록하지 않고 건너뜀
@@ -3682,11 +3727,18 @@ export const syncRegionalToUniversities = async () => {
       continue
     }
 
+    // 전형구분 (교과/종합) 판별
+    const catVal = String(r.recruitment_quota || '').trim()
+    let determinedTrackType = '교과'
+    if (catVal.includes('종합') || catVal.includes('학종') || trackName.includes('학생부종합') || trackName.includes('종합')) {
+      determinedTrackType = '종합'
+    }
+
     // 2단계 universities 테이블에 자동 등록
     await createUniversity({
       univ_name: univName,
       track_name: trackName,
-      track_type: '교과',
+      track_type: determinedTrackType,
       total_quota: null,
       unit_quota: quotaLimit,
       raw_quota_limit: isPercentType ? rawQuota : null,  // % 타입이면 원본 텍스트 보존
@@ -4214,7 +4266,7 @@ export const promoteNextEligibleStudent = async (univId, roundId) => {
   if (decryptedName && decryptedName.startsWith('enc:')) {
     try {
       decryptedName = await decryptText(decryptedName)
-    } catch {}
+    } catch { }
   }
 
   return {
