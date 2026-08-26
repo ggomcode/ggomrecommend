@@ -258,7 +258,7 @@
 
           <!-- ── 통합 추천 선발 및 결과 뷰 ──────────────── -->
           <div>
-            <div class="sticky top-0 z-10" style="padding: 10px 0; margin: -10px 0 6px;">
+            <div class="mb-3">
               <div class="flex items-center gap-3 mb-3 flex-wrap">
                 <select
                   v-model="selectedTrackId"
