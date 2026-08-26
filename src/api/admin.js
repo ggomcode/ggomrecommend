@@ -97,23 +97,51 @@ export const getOverview = async (targetRoundId = null) => {
     allRoundsLimitRes,
     studentCountRes,
     teachersRes,
-    allRoundsRes,
-    totalApplicantsRes,
-    confirmedCountRes,
-    abandonedCountRes
+    allAppsRes
   ] = await Promise.all([
     supabase.from('timeline_rounds').select('*').lte('id', limit).order('id', { ascending: true }),
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student'),
     supabase.from('profiles').select('*').eq('role', 'teacher').order('grade', { ascending: true }).order('class_no', { ascending: true }),
-    supabase.from('timeline_rounds').select('id').lte('id', limit),
-    supabase.from('applications').select('*', { count: 'exact', head: true }).lte('round', limit),
-    supabase.from('applications').select('*', { count: 'exact', head: true }).eq('is_recommended', true).lte('round', limit),
-    supabase.from('applications').select('*', { count: 'exact', head: true }).eq('is_abandoned', true).lte('round', limit)
+    supabase.from('applications').select('id, student_id, univ_id, round, is_recommended, is_abandoned').lte('round', limit)
   ])
+
+  const allApps = allAppsRes.data || []
+  const roundsList = allRoundsLimitRes.data || []
+  const schedulesMap = await fetchRoundSchedulesMap()
+
+  // 현재까지 실제로 도달/진행된 최고 차수 계산
+  let maxReachedRound = 1
+  for (const r of roundsList) {
+    const sched = schedulesMap[r.id]
+    const hasApps = allApps.some(a => a.round === r.id)
+    const status = computeRoundDisplayStatus(r, sched)
+    if (hasApps || status !== 'DRAFT') {
+      if (r.id > maxReachedRound) {
+        maxReachedRound = r.id
+      }
+    }
+  }
+
+  // 1. 누적 지원자 (학생 수 vs 지원 건수)
+  const applicantStudentsSet = new Set(allApps.map(a => a.student_id))
+  const applicantStudentsCount = applicantStudentsSet.size
+  const totalApplicantsCount = allApps.length
+
+  // 2. 확정 추천자 (학생 수 vs 추천 건수)
+  const confirmedApps = allApps.filter(a => a.is_recommended)
+  const confirmedStudentsSet = new Set(confirmedApps.map(a => a.student_id))
+  const confirmedStudentsCount = confirmedStudentsSet.size
+  const confirmedCasesCount = confirmedApps.length
+
+  // 3. 포기자 (학생 수 vs 포기 건수)
+  const abandonedApps = allApps.filter(a => a.is_abandoned)
+  const abandonedStudentsSet = new Set(abandonedApps.map(a => a.student_id))
+  const abandonedStudentsCount = abandonedStudentsSet.size
+  const abandonedCasesCount = abandonedApps.length
 
   let round = null
   if (targetRoundId != null) {
-    const found = (allRoundsLimitRes.data || []).find(r => r.id === Number(targetRoundId))
+    const found = roundsList.find(r => r.id === Number(targetRoundId))
     if (found) {
       round = found
     } else {
@@ -126,10 +154,7 @@ export const getOverview = async (targetRoundId = null) => {
 
   const studentCount = studentCountRes.count || 0
   const teachers = teachersRes.data || []
-  const totalRounds = allRoundsRes.data ? allRoundsRes.data.length : 0
-  const totalApplicants = totalApplicantsRes.count || 0
-  const confirmedCount = confirmedCountRes.count || 0
-  const abandonedCount = abandonedCountRes.count || 0
+  const totalRounds = roundsList.length
 
   // [2] 현재 조회 대상 라운드의 지원서와 재학생 매핑 정보를 조회
   const appCountByUniv = new Map()
@@ -204,18 +229,58 @@ export const getOverview = async (targetRoundId = null) => {
   } : null
 
   // [4] 대학/모집단위 배열 생성 (정원 계산 헬퍼 getQuotaStats와 연동하여 정밀한 정원 계산 반영)
+  // 이전 차수에서 추천 확정되어 아직 포기되지 않은(유효한) 추천 인원 집계
+  const priorConfirmedByTrack = new Map()
+
+  if (round && round.id > 1) {
+    const { data: priorApps } = await supabase
+      .from('applications')
+      .select('univ_id')
+      .lt('round', round.id)
+      .eq('is_recommended', true)
+      .eq('is_abandoned', false)
+
+    for (const app of (priorApps || [])) {
+      if (app.univ_id) {
+        priorConfirmedByTrack.set(app.univ_id, (priorConfirmedByTrack.get(app.univ_id) || 0) + 1)
+      }
+    }
+  }
+
   const quotaStats = await getQuotaStats()
   const universities = (quotaStats || []).map(u => {
+    let univPriorUsed = 0
+    for (const t of u.tracks) {
+      univPriorUsed += (priorConfirmedByTrack.get(t.track_id) || 0)
+    }
+    const remainingUnivTotal = u.total_quota !== null ? Math.max(0, u.total_quota - univPriorUsed) : null
+
     return {
       univ_id: u.univ_id,
       univ_name: u.univ_name,
       total_quota: u.total_quota,
+      prior_total_used: univPriorUsed,
+      available_total_quota: remainingUnivTotal,
       tracks: u.tracks.map(t => {
         const applicants = appCountByUniv.get(t.track_id) || 0
+        const trackPriorUsed = priorConfirmedByTrack.get(t.track_id) || 0
+        const remainingUnit = t.unit_quota !== null ? Math.max(0, t.unit_quota - trackPriorUsed) : null
+        
+        let availableQuota = null
+        if (remainingUnit !== null && remainingUnivTotal !== null) {
+          availableQuota = Math.min(remainingUnit, remainingUnivTotal)
+        } else if (remainingUnit !== null) {
+          availableQuota = remainingUnit
+        } else if (remainingUnivTotal !== null) {
+          availableQuota = remainingUnivTotal
+        }
+
         return {
           track_id: t.track_id,
           track_name: t.track_name,
           unit_quota: t.unit_quota,
+          prior_used: trackPriorUsed,
+          available_quota: availableQuota,
           applicants
         }
       })
@@ -233,9 +298,16 @@ export const getOverview = async (targetRoundId = null) => {
     universities,
     all_time: {
       total_rounds: totalRounds,
-      total_applicants: totalApplicants,
-      confirmed: confirmedCount,
-      abandoned: abandonedCount
+      progressed_rounds: maxReachedRound,
+      applicant_students: applicantStudentsCount,
+      applicant_cases: totalApplicantsCount,
+      confirmed_students: confirmedStudentsCount,
+      confirmed_cases: confirmedCasesCount,
+      abandoned_students: abandonedStudentsCount,
+      abandoned_cases: abandonedCasesCount,
+      total_applicants: applicantStudentsCount,
+      confirmed: confirmedStudentsCount,
+      abandoned: abandonedStudentsCount
     }
   }
 }

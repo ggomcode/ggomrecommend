@@ -312,6 +312,11 @@
                       <span class="text-base font-bold" style="color: #1e293b;">{{ univ.univ_name }}</span>
                       <span v-if="univ.total_quota !== null" class="text-base ml-3" style="color: #64748b;">
                         총 정원 {{ univ.total_quota }}명
+                        <template v-if="totalRounds > 1 && data.round && data.round.id > 1">
+                          <span class="text-xs text-slate-500 font-medium ml-1.5">
+                            (이전 확정 {{ univ.prior_total_used || 0 }}명 / 이번 잔여 {{ univ.available_total_quota != null ? univ.available_total_quota + '명' : '제한없음' }})
+                          </span>
+                        </template>
                       </span>
                       <span v-if="univ.tracks.length === 0" class="text-base ml-3" style="color: #94a3b8;">
                         (모집단위 없음)
@@ -327,44 +332,95 @@
                   >
                     <!-- 파이 차트 or 무제한 표시 -->
                     <td style="padding: 14px 20px 14px 28px;">
-                      <MiniPie
-                        v-if="track.unit_quota != null"
-                        :filled="track.applicants || 0"
-                        :total="track.unit_quota || 0"
-                        :size="20"
-                      />
+                      <template v-if="getTrackEffectiveQuota(track) != null">
+                        <MiniPie
+                          v-if="getTrackEffectiveQuota(track) > 0"
+                          :filled="track.applicants || 0"
+                          :total="getTrackEffectiveQuota(track)"
+                          :size="20"
+                        />
+                        <span v-else class="text-xs font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200">
+                          0명
+                        </span>
+                      </template>
                       <span v-else class="text-base font-semibold" style="color: #94a3b8;">∞</span>
                     </td>
                     <!-- 모집단위명 -->
                     <td class="text-base" style="padding: 14px 20px; color: #1e293b;">{{ track.track_name }}</td>
                     <!-- 지원자/정원 -->
                     <td class="text-base tabular-nums" style="padding: 14px 20px;">
-                      <span v-if="track.unit_quota !== null">
-                        <span class="font-semibold"
-                          :style="track.applicants >= track.unit_quota ? { color: '#ef4444' } : { color: '#1e293b' }">
-                          {{ track.applicants }}
-                        </span>
-                        <span style="color: #cbd5e1;"> / </span>
-                        <span style="color: #475569;">{{ track.unit_quota }}명</span>
-                      </span>
+                      <template v-if="track.unit_quota !== null">
+                        <!-- 2차 이상일 때 (이전 차수 확정 인원 반영) -->
+                        <template v-if="totalRounds > 1 && data.round && data.round.id > 1">
+                          <span class="font-semibold"
+                            :style="(getTrackEffectiveQuota(track) === 0 || track.applicants >= getTrackEffectiveQuota(track)) ? { color: '#ef4444' } : { color: '#1e293b' }">
+                            {{ track.applicants }}
+                          </span>
+                          <span style="color: #cbd5e1;"> / </span>
+                          <span style="color: #475569;">
+                            {{ getTrackEffectiveQuota(track) }}명
+                            <span class="text-xs text-slate-400 font-normal ml-1">
+                              (총 {{ track.unit_quota }}명<template v-if="track.prior_used > 0">, 기확정 {{ track.prior_used }}명</template>)
+                            </span>
+                          </span>
+                        </template>
+                        <!-- 1차 또는 단일 차수일 때 -->
+                        <template v-else>
+                          <span class="font-semibold"
+                            :style="track.applicants >= track.unit_quota ? { color: '#ef4444' } : { color: '#1e293b' }">
+                            {{ track.applicants }}
+                          </span>
+                          <span style="color: #cbd5e1;"> / </span>
+                          <span style="color: #475569;">{{ track.unit_quota }}명</span>
+                        </template>
+                      </template>
                       <span v-else class="font-semibold" style="color: #1e293b;">{{ track.applicants }}명</span>
                     </td>
                     <!-- 현황 배지 -->
                     <td class="text-right" style="padding: 14px 20px;">
                       <template v-if="track.unit_quota !== null">
-                        <span v-if="track.applicants >= track.unit_quota"
-                          class="text-base font-semibold"
-                          style="padding: 3px 12px; border-radius: 999px; background: #fef2f2; color: #ef4444;">
-                          마감
-                        </span>
-                        <span v-else-if="track.applicants === 0"
-                          class="text-base font-semibold"
-                          style="padding: 3px 12px; border-radius: 999px; background: #f1f5f9; color: #64748b;">
-                          미지원
-                        </span>
-                        <span v-else class="text-base" style="color: #64748b;">
-                          {{ track.unit_quota - track.applicants }}자리 남음
-                        </span>
+                        <!-- 2차 이상일 때 -->
+                        <template v-if="totalRounds > 1 && data.round && data.round.id > 1">
+                          <span v-if="getTrackEffectiveQuota(track) === 0 && track.applicants > 0"
+                            class="text-base font-semibold"
+                            style="padding: 3px 12px; border-radius: 999px; background: #fef2f2; color: #ef4444;">
+                            마감 ({{ track.applicants }}명 초과)
+                          </span>
+                          <span v-else-if="getTrackEffectiveQuota(track) === 0"
+                            class="text-base font-semibold"
+                            style="padding: 3px 12px; border-radius: 999px; background: #fef2f2; color: #ef4444;">
+                            마감 (이전 선발 확정)
+                          </span>
+                          <span v-else-if="track.applicants >= getTrackEffectiveQuota(track)"
+                            class="text-base font-semibold"
+                            style="padding: 3px 12px; border-radius: 999px; background: #fef2f2; color: #ef4444;">
+                            마감
+                          </span>
+                          <span v-else-if="track.applicants === 0"
+                            class="text-base font-semibold"
+                            style="padding: 3px 12px; border-radius: 999px; background: #f1f5f9; color: #64748b;">
+                            미지원 ({{ getTrackEffectiveQuota(track) }}자리 남음)
+                          </span>
+                          <span v-else class="text-base" style="color: #64748b;">
+                            {{ getTrackEffectiveQuota(track) - track.applicants }}자리 남음
+                          </span>
+                        </template>
+                        <!-- 1차 또는 단일 차수일 때 -->
+                        <template v-else>
+                          <span v-if="track.applicants >= track.unit_quota"
+                            class="text-base font-semibold"
+                            style="padding: 3px 12px; border-radius: 999px; background: #fef2f2; color: #ef4444;">
+                            마감
+                          </span>
+                          <span v-else-if="track.applicants === 0"
+                            class="text-base font-semibold"
+                            style="padding: 3px 12px; border-radius: 999px; background: #f1f5f9; color: #64748b;">
+                            미지원
+                          </span>
+                          <span v-else class="text-base" style="color: #64748b;">
+                            {{ track.unit_quota - track.applicants }}자리 남음
+                          </span>
+                        </template>
                       </template>
                       <span v-else
                         class="text-base font-semibold"
@@ -386,9 +442,9 @@
         <SectionLabel title="전체 누적 통계" />
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <div v-for="stat in allTimeStats" :key="stat.label"
-            class="rounded-xl text-center"
+            class="rounded-xl text-center flex flex-col justify-center"
             style="padding: 18px 12px; background: #f8fafc;">
-            <p class="text-2xl font-bold" style="color: #1e293b;">{{ stat.value }}</p>
+            <p class="text-xl sm:text-2xl font-bold" style="color: #1e293b;" :title="stat.value">{{ stat.value }}</p>
             <p class="text-base mt-0.5" style="color: #94a3b8;">{{ stat.label }}</p>
           </div>
         </div>
@@ -845,6 +901,13 @@ async function handleSelectRound(rId) {
   }
 }
 
+function getTrackEffectiveQuota(track) {
+  if (track.available_quota !== undefined && track.available_quota !== null) {
+    return track.available_quota
+  }
+  return track.unit_quota
+}
+
 const effectiveRoundStatus = computed(() => {
   if (!data.value?.round) return 'DRAFT'
   const round = data.value.round
@@ -933,11 +996,25 @@ const helpBox = computed(() => {
 const allTimeStats = computed(() => {
   if (!data.value) return []
   const t = data.value.all_time || {}
+  const roundsVal = totalRounds.value === 1 ? '완료' : `${t.progressed_rounds ?? t.total_rounds ?? 1}차`
+
+  const applicantsVal = t.applicant_students != null && t.applicant_cases != null
+    ? `${t.applicant_students}명 (${t.applicant_cases}건)`
+    : `${t.total_applicants ?? 0}명`
+
+  const confirmedVal = t.confirmed_students != null && t.confirmed_cases != null
+    ? `${t.confirmed_students}명 (${t.confirmed_cases}건)`
+    : `${t.confirmed ?? 0}명`
+
+  const abandonedVal = t.abandoned_students != null && t.abandoned_cases != null
+    ? `${t.abandoned_students}명 (${t.abandoned_cases}건)`
+    : `${t.abandoned ?? 0}명`
+
   return [
-    { label: '진행된 추천 선발',  value: totalRounds.value === 1 ? '완료' : `${t.total_rounds ?? 0}차` },
-    { label: '누적 지원자',  value: `${t.total_applicants ?? 0}명` },
-    { label: '확정 추천자',  value: `${t.confirmed ?? 0}명` },
-    { label: '포기자',       value: `${t.abandoned ?? 0}명` },
+    { label: '진행된 추천 선발',  value: roundsVal },
+    { label: '누적 지원자',      value: applicantsVal },
+    { label: '확정 추천자',      value: confirmedVal },
+    { label: '포기자',           value: abandonedVal },
   ]
 })
 
