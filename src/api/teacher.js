@@ -800,9 +800,13 @@ const scoreText = scoreTextMap[ap.id] || '-'
 const totalScore = totalScoreMap[ap.id] || 0
 
 results.push({
+id: ap.id,
 student_id: ap.student_id,
 track_id: ap.univ_id,
+round: ap.round,
 round_id: ap.round,
+recommended_round: ap.recommended_round || ap.round,
+abandoned_round: ap.abandoned_round || ap.round,
 total_score: totalScore,
 score_text: scoreText,
 score_detail: {},
@@ -811,6 +815,7 @@ track_rank: finalRank,
 recommended: ap.is_recommended,
 abandoned: ap.is_abandoned,
 scanned_doc_url: ap.scanned_doc_url,
+parent_name: ap.parent_name || st.parent_name || '',
 excluded: ap.is_excluded,
 excluded_reason: ap.excluded_reason,
 student_code: st.student_code || '',

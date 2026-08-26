@@ -1106,4 +1106,175 @@ export function printAllClassesApplicationsReport({
   win.document.close()
 }
 
+/**
+ * 2027학년도 대입 학교장추천전형 지원 포기원 인쇄 (학생용 포기원 양식과 100% 동일한 폼)
+ * @param {Object} app 지원 및 포기 정보 객체
+ * @param {Object} [studentInfo] 학생 추가 정보 (선택사항)
+ */
+export function printAbandonmentForm(app, studentInfo = {}) {
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) {
+    alert('팝업 창이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.')
+    return
+  }
+
+  // 1. 포기 신청 메타데이터 파싱 (scanned_doc_url)
+  let req = {}
+  if (app.scanned_doc_url) {
+    try {
+      req = typeof app.scanned_doc_url === 'string' ? JSON.parse(app.scanned_doc_url) : app.scanned_doc_url
+    } catch {}
+  }
+
+  const studentName = app.name || app.student_name || studentInfo.name || ''
+  const studentCode = app.student_code || studentInfo.student_code || ''
+  const univName = app.univ_name || app.universities?.univ_name || ''
+  const trackName = app.track_name || app.universities?.track_name || ''
+  const departmentName = app.department_name || ''
+  const parentName = app.parent_name || studentInfo.parent_name || '학부모'
+  const abandonReason = req.abandon_reason || app.abandon_reason || app.excluded_reason || '개인 사유로 인한 지원 포기'
+
+  const studentSigUrl = req.student_signature_url || app.student_signature_url || studentInfo.student_signature_url
+  const parentSigUrl = req.parent_signature_url || app.parent_signature_url || studentInfo.parent_signature_url
+
+  const studentSigHtml = studentSigUrl
+    ? `<img class="sig-img" src="${studentSigUrl}" />`
+    : `<div style="height: 60px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px;">(서명/날인)</div>`
+
+  const parentSigHtml = parentSigUrl
+    ? `<img class="sig-img" src="${parentSigUrl}" />`
+    : `<div style="height: 60px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px;">(서명/날인)</div>`
+
+  const dateVal = req.requested_at || app.abandoned_at || app.updated_at || new Date()
+  const formattedDate = new Date(dateVal).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
+
+  // 학생용 포기원 폼의 학교장 직인 타이틀 생성 규칙
+  const name = (schoolName.value || '').trim()
+  let targetSchoolFooter = '우리고등학교장 귀하'
+  if (!name || name === '우리학교' || name === '우리고등학교' || name === '학교명 미설정') {
+    targetSchoolFooter = '우리고등학교장 귀하'
+  } else if (name.endsWith('학교')) {
+    targetSchoolFooter = `${name}장 귀하`
+  } else if (name.endsWith('고')) {
+    targetSchoolFooter = `${name}등학교장 귀하`
+  } else if (!name.includes('학교')) {
+    targetSchoolFooter = `${name}고등학교장 귀하`
+  } else {
+    targetSchoolFooter = `${name}장 귀하`
+  }
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>2027학년도 대입 학교장추천전형 지원 포기원</title>
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 15mm 20mm;
+          }
+          * { box-sizing: border-box; }
+          html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            color: #111;
+            line-height: 1.6;
+          }
+          .page {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+            min-height: 245mm;
+            padding: 5mm 0;
+            box-sizing: border-box;
+          }
+          .top-section {
+            width: 100%;
+          }
+          .title { text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 35px; letter-spacing: 1px; }
+          .table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+          .table th, .table td { border: 1px solid #000; padding: 10px 12px; text-align: left; font-size: 13px; }
+          .table th { background: #f2f2f2; font-weight: bold; width: 25%; text-align: center; }
+          .section-title { font-weight: bold; font-size: 14px; margin-top: 20px; margin-bottom: 8px; }
+          .reason-box { border: 1px solid #000; padding: 15px; min-height: 130px; margin-bottom: 25px; font-size: 13px; white-space: pre-wrap; }
+          .statement { font-size: 13px; line-height: 1.7; word-break: keep-all; margin-top: 15px; }
+          .bottom-section {
+            margin-top: auto;
+            width: 100%;
+            padding-bottom: 5mm;
+          }
+          .date { text-align: center; font-size: 15px; margin-bottom: 35px; }
+          .signature-area { display: flex; justify-content: space-around; align-items: flex-start; margin-bottom: 40px; }
+          .sig-box { text-align: center; width: 45%; font-size: 13.5px; }
+          .sig-img { max-height: 75px; display: block; margin: 10px auto 0; }
+          .footer { text-align: left; font-size: 20px; font-weight: bold; letter-spacing: 1px; padding-left: 5px; }
+        </style>
+      </head>
+      <body>
+        <div class="page">
+          <div class="top-section">
+            <div class="title">2027학년도 대입 학교장추천전형 지원 포기원</div>
+            
+            <div class="section-title">[신청인 인적사항]</div>
+            <table class="table">
+              <tr>
+                <th>학번/학생코드</th>
+                <td>${studentCode}</td>
+                <th>성명</th>
+                <td>${studentName}</td>
+              </tr>
+              <tr>
+                <th>지원 대학</th>
+                <td>${univName}</td>
+                <th>지원 전형</th>
+                <td>${trackName}</td>
+              </tr>
+              <tr>
+                <th>지원 학과</th>
+                <td colspan="3">${departmentName}</td>
+              </tr>
+            </table>
+            
+            <div class="section-title">[포기 사유]</div>
+            <div class="reason-box">${abandonReason}</div>
+            
+            <p class="statement">
+              위 본인은 2027학년도 대입 학교장추천전형 선정과 관련하여 추천이 확정되었으나, 위의 사유로 인하여 학교장추천전형 지원 권한을 공식적으로 포기하고자 포기원을 제출합니다.
+              아울러 추천 포기 처리가 완료되면 차순위 대기 학생에게 추천 기회가 승계됨을 확인합니다.
+            </p>
+          </div>
+          
+          <div class="bottom-section">
+            <div class="date">${formattedDate}</div>
+            
+            <div class="signature-area">
+              <div class="sig-box">
+                <div>학생 본인: ${studentName} (서명/날인)</div>
+                ${studentSigHtml}
+              </div>
+              <div class="sig-box">
+                <div>보호자(학부모): ${parentName} (서명/날인)</div>
+                ${parentSigHtml}
+              </div>
+            </div>
+            
+            <div class="footer">${targetSchoolFooter}</div>
+          </div>
+        </div>
+        
+        <script>
+          window.onload = function() {
+            window.print();
+            window.close();
+          }
+        <\/script>
+      </body>
+    </html>
+  `)
+  printWindow.document.close()
+}
+
+
 

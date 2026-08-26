@@ -445,10 +445,10 @@
                           </td>
                           <td class="text-base font-medium" style="padding: 12px 18px; color: #1e293b; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                             <span v-if="showAbandonOnly" class="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 mr-1 border border-rose-200">
-                              {{ r.round || selected?.id }}차 포기
+                              {{ r.abandoned_round || r.round || r.round_id || selected?.id }}차 포기
                             </span>
-                            <span v-else-if="totalRounds > 1 && (r.round || selected?.id)" class="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 mr-1 border border-indigo-200">
-                              {{ r.round || selected?.id }}차 지원
+                            <span v-else-if="totalRounds > 1 && (r.round || r.round_id || selected?.id)" class="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 mr-1 border border-indigo-200">
+                              {{ r.round || r.round_id || selected?.id }}차 지원
                             </span>
                             {{ r.name }}
                           </td>
@@ -474,14 +474,14 @@
                           <td class="text-center" style="padding: 12px 18px;" @click.stop>
                             <div class="flex flex-col items-center gap-1">
                             <span v-if="r.abandoned" class="text-base font-semibold" style="color: #ef4444;">
-                              {{ totalRounds > 1 && (r.abandoned_round || r.round || selected?.id) ? `${r.abandoned_round || r.round || selected?.id}차 포기됨` : '포기됨' }}
+                              {{ totalRounds > 1 && (r.abandoned_round || r.round || r.round_id || selected?.id) ? `${r.abandoned_round || r.round || r.round_id || selected?.id}차 포기됨` : '포기됨' }}
                             </span>
                             <span v-else-if="isAbandonRequested(r)" class="text-base font-semibold text-rose-500" style="color: #f43f5e;">
-                              {{ totalRounds > 1 && (r.round || selected?.id) ? `${r.round || selected?.id}차 포기신청` : '포기 신청중' }}
+                              {{ totalRounds > 1 && (r.abandoned_round || r.round || r.round_id || selected?.id) ? `${r.abandoned_round || r.round || r.round_id || selected?.id}차 포기신청` : '포기 신청중' }}
                             </span>
                             <template v-else-if="r.recommended">
                               <span class="text-base font-semibold" style="color: #16a34a;">
-                                {{ totalRounds > 1 && (r.recommended_round || r.round || selected?.id) ? `${r.recommended_round || r.round || selected?.id}차 추천 확정됨` : '추천 확정됨' }}
+                                {{ totalRounds > 1 && (r.recommended_round || r.round || r.round_id || selected?.id) ? `${r.recommended_round || r.round || r.round_id || selected?.id}차 추천 확정됨` : '추천 확정됨' }}
                               </span>
                               <button
                                 v-if="selected.status === 'CLOSED'"
@@ -499,14 +499,21 @@
                             >추천 확정</button>
                             <span v-else-if="selected.status === 'CLOSED' && r.excluded" style="color: #cbd5e1;">-</span>
                             <span v-else-if="selected.status === 'FINALIZED'" class="text-base font-semibold" style="color: #ef4444;">
-                              {{ totalRounds > 1 && (r.round || selected?.id) ? `${r.round || selected?.id}차 미선발` : '미선발' }}
+                              {{ totalRounds > 1 && (r.round || r.round_id || selected?.id) ? `${r.round || r.round_id || selected?.id}차 미선발` : '미선발' }}
                             </span>
                             <span v-else class="text-base font-semibold" style="color: #94a3b8;">-</span>
                             </div>
                           </td>
                           <td class="text-center" style="padding: 12px 18px;" @click.stop>
                             <button
-                              v-if="isAbandonRequested(r)"
+                              v-if="r.abandoned"
+                              class="text-sm font-semibold rounded-lg whitespace-nowrap shadow-xs hover:bg-rose-100 transition-colors"
+                              style="padding: 5px 12px; border: 1px solid #fda4af; background: #fff1f2; color: #e11d48; cursor: pointer;"
+                              @click="handlePrintAbandon(r)"
+                              title="포기원 서류 인쇄"
+                            >📄 포기원 인쇄</button>
+                            <button
+                              v-else-if="isAbandonRequested(r)"
                               class="text-base font-semibold rounded-lg whitespace-nowrap"
                               style="padding: 5px 12px; border: none; background: #e11d48; color: white; cursor: pointer;"
                               @click="handleApproveAbandon(r)"
@@ -523,7 +530,7 @@
                             <div class="flex flex-col items-center gap-1">
                             <template v-if="r.excluded">
                               <span class="text-base font-semibold" :title="r.excluded_reason" style="color: #d97706;">
-                                {{ totalRounds > 1 && (r.round || selected?.id) ? `${r.round || selected?.id}차 미선발` : '미선발' }}
+                                {{ totalRounds > 1 && (r.round || r.round_id || selected?.id) ? `${r.round || r.round_id || selected?.id}차 미선발` : '미선발' }}
                               </span>
                               <button
                                 v-if="selected.status === 'CLOSED'"
@@ -551,19 +558,19 @@
                               <div v-if="totalRounds > 1" class="flex items-center gap-3 text-xs pb-2 border-b border-slate-200/80 flex-wrap">
                                 <span class="font-bold text-slate-700">📌 차수 정보:</span>
                                 <span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">
-                                  지원: {{ r.round || selected?.id }}차 지원
+                                  지원: {{ r.round || r.round_id || selected?.id }}차 지원
                                 </span>
                                 <span v-if="r.recommended" class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
-                                  선발: {{ r.recommended_round || r.round || selected?.id }}차 추천 확정됨
+                                  선발: {{ r.recommended_round || r.round || r.round_id || selected?.id }}차 추천 확정됨
                                 </span>
                                 <span v-else-if="r.abandoned" class="px-2 py-0.5 rounded bg-rose-50 text-rose-700 font-semibold border border-rose-200">
-                                  포기: {{ r.abandoned_round || r.round || selected?.id }}차 포기 처리됨
+                                  포기: {{ r.abandoned_round || r.round || r.round_id || selected?.id }}차 포기 처리됨
                                 </span>
                                 <span v-else-if="r.excluded" class="px-2 py-0.5 rounded bg-amber-50 text-amber-700 font-semibold border border-amber-200">
-                                  미선발: {{ r.round || selected?.id }}차 제외 ({{ r.excluded_reason || '사유 없음' }})
+                                  미선발: {{ r.round || r.round_id || selected?.id }}차 제외 ({{ r.excluded_reason || '사유 없음' }})
                                 </span>
                                 <span v-else-if="selected.status === 'FINALIZED'" class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold border border-slate-200">
-                                  선발 결과: {{ r.round || selected?.id }}차 미선발
+                                  선발 결과: {{ r.round || r.round_id || selected?.id }}차 미선발
                                 </span>
                               </div>
                               <div class="flex flex-wrap gap-x-6 gap-y-2">
@@ -796,6 +803,7 @@ import { roundStatusLabel } from '../../data/roundStatus.js'
 import { computeRoundDisplayStatus } from '../../utils/roundSchedule.js'
 import { formatScore } from '../../utils/scorePreviewShared.js'
 import { convertPdfToImages, analyzeDocumentWithAI } from '../../utils/ocrParser.js'
+import { printAbandonmentForm } from '../../utils/printTemplates.js'
 
 const baseUrl = import.meta.env.BASE_URL || '/'
 
@@ -1792,6 +1800,10 @@ async function handleApproveAbandon(r) {
   }
 }
 
+function handlePrintAbandon(r) {
+  printAbandonmentForm(r)
+}
+
 function startExclude(r) {
   excludeTarget.value = r
   excludeReasonDraft.value = ''
@@ -1961,9 +1973,9 @@ function getLatestReachedRound() {
   return latest || rounds.value[0]
 }
 
-watch(showAbandonOnly, async (newVal) => {
-  if (newVal && rounds.value.length > 0) {
-    const targetRound = getLatestReachedRound()
+watch(showAbandonOnly, async () => {
+  if (rounds.value.length > 0) {
+    const targetRound = selected.value || getLatestReachedRound()
     if (targetRound) {
       await selectRound(targetRound)
     }

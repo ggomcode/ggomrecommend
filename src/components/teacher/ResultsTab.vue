@@ -171,7 +171,13 @@
                         <span v-else class="text-base font-semibold" style="color: #2563eb;">접수 완료</span>
                       </td>
                       <td class="text-center" style="padding: 12px 16px;">
-                        <span v-if="r.abandoned" class="text-slate-400 text-sm">포기 완료</span>
+                        <button
+                          v-if="r.abandoned"
+                          class="text-sm font-semibold rounded-lg whitespace-nowrap shadow-xs hover:bg-rose-100 transition-colors"
+                          style="padding: 5px 12px; border: 1px solid #fda4af; background: #fff1f2; color: #e11d48; cursor: pointer;"
+                          @click="handlePrintAbandon(r)"
+                          title="포기원 서류 인쇄"
+                        >📄 포기원 인쇄</button>
                         <button
                           v-else-if="isAbandonRequested(r)"
                           class="text-base font-semibold rounded-lg whitespace-nowrap"
@@ -204,7 +210,7 @@ import { useAuthStore } from '../../stores/auth.js'
 import { teacherGetResults, teacherAbandonApplication } from '../../api/teacher.js'
 import { promoteNextEligibleStudent } from '../../api/admin.js'
 import { roundStatusLabel } from '../../data/roundStatus.js'
-import { printRoundsReport } from '../../utils/printTemplates.js'
+import { printRoundsReport, printAbandonmentForm } from '../../utils/printTemplates.js'
 import { dialog } from '../common/dialog.js'
 import HelpBox from '../common/HelpBox.vue'
 import { formatScore } from '../../utils/scorePreviewShared.js'
@@ -411,6 +417,10 @@ async function handleApproveAbandon(r) {
   } catch (e) {
     await dialog.alert({ title: '오류', message: e.response?.data || e.message, level: 'error' })
   }
+}
+
+function handlePrintAbandon(r) {
+  printAbandonmentForm(r)
 }
 
 onMounted(load)

@@ -1938,9 +1938,13 @@ export const getResults = async (roundId, trackId) => {
       }
 
       results.push({
+        id: ap.id,
         student_id: ap.student_id,
         track_id: ap.univ_id,
+        round: ap.round,
         round_id: ap.round,
+        recommended_round: ap.recommended_round || ap.round,
+        abandoned_round: ap.abandoned_round || ap.round,
         manual_score: ap.manual_score,
         gpa_overall: ap.stInfo.gpa_overall != null ? ap.stInfo.gpa_overall : null,
         total_score: currentScore > 0 ? currentScore : (ap.stInfo.gpa_overall != null ? ap.stInfo.gpa_overall : null),
@@ -1950,6 +1954,7 @@ export const getResults = async (roundId, trackId) => {
         recommended: ap.is_recommended,
         abandoned: ap.is_abandoned,
         scanned_doc_url: ap.scanned_doc_url,
+        parent_name: ap.parent_name || ap.stInfo.parent_name || '',
         excluded: ap.is_excluded,
         excluded_reason: ap.excluded_reason,
         student_code: ap.stInfo.student_code || '',
