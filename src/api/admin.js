@@ -2648,11 +2648,70 @@ export const getRoundConfirmationStatus = async () => {
   return { classes: [] }
 }
 
-export const exportQuotaStats = async () => {
+export const exportQuotaStats = async (param = null) => {
+  let selectedRound = null
+  let filterUnivId = null
+
+  if (param != null) {
+    if (typeof param === 'number' || (!isNaN(parseInt(param, 10)) && !String(param).includes('-'))) {
+      selectedRound = parseInt(param, 10)
+    } else if (param === 'all') {
+      selectedRound = null
+    } else if (typeof param === 'string' && param.includes('-')) {
+      filterUnivId = param
+    }
+  }
+
   const stats = await getQuotaStats()
   const disclosureCount = await getDisclosureCount()
 
-  function formatExcelQuota(unitQuota, rawQuotaLimit) {
+  // 1. 지원서 전체 조회 (차수별 이전 선발 인원 및 해당 차수 선발 인원 계산용)
+  let allRecApps = []
+  let stMap = {}
+  let univList = []
+  if (supabase) {
+    const [{ data: recData }, { data: stData }, { data: uData }] = await Promise.all([
+      supabase.from('applications').select('*').eq('is_recommended', true).eq('is_abandoned', false).order('round', { ascending: true }),
+      supabase.from('enrolled_students').select('id, name, student_code, grade, class_no, seq_no, is_enrolled, grad_year, gpa_overall'),
+      supabase.from('universities').select('id, univ_name, track_name, unit_quota, raw_quota_limit')
+    ])
+    allRecApps = recData || []
+    univList = uData || []
+    for (const s of (stData || [])) {
+      const decName = await decryptText(s.name)
+      stMap[s.id] = { ...s, name: decName }
+    }
+  }
+
+  // 트랙별 차수별 선발 인원 맵
+  const priorUsedMap = {}
+  const currentUsedMap = {}
+  const currentEnrolledUsedMap = {}
+  const currentGradUsedMap = {}
+
+  for (const ap of allRecApps) {
+    const tId = ap.univ_id
+    const r = ap.recommended_round || ap.round || 1
+    const isGrad = stMap[ap.student_id]?.is_enrolled === false || (!stMap[ap.student_id]?.grade && stMap[ap.student_id]?.grad_year)
+
+    if (selectedRound && selectedRound >= 2) {
+      if (r < selectedRound) {
+        priorUsedMap[tId] = (priorUsedMap[tId] || 0) + 1
+      }
+    }
+
+    if (!selectedRound || r === selectedRound) {
+      currentUsedMap[tId] = (currentUsedMap[tId] || 0) + 1
+      if (isGrad) {
+        currentGradUsedMap[tId] = (currentGradUsedMap[tId] || 0) + 1
+      } else {
+        currentEnrolledUsedMap[tId] = (currentEnrolledUsedMap[tId] || 0) + 1
+      }
+    }
+  }
+
+  function formatExcelQuota(unitQuota, rawQuotaLimit, remainingAfterPrev = null) {
+    let baseStr = ''
     if (rawQuotaLimit) {
       const str = String(rawQuotaLimit).trim()
       const num = parseFloat(str)
@@ -2666,17 +2725,23 @@ export const exportQuotaStats = async () => {
       if (pct !== null) {
         const pctClean = parseFloat(pct.toPrecision(10))
         if (unitQuota != null && unitQuota > 0) {
-          return `${unitQuota}명 (${pctClean}%)`
-        }
-        if (disclosureCount) {
+          baseStr = `${unitQuota}명 (${pctClean}%)`
+        } else if (disclosureCount) {
           const calc = Math.ceil(disclosureCount * pct / 100)
-          return `${calc}명 (${pctClean}%)`
+          baseStr = `${calc}명 (${pctClean}%)`
+        } else {
+          baseStr = `${pctClean}%`
         }
-        return `${pctClean}%`
       }
     }
-    if (unitQuota != null) return `${unitQuota}명`
-    return '무제한'
+    if (!baseStr) {
+      baseStr = unitQuota != null ? `${unitQuota}명` : '무제한'
+    }
+
+    if (selectedRound && selectedRound >= 2 && remainingAfterPrev !== null && unitQuota != null) {
+      return `총 ${baseStr} (잔여 ${remainingAfterPrev}명)`
+    }
+    return baseStr
   }
 
   const headers = ['No', '지역', '대학명', '구분 / 모집단위(학과)', '추천 제한 정원', '추천 확정 인원', '(재학생)', '(졸업생)', '잔여 추천 정원']
@@ -2684,18 +2749,27 @@ export const exportQuotaStats = async () => {
 
   let index = 1
   for (const u of stats) {
+    if (filterUnivId && u.id !== filterUnivId) continue
+
     // 대학 총괄 행
-    const univRemaining = u.total_quota !== null ? Math.max(0, u.total_quota - u.total_used) + '명' : '무제한'
-    const totalEnrolled = u.total_enrolled_used || 0
-    const totalGrad = u.total_grad_used || 0
+    const totalUsed = selectedRound ? (u.tracks.reduce((sum, t) => sum + (currentUsedMap[t.track_id] || 0), 0)) : u.total_used
+    const totalEnrolled = selectedRound ? (u.tracks.reduce((sum, t) => sum + (currentEnrolledUsedMap[t.track_id] || 0), 0)) : (u.total_enrolled_used || 0)
+    const totalGrad = selectedRound ? (u.tracks.reduce((sum, t) => sum + (currentGradUsedMap[t.track_id] || 0), 0)) : (u.total_grad_used || 0)
+    const priorUnivUsed = u.tracks.reduce((sum, t) => sum + (priorUsedMap[t.track_id] || 0), 0)
+    const univRemainingAfterPrior = u.total_quota !== null ? Math.max(0, u.total_quota - priorUnivUsed) : null
+    const univRemaining = u.total_quota !== null ? Math.max(0, (univRemainingAfterPrior ?? u.total_quota) - totalUsed) + '명' : '무제한'
+
+    const univQuotaDisplay = (selectedRound && selectedRound >= 2 && u.total_quota !== null)
+      ? `총 ${u.total_quota}명 (잔여 ${univRemainingAfterPrior}명)`
+      : (u.total_quota !== null ? u.total_quota + '명' : '무제한')
 
     rows.push([
       index++,
       u.region || '그외지역',
       u.univ_name,
       '[대학 전체 총괄]',
-      u.total_quota !== null ? u.total_quota + '명' : '무제한',
-      u.total_used > 0 ? u.total_used + '명' : '-',
+      univQuotaDisplay,
+      totalUsed > 0 ? totalUsed + '명' : '-',
       totalEnrolled > 0 ? totalEnrolled + '명' : '-',
       totalGrad > 0 ? totalGrad + '명' : '-',
       univRemaining
@@ -2703,16 +2777,22 @@ export const exportQuotaStats = async () => {
 
     // 학과별 세부 행
     for (const t of u.tracks) {
-      const trackRemaining = t.unit_quota !== null ? Math.max(0, t.unit_quota - t.unit_used) + '명' : '무제한'
+      const priorUsed = priorUsedMap[t.track_id] || 0
+      const remainingAfterPrev = t.unit_quota !== null ? Math.max(0, t.unit_quota - priorUsed) : null
+      const unitUsed = selectedRound ? (currentUsedMap[t.track_id] || 0) : t.unit_used
+      const enrolledUsed = selectedRound ? (currentEnrolledUsedMap[t.track_id] || 0) : t.enrolled_used
+      const gradUsed = selectedRound ? (currentGradUsedMap[t.track_id] || 0) : t.grad_used
+      const trackRemaining = t.unit_quota !== null ? Math.max(0, (remainingAfterPrev ?? t.unit_quota) - unitUsed) + '명' : '무제한'
+
       rows.push([
         '',
         '',
         u.univ_name,
         `  └ ${t.track_name}`,
-        formatExcelQuota(t.unit_quota, t.raw_quota_limit),
-        t.unit_used > 0 ? t.unit_used + '명' : '-',
-        t.enrolled_used > 0 ? t.enrolled_used + '명' : '-',
-        t.grad_used > 0 ? t.grad_used + '명' : '-',
+        formatExcelQuota(t.unit_quota, t.raw_quota_limit, remainingAfterPrev),
+        unitUsed > 0 ? unitUsed + '명' : '-',
+        enrolledUsed > 0 ? enrolledUsed + '명' : '-',
+        gradUsed > 0 ? gradUsed + '명' : '-',
         trackRemaining
       ])
     }
@@ -2720,62 +2800,56 @@ export const exportQuotaStats = async () => {
 
   const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
   const workbook = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(workbook, worksheet, '추천현황종합보고서')
+  const sheet1Name = selectedRound ? `추천현황_${selectedRound}차` : '추천현황종합보고서'
+  XLSX.utils.book_append_sheet(workbook, worksheet, sheet1Name)
 
   // 2. 추천 대상 학생 세부 명단 시트 추가 (지원/선발 차수 포함)
   try {
-    if (supabase) {
-      const [{ data: allRecApps }, { data: stList }, { data: univList }] = await Promise.all([
-        supabase.from('applications').select('*').eq('is_recommended', true).eq('is_abandoned', false).order('round', { ascending: true }),
-        supabase.from('enrolled_students').select('id, name, student_code, grade, class_no, seq_no, is_enrolled, grad_year, gpa_overall'),
-        supabase.from('universities').select('id, univ_name, track_name, unit_quota')
-      ])
+    const studentHeaders = ['No', '대학명', '모집단위', '학번', '성명', '구분', '내신/점수', '지원 차수', '선발(확정) 차수', '비고']
+    const studentRows = []
+    let sIdx = 1
 
-      const stMap = {}
-      for (const s of (stList || [])) {
-        const decName = await decryptText(s.name)
-        stMap[s.id] = { ...s, name: decName }
-      }
-
-      const uMap = {}
-      for (const u of (univList || [])) {
-        uMap[u.id] = u
-      }
-
-      const studentHeaders = ['No', '대학명', '모집단위', '학번', '성명', '구분', '내신/점수', '지원 차수', '선발(확정) 차수', '비고']
-      const studentRows = []
-      let sIdx = 1
-
-      for (const ap of (allRecApps || [])) {
-        const s = stMap[ap.student_id] || {}
-        const u = uMap[ap.univ_id] || {}
-        const isGrad = s.is_enrolled === false || (!s.grade && s.grad_year)
-        const scoreVal = ap.univ_calc_score != null ? ap.univ_calc_score : ap.manual_score
-        const scoreText = (scoreVal != null && Number(scoreVal) > 0) ? `${scoreVal}점` : (s.gpa_overall ? `${s.gpa_overall}등급` : '-')
-
-        studentRows.push([
-          sIdx++,
-          u.univ_name || '-',
-          u.track_name || '-',
-          s.student_code || '-',
-          s.name || ap.name || '-',
-          isGrad ? '졸업생' : '재학생',
-          scoreText,
-          `${ap.round || 1}차 지원`,
-          `${ap.recommended_round || ap.round || 1}차 선발`,
-          '추천 확정'
-        ])
-      }
-
-      const studentWorksheet = XLSX.utils.aoa_to_sheet([studentHeaders, ...studentRows])
-      XLSX.utils.book_append_sheet(workbook, studentWorksheet, '추천대상학생명단')
+    const uMap = {}
+    for (const u of univList) {
+      uMap[u.id] = u
     }
+
+    for (const ap of allRecApps) {
+      if (filterUnivId && ap.univ_id !== filterUnivId) continue
+      const r = ap.recommended_round || ap.round || 1
+      if (selectedRound && r !== selectedRound) continue
+
+      const s = stMap[ap.student_id] || {}
+      const u = uMap[ap.univ_id] || {}
+      const isGrad = s.is_enrolled === false || (!s.grade && s.grad_year)
+      const scoreVal = ap.univ_calc_score != null ? ap.univ_calc_score : ap.manual_score
+      const scoreText = (scoreVal != null && Number(scoreVal) > 0) ? `${scoreVal}점` : (s.gpa_overall ? `${s.gpa_overall}등급` : '-')
+
+      studentRows.push([
+        sIdx++,
+        u.univ_name || '-',
+        u.track_name || '-',
+        s.student_code || '-',
+        s.name || ap.name || '-',
+        isGrad ? '졸업생' : '재학생',
+        scoreText,
+        `${ap.round || 1}차 지원`,
+        `${ap.recommended_round || ap.round || 1}차 선발`,
+        '추천 확정'
+      ])
+    }
+
+    const studentWorksheet = XLSX.utils.aoa_to_sheet([studentHeaders, ...studentRows])
+    const sheet2Name = selectedRound ? `추천학생명단_${selectedRound}차` : '추천대상학생명단'
+    XLSX.utils.book_append_sheet(workbook, studentWorksheet, sheet2Name)
   } catch (err) {
     console.warn('추천학생명단 시트 생성 중 오류 발생:', err)
   }
 
   const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
-  return new Blob([wbout], { type: 'application/octet-stream' })
+  const blob = new Blob([wbout], { type: 'application/octet-stream' })
+  blob.data = blob
+  return blob
 }
 
 export const getTrackRecommendedList = async (trackId) => {
