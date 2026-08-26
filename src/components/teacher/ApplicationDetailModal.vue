@@ -39,14 +39,24 @@
         >
           <div v-if="app.abandoned" class="space-y-1.5">
             <p>⚠️ <strong>추천 포기 완료 건:</strong> 이 지원서는 학생/학부모의 추천 포기 서신이 제출되어 반려 및 종료되었습니다. ({{ app.abandoned_round || app.round_id || app.round }}차 포기)</p>
-            <div v-if="docUrl || app.abandoned_doc_url" class="mt-2 text-right">
-              <a :href="docUrl || app.abandoned_doc_url" target="_blank" class="text-rose-600 underline font-bold">📄 업로드된 포기원 문서 보기</a>
+            <div class="mt-2 flex items-center justify-end gap-3 flex-wrap">
+              <a v-if="docUrl || app.abandoned_doc_url" :href="docUrl || app.abandoned_doc_url" target="_blank" class="text-rose-600 underline font-bold">📄 업로드된 포기원 문서 보기</a>
+              <button
+                type="button"
+                @click="printAbandonmentForm({ ...app, name: studentName })"
+                class="px-2.5 py-1 text-xs font-bold text-rose-700 bg-rose-100 hover:bg-rose-200 rounded-lg border border-rose-300 cursor-pointer"
+              >🖨️ 포기원 인쇄</button>
             </div>
           </div>
           <div v-else-if="isAbandonRequested" class="space-y-1.5">
             <p>⚠️ <strong>추천 포기 신청 대기 건:</strong> 학생이 추천 포기 신청서(포기원)를 작성 및 서명 제출했습니다. 관리자의 최종 승인 및 처리 대기 상태입니다. ({{ app.round_id || app.round }}차 신청)</p>
-            <div v-if="app.scanned_doc_url" class="mt-2 text-right">
-              <a :href="typeof app.scanned_doc_url === 'string' ? JSON.parse(app.scanned_doc_url).doc_url : app.scanned_doc_url.doc_url" target="_blank" class="text-rose-600 underline font-bold">📄 학생 제출 포기원 서류 보기</a>
+            <div class="mt-2 flex items-center justify-end gap-3 flex-wrap">
+              <a v-if="app.scanned_doc_url && (typeof app.scanned_doc_url === 'string' ? (JSON.parse(app.scanned_doc_url).doc_url) : app.scanned_doc_url.doc_url)" :href="typeof app.scanned_doc_url === 'string' ? JSON.parse(app.scanned_doc_url).doc_url : app.scanned_doc_url.doc_url" target="_blank" class="text-rose-600 underline font-bold">📄 학생 제출 포기원 서류 보기</a>
+              <button
+                type="button"
+                @click="printAbandonmentForm({ ...app, name: studentName })"
+                class="px-2.5 py-1 text-xs font-bold text-rose-700 bg-rose-100 hover:bg-rose-200 rounded-lg border border-rose-300 cursor-pointer"
+              >🖨️ 포기원 인쇄</button>
             </div>
           </div>
           <div v-else-if="app.excluded || app.is_excluded">
@@ -176,6 +186,7 @@ import {
 } from '../../api/teacher.js'
 import { promoteNextEligibleStudent } from '../../api/admin.js'
 import { convertPdfToImages, analyzeDocumentWithAI } from '../../utils/ocrParser.js'
+import { printAbandonmentForm } from '../../utils/printTemplates.js'
 
 const baseUrl = import.meta.env.BASE_URL || '/'
 
