@@ -3460,7 +3460,7 @@ export const importRegionalRecommendations = async (file) => {
     throw new Error('엑셀 파일에 시트가 존재하지 않습니다.')
   }
 
-  // 1. 시트(Sheet) 범용 자동 선택 (시트 이름에 구애받지 않고 유효 컬럼 수가 가장 많은 시트 선택)
+  // 1. 시트(Sheet) 범용 자동 선택 (유효 컬럼 수가 가장 많은 시트 선택)
   let targetSheetName = workbook.SheetNames[0]
   let maxScore = -1
 
@@ -3473,9 +3473,9 @@ export const importRegionalRecommendations = async (file) => {
     let hasRelevantHeader = false
 
     for (let i = 0; i < Math.min(matrix.length, 10); i++) {
-      const row = matrix[i].map(c => String(c).trim().replace(/\s+/g, ''))
+      const row = (matrix[i] || []).map(c => String(c || '').trim().replace(/\s+/g, ''))
       if (row.length > colCount) colCount = row.length
-      if (row.some(cell => cell.includes('대학명') || cell.includes('전형명') || cell === '대학' || cell === '전형')) {
+      if (row.some(cell => cell.includes('대학명') || cell.includes('전형명') || cell === '대학' || cell === '전형' || cell.includes('지역'))) {
         hasRelevantHeader = true
       }
     }
@@ -3489,84 +3489,98 @@ export const importRegionalRecommendations = async (file) => {
 
   const worksheet = workbook.Sheets[targetSheetName]
 
-  // 1. 헤더 행(Header Row) 스마트 자동 탐색
+  // 2. 2D 매트릭스 형태로 시트 데이터 추출
   const sheetMatrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
   if (!sheetMatrix || sheetMatrix.length === 0) {
     throw new Error('엑셀 파일에 데이터가 없습니다.')
   }
 
+  // 3. 헤더 행(Header Row) 스마트 자동 탐색
   let headerRowIndex = 0
   for (let i = 0; i < Math.min(sheetMatrix.length, 10); i++) {
-    const rowCells = sheetMatrix[i].map(c => String(c).trim().replace(/\s+/g, ''))
-    if (rowCells.some(cell => cell.includes('대학명') || cell.includes('전형명') || cell === '대학' || cell === '전형')) {
+    const rowCells = (sheetMatrix[i] || []).map(c => String(c || '').trim().replace(/\s+/g, ''))
+    if (rowCells.some(cell => cell.includes('대학명') || cell.includes('전형명') || cell === '대학' || cell === '전형' || cell.includes('지역'))) {
       headerRowIndex = i
       break
     }
   }
 
-  // 헤더 행 컬럼 위치(인덱스) 분석
-  const headerCells = (sheetMatrix[headerRowIndex] || []).map(c => String(c).trim().replace(/[\s_\-\(\)\[\]\/\,\.]/g, '').toLowerCase())
-  let catColIdx = -1
-  let trackColIdx = -1
-  for (let ci = 0; ci < headerCells.length; ci++) {
-    const h = headerCells[ci]
-    if (catColIdx === -1 && (h.includes('전형구분') || h.includes('전형유형') || h.includes('전형분류') || h.includes('선발유형') || h.includes('교과종합') || (h.includes('구분') && !h.includes('졸업')) || (h === '유형') || (h === '전형' && ci < 3))) {
-      catColIdx = ci
+  // 4. 헤더 행 컬럼 인덱스 분석
+  const headerRow = sheetMatrix[headerRowIndex] || []
+  let colIdxRegion = -1      // Column A (0)
+  let colIdxUniv = -1        // Column B (1)
+  let colIdxCategory = -1    // Column C (2) - 전형구분 (교과/종합)
+  let colIdxTrack = -1       // Column D (3) - 전형명
+  let colIdxQuota = -1       // Column E (4) - 인원제한
+  let colIdxGrad = -1        // Column F (5) - 졸업년도조건
+  let colIdxCsat = -1        // Column G (6) - 수능최저
+  let colIdxElig = -1        // Column H (7) - 본교지원가능여부
+  let colIdxRemarks = -1     // Column I (8) - 사전마감여부
+
+  for (let ci = 0; ci < headerRow.length; ci++) {
+    const h = String(headerRow[ci] || '').trim().replace(/[\s_\-\(\)\[\]\/\,\.]/g, '').toLowerCase()
+    if (!h) continue
+
+    if (colIdxRegion === -1 && (h.includes('지역') || h.includes('권역') || h.includes('소재지'))) {
+      colIdxRegion = ci
+    } else if (colIdxUniv === -1 && (h.includes('대학명') || h.includes('대학교') || h === '대학' || h.includes('학교명'))) {
+      colIdxUniv = ci
+    } else if (colIdxCategory === -1 && (h.includes('전형구분') || h.includes('전형유형') || h.includes('교과종합') || h.includes('선발유형') || h.includes('선발구분') || h.includes('모집구분') || (h.includes('구분') && !h.includes('졸업')) || h === '유형' || (h === '전형' && ci < 3))) {
+      colIdxCategory = ci
+    } else if (colIdxTrack === -1 && (h.includes('전형명') || h.includes('세부전형') || h.includes('모집단위') || (h === '전형' && ci >= 3))) {
+      colIdxTrack = ci
+    } else if (colIdxQuota === -1 && (h.includes('인원제한') || h.includes('추천인원') || h.includes('제한인원') || h.includes('정원') || h.includes('인원'))) {
+      colIdxQuota = ci
+    } else if (colIdxGrad === -1 && (h.includes('졸업') || h.includes('재학생'))) {
+      colIdxGrad = ci
+    } else if (colIdxCsat === -1 && (h.includes('수능') || h.includes('최저'))) {
+      colIdxCsat = ci
+    } else if (colIdxElig === -1 && (h.includes('본교') || h.includes('지원가능') || h.includes('자격') || h.includes('대상'))) {
+      colIdxElig = ci
+    } else if (colIdxRemarks === -1 && (h.includes('마감') || h.includes('비고') || h.includes('사전'))) {
+      colIdxRemarks = ci
     }
-    if (trackColIdx === -1 && (h.includes('전형명') || h.includes('세부전형') || (h === '전형' && ci >= 3))) {
-      trackColIdx = ci
-    }
-  }
-  // 기본 표준 9컬럼 포맷인 경우 (0: 지역, 1: 대학명, 2: 전형구분, 3: 전형명...)
-  if (catColIdx === -1 && headerCells.length >= 4) {
-    catColIdx = 2
   }
 
-  // 헤더 행이 인식된 상태로 JSON 객체 변환
-  const rawRows = XLSX.utils.sheet_to_json(worksheet, { range: headerRowIndex, defval: '' })
-
-  if (!rawRows || rawRows.length === 0) {
-    throw new Error('엑셀 파일에 데이터 행이 존재하지 않습니다.')
-  }
+  // 기본 표준 위치 매핑 (구글 시트 9컬럼 기준: A=0, B=1, C=2, D=3, E=4, F=5, G=6, H=7, I=8)
+  if (colIdxRegion === -1) colIdxRegion = 0
+  if (colIdxUniv === -1) colIdxUniv = 1
+  if (colIdxCategory === -1) colIdxCategory = 2   // C컬럼 = 전형구분
+  if (colIdxTrack === -1) colIdxTrack = 3
+  if (colIdxQuota === -1) colIdxQuota = 4
+  if (colIdxGrad === -1) colIdxGrad = 5
+  if (colIdxCsat === -1) colIdxCsat = 6
+  if (colIdxElig === -1) colIdxElig = 7
+  if (colIdxRemarks === -1) colIdxRemarks = 8
 
   let lastRegion = ''
   let lastUnivName = ''
-  let lastQuota = ''
+  let lastCategory = ''
 
-  // 9개 지정 컬럼 유연 매핑 (A: 지역, B: 대학명, C: 전형구분, D: 전형명, E: 인원제한, F: 졸업년도조건, G: 수능최저학력기준, H: 본교지원가능여부, I: 사전마감여부)
+  // 5. 각 데이터 행 순회 파싱
   const mappedRows = []
-  for (let rIdx = 0; rIdx < rawRows.length; rIdx++) {
-    const row = rawRows[rIdx]
-    const matrixRow = sheetMatrix[headerRowIndex + 1 + rIdx] || []
+  for (let rIdx = headerRowIndex + 1; rIdx < sheetMatrix.length; rIdx++) {
+    const mRow = sheetMatrix[rIdx] || []
+    if (!mRow || mRow.length === 0) continue
 
-    let reg = getExcelRowValue(row, ['지역', '권역', '소재지'])
-    let rawUniv = getExcelRowValue(row, ['대학명', '대학', '학교명', '대학교'])
+    let reg = String(mRow[colIdxRegion] != null ? mRow[colIdxRegion] : '').trim()
+    let rawUniv = String(mRow[colIdxUniv] != null ? mRow[colIdxUniv] : '').trim()
     let univ = normalizeUnivName(rawUniv)
-    let category = getExcelRowValue(row, [
-      '전형구분', '전형 구분', '구분', '전형유형', '전형 유형', '유형', '전형분류', '전형 분류',
-      '선발유형', '선발 구분', '선발구분', '모집구분', '모집 구분', '교과종합', '교과/종합',
-      '전형(교과/종합)', '구분(교과/종합)', '전형방법', '계열'
-    ])
-    let track = getExcelRowValue(row, ['전형명', '전형 명', '전형', '세부전형', '전형 유형'])
-    let quotaLimit = normalizeQuotaLimitRaw(getExcelRowValue(row, ['인원제한', '인원 제한', '추천인원', '추천 인원', '추천 제한', '추천인원제한', '추천인원 제한', '제한인원']))
-    let gradCond = getExcelRowValue(row, ['졸업년도조건', '졸업년도 조건', '졸업생조건', '졸업생 조건', '졸업조건'])
-    let csatMin = getExcelRowValue(row, ['수능최저학력기준', '수능최저학력 기준', '수능최저', '수능 최저', '수능최저기준', '수능 최저학력기준', '수능 최저 기준'])
-    let schoolElig = getExcelRowValue(row, ['본교지원가능여부', '본교 지원가능여부', '본교지원가능 여부', '본교지원 여부', '본교지원가능', '지원가능여부', '대상', '지원자격'])
-    let preClose = getExcelRowValue(row, ['사전마감여부', '사전 마감여부', '사전마감 여부', '사전마감', '마감여부', '비고'])
+    let rawCat = String(mRow[colIdxCategory] != null ? mRow[colIdxCategory] : '').trim()
+    let track = String(mRow[colIdxTrack] != null ? mRow[colIdxTrack] : '').trim()
+    let quotaLimit = normalizeQuotaLimitRaw(String(mRow[colIdxQuota] != null ? mRow[colIdxQuota] : '').trim())
+    let gradCond = String(mRow[colIdxGrad] != null ? mRow[colIdxGrad] : '').trim()
+    let csatMin = String(mRow[colIdxCsat] != null ? mRow[colIdxCsat] : '').trim()
+    let schoolElig = String(mRow[colIdxElig] != null ? mRow[colIdxElig] : '').trim()
+    let preClose = String(mRow[colIdxRemarks] != null ? mRow[colIdxRemarks] : '').trim()
 
-    // 위치 기반 fallback 매핑
-    if (!category && catColIdx !== -1 && matrixRow[catColIdx] != null) {
-      category = String(matrixRow[catColIdx]).trim()
-    }
-    if (!track && trackColIdx !== -1 && matrixRow[trackColIdx] != null) {
-      track = String(matrixRow[trackColIdx]).trim()
-    }
-
-    // 전형구분(교과/종합) 정규화 및 전형명 기반 자동 추론
+    // C컬럼 전형구분 정규화: 구글 시트 C컬럼 값을 최우선으로 반영
+    let category = rawCat
     if (category) {
       if (category.includes('교과')) category = '교과'
       else if (category.includes('종합') || category.includes('학종')) category = '종합'
     } else if (track) {
+      // C컬럼이 비어있을 때만 D컬럼(전형명)에서 추론
       if (track.includes('학생부종합') || track.includes('종합') || track.includes('학종')) {
         category = '종합'
       } else if (track.includes('학생부교과') || track.includes('교과') || track.includes('지역균형') || track.includes('학교장') || track.includes('지균')) {
@@ -3576,24 +3590,23 @@ export const importRegionalRecommendations = async (file) => {
 
     if (!track && !univ) continue
 
-    // 엑셀 병합 셀 및 이전 행 대학명/지역 승계 처리
+    // 엑셀 병합 셀 및 이전 행 대학명/지역/구분 승계 처리
     if (univ) {
       lastUnivName = univ
       if (reg) lastRegion = reg
-      if (category) lastQuota = category
+      if (category) lastCategory = category
     } else if (track && lastUnivName) {
       univ = lastUnivName
       reg = reg || lastRegion
-      category = category || lastQuota
+      category = category || lastCategory
     }
 
-    // 제목/설명행이나 유효하지 않은 데이터 건너뛰기
     if (!univ || !track) continue
 
     mappedRows.push({
       region: reg,
       univ_name: univ,
-      recruitment_quota: category,
+      recruitment_quota: category, // C컬럼 값 저장
       track_name: track,
       quota_limit: quotaLimit,
       grad_condition: gradCond,
