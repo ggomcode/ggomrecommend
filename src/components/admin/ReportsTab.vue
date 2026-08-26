@@ -12,7 +12,19 @@
         </div>
 
         <!-- 우측 액션 버튼들 -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 flex-wrap">
+          <!-- 차수 선택 드롭다운 -->
+          <div class="flex items-center gap-2 bg-white px-3.5 py-2 rounded-xl border border-slate-300 shadow-sm">
+            <span class="text-xs font-bold text-slate-500 whitespace-nowrap">선택 차수:</span>
+            <select
+              v-model="selectedRoundFilter"
+              class="bg-transparent border-none text-xs font-black text-blue-700 focus:outline-none cursor-pointer pr-1"
+            >
+              <option value="all">전체 차수 (누적 종합)</option>
+              <option v-for="r in roundOptions" :key="r" :value="r">{{ r }}차 선발 결과</option>
+            </select>
+          </div>
+
           <button
             class="px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors"
             :disabled="loading"
@@ -48,7 +60,10 @@
         <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50/50 shrink-0">
           <div>
             <span class="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">{{ schoolName }}</span>
-            <h2 class="text-xl font-black text-slate-900" style="margin: 0;">학교장추천전형 추천 명단 및 현황</h2>
+            <h2 class="text-xl font-black text-slate-900" style="margin: 0;">
+              학교장추천전형 추천 명단 및 현황
+              <span class="text-blue-600 text-lg ml-1 font-bold">{{ roundLabelText }}</span>
+            </h2>
           </div>
           <div class="text-xs text-slate-500 font-medium">
             기준일시: {{ currentDate }}
@@ -73,7 +88,7 @@
                 <th class="p-3 font-bold whitespace-nowrap w-28">대학명</th>
                 <th class="p-3 font-bold whitespace-nowrap">모집단위 (전형명)</th>
                 <th class="p-3 font-bold whitespace-nowrap w-36">졸업년도 조건</th>
-                <th class="p-3 font-bold text-center w-24 whitespace-nowrap">추천 제한 정원</th>
+                <th class="p-3 font-bold text-center w-32 whitespace-nowrap">추천 제한 정원</th>
                 <th class="p-3 font-bold text-center w-28 whitespace-nowrap">추천 현황(지원)</th>
                 <th class="p-3 font-bold text-center w-16 whitespace-nowrap">(재학생)</th>
                 <th class="p-3 font-bold text-center w-16 whitespace-nowrap">(졸업생)</th>
@@ -92,8 +107,8 @@
                     {{ item.grad_condition || '제한없음' }}
                   </span>
                 </td>
-                <td class="p-3 text-center font-semibold text-slate-700">
-                  {{ formatQuotaDisplay(item.unit_quota, item.raw_quota_limit) }}
+                <td class="p-3 text-center font-semibold text-slate-800 whitespace-nowrap">
+                  {{ item.quota_display }}
                 </td>
                 <td class="p-3 text-center">
                   <div v-if="item.is_over_quota" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-100/80 text-rose-700 border border-rose-200 text-xs font-black">
@@ -162,7 +177,7 @@
         <div class="print-header-row">
           <div class="print-title-box">
             <div class="print-school-label">{{ schoolName }}</div>
-            <h1 class="print-main-title">학교장추천전형 결과 보고서</h1>
+            <h1 class="print-main-title">학교장추천전형 결과 보고서 {{ roundLabelText }}</h1>
             <div class="print-sub-desc">대입 학교장추천전형 추천 명단 및 정원 관리 종합 대장</div>
           </div>
 
@@ -225,7 +240,7 @@
                 <th style="width: 100px;">대학명</th>
                 <th style="width: 130px;">모집단위 (전형명)</th>
                 <th style="width: 90px;">졸업년도 조건</th>
-                <th style="width: 80px;">추천 정원</th>
+                <th style="width: 100px;">추천 정원</th>
                 <th style="width: 75px;">추천(지원)</th>
                 <th style="width: 50px;">재학생</th>
                 <th style="width: 50px;">졸업생</th>
@@ -244,7 +259,7 @@
                   <td class="font-extrabold text-blue-950">{{ item.univ_name }}</td>
                   <td class="font-bold text-slate-800">{{ item.track_name }}</td>
                   <td class="text-xs text-slate-600 leading-tight whitespace-pre-line">{{ item.grad_condition || '제한없음' }}</td>
-                  <td class="text-center font-bold">{{ formatQuotaDisplay(item.unit_quota, item.raw_quota_limit) }}</td>
+                  <td class="text-center font-bold whitespace-nowrap">{{ item.quota_display }}</td>
                   <td class="text-center font-extrabold" :class="item.is_over_quota ? 'text-rose-600' : 'text-blue-700'">
                     {{ item.unit_used }}명
                     <span v-if="item.is_over_quota" class="text-[10px] text-rose-500 block">({{ item.total_applied }}지원)</span>
@@ -262,7 +277,7 @@
                     <td :rowspan="getRoundGroups(item.students).length" class="font-extrabold text-blue-950 align-middle">{{ item.univ_name }}</td>
                     <td :rowspan="getRoundGroups(item.students).length" class="font-bold text-slate-800 align-middle">{{ item.track_name }}</td>
                     <td :rowspan="getRoundGroups(item.students).length" class="text-xs text-slate-600 leading-tight whitespace-pre-line align-middle">{{ item.grad_condition || '제한없음' }}</td>
-                    <td :rowspan="getRoundGroups(item.students).length" class="text-center font-bold align-middle">{{ formatQuotaDisplay(item.unit_quota, item.raw_quota_limit) }}</td>
+                    <td :rowspan="getRoundGroups(item.students).length" class="text-center font-bold align-middle whitespace-nowrap">{{ item.quota_display }}</td>
                     <td :rowspan="getRoundGroups(item.students).length" class="text-center font-extrabold align-middle" :class="item.is_over_quota ? 'text-rose-600' : 'text-blue-700'">
                       {{ item.unit_used }}명
                       <span v-if="item.is_over_quota" class="text-[10px] text-rose-500 block">({{ item.total_applied }}지원)</span>
@@ -310,7 +325,7 @@
         <div class="print-header-row print-detail-header-row">
           <div class="print-title-box">
             <div class="print-school-label">{{ schoolName }}</div>
-            <h1 class="print-main-title">학교장추천전형 결과 보고서</h1>
+            <h1 class="print-main-title">학교장추천전형 결과 보고서 {{ roundLabelText }}</h1>
             <div class="print-sub-desc">대입 학교장추천전형 추천 명단 및 정원 관리 대장 (전형별 상세)</div>
           </div>
         </div>
@@ -327,7 +342,7 @@
               </tr>
               <tr>
                 <th class="info-th">추천 제한 정원</th>
-                <td class="info-td font-bold">{{ formatQuotaDisplay(item.unit_quota, item.raw_quota_limit) }}</td>
+                <td class="info-td font-bold">{{ item.quota_display }}</td>
                 <th class="info-th">졸업년도 조건</th>
                 <td class="info-td font-bold text-slate-800">{{ item.grad_condition || '제한없음' }}</td>
               </tr>
@@ -341,7 +356,14 @@
                   <span class="info-sub" :class="item.is_over_quota ? 'text-rose-600 font-bold' : ''">
                     (재학생 지원: {{ item.enrolled_applied }}명 / 졸업생 지원: {{ item.grad_applied }}명)
                   </span>
-                  <span v-if="item.unit_quota != null" class="info-sub font-semibold text-slate-600"> | 잔여 정원: {{ item.remaining_quota }}명</span>
+                  <span v-if="item.unit_quota != null" class="info-sub font-semibold text-slate-600">
+                    <template v-if="selectedRoundFilter === 2 && item.remaining_after_prev !== null">
+                      | 1차 후 잔여: {{ item.remaining_after_prev }}명 / 2차 선발 후 잔여: {{ item.remaining_quota }}명
+                    </template>
+                    <template v-else>
+                      | 잔여 정원: {{ item.remaining_quota }}명
+                    </template>
+                  </span>
                 </td>
               </tr>
             </tbody>
@@ -427,12 +449,28 @@ const recommendedList = ref([])
 const allApplicantsMap = ref({})
 const studentMap = ref({})
 const gradConditionMap = ref({})
+const selectedRoundFilter = ref('all')
+
+const roundOptions = computed(() => {
+  const tr = Math.max(totalRounds.value || 1, 2)
+  const list = []
+  for (let i = 1; i <= tr; i++) {
+    list.push(i)
+  }
+  return list
+})
+
+const roundLabelText = computed(() => {
+  if (selectedRoundFilter.value === 'all') return '(전체)'
+  return `(${selectedRoundFilter.value}차 선발)`
+})
 
 /**
  * 표시용 인원 포맷 함수
- * raw_quota_limit이 %이면 '10명 (3%)' 형식, 아니면 '미지정' 또는 '무제한'
+ * raw_quota_limit이 %이면 '10명 (3%)' 형식, 2차 이상일 경우 '총 10명 (잔여 4명)' 형태로 총 제한 정원과 잔여정원을 함께 표시
  */
-function formatQuotaDisplay(unitQuota, rawQuotaLimit) {
+function formatQuotaDisplay(unitQuota, rawQuotaLimit, round = null, remainingAfterPrev = null) {
+  let baseStr = ''
   if (rawQuotaLimit) {
     const str = String(rawQuotaLimit).trim()
     const num = parseFloat(str)
@@ -446,17 +484,27 @@ function formatQuotaDisplay(unitQuota, rawQuotaLimit) {
     if (pct !== null) {
       const pctClean = parseFloat(pct.toPrecision(10))
       if (unitQuota != null && unitQuota > 0) {
-        return `${unitQuota}명 (${pctClean}%)`
-      }
-      if (disclosureCount.value) {
+        baseStr = `${unitQuota}명 (${pctClean}%)`
+      } else if (disclosureCount.value) {
         const calc = Math.ceil(disclosureCount.value * pct / 100)
-        return `${calc}명 (${pctClean}%)`
+        baseStr = `${calc}명 (${pctClean}%)`
+      } else {
+        baseStr = `${pctClean}%`
       }
-      return `${pctClean}%`
     }
   }
-  if (unitQuota != null) return `${unitQuota}명`
-  return '무제한'
+  if (!baseStr) {
+    baseStr = unitQuota != null ? `${unitQuota}명` : '무제한'
+  }
+
+  if (baseStr === '무제한' || unitQuota == null) return '무제한'
+
+  // 2차 이상일 때 총 제한 정원과 이전 차수 후 잔여 정원을 함께 표시
+  if (round && round >= 2 && remainingAfterPrev !== null) {
+    return `총 ${baseStr} (잔여 ${remainingAfterPrev}명)`
+  }
+
+  return baseStr
 }
 
 /**
@@ -466,14 +514,35 @@ function formatQuotaDisplay(unitQuota, rawQuotaLimit) {
 const flatStats = computed(() => {
   const list = []
   const normKey = s => (s || '').trim().toLowerCase().replace(/\s+/g, '')
+  const curRound = selectedRoundFilter.value === 'all' ? null : Number(selectedRoundFilter.value)
   
   for (const u of (stats.value || [])) {
     for (const t of (u.tracks || [])) {
-      // 해당 트랙에 배정된 현 상황 추천 대상 학생들
-      const trackApps = recommendedList.value.filter(ap => ap.univ_id === t.track_id)
       const allTrackApps = allApplicantsMap.value[t.track_id] || []
-      
+      const allTrackRecs = recommendedList.value.filter(ap => ap.univ_id === t.track_id)
       const hasQuota = t.unit_quota != null
+
+      // 이전 차수(1차 등)에서 선발된 인원 계산
+      let prevUsedCount = 0
+      if (curRound && curRound >= 2) {
+        prevUsedCount = allTrackRecs.filter(ap => {
+          const r = ap.recommended_round || ap.round || 1
+          return r < curRound
+        }).length
+      }
+
+      const remainingAfterPrev = hasQuota ? Math.max(0, t.unit_quota - prevUsedCount) : null
+
+      // 현재 선택된 차수 기준 추천 대상 학생들
+      let trackApps = []
+      if (!curRound) {
+        trackApps = allTrackRecs
+      } else {
+        trackApps = allTrackRecs.filter(ap => {
+          const r = ap.recommended_round || ap.round || 1
+          return r === curRound
+        })
+      }
       
       // 정원제한이 있는 경우 추천 순위 순, 없는 경우 학번순 정렬
       trackApps.sort((a, b) => {
@@ -521,11 +590,16 @@ const flatStats = computed(() => {
 
       const usedCount = studentsArray.length
 
-      // 전체 지원자 통계 (재학생/졸업생 지원수)
-      let totalApplied = allTrackApps.length
+      // 전체 지원자 통계 (재학생/졸업생 지원수, 차수 필터 적용)
+      let relevantAppliedApps = allTrackApps
+      if (curRound) {
+        relevantAppliedApps = allTrackApps.filter(ap => (ap.round || 1) === curRound)
+      }
+
+      let totalApplied = relevantAppliedApps.length
       let enrolledApplied = 0
       let gradApplied = 0
-      for (const ap of allTrackApps) {
+      for (const ap of relevantAppliedApps) {
         const stInfo = studentMap.value[ap.student_id] || {}
         const isGrad = stInfo.is_graduated || (!stInfo.grade && stInfo.grad_year)
         if (isGrad) gradApplied++
@@ -533,12 +607,15 @@ const flatStats = computed(() => {
       }
 
       // 추천 제한 인원이 있는 경우, 지원수(재학생+졸업생)가 제한 인원을 넘었는지 여부
-      const isOverQuota = hasQuota && t.unit_quota > 0 && totalApplied > t.unit_quota
+      const effectiveQuota = curRound && curRound >= 2 ? (remainingAfterPrev ?? 0) : (t.unit_quota ?? 0)
+      const isOverQuota = hasQuota && effectiveQuota > 0 && totalApplied > effectiveQuota
 
       // 졸업년도 조건 매핑 (1순위: 대학_전형 정확 매칭, 2순위: 대학명 fallback)
       const uNorm = normKey(u.univ_name)
       const tNorm = normKey(t.track_name)
       const gradCond = gradConditionMap.value[`${uNorm}__${tNorm}`] || gradConditionMap.value[uNorm] || ''
+
+      const quotaDisplay = formatQuotaDisplay(t.unit_quota, t.raw_quota_limit, curRound, remainingAfterPrev)
 
       list.push({
         univ_name: u.univ_name,
@@ -548,6 +625,9 @@ const flatStats = computed(() => {
         grad_condition: gradCond,
         unit_quota: t.unit_quota,
         raw_quota_limit: t.raw_quota_limit ?? null,
+        quota_display: quotaDisplay,
+        prev_used: prevUsedCount,
+        remaining_after_prev: remainingAfterPrev,
         unit_used: usedCount,
         enrolled_used: enrolledCount,
         grad_used: gradCount,
@@ -555,7 +635,7 @@ const flatStats = computed(() => {
         enrolled_applied: enrolledApplied,
         grad_applied: gradApplied,
         is_over_quota: isOverQuota,
-        remaining_quota: t.unit_quota != null ? Math.max(0, t.unit_quota - usedCount) : null,
+        remaining_quota: hasQuota ? Math.max(0, (remainingAfterPrev ?? t.unit_quota) - usedCount) : null,
         students: studentsArray
       })
     }
@@ -588,11 +668,13 @@ const displayedStats = computed(() => {
 })
 
 const totalAppliedStats = computed(() => {
+  const curRound = selectedRoundFilter.value === 'all' ? null : Number(selectedRoundFilter.value)
   const studentSet = new Set()
   let cases = 0
   for (const trackId in (allApplicantsMap.value || {})) {
     const list = allApplicantsMap.value[trackId] || []
     for (const ap of list) {
+      if (curRound && (ap.round || 1) !== curRound) continue
       if (ap.student_id) studentSet.add(ap.student_id)
       cases++
     }
@@ -633,7 +715,6 @@ const totalRecommendedStats = computed(() => {
     enrolledCases,
     gradStudents: gradSet.size,
     gradCases,
-    // 레거시/단일 숫자 호환
     total: totalCases,
     enrolled: enrolledCases,
     grad: gradCases
@@ -797,11 +878,13 @@ async function loadData() {
 async function downloadExcel() {
   downloading.value = true
   try {
-    const blob = await exportQuotaStats(true)
+    const roundParam = selectedRoundFilter.value === 'all' ? null : Number(selectedRoundFilter.value)
+    const blob = await exportQuotaStats(roundParam)
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `학교장추천전형_추천명단_및_정원소진현황_${new Date().toISOString().slice(0, 10)}.xlsx`
+    const roundStr = selectedRoundFilter.value === 'all' ? '전체' : `${selectedRoundFilter.value}차`
+    a.download = `학교장추천전형_${roundStr}_추천명단_및_정원현황_${new Date().toISOString().slice(0, 10)}.xlsx`
     a.click()
     window.URL.revokeObjectURL(url)
   } catch (e) {

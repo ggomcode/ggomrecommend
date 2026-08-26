@@ -65,36 +65,36 @@
     <div class="rounded-xl overflow-hidden mb-4"
       style="background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
       <div class="overflow-x-auto">
-        <table class="w-full" style="border-collapse: collapse; table-layout: fixed; min-width: 880px;">
+        <table class="w-full" style="border-collapse: collapse; table-layout: fixed; min-width: 1020px;">
           <colgroup>
+            <col style="width: 210px;">
             <col style="width: 170px;">
-            <col style="width: 150px;">
-            <col style="width: 160px;">
+            <col style="width: 210px;">
             <col style="width: 220px;">
             <col>
           </colgroup>
           <thead>
             <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-              <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">시각</th>
-              <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">행위자</th>
-              <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">행위</th>
-              <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">대상</th>
-              <th class="text-base font-semibold text-left" style="padding: 14px 20px; color: #475569;">상세</th>
+              <th class="text-sm font-semibold text-left" style="padding: 14px 16px; color: #475569;">시각</th>
+              <th class="text-sm font-semibold text-left" style="padding: 14px 16px; color: #475569;">행위자</th>
+              <th class="text-sm font-semibold text-left" style="padding: 14px 16px; color: #475569;">행위</th>
+              <th class="text-sm font-semibold text-left" style="padding: 14px 16px; color: #475569;">대상</th>
+              <th class="text-sm font-semibold text-left" style="padding: 14px 16px; color: #475569;">상세</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in auditPage.rows" :key="row.id"
               class="hover:bg-slate-50"
               style="border-bottom: 1px solid #f1f5f9; transition: background 0.1s;">
-              <td class="text-base font-mono" style="padding: 13px 20px; color: #475569; white-space: nowrap;">{{ fmtDt(row.at || row.created_at) }}</td>
-              <td class="text-base font-semibold" style="padding: 13px 20px; color: #1e293b; white-space: nowrap;">{{ row.actor_name || fmtActor(row) }}</td>
-              <td style="padding: 13px 20px; white-space: nowrap;">
+              <td class="text-sm font-mono text-slate-600" style="padding: 13px 16px; white-space: nowrap;">{{ fmtDt(row.at || row.created_at) }}</td>
+              <td class="text-sm font-semibold text-slate-800" style="padding: 13px 16px; white-space: nowrap;">{{ row.actor_name || fmtActor(row) }}</td>
+              <td style="padding: 13px 16px; white-space: nowrap;">
                 <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                   {{ AUDIT_ACTION_LABELS[row.action] || row.action }}
                 </span>
               </td>
-              <td class="text-base font-medium" style="padding: 13px 20px; color: #1e293b;">{{ row.target_name || fmtTarget(row.detail) || '-' }}</td>
-              <td class="text-base" style="padding: 13px 20px; color: #64748b;">{{ row.details_text || fmtDetail(row) }}</td>
+              <td class="text-sm font-medium text-slate-800" style="padding: 13px 16px;">{{ row.target_name || fmtTarget(row.detail) || '-' }}</td>
+              <td class="text-sm text-slate-600" style="padding: 13px 16px; word-break: break-all;">{{ row.details_text || fmtDetail(row) }}</td>
             </tr>
             <tr v-if="auditPage.rows.length === 0">
               <td colspan="5" class="text-base text-center" style="padding: 48px 20px; color: #94a3b8;">
