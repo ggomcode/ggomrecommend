@@ -14,11 +14,11 @@
         <!-- 우측 액션 버튼들 -->
         <div class="flex items-center gap-3 flex-wrap">
           <!-- 차수 선택 드롭다운 -->
-          <div class="h-[38px] flex items-center gap-2 bg-white px-3.5 rounded-xl border border-slate-300 shadow-sm box-border">
+          <div class="h-[38px] flex items-center gap-2.5 bg-white px-4 rounded-xl border border-slate-300 shadow-sm box-border">
             <span class="text-xs font-bold text-slate-500 whitespace-nowrap">선택 차수:</span>
             <select
               v-model="selectedRoundFilter"
-              class="bg-transparent border-none text-xs font-black text-blue-700 focus:outline-none cursor-pointer pr-1 py-0 leading-tight"
+              class="bg-transparent border-none text-xs font-black text-blue-700 focus:outline-none cursor-pointer pr-3 py-0 leading-tight min-w-[76px]"
             >
               <option value="all">전체</option>
               <option v-for="r in roundOptions" :key="r" :value="r">{{ r }}차 선발</option>
@@ -132,18 +132,18 @@
                 </td>
                 <!-- 1. 추천 학생 (학번 / 성명) -->
                 <td class="p-3 text-left font-medium text-slate-800 whitespace-nowrap" style="min-width: 140px;">
-                  <div v-if="item.students && item.students.length > 0" class="flex flex-col gap-1.5">
-                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap flex items-center gap-1.5 h-6">
+                  <div v-if="item.students && item.students.length > 0" class="flex flex-col gap-1">
+                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap flex items-center gap-1.5 h-5 leading-5 text-xs">
                       <span class="font-mono text-slate-600">{{ std.student_code }}</span>
                       <span class="font-bold text-slate-900">{{ std.name }}</span>
                     </div>
                   </div>
                   <span v-else class="text-slate-400">-</span>
                 </td>
-                <!-- 2. 지원 / 선발 구분 버튼 -->
-                <td class="p-3 text-center whitespace-nowrap" style="min-width: 90px;">
-                  <div v-if="item.students && item.students.length > 0" class="flex flex-col items-center gap-1.5">
-                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap flex items-center justify-center h-6">
+                <!-- 2. 지원 / 선발 구분 (일반 텍스트) -->
+                <td class="p-3 text-center whitespace-nowrap" style="min-width: 80px;">
+                  <div v-if="item.students && item.students.length > 0" class="flex flex-col items-center gap-1">
+                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap flex items-center justify-center h-5 leading-5 text-xs">
                       <span :class="getStudentRoundBadge(std).class">
                         {{ getStudentRoundBadge(std).text }}
                       </span>
@@ -152,9 +152,9 @@
                   <span v-else class="text-slate-400">-</span>
                 </td>
                 <!-- 3. 순위 / 등급 -->
-                <td class="p-3 text-center whitespace-nowrap" style="min-width: 120px;">
-                  <div v-if="item.students && item.students.length > 0" class="flex flex-col items-center gap-1.5">
-                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap flex items-center justify-center h-6 text-slate-600 text-[11px]">
+                <td class="p-3 text-center whitespace-nowrap" style="min-width: 110px;">
+                  <div v-if="item.students && item.students.length > 0" class="flex flex-col items-center gap-1">
+                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap flex items-center justify-center h-5 leading-5 text-xs text-slate-600">
                       <span v-if="item.unit_quota != null" class="font-semibold text-slate-800">
                         {{ std.rank }}위<span v-if="std.score_text && std.score_text !== '-'" class="text-slate-500 font-normal ml-1">({{ std.score_text }})</span>
                       </span>
@@ -311,14 +311,14 @@
                   <td class="text-center font-medium align-middle">{{ item.grad_used > 0 ? item.grad_used + '명' : '-' }}</td>
                   <!-- 1. 추천 학생 (학번/성명) -->
                   <td class="text-left text-xs py-1">
-                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap my-0.5 leading-tight flex items-center gap-1">
+                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap leading-5 h-5 flex items-center gap-1">
                       <span class="font-mono text-slate-600">{{ std.student_code }}</span>
                       <strong class="text-slate-900">{{ std.name }}</strong>
                     </div>
                   </td>
-                  <!-- 2. 지원 / 선발 배지 -->
+                  <!-- 2. 지원 / 선발 (일반 텍스트) -->
                   <td class="text-center text-xs py-1">
-                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap my-0.5 leading-tight flex items-center justify-center">
+                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap leading-5 h-5 flex items-center justify-center">
                       <span :class="getStudentRoundBadge(std).class" style="print-color-adjust: exact; -webkit-print-color-adjust: exact;">
                         {{ getStudentRoundBadge(std).text }}
                       </span>
@@ -326,7 +326,7 @@
                   </td>
                   <!-- 3. 순위 / 등급 -->
                   <td class="text-center text-xs py-1">
-                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap my-0.5 leading-tight text-slate-600">
+                    <div v-for="std in item.students" :key="std.id || std.student_code" class="whitespace-nowrap leading-5 h-5 flex items-center justify-center text-slate-600">
                       <span v-if="item.unit_quota != null" class="font-semibold text-slate-800">
                         {{ std.rank }}위<span v-if="std.score_text && std.score_text !== '-'" class="text-slate-500 font-normal ml-0.5">({{ std.score_text }})</span>
                       </span>
@@ -500,7 +500,7 @@ function getStudentRoundBadge(std) {
     return {
       type: 'selected',
       text: `${roundNum}차 선발`,
-      class: 'text-emerald-700 font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block'
+      class: 'text-emerald-700 font-bold text-xs'
     }
   }
 
@@ -510,14 +510,14 @@ function getStudentRoundBadge(std) {
       return {
         type: 'applied',
         text: `${roundNum}차 지원`,
-        class: 'text-indigo-700 font-bold text-[10px] bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-block'
+        class: 'text-indigo-600 font-medium text-xs'
       }
     } else {
       // 선정 협의일(eval_date)이 지난 후 -> 선발 확정
       return {
         type: 'selected',
         text: `${roundNum}차 선발`,
-        class: 'text-emerald-700 font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block'
+        class: 'text-emerald-700 font-bold text-xs'
       }
     }
   }
@@ -527,14 +527,14 @@ function getStudentRoundBadge(std) {
     return {
       type: 'selected',
       text: `${roundNum}차 선발`,
-      class: 'text-emerald-700 font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block'
+      class: 'text-emerald-700 font-bold text-xs'
     }
   }
 
   return {
     type: 'applied',
     text: `${roundNum}차 지원`,
-    class: 'text-indigo-700 font-bold text-[10px] bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-block'
+    class: 'text-indigo-600 font-medium text-xs'
   }
 }
 
