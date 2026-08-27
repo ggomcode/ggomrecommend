@@ -542,22 +542,22 @@
                 <td class="p-2.5 font-bold text-slate-800 sticky left-32 z-20 bg-white group-hover:bg-slate-50! border-b border-b-slate-100 border-r border-r-slate-200" style="min-width: 130px; max-width: 130px;">{{ r.univ_name }}</td>
                 <td class="p-2.5 text-center">
                   <span
-                    v-if="getCategoryDisplay(r) === '교과'"
+                    v-if="r.recruitment_quota === '교과'"
                     class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
                   >
                     교과
                   </span>
                   <span
-                    v-else-if="getCategoryDisplay(r) === '종합'"
+                    v-else-if="r.recruitment_quota === '종합'"
                     class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
                   >
                     종합
                   </span>
                   <span
-                    v-else-if="getCategoryDisplay(r)"
+                    v-else-if="r.recruitment_quota"
                     class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
                   >
-                    {{ getCategoryDisplay(r) }}
+                    {{ r.recruitment_quota }}
                   </span>
                   <span v-else class="text-slate-400">-</span>
                 </td>
@@ -1069,22 +1069,7 @@ function formatQuotaLimit(rawVal) {
   return str
 }
 
-/**
- * 전형구분 표시용 텍스트/추론 함수
- */
-function getCategoryDisplay(r) {
-  if (!r) return ''
-  const val = String(r.recruitment_quota || '').trim()
-  if (val && val !== '-' && val !== '—') {
-    if (val.includes('교과')) return '교과'
-    if (val.includes('종합') || val.includes('학종')) return '종합'
-    return val
-  }
-  const track = String(r.track_name || '').trim()
-  if (track.includes('학생부종합') || track.includes('종합') || track.includes('학종')) return '종합'
-  if (track.includes('학생부교과') || track.includes('교과') || track.includes('지역균형') || track.includes('학교장') || track.includes('지균')) return '교과'
-  return val && val !== '-' && val !== '—' ? val : ''
-}
+
 
 const selectedUnivRegionalInfo = computed(() => {
   if (!selectedUnivId.value) return []

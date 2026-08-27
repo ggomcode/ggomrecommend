@@ -122,22 +122,22 @@
                   <td class="font-bold bg-white group-hover:bg-slate-50! cursor-pointer text-blue-600 hover:underline" style="position: sticky; left: 140px; z-index: 20; padding: 12px 14px; width: 160px; min-width: 160px; max-width: 160px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;" @click="openEditRegionalModal(r)">{{ r.univ_name }}</td>
                   <td style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">
                     <span
-                      v-if="getCategoryDisplay(r) === '교과'"
+                      v-if="r.recruitment_quota === '교과'"
                       class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200"
                     >
                       교과
                     </span>
                     <span
-                      v-else-if="getCategoryDisplay(r) === '종합'"
+                      v-else-if="r.recruitment_quota === '종합'"
                       class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200"
                     >
                       종합
                     </span>
                     <span
-                      v-else-if="getCategoryDisplay(r)"
+                      v-else-if="r.recruitment_quota"
                       class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200"
                     >
-                      {{ getCategoryDisplay(r) }}
+                      {{ r.recruitment_quota }}
                     </span>
                     <span v-else class="text-slate-400">-</span>
                   </td>
@@ -178,9 +178,9 @@
             <span class="text-slate-500 block mb-0.5 font-medium">전형구분</span>
             <span
               class="text-sm font-bold"
-              :class="getCategoryDisplay(editRegionalModal.form) === '종합' ? 'text-purple-700' : 'text-blue-700'"
+              :class="editRegionalModal.form.recruitment_quota === '종합' ? 'text-purple-700' : 'text-blue-700'"
             >
-              {{ getCategoryDisplay(editRegionalModal.form) || '미지정' }}
+              {{ editRegionalModal.form.recruitment_quota || '미지정' }}
             </span>
           </div>
           <div>
@@ -430,24 +430,7 @@ function formatQuotaLimit(rawVal) {
   return str
 }
 
-/**
- * 전형구분 표시용 텍스트/추론 함수
- * - DB 값(recruitment_quota) 우선
- * - 비어있을 경우 전형명(track_name)에서 교과/종합 자동 추출
- */
-function getCategoryDisplay(r) {
-  if (!r) return ''
-  const val = String(r.recruitment_quota || '').trim()
-  if (val && val !== '-' && val !== '—') {
-    if (val.includes('교과')) return '교과'
-    if (val.includes('종합') || val.includes('학종')) return '종합'
-    return val
-  }
-  const track = String(r.track_name || '').trim()
-  if (track.includes('학생부종합') || track.includes('종합') || track.includes('학종')) return '종합'
-  if (track.includes('학생부교과') || track.includes('교과') || track.includes('지역균형') || track.includes('학교장') || track.includes('지균')) return '교과'
-  return val && val !== '-' && val !== '—' ? val : ''
-}
+
 
 const selectedUnivId  = ref(null)
 const addingUniv      = ref(false)

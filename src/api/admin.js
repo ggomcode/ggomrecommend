@@ -3579,11 +3579,18 @@ export const importRegionalRecommendations = async (file) => {
     if (category) {
       if (category.includes('교과')) category = '교과'
       else if (category.includes('종합') || category.includes('학종')) category = '종합'
-    } else if (track) {
-      // C컬럼이 비어있을 때만 D컬럼(전형명)에서 추론
-      if (track.includes('학생부종합') || track.includes('종합') || track.includes('학종')) {
+      else if (/^\d+/.test(category)) category = '' // 숫자가 들어간 경우 전형명에서 추론
+    }
+    if (!category && track) {
+      // C컬럼이 비어있을 때 D컬럼(전형명) 및 대학명에서 추론
+      if (
+        track.includes('학생부종합') || track.includes('학종') ||
+        track.includes('서류') || track.includes('면접') ||
+        track.includes('활동우수') || track.includes('국제형') ||
+        (univ.includes('서울대') && track.includes('지역균형'))
+      ) {
         category = '종합'
-      } else if (track.includes('학생부교과') || track.includes('교과') || track.includes('지역균형') || track.includes('학교장') || track.includes('지균')) {
+      } else {
         category = '교과'
       }
     }
