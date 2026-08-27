@@ -542,22 +542,22 @@
                 <td class="p-2.5 font-bold text-slate-800 sticky left-32 z-20 bg-white group-hover:bg-slate-50! border-b border-b-slate-100 border-r border-r-slate-200" style="min-width: 130px; max-width: 130px;">{{ r.univ_name }}</td>
                 <td class="p-2.5 text-center">
                   <span
-                    v-if="r.recruitment_quota === '교과'"
+                    v-if="getCategory(r) === '교과'"
                     class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
                   >
                     교과
                   </span>
                   <span
-                    v-else-if="r.recruitment_quota === '종합'"
+                    v-else-if="getCategory(r) === '종합'"
                     class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
                   >
                     종합
                   </span>
                   <span
-                    v-else-if="r.recruitment_quota"
+                    v-else-if="getCategory(r)"
                     class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
                   >
-                    {{ r.recruitment_quota }}
+                    {{ getCategory(r) }}
                   </span>
                   <span v-else class="text-slate-400">-</span>
                 </td>
@@ -1069,7 +1069,25 @@ function formatQuotaLimit(rawVal) {
   return str
 }
 
+function getCategory(r) {
+  if (!r) return ''
+  const q = String(r.recruitment_quota || '').trim()
+  if (q.includes('교과')) return '교과'
+  if (q.includes('종합') || q.includes('학종')) return '종합'
+  if (q && q !== '-' && q !== '—' && !/^\d+$/.test(q)) return q
 
+  // DB에 recruitment_quota가 아직 없는 기존 데이터인 경우 전형명(track_name)에서 자동 감지
+  const t = String(r.track_name || '').trim()
+  const u = String(r.univ_name || '').trim()
+  if (
+    t.includes('학생부종합') || t.includes('학종') || t.includes('종합') ||
+    t.includes('서류') || t.includes('면접') || t.includes('활동우수') || t.includes('국제형') ||
+    (u.includes('서울대') && t.includes('지역균형'))
+  ) {
+    return '종합'
+  }
+  return t ? '교과' : ''
+}
 
 const selectedUnivRegionalInfo = computed(() => {
   if (!selectedUnivId.value) return []
