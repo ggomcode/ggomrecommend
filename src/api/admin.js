@@ -3808,24 +3808,62 @@ export const syncRegionalToUniversities = async () => {
     // 1단계 요강 대상/졸업생 조건 파싱 (재학생만/지원불가 -> 재학생 우선 설정)
     const prioritizeEnrolled = target.includes('재학생만') || target === '재학생' || gradCond.includes('지원불가') || gradCond.includes('불가')
 
+    // 전형구분 (교과/종합) 판별 - 구글 시트 C컬럼(recruitment_quota)을 최우선으로 반영
+    const catVal = String(r.recruitment_quota || '').trim()
+    let determinedTrackType = '교과'
+    if (catVal) {
+      if (catVal.includes('교과')) {
+        determinedTrackType = '교과'
+      } else if (catVal.includes('종합') || catVal.includes('학종')) {
+        determinedTrackType = '종합'
+      } else {
+        determinedTrackType = catVal
+      }
+    } else {
+      // C컬럼이 비어있는 경우에만 전형명(trackName)에서 추론
+      if (
+        trackName.includes('학생부종합') || trackName.includes('학종') || trackName.includes('종합') ||
+        trackName.includes('서류') || trackName.includes('면접') || trackName.includes('활동우수') || trackName.includes('국제형') ||
+        (univName.includes('서울대') && trackName.includes('지역균형'))
+      ) {
+        determinedTrackType = '종합'
+      } else {
+        determinedTrackType = '교과'
+      }
+    }
+
     if (existing) {
-      // 이미 등록된 항목: % 타입이거나 unit_quota 수치가 달라진 경우 업데이트
-      const needsQuotaUpdate = isPercentType || existing.quota_limit === 0 || existing.quota_limit !== quotaLimit
+      const updates = {}
+      // 1) track_type 동기화 (구글 시트 C컬럼 반영)
+      if (existing.track_type !== determinedTrackType) {
+        updates.track_type = determinedTrackType
+      }
+      // 2) 인원제한 (unit_quota, raw_quota_limit)
+      const needsQuotaUpdate = isPercentType || existing.unit_quota !== quotaLimit || (isPercentType && existing.raw_quota_limit !== rawQuota)
       if (needsQuotaUpdate) {
-        await updateUniversity(existing.id, {
-          unit_quota: quotaLimit,
-          raw_quota_limit: isPercentType ? rawQuota : (existing.raw_quota_limit ?? null),
-        })
+        updates.unit_quota = quotaLimit
+        updates.raw_quota_limit = isPercentType ? rawQuota : (existing.raw_quota_limit ?? null)
+      }
+      // 3) 수능최저 (csat_min)
+      const newCsat = r.csat_min || 'X'
+      if (existing.csat_min !== newCsat) {
+        updates.csat_min = newCsat
+      }
+      // 4) 졸업생 지원가능 여부 (grad_allowed)
+      const newGradAllowed = !gradCond.includes('지원불가')
+      if (existing.grad_allowed !== newGradAllowed) {
+        updates.grad_allowed = newGradAllowed
+      }
+      // 5) 재학생 우선 여부 (prioritize_enrolled)
+      if (existing.prioritize_enrolled !== prioritizeEnrolled) {
+        updates.prioritize_enrolled = prioritizeEnrolled
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await updateUniversity(existing.id, updates)
         updatedCount++
       }
       continue
-    }
-
-    // 전형구분 (교과/종합) 판별
-    const catVal = String(r.recruitment_quota || '').trim()
-    let determinedTrackType = '교과'
-    if (catVal.includes('종합') || catVal.includes('학종') || trackName.includes('학생부종합') || trackName.includes('종합')) {
-      determinedTrackType = '종합'
     }
 
     // 2단계 universities 테이블에 자동 등록
@@ -3841,7 +3879,7 @@ export const syncRegionalToUniversities = async () => {
       grad_allowed: !gradCond.includes('지원불가'),
     })
 
-    existingMap.set(key, { quota_limit: quotaLimit })
+    existingMap.set(key, { quota_limit: quotaLimit, track_type: determinedTrackType })
     count++
   }
 
