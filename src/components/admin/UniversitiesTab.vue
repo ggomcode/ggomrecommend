@@ -973,7 +973,8 @@ async function saveEditRegionalRow() {
   editRegionalModal.value.saving = true
   try {
     await updateRegionalRecommendation(f.id, f)
-    await loadRegionalRecs()
+    await syncRegionalToUniversities()
+    await Promise.all([loadRegionalRecs(), loadUnivs(), loadQuotaStats()])
     editRegionalModal.value.isEditing = false
     await dialog.alert({ title: '수정 완료', message: `${f.univ_name} (${f.track_name}) 정보가 성공적으로 수정되었습니다.` })
   } catch (e) {
