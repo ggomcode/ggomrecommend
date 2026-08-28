@@ -2593,6 +2593,7 @@ export const getQuotaStats = async () => {
       id: u.id,
       track_id: u.id,
       track_name: u.track_name || key,
+      track_type: u.track_type || '',
       unit_quota: unitQuota,
       raw_quota_limit: rawQuotaLimit,   // 원본 regional % 텍스트 ("3%" 등)
       unit_used: recommendedCount,
@@ -2784,11 +2785,12 @@ export const exportQuotaStats = async (param = null) => {
       const gradUsed = selectedRound ? (currentGradUsedMap[t.track_id] || 0) : t.grad_used
       const trackRemaining = t.unit_quota !== null ? Math.max(0, (remainingAfterPrev ?? t.unit_quota) - unitUsed) + '명' : '무제한'
 
+      const displayTrackName = t.track_type ? `(${t.track_type}) ${t.track_name}` : t.track_name
       rows.push([
         '',
         '',
         u.univ_name,
-        `  └ ${t.track_name}`,
+        `  └ ${displayTrackName}`,
         formatExcelQuota(t.unit_quota, t.raw_quota_limit, remainingAfterPrev),
         unitUsed > 0 ? unitUsed + '명' : '-',
         enrolledUsed > 0 ? enrolledUsed + '명' : '-',

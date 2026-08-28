@@ -86,7 +86,7 @@
               <tr class="bg-slate-100 text-slate-700 border-b-2 border-slate-300">
                 <th class="p-3 font-bold w-10 text-center">No</th>
                 <th class="p-3 font-bold whitespace-nowrap w-28">대학명</th>
-                <th class="p-3 font-bold whitespace-nowrap">모집단위 (전형명)</th>
+                <th class="p-3 font-bold whitespace-nowrap">모집단위</th>
                 <th class="p-3 font-bold whitespace-nowrap w-36">졸업년도 조건</th>
                 <th class="p-3 font-bold text-center w-32 whitespace-nowrap">추천 제한 정원</th>
                 <th class="p-3 font-bold text-center w-28 whitespace-nowrap">추천 현황(지원)</th>
@@ -103,7 +103,7 @@
                 <td class="p-3 font-bold text-slate-900 whitespace-nowrap w-28">
                   <span class="text-sm font-extrabold text-blue-950">{{ item.univ_name }}</span>
                 </td>
-                <td class="p-3 font-bold text-slate-800 text-sm whitespace-nowrap">{{ item.track_name }}</td>
+                <td class="p-3 font-bold text-slate-800 text-sm whitespace-nowrap">{{ item.display_track_name || item.track_name }}</td>
                 <td class="p-3 text-slate-600 text-xs whitespace-pre-line font-medium leading-tight">
                   <span :class="item.grad_condition && item.grad_condition.includes('재학생') ? 'text-amber-700 font-semibold' : 'text-slate-600'">
                     {{ item.grad_condition || '제한없음' }}
@@ -262,7 +262,7 @@
               <tr>
                 <th style="width: 28px;">No</th>
                 <th style="width: 95px;">대학명</th>
-                <th style="width: 120px;">모집단위 (전형명)</th>
+                <th style="width: 120px;">모집단위</th>
                 <th style="width: 85px;">졸업년도 조건</th>
                 <th style="width: 90px;">추천 정원</th>
                 <th style="width: 65px;">추천(지원)</th>
@@ -282,7 +282,7 @@
                 <tr v-if="!item.students || item.students.length === 0" :class="item.is_over_quota ? 'bg-rose-50/40' : ''">
                   <td class="text-center font-medium text-slate-500">{{ item.no }}</td>
                   <td class="font-extrabold text-blue-950">{{ item.univ_name }}</td>
-                  <td class="font-bold text-slate-800">{{ item.track_name }}</td>
+                  <td class="font-bold text-slate-800">{{ item.display_track_name || item.track_name }}</td>
                   <td class="text-xs text-slate-600 leading-tight whitespace-pre-line">{{ item.grad_condition || '제한없음' }}</td>
                   <td class="text-center font-bold whitespace-nowrap">{{ item.quota_display }}</td>
                   <td class="text-center font-extrabold" :class="item.is_over_quota ? 'text-rose-600' : 'text-blue-700'">
@@ -300,7 +300,7 @@
                 <tr v-else :class="item.is_over_quota ? 'bg-rose-50/40' : ''">
                   <td class="text-center font-medium text-slate-500 align-middle">{{ item.no }}</td>
                   <td class="font-extrabold text-blue-950 align-middle">{{ item.univ_name }}</td>
-                  <td class="font-bold text-slate-800 align-middle">{{ item.track_name }}</td>
+                  <td class="font-bold text-slate-800 align-middle">{{ item.display_track_name || item.track_name }}</td>
                   <td class="text-xs text-slate-600 leading-tight whitespace-pre-line align-middle">{{ item.grad_condition || '제한없음' }}</td>
                   <td class="text-center font-bold align-middle whitespace-nowrap">{{ item.quota_display }}</td>
                   <td class="text-center font-extrabold align-middle" :class="item.is_over_quota ? 'text-rose-600' : 'text-blue-700'">
@@ -364,8 +364,8 @@
               <tr>
                 <th class="info-th">대 학 명</th>
                 <td class="info-td font-extrabold text-blue-950">{{ item.univ_name }}</td>
-                <th class="info-th">모집단위 (전형명)</th>
-                <td class="info-td font-extrabold">{{ item.track_name }}</td>
+                <th class="info-th">모집단위</th>
+                <td class="info-td font-extrabold">{{ item.display_track_name || item.track_name }}</td>
               </tr>
               <tr>
                 <th class="info-th">추천 제한 정원</th>
@@ -704,11 +704,15 @@ const flatStats = computed(() => {
       const gradCond = gradConditionMap.value[`${uNorm}__${tNorm}`] || gradConditionMap.value[uNorm] || ''
 
       const quotaDisplay = formatQuotaDisplay(t.unit_quota, t.raw_quota_limit, curRound, remainingAfterPrev)
+      const trackType = String(t.track_type || '').trim()
+      const displayTrackName = trackType ? `(${trackType}) ${t.track_name}` : t.track_name
 
       list.push({
         univ_name: u.univ_name,
         region: u.region,
         track_name: t.track_name,
+        track_type: trackType,
+        display_track_name: displayTrackName,
         track_id: t.track_id,
         grad_condition: gradCond,
         unit_quota: t.unit_quota,
