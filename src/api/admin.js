@@ -3499,7 +3499,10 @@ export const importRegionalRecommendations = async (file) => {
   let headerRowIndex = 0
   for (let i = 0; i < Math.min(sheetMatrix.length, 10); i++) {
     const rowCells = (sheetMatrix[i] || []).map(c => String(c || '').trim().replace(/\s+/g, ''))
-    if (rowCells.some(cell => cell.includes('대학명') || cell.includes('전형명') || cell === '대학' || cell === '전형' || cell.includes('지역'))) {
+    const matchCount = rowCells.filter(cell => 
+      cell.includes('대학') || cell.includes('전형') || cell.includes('지역') || cell.includes('인원') || cell.includes('구분')
+    ).length
+    if (matchCount >= 2) {
       headerRowIndex = i
       break
     }
@@ -3574,7 +3577,6 @@ export const importRegionalRecommendations = async (file) => {
     let schoolElig = String(mRow[colIdxElig] != null ? mRow[colIdxElig] : '').trim()
     let preClose = String(mRow[colIdxRemarks] != null ? mRow[colIdxRemarks] : '').trim()
 
-    // C컬럼 전형구분: 구글 시트 C컬럼 값을 그대로 반영
     let category = rawCat
 
     if (!track && !univ) continue
@@ -3583,7 +3585,10 @@ export const importRegionalRecommendations = async (file) => {
     if (univ) {
       lastUnivName = univ
       if (reg) lastRegion = reg
+      else reg = lastRegion
+
       if (category) lastCategory = category
+      else category = lastCategory
     } else if (track && lastUnivName) {
       univ = lastUnivName
       reg = reg || lastRegion
@@ -3631,7 +3636,7 @@ export const importRegionalRecommendations = async (file) => {
 
   // 1단계 엑셀 업로드 직후 2단계 정원 목록 백그라운드 자동 동기화
   try {
-    await syncRegionalToUniversities()
+    await syncRegionalToUniversities(sortedRows)
   } catch (e) {
     console.warn('Auto sync to universities failed:', e)
   }
@@ -3645,12 +3650,13 @@ export const syncPrincipalUnivsFromGoogleSheet = async (sheetId) => {
   }
 
   const cleanId = sheetId.trim()
+  const timestamp = Date.now()
   let file = null
 
-  // 1. XLSX 바이너리 내보내기 시도 (구글 시트 사본 및 원본 일괄 대응)
+  // 1. XLSX 바이너리 내보내기 시도 (캐시 방지 헤더 및 타임스탬프 적용)
   try {
-    const xlsxUrl = `https://docs.google.com/spreadsheets/d/${cleanId}/export?format=xlsx`
-    const res = await fetch(xlsxUrl)
+    const xlsxUrl = `https://docs.google.com/spreadsheets/d/${cleanId}/export?format=xlsx&_t=${timestamp}`
+    const res = await fetch(xlsxUrl, { cache: 'no-store' })
     if (res.ok) {
       const buffer = await res.arrayBuffer()
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
@@ -3662,8 +3668,8 @@ export const syncPrincipalUnivsFromGoogleSheet = async (sheetId) => {
 
   // 2. CSV 내보내기 폴백 시도
   if (!file) {
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${cleanId}/export?format=csv`
-    const res = await fetch(csvUrl)
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${cleanId}/export?format=csv&_t=${timestamp}`
+    const res = await fetch(csvUrl, { cache: 'no-store' })
     if (!res.ok) {
       throw new Error(`구글 스프레드시트를 불러올 수 없습니다. (상태 코드: ${res.status}). 구글 시트 공유 설정이 '링크가 있는 모든 사용자에게 공개(웹에 게시 또는 링크 보기 가능)' 상태인지 확인하세요.`)
     }
@@ -3675,10 +3681,16 @@ export const syncPrincipalUnivsFromGoogleSheet = async (sheetId) => {
   return await importRegionalRecommendations(file)
 }
 
-export const syncRegionalToUniversities = async () => {
+function makeUnivMatchKey(univName, trackName) {
+  const normU = normalizeUnivName(univName || '').replace(/\s+/g, '')
+  const normT = String(trackName || '').trim().replace(/\s+/g, '')
+  return `${normU}__${normT}`
+}
+
+export const syncRegionalToUniversities = async (customRows = null) => {
   if (!supabase) return { count: 0 }
 
-  const regionalRows = await getRegionalRecommendations()
+  const regionalRows = customRows || await getRegionalRecommendations()
   if (!regionalRows || regionalRows.length === 0) {
     throw new Error('등록된 학교장 추천전형 모집요강 데이터가 없습니다. 먼저 상단의 [학교장 전형 DB 동기화] (구글 시트 동기화) 버튼을 클릭해 주세요.')
   }
@@ -3687,20 +3699,20 @@ export const syncRegionalToUniversities = async () => {
   const disclosureCount = await getDisclosureCount()
   const percentWarnings = []
 
-  // 기존 등록된 2단계 대학/모집단위 조회 (이름 → id 맵핑용)
+  // 기존 등록된 2단계 대학/모집단위 조회 (정규화 매칭 키 맵핑)
   const { data: existingUnivs } = await supabase.from('universities').select('*')
   const existingMap = new Map(
-    (existingUnivs || []).map(u => [`${u.univ_name.trim()}__${u.track_name.trim()}`, u])
+    (existingUnivs || []).map(u => [makeUnivMatchKey(u.univ_name, u.track_name), u])
   )
 
   let count = 0
   let updatedCount = 0
   for (const r of regionalRows) {
-    const univName = (r.univ_name || '').trim()
+    const univName = normalizeUnivName((r.univ_name || '').trim())
     const trackName = (r.track_name || '').trim()
     if (!univName || !trackName) continue
 
-    const key = `${univName}__${trackName}`
+    const matchKey = makeUnivMatchKey(univName, trackName)
 
     // 1단계 요강 대상/마감 조건 파싱
     const target = String(r.target_students || '').trim()
@@ -3712,7 +3724,7 @@ export const syncRegionalToUniversities = async () => {
     const isClosed = remarks.includes('마감')
     const isBlocked = isTargetX || isClosed
 
-    const existing = existingMap.get(key)
+    const existing = existingMap.get(matchKey)
 
     // 지원 불가 또는 사전 마감 항목인 경우
     if (isBlocked) {
@@ -3726,7 +3738,7 @@ export const syncRegionalToUniversities = async () => {
         if (!appCount || appCount === 0) {
           try {
             await deleteUniversity(existing.id)
-            existingMap.delete(key)
+            existingMap.delete(matchKey)
           } catch (_) { }
         }
       }
@@ -3735,13 +3747,10 @@ export const syncRegionalToUniversities = async () => {
     }
 
     // 1단계 요강 인원제한 파싱
-    // - "12명" → 12, "없음"/"제한없음" → null (무제한)
-    // - "3%", "11%" 등 % 문자열 → 정보공시 재학생 수 × 비율, 소수점 올림
-    // - "0.03", "0.11" 등 0<n<1 소수 → % 처리 (엑셀 서식 셀 원본 보존 경로 대비)
     let quotaLimit = null
     let rawQuota = String(r.quota_limit || '').trim()
 
-    // 스마트 % 탐색 fallback: quota_limit에 %가 없더라도 target_students나 remarks에 %가 있으면 % 복원
+    // 스마트 % 탐색 fallback
     if (!rawQuota.includes('%')) {
       const decimalNum = parseFloat(rawQuota)
       const isDecimalPercent = !isNaN(decimalNum) && decimalNum > 0 && decimalNum < 1
@@ -3760,26 +3769,22 @@ export const syncRegionalToUniversities = async () => {
     let isPercentType = false
 
     if (rawQuota && !rawQuota.includes('없음') && !rawQuota.includes('제한없음') && !rawQuota.includes('무제한')) {
-      // 퍼센트 판별: 명시적 % 기호 OR 0<n<1 소수
       const pctMatch = rawQuota.match(/^(\d+(?:\.\d+)?)\s*%$/) || rawQuota.match(/(\d+(?:\.\d+)?)\s*%/)
       const decimalNum = parseFloat(rawQuota)
       const isDecimalPercent = !isNaN(decimalNum) && decimalNum > 0 && decimalNum < 1 && !rawQuota.includes('%')
 
       if (pctMatch || isDecimalPercent) {
         isPercentType = true
-        // % 형태: 정보공시 인원 기준으로 환산
         const pct = pctMatch ? parseFloat(pctMatch[1]) : decimalNum * 100
         if (!isNaN(pct)) {
           if (disclosureCount != null) {
             quotaLimit = Math.ceil(disclosureCount * pct / 100)
             rawQuota = `${parseFloat(pct.toPrecision(10))}%`
           } else {
-            // 정보공시 인원 미설정 → 무제한으로 처리, 경고 목록에 추가
             percentWarnings.push(`${univName} (${trackName}): ${rawQuota} → 정보공시 인원 미설정으로 무제한 처리`)
           }
         }
       } else {
-        // 일반 숫자 형태 ("12명", "5" 등)
         const numMatch = rawQuota.match(/\d+/)
         if (numMatch) {
           quotaLimit = parseInt(numMatch[0], 10)
@@ -3834,13 +3839,13 @@ export const syncRegionalToUniversities = async () => {
       track_type: determinedTrackType,
       total_quota: null,
       unit_quota: quotaLimit,
-      raw_quota_limit: isPercentType ? rawQuota : null,  // % 타입이면 원본 텍스트 보존
+      raw_quota_limit: isPercentType ? rawQuota : null,
       prioritize_enrolled: prioritizeEnrolled,
       csat_min: r.csat_min || 'X',
       grad_allowed: !gradCond.includes('지원불가'),
     })
 
-    existingMap.set(key, { quota_limit: quotaLimit, track_type: determinedTrackType })
+    existingMap.set(matchKey, { quota_limit: quotaLimit, track_type: determinedTrackType })
     count++
   }
 
