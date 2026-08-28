@@ -354,7 +354,7 @@
                 <div v-for="info in selectedUnivRegionalInfo" :key="info.id || info.seq_no" class="space-y-1.5">
                   <div class="font-bold text-blue-700 dark:text-blue-300 flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-1">
                     <span>{{ info.univ_name }} - {{ info.track_name }}</span>
-                    <span class="text-[11px] text-slate-500 font-normal">구분: <span class="font-semibold text-blue-700 dark:text-blue-300">{{ getCategoryDisplay(info) || '—' }}</span> (제한: {{ formatQuotaLimit(info.quota_limit) || '—' }})</span>
+                    <span class="text-[11px] text-slate-500 font-normal">구분: <span class="font-semibold text-blue-700 dark:text-blue-300">{{ getCategory(info) || '—' }}</span> (제한: {{ formatQuotaLimit(info.quota_limit) || '—' }})</span>
                   </div>
                   <div v-if="info.grad_condition"><strong class="text-slate-700 dark:text-slate-300">졸업년도조건:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.grad_condition }}</span></div>
                   <div v-if="info.csat_min"><strong class="text-slate-700 dark:text-slate-300">수능최저:</strong> <span class="whitespace-pre-line text-slate-600 dark:text-slate-400">{{ info.csat_min }}</span></div>
@@ -1088,6 +1088,7 @@ function getCategory(r) {
   }
   return t ? '교과' : ''
 }
+const getCategoryDisplay = getCategory
 
 const selectedUnivRegionalInfo = computed(() => {
   if (!selectedUnivId.value) return []
