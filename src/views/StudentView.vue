@@ -1071,22 +1071,7 @@ function formatQuotaLimit(rawVal) {
 
 function getCategory(r) {
   if (!r) return ''
-  const q = String(r.recruitment_quota || '').trim()
-  if (q.includes('교과')) return '교과'
-  if (q.includes('종합') || q.includes('학종')) return '종합'
-  if (q && q !== '-' && q !== '—' && !/^\d+$/.test(q)) return q
-
-  // DB에 recruitment_quota가 아직 없는 기존 데이터인 경우 전형명(track_name)에서 자동 감지
-  const t = String(r.track_name || '').trim()
-  const u = String(r.univ_name || '').trim()
-  if (
-    t.includes('학생부종합') || t.includes('학종') || t.includes('종합') ||
-    t.includes('서류') || t.includes('면접') || t.includes('활동우수') || t.includes('국제형') ||
-    (u.includes('서울대') && t.includes('지역균형'))
-  ) {
-    return '종합'
-  }
-  return t ? '교과' : ''
+  return String(r.recruitment_quota || r.track_type || '').trim()
 }
 const getCategoryDisplay = getCategory
 

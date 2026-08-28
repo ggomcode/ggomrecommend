@@ -3574,26 +3574,8 @@ export const importRegionalRecommendations = async (file) => {
     let schoolElig = String(mRow[colIdxElig] != null ? mRow[colIdxElig] : '').trim()
     let preClose = String(mRow[colIdxRemarks] != null ? mRow[colIdxRemarks] : '').trim()
 
-    // C컬럼 전형구분 정규화: 구글 시트 C컬럼 값을 최우선으로 반영
+    // C컬럼 전형구분: 구글 시트 C컬럼 값을 그대로 반영
     let category = rawCat
-    if (category) {
-      if (category.includes('교과')) category = '교과'
-      else if (category.includes('종합') || category.includes('학종')) category = '종합'
-      else if (/^\d+/.test(category)) category = '' // 숫자가 들어간 경우 전형명에서 추론
-    }
-    if (!category && track) {
-      // C컬럼이 비어있을 때 D컬럼(전형명) 및 대학명에서 추론
-      if (
-        track.includes('학생부종합') || track.includes('학종') ||
-        track.includes('서류') || track.includes('면접') ||
-        track.includes('활동우수') || track.includes('국제형') ||
-        (univ.includes('서울대') && track.includes('지역균형'))
-      ) {
-        category = '종합'
-      } else {
-        category = '교과'
-      }
-    }
 
     if (!track && !univ) continue
 
@@ -3808,29 +3790,8 @@ export const syncRegionalToUniversities = async () => {
     // 1단계 요강 대상/졸업생 조건 파싱 (재학생만/지원불가 -> 재학생 우선 설정)
     const prioritizeEnrolled = target.includes('재학생만') || target === '재학생' || gradCond.includes('지원불가') || gradCond.includes('불가')
 
-    // 전형구분 (교과/종합) 판별 - 구글 시트 C컬럼(recruitment_quota)을 최우선으로 반영
-    const catVal = String(r.recruitment_quota || '').trim()
-    let determinedTrackType = '교과'
-    if (catVal) {
-      if (catVal.includes('교과')) {
-        determinedTrackType = '교과'
-      } else if (catVal.includes('종합') || catVal.includes('학종')) {
-        determinedTrackType = '종합'
-      } else {
-        determinedTrackType = catVal
-      }
-    } else {
-      // C컬럼이 비어있는 경우에만 전형명(trackName)에서 추론
-      if (
-        trackName.includes('학생부종합') || trackName.includes('학종') || trackName.includes('종합') ||
-        trackName.includes('서류') || trackName.includes('면접') || trackName.includes('활동우수') || trackName.includes('국제형') ||
-        (univName.includes('서울대') && trackName.includes('지역균형'))
-      ) {
-        determinedTrackType = '종합'
-      } else {
-        determinedTrackType = '교과'
-      }
-    }
+    // 전형구분: 구글 시트 C컬럼(recruitment_quota)의 값을 그대로 사용
+    const determinedTrackType = String(r.recruitment_quota || '').trim() || '교과'
 
     if (existing) {
       const updates = {}
