@@ -1277,4 +1277,252 @@ export function printAbandonmentForm(app, studentInfo = {}) {
 }
 
 
+// ========================================================================
+// 수능 미응시 확인서 & 수시 미접수 확인서 인쇄 템플릿
+// ========================================================================
 
+/**
+ * 공통 확인서 인쇄 스타일 (A4 세로)
+ */
+function getIntentFormStyles() {
+  return `
+    @page { size: A4 portrait; margin: 20mm 20mm 15mm 20mm; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Pretendard', '맑은 고딕', sans-serif; color: #111; font-size: 14px; line-height: 1.7; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { width: 100%; max-width: 700px; margin: 0 auto; padding: 0; position: relative; min-height: 900px; page-break-after: always; }
+    .page:last-child { page-break-after: avoid; }
+    .title { text-align: center; font-size: 22px; font-weight: 800; margin: 30px 0 30px 0; letter-spacing: 2px; }
+    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    .info-table th, .info-table td { border: 1px solid #333; padding: 8px 12px; font-size: 13px; }
+    .info-table th { background: #f3f4f6; font-weight: 700; text-align: center; width: 110px; }
+    .info-table td { text-align: center; }
+    .content-box { border: 2px solid #333; padding: 28px 24px; margin: 20px 0 24px 0; font-size: 14.5px; line-height: 2; text-align: justify; }
+    .reason-box { border: 1px solid #999; padding: 14px 18px; margin: 0 0 20px 0; font-size: 13px; min-height: 50px; }
+    .reason-label { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+    .date-line { text-align: center; font-size: 15px; font-weight: 600; margin: 28px 0 20px 0; }
+    .sig-table { width: 100%; border-collapse: collapse; margin: 0 auto 24px auto; max-width: 500px; }
+    .sig-table td { padding: 10px 16px; font-size: 14px; vertical-align: middle; }
+    .sig-table .label { font-weight: 700; text-align: right; width: 90px; white-space: nowrap; }
+    .sig-table .name-cell { text-align: left; min-width: 120px; }
+    .sig-table .sig-cell { text-align: right; min-width: 120px; font-size: 13px; color: #666; }
+    .sig-table .sig-cell img { max-height: 40px; vertical-align: middle; }
+    .footer-line { position: absolute; bottom: 0; left: 0; width: 100%; text-align: left; font-size: 14px; font-weight: 700; padding-top: 10px; border-top: 1px solid #ccc; }
+    @media screen { .page { border: 1px solid #ddd; padding: 40px; margin: 20px auto; box-shadow: 0 2px 12px rgba(0,0,0,0.1); } }
+  `
+}
+
+/**
+ * 날짜를 '2026년 8월 31일' 형태로 포맷
+ */
+function formatKoreanDate(dateStr) {
+  const d = dateStr ? new Date(dateStr) : new Date()
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`
+}
+
+/**
+ * 서명 이미지 HTML 생성
+ */
+function renderSig(sigUrl) {
+  if (sigUrl) return `<img src="${sigUrl}" style="max-height:40px; vertical-align:middle;" />`
+  return '(서명 또는 인)'
+}
+
+/**
+ * 2027학년도 대학수학능력시험 미응시 확인서 인쇄
+ * @param {object} student - { name, grade, class_no, student_no, student_code }
+ * @param {object} intentData - { csat_no_take_reason, student_signature, parent_signature, parent_name, confirmed_at }
+ */
+export function printCsatNoTakeForm(student, intentData = {}) {
+  const fullSchoolName = getFormattedSchoolName(schoolName)
+  const principalTitle = formatSchoolPrincipalTitle(schoolName)
+  const dateStr = formatKoreanDate(intentData.confirmed_at)
+  const reason = intentData.csat_no_take_reason || '(사유 미입력)'
+  const parentNameDisplay = intentData.parent_name || ''
+
+  const win = window.open('', '_blank')
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>수능 미응시 확인서</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <style>${getIntentFormStyles()}</style></head><body>
+  <div class="page">
+    <h1 class="title">2027학년도 대학수학능력시험 미응시 확인서</h1>
+
+    <table class="info-table">
+      <tr>
+        <th>학 교 명</th>
+        <td colspan="3">${fullSchoolName}</td>
+      </tr>
+      <tr>
+        <th>학년 / 반 / 번호</th>
+        <td>${student.grade || 3}학년 ${student.class_no || ''}반 ${student.student_no || ''}번</td>
+        <th>학 번</th>
+        <td>${student.student_code || ''}</td>
+      </tr>
+      <tr>
+        <th>성 명</th>
+        <td colspan="3" style="font-weight:700; font-size:15px;">${student.name || ''}</td>
+      </tr>
+    </table>
+
+    <div class="content-box">
+      위 학생은 <strong>2027학년도 대학수학능력시험</strong>에 응시하지 않음을 확인하며, 추후 본인의 미응시에 따른 모든 진학 관련 제반 사항에 대하여 충분히 인지하고 <strong>본인과 보호자의 동의</strong>하에 본 확인서를 제출합니다.
+    </div>
+
+    <div class="reason-label">▶ 미응시 사유:</div>
+    <div class="reason-box">${reason}</div>
+
+    <p class="date-line">${dateStr}</p>
+
+    <table class="sig-table">
+      <tr>
+        <td class="label">학 생 :</td>
+        <td class="name-cell">${student.name || ''}</td>
+        <td class="sig-cell">${renderSig(intentData.student_signature)}</td>
+      </tr>
+      <tr>
+        <td class="label">보호자 :</td>
+        <td class="name-cell">${parentNameDisplay}</td>
+        <td class="sig-cell">${renderSig(intentData.parent_signature)}</td>
+      </tr>
+      <tr>
+        <td class="label">담임교사 :</td>
+        <td class="name-cell"></td>
+        <td class="sig-cell">(서명 또는 인)</td>
+      </tr>
+    </table>
+
+    <div class="footer-line">${principalTitle}</div>
+  </div>
+
+  <script>window.onload=function(){window.print();window.close();}<\/script>
+  </body></html>`)
+  win.document.close()
+}
+
+/**
+ * 2027학년도 대입 수시모집 원서 미접수 확인서 인쇄
+ * @param {object} student - { name, grade, class_no, student_no, student_code }
+ * @param {object} intentData - { susi_no_apply_reason, student_signature, parent_signature, parent_name, confirmed_at }
+ */
+export function printSusiNoApplyForm(student, intentData = {}) {
+  const fullSchoolName = getFormattedSchoolName(schoolName)
+  const principalTitle = formatSchoolPrincipalTitle(schoolName)
+  const dateStr = formatKoreanDate(intentData.confirmed_at)
+  const reason = intentData.susi_no_apply_reason || '(사유 미입력)'
+  const parentNameDisplay = intentData.parent_name || ''
+
+  const win = window.open('', '_blank')
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>수시 미접수 확인서</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <style>${getIntentFormStyles()}</style></head><body>
+  <div class="page">
+    <h1 class="title">2027학년도 대입 수시모집 원서 미접수 확인서</h1>
+
+    <table class="info-table">
+      <tr>
+        <th>학 교 명</th>
+        <td colspan="3">${fullSchoolName}</td>
+      </tr>
+      <tr>
+        <th>학년 / 반 / 번호</th>
+        <td>${student.grade || 3}학년 ${student.class_no || ''}반 ${student.student_no || ''}번</td>
+        <th>학 번</th>
+        <td>${student.student_code || ''}</td>
+      </tr>
+      <tr>
+        <th>성 명</th>
+        <td colspan="3" style="font-weight:700; font-size:15px;">${student.name || ''}</td>
+      </tr>
+    </table>
+
+    <div class="content-box">
+      위 학생의 진로 및 진학에 대하여 충분히 상의하였으며, 이에 학생 및 보호자의 현재 의사에 따라 <strong>2027학년도 대학 진학을 위한 수시원서를 접수하지 않음</strong>을 본인과 학부모의 연서로 확인합니다.
+    </div>
+
+    <div class="reason-label">▶ 미접수 사유:</div>
+    <div class="reason-box">${reason}</div>
+
+    <p class="date-line">${dateStr}</p>
+
+    <table class="sig-table">
+      <tr>
+        <td class="label">학 생 :</td>
+        <td class="name-cell">${student.name || ''}</td>
+        <td class="sig-cell">${renderSig(intentData.student_signature)}</td>
+      </tr>
+      <tr>
+        <td class="label">보호자 :</td>
+        <td class="name-cell">${parentNameDisplay}</td>
+        <td class="sig-cell">${renderSig(intentData.parent_signature)}</td>
+      </tr>
+      <tr>
+        <td class="label">담임교사 :</td>
+        <td class="name-cell"></td>
+        <td class="sig-cell">(서명 또는 인)</td>
+      </tr>
+    </table>
+
+    <div class="footer-line">${principalTitle}</div>
+  </div>
+
+  <script>window.onload=function(){window.print();window.close();}<\/script>
+  </body></html>`)
+  win.document.close()
+}
+
+/**
+ * 학급별 일괄 연속 인쇄 (미응시/미접수 확인서)
+ * @param {Array} list - 대상 학생 배열 (각 항목: { student, intentData })
+ * @param {'csat'|'susi'} type - 'csat': 수능 미응시, 'susi': 수시 미접수
+ */
+export function printBatchIntentForms(list, type = 'csat') {
+  if (!list || list.length === 0) return
+
+  const fullSchoolName = getFormattedSchoolName(schoolName)
+  const principalTitle = formatSchoolPrincipalTitle(schoolName)
+  const isCsat = type === 'csat'
+
+  const title = isCsat
+    ? '2027학년도 대학수학능력시험 미응시 확인서'
+    : '2027학년도 대입 수시모집 원서 미접수 확인서'
+
+  const contentText = isCsat
+    ? '위 학생은 <strong>2027학년도 대학수학능력시험</strong>에 응시하지 않음을 확인하며, 추후 본인의 미응시에 따른 모든 진학 관련 제반 사항에 대하여 충분히 인지하고 <strong>본인과 보호자의 동의</strong>하에 본 확인서를 제출합니다.'
+    : '위 학생의 진로 및 진학에 대하여 충분히 상의하였으며, 이에 학생 및 보호자의 현재 의사에 따라 <strong>2027학년도 대학 진학을 위한 수시원서를 접수하지 않음</strong>을 본인과 학부모의 연서로 확인합니다.'
+
+  const pages = list.map(({ student, intentData }) => {
+    const dateStr = formatKoreanDate(intentData?.confirmed_at)
+    const reason = isCsat
+      ? (intentData?.csat_no_take_reason || '(사유 미입력)')
+      : (intentData?.susi_no_apply_reason || '(사유 미입력)')
+    const parentNameDisplay = intentData?.parent_name || ''
+
+    return `
+    <div class="page">
+      <h1 class="title">${title}</h1>
+      <table class="info-table">
+        <tr><th>학 교 명</th><td colspan="3">${fullSchoolName}</td></tr>
+        <tr><th>학년 / 반 / 번호</th><td>${student.grade || 3}학년 ${student.class_no || ''}반 ${student.student_no || ''}번</td><th>학 번</th><td>${student.student_code || ''}</td></tr>
+        <tr><th>성 명</th><td colspan="3" style="font-weight:700; font-size:15px;">${student.name || ''}</td></tr>
+      </table>
+      <div class="content-box">${contentText}</div>
+      <div class="reason-label">▶ ${isCsat ? '미응시' : '미접수'} 사유:</div>
+      <div class="reason-box">${reason}</div>
+      <p class="date-line">${dateStr}</p>
+      <table class="sig-table">
+        <tr><td class="label">학 생 :</td><td class="name-cell">${student.name || ''}</td><td class="sig-cell">${renderSig(intentData?.student_signature)}</td></tr>
+        <tr><td class="label">보호자 :</td><td class="name-cell">${parentNameDisplay}</td><td class="sig-cell">${renderSig(intentData?.parent_signature)}</td></tr>
+        <tr><td class="label">담임교사 :</td><td class="name-cell"></td><td class="sig-cell">(서명 또는 인)</td></tr>
+      </table>
+      <div class="footer-line">${principalTitle}</div>
+    </div>`
+  }).join('')
+
+  const win = window.open('', '_blank')
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title} (일괄)</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <style>${getIntentFormStyles()}</style></head><body>
+  ${pages}
+  <script>window.onload=function(){window.print();window.close();}<\/script>
+  </body></html>`)
+  win.document.close()
+}

@@ -1113,3 +1113,78 @@ ALTER TABLE public.student_rural_eligibility ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Enable all access to student_rural_eligibility" ON public.student_rural_eligibility;
 CREATE POLICY "Enable all access to student_rural_eligibility" ON public.student_rural_eligibility FOR ALL TO public USING (true) WITH CHECK (true);
 GRANT ALL ON TABLE public.student_rural_eligibility TO anon, authenticated, service_role;
+
+-- ================================================================
+-- 22. CSAT_REGISTRATION_RECORDS (대학수학능력시험 공식 응시원서 접수대장 원장)
+-- ================================================================
+CREATE TABLE IF NOT EXISTS public.csat_registration_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    upload_batch_time TIMESTAMP WITH TIME ZONE NOT NULL,          -- PDF 1페이지 좌측 하단 저장 일시 (예: 2026-08-31 11:33:00)
+    seq_no INT,                                                   -- 일련번호 (1 ~ 217)
+    receipt_no TEXT UNIQUE,                                       -- 접수번호 (6자리 고유 번호)
+    name TEXT NOT NULL,                                           -- 성명 (AES-256-GCM 가역 암호화)
+    name_hash TEXT,                                               -- 성명 SHA-256 해시 (대조 및 검색용)
+    resident_no TEXT NOT NULL,                                    -- 주민등록번호 (AES-256-GCM 가역 암호화)
+    resident_no_hash TEXT,                                        -- 주민등록번호 SHA-256 해시
+    gender TEXT,                                                  -- 성별 ('남자', '여자')
+    class_or_grad_year INT NOT NULL,                              -- 반(년): 재학생은 학급(1~11), 졸업생은 졸업연도(2026, 2025 등 1000 이상)
+    student_no INT,                                               -- 번호 (재학생 출석번호, 졸업생은 null)
+    student_code TEXT,                                            -- 재학생 자동 매칭 학번 (예: 30124, 30624)
+    is_enrolled BOOLEAN NOT NULL DEFAULT TRUE,                    -- 재학생 여부 (class_or_grad_year < 1000)
+    subject_korean TEXT,                                          -- 국어 ('화법과 작문', '언어와 매체', 'X')
+    subject_math TEXT,                                            -- 수학 ('확률과 통계', '미적분', '기하', 'X')
+    subject_english TEXT,                                         -- 영어 ('O', 'X')
+    subject_history TEXT,                                         -- 한국사 ('O', 'X')
+    inquiry_type TEXT,                                            -- 탐구 유형 ('사회탐구', '과학탐구', '사회·과학탐구', '직업탐구', '사회·직업탐구', '과학·직업탐구', 'X')
+    inquiry_subjects TEXT,                                        -- 탐구 선택과목 (예: '생활과 윤리 / 세계사', '사회·문화 / X', 'X / X')
+    foreign_language TEXT,                                        -- 제2외국어/한문 ('X', '일본어I', '한문I' 등)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_csat_records_batch_time ON public.csat_registration_records(upload_batch_time);
+CREATE INDEX IF NOT EXISTS idx_csat_records_code ON public.csat_registration_records(student_code);
+CREATE INDEX IF NOT EXISTS idx_csat_records_class ON public.csat_registration_records(class_or_grad_year, student_no);
+
+ALTER TABLE public.csat_registration_records ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable all access to csat_registration_records" ON public.csat_registration_records;
+CREATE POLICY "Enable all access to csat_registration_records" ON public.csat_registration_records FOR ALL TO public USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.csat_registration_records TO anon, authenticated, service_role;
+
+
+-- ================================================================
+-- 23. STUDENT_INTENT_SURVEYS (학생 수능 미응시 및 수시 미접수 자가 조사 원장)
+-- ================================================================
+CREATE TABLE IF NOT EXISTS public.student_intent_surveys (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID REFERENCES public.enrolled_students(id) ON DELETE CASCADE,
+    student_code TEXT NOT NULL UNIQUE,                            -- 학번 (예: 30105)
+    
+    -- 수능 응시 여부 조사
+    csat_intent TEXT NOT NULL DEFAULT 'TAKE' CHECK (csat_intent IN ('TAKE', 'NO_TAKE')), -- 수능 응시('TAKE') / 미응시('NO_TAKE')
+    csat_no_take_reason TEXT,                                     -- 수능 미응시 사유 (취업 준비, 군입대, 해외유학, 수시집중 등)
+    
+    -- 수시 접수 여부 조사
+    susi_intent TEXT NOT NULL DEFAULT 'APPLY' CHECK (susi_intent IN ('APPLY', 'NO_APPLY')), -- 수시 접수('APPLY') / 미접수('NO_APPLY')
+    susi_no_apply_reason TEXT,                                    -- 수시 미접수 사유 (정시 올인, 취업 준비, 재수 준비 등)
+    
+    -- 전자서명 및 확인 정보
+    student_signature TEXT,                                       -- 학생 모바일/PC 전자서명 (Base64 Data URL)
+    parent_signature TEXT,                                        -- 학부모 모바일/PC 전자서명 (Base64 Data URL)
+    parent_name TEXT,                                             -- 학부모 성명
+    is_form_submitted BOOLEAN NOT NULL DEFAULT FALSE,             -- 실물 확인서 담임 제출 완료 여부
+    confirmed_at TIMESTAMP WITH TIME ZONE,                        -- 학생 등록 완료 일시
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_intent_surveys_student_id ON public.student_intent_surveys(student_id);
+CREATE INDEX IF NOT EXISTS idx_intent_surveys_csat_intent ON public.student_intent_surveys(csat_intent);
+CREATE INDEX IF NOT EXISTS idx_intent_surveys_susi_intent ON public.student_intent_surveys(susi_intent);
+
+ALTER TABLE public.student_intent_surveys ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable all access to student_intent_surveys" ON public.student_intent_surveys;
+CREATE POLICY "Enable all access to student_intent_surveys" ON public.student_intent_surveys FOR ALL TO public USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.student_intent_surveys TO anon, authenticated, service_role;
+

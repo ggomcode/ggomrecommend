@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
+import { checkExamIntentSystemEnabled } from '../api/examIntentApi.js'
 
 const routes = [
   { path: '/', redirect: '/login' },
@@ -46,6 +47,16 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/exam-intent',
+    component: () => import('../views/ExamIntentStudentView.vue'),
+    meta: { requiresStudent: true },
+  },
+  {
+    path: '/exam-intent-manage',
+    component: () => import('../views/ExamIntentAdminView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/login',
   },
@@ -74,6 +85,15 @@ router.beforeEach(async to => {
   if (to.path === '/rural') {
     const status = await checkRuralSystemOpenStatus()
     if (status.isEnabled !== true) return '/select-system'
+  }
+
+  if (to.path === '/exam-intent' || to.path === '/exam-intent-manage') {
+    const isEnabled = await checkExamIntentSystemEnabled()
+    if (!isEnabled) return '/select-system'
+    // 학생인 경우 졸업생은 진입 차단
+    if (to.path === '/exam-intent' && auth.isStudent && !auth.isEnrolled) {
+      return '/select-system'
+    }
   }
 
   if (to.meta.requiresAuth && !auth.isAdmin && !auth.isTeacher && !auth.isStudent) return '/login'

@@ -388,7 +388,7 @@
         <div class="flex items-center justify-between gap-4">
           <div>
             <h2 class="text-base font-bold text-slate-800 dark:text-white mb-1 flex items-center gap-2">
-              <span class="w-1 h-3 bg-blue-600 rounded-full"></span>
+              <span class="w-1 h-3 bg-emerald-600 rounded-full"></span>
               농어촌 전형 시스템 활성화
             </h2>
             <p class="text-xs text-slate-400">
@@ -405,6 +405,33 @@
             <span
               class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
               :class="enableRuralSystem ? 'translate-x-5' : 'translate-x-0'"
+            />
+          </button>
+        </div>
+      </div>
+
+      <!-- 4-3. 수능 · 수시 응시 등록 시스템 활성화 -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-800 dark:text-white mb-1 flex items-center gap-2">
+              <span class="w-1 h-3 bg-violet-600 rounded-full"></span>
+              수능 · 수시 응시 등록 시스템 활성화
+            </h2>
+            <p class="text-xs text-slate-400">
+              재학생 대상 수능 미응시자 및 수시원서 미접수자 파악, 확인서 출력, 수능 접수대장 대조 시스템을 활성화합니다.
+            </p>
+          </div>
+          <button
+            type="button"
+            @click="toggleEnableExamIntentSystem"
+            :disabled="examIntentSystemLoading"
+            class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+            :class="enableExamIntentSystem ? 'bg-violet-600' : 'bg-slate-300 dark:bg-slate-700'"
+          >
+            <span
+              class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+              :class="enableExamIntentSystem ? 'translate-x-5' : 'translate-x-0'"
             />
           </button>
         </div>
@@ -525,6 +552,9 @@ const areaEditLoading = ref(false)
 const enableRuralSystem = ref(false)
 const ruralSystemLoading = ref(false)
 
+const enableExamIntentSystem = ref(true)
+const examIntentSystemLoading = ref(false)
+
 const susiApplyStartDate = ref('')
 const susiApplyEndDate = ref('')
 const susiPeriodLoading = ref(false)
@@ -616,6 +646,10 @@ async function loadConfig() {
     if (configMap['enable_rural_system']) {
       enableRuralSystem.value = configMap['enable_rural_system'] === 'true'
       localStorage.setItem('pcm_enable_rural_system', configMap['enable_rural_system'])
+    }
+    if (configMap['enable_exam_intent_system'] !== undefined) {
+      enableExamIntentSystem.value = configMap['enable_exam_intent_system'] === 'true'
+      localStorage.setItem('pcm_enable_exam_intent_system', configMap['enable_exam_intent_system'])
     }
 
     susiApplyStartDate.value = configMap['susi_apply_start_date'] || ''
@@ -813,6 +847,28 @@ async function toggleEnableRuralSystem() {
     }
   } else {
     ruralSystemLoading.value = false
+  }
+}
+
+async function toggleEnableExamIntentSystem() {
+  enableExamIntentSystem.value = !enableExamIntentSystem.value
+  examIntentSystemLoading.value = true
+  localStorage.setItem('pcm_enable_exam_intent_system', String(enableExamIntentSystem.value))
+  if (supabase) {
+    try {
+      const { error } = await supabase
+        .from('config')
+        .upsert({ key: 'enable_exam_intent_system', value: String(enableExamIntentSystem.value) }, { onConflict: 'key' })
+      if (error) throw error
+      alert(`수능 · 수시 응시 등록 시스템이 ${enableExamIntentSystem.value ? '활성화' : '비활성화'}되었습니다.`)
+    } catch (e) {
+      console.error(e)
+      alert('설정 저장 중 오류가 발생했습니다.')
+    } finally {
+      examIntentSystemLoading.value = false
+    }
+  } else {
+    examIntentSystemLoading.value = false
   }
 }
 

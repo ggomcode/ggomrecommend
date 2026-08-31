@@ -59,8 +59,8 @@
         </p>
       </div>
 
-      <!-- 시스템 선택 2개 카드 뷰 -->
-      <div :class="['grid gap-8 w-full', isRuralSystemEnabled ? 'grid-cols-1 md:grid-cols-2 max-w-4xl' : 'grid-cols-1 max-w-xl']">
+      <!-- 시스템 선택 카드 뷰 -->
+      <div :class="['grid gap-8 w-full', portalGridClass]">
         
         <!-- 카드 1: 학교장 추천자 선발 시스템 -->
         <div
@@ -188,6 +188,48 @@
             </svg>
           </div>
         </div>
+
+        <!-- 카드 3: 수능 미응시 및 수시 미접수 등록 시스템 (재학생/교사/관리자만 표시, 졸업생 미노출) -->
+        <div
+          v-if="showExamIntentCard"
+          @click="enterExamIntentSystem"
+          class="group relative bg-white rounded-3xl p-8 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-violet-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
+        >
+          <div class="absolute -top-20 -right-20 w-40 h-40 bg-violet-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
+
+          <div>
+            <div class="flex items-center justify-between mb-6">
+              <div class="w-16 h-16 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center group-hover:bg-violet-600 group-hover:text-white transition-all duration-300 shadow-sm border border-violet-100">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 5H2v7l6.29 6.29c.94.94 2.48.94 3.42 0l3.58-3.58c.94-.94.94-2.48 0-3.42L9 5Z"/>
+                  <path d="M6 9.01V9"/>
+                </svg>
+              </div>
+              <span class="px-3 py-1 rounded-full text-xs font-bold shadow-xs bg-violet-100 text-violet-800 border border-violet-200">
+                재학생 전수 조사
+              </span>
+            </div>
+
+            <div class="inline-block px-2.5 py-1 rounded-md text-xs font-extrabold bg-violet-100 text-violet-700 mb-3">
+              진학 관리
+            </div>
+
+            <h3 class="text-2xl font-bold text-slate-900 group-hover:text-violet-600 transition-colors mb-3">
+              수능 · 수시 응시 등록
+            </h3>
+            
+            <p class="text-sm text-slate-600 leading-relaxed">
+              수능 응시 여부 및 대학 수시원서 접수 여부 자가 등록, 미응시/미접수 확인서 출력 및 수능 접수대장 대조 관리를 수행합니다.
+            </p>
+          </div>
+
+          <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-violet-600">
+            <span>시스템 바로가기</span>
+            <svg class="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </div>
+        </div>
       </div>
     </main>
 
@@ -205,6 +247,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { checkRuralSystemOpenStatus, getRuralEligibilityList } from '../api/ruralApi'
+import { checkExamIntentSystemEnabled } from '../api/examIntentApi'
 import { supabase } from '../utils/supabaseClient'
 import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../utils/roundSchedule'
 import { dialog } from '../components/common/dialog'
@@ -217,6 +260,7 @@ const principalStatusText = ref('🟢 접수 진행 중')
 
 const isRuralSystemOpen = ref(true)
 const isRuralSystemEnabled = ref(false)
+const isExamIntentSystemEnabled = ref(false)
 const activeRuralTerm = ref('수시')
 const ruralClosedReason = ref('')
 const ruralPeriodState = ref('open')
@@ -258,11 +302,37 @@ const userSubInfo = computed(() => {
   return null
 })
 
+// 수능/수시 등록 시스템 카드 노출 여부 (시스템 활성화 && (재학생 + 교사 + 관리자만, 졸업생 미노출))
+const showExamIntentCard = computed(() => {
+  if (!isExamIntentSystemEnabled.value) return false
+  if (auth.isAdmin || auth.isTeacher) return true
+  if (auth.isStudent && auth.isEnrolled) return true
+  return false
+})
+
+// 그리드 레이아웃 클래스 (카드 수에 따라 동적 조정)
+const portalGridClass = computed(() => {
+  const cardCount = 1 + (isRuralSystemEnabled.value ? 1 : 0) + (showExamIntentCard.value ? 1 : 0)
+  if (cardCount >= 3) return 'grid-cols-1 md:grid-cols-3 max-w-6xl'
+  if (cardCount === 2) return 'grid-cols-1 md:grid-cols-2 max-w-4xl'
+  return 'grid-cols-1 max-w-xl'
+})
+
 function enterPrincipalSystem() {
   if (auth.isAdmin) router.push('/admin')
   else if (auth.isTeacher) router.push('/teacher')
   else if (auth.isStudent) router.push('/student')
   else router.push('/login')
+}
+
+async function enterExamIntentSystem() {
+  if (isPortalLoading.value) return
+  if (!isExamIntentSystemEnabled.value) {
+    await dialog.alert({ title: '시스템 이용 제한', message: '수능 · 수시 응시 등록 시스템이 현재 비활성화되어 있습니다.' })
+    return
+  }
+  if (auth.isStudent) router.push('/exam-intent')
+  else router.push('/exam-intent-manage')
 }
 
 async function enterRuralSystem() {
@@ -375,6 +445,9 @@ onMounted(async () => {
   try {
     await Promise.all([
       loadPrincipalStatus(),
+      (async () => {
+        isExamIntentSystemEnabled.value = await checkExamIntentSystemEnabled()
+      })(),
       (async () => {
         const status = await checkRuralSystemOpenStatus()
         isRuralSystemEnabled.value = status.isEnabled === true
