@@ -260,7 +260,7 @@ const principalStatusText = ref('🟢 접수 진행 중')
 
 const isRuralSystemOpen = ref(true)
 const isRuralSystemEnabled = ref(false)
-const isExamIntentSystemEnabled = ref(false)
+const isExamIntentSystemEnabled = ref(localStorage.getItem('pcm_enable_exam_intent_system') !== 'false')
 const activeRuralTerm = ref('수시')
 const ruralClosedReason = ref('')
 const ruralPeriodState = ref('open')

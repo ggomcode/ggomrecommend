@@ -552,7 +552,7 @@ const areaEditLoading = ref(false)
 const enableRuralSystem = ref(false)
 const ruralSystemLoading = ref(false)
 
-const enableExamIntentSystem = ref(true)
+const enableExamIntentSystem = ref(localStorage.getItem('pcm_enable_exam_intent_system') !== 'false')
 const examIntentSystemLoading = ref(false)
 
 const susiApplyStartDate = ref('')
@@ -648,8 +648,11 @@ async function loadConfig() {
       localStorage.setItem('pcm_enable_rural_system', configMap['enable_rural_system'])
     }
     if (configMap['enable_exam_intent_system'] !== undefined) {
-      enableExamIntentSystem.value = configMap['enable_exam_intent_system'] === 'true'
-      localStorage.setItem('pcm_enable_exam_intent_system', configMap['enable_exam_intent_system'])
+      enableExamIntentSystem.value = configMap['enable_exam_intent_system'] !== 'false'
+      localStorage.setItem('pcm_enable_exam_intent_system', String(enableExamIntentSystem.value))
+    } else {
+      enableExamIntentSystem.value = true
+      localStorage.setItem('pcm_enable_exam_intent_system', 'true')
     }
 
     susiApplyStartDate.value = configMap['susi_apply_start_date'] || ''

@@ -8,11 +8,11 @@ import { supabase } from '../utils/supabaseClient'
 import { encryptText, decryptText, hashText } from '../utils/cryptoUtils'
 
 // ==========================================
-// 시스템 활성화 여부 확인
+// 시스템 활성화 여부 확인 (기본값: true - 명시적 'false'일 때만 비활성화)
 // ==========================================
 export async function checkExamIntentSystemEnabled() {
   const cached = localStorage.getItem('pcm_enable_exam_intent_system')
-  let isEnabled = cached === 'true'
+  let isEnabled = cached !== 'false'
 
   if (supabase) {
     try {
@@ -22,8 +22,15 @@ export async function checkExamIntentSystemEnabled() {
         .eq('key', 'enable_exam_intent_system')
         .maybeSingle()
 
-      if (!error && data && data.value != null) {
-        isEnabled = data.value === 'true'
+      if (!error) {
+        if (data && data.value != null) {
+          isEnabled = data.value !== 'false'
+        } else {
+          isEnabled = true
+          try {
+            await supabase.from('config').upsert({ key: 'enable_exam_intent_system', value: 'true' }, { onConflict: 'key' })
+          } catch (e) {}
+        }
         localStorage.setItem('pcm_enable_exam_intent_system', String(isEnabled))
       }
     } catch (e) {
