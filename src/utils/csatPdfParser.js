@@ -1,8 +1,9 @@
 /**
  * 대학수학능력시험 응시원서 접수대장 PDF 클라이언트 파서
- * - pdfjs-dist 기반 텍스트 추출 및 14개 컬럼 데이터 파싱
- * - 1페이지 좌측 하단 저장 일시(YYYY-MM-DD HH:mm:ss) 추출
- * - 엣지 케이스: 국어+수학 분리, 탐구 줄바꿈 정규화, 졸업생 빈번호 보정
+ * - pdfjs-dist 기반 텍스트 추출 및 14개 컬럼 정밀 파싱
+ * - Y좌표 클러스터링 기반 행 그룹핑 (경계값 분할 버그 완전 방지)
+ * - 텍스트 토큰화 기반 다중 포맷 파싱 (공백 분리, 주민번호 마스킹, 기호 정규화)
+ * - 1페이지 좌측 하단 저장 일시(YYYY-MM-DD HH:mm:ss) 및 전 페이지 다중 포맷 탐색
  */
 
 import * as pdfjsLib from 'pdfjs-dist'
@@ -21,11 +22,16 @@ const INQUIRY_TYPES = [
   '사회·과학탐구', '사회·직업탐구', '과학·직업탐구',
   '사회탐구', '과학탐구', '직업탐구', 'X'
 ]
+// 제2외국어/한문 후보 키워드 (아스키 I 및 유니코드 Ⅰ 모두 대응)
+const FOREIGN_LANGUAGES = [
+  '독일어I', '프랑스어I', '스페인어I', '중국어I', '일본어I', '러시아어I', '아랍어I', '베트남어I', '한문I',
+  '독일어Ⅰ', '프랑스어Ⅰ', '스페인어Ⅰ', '중국어Ⅰ', '일본어Ⅰ', '러시아어Ⅰ', '아랍어Ⅰ', '베트남어Ⅰ', '한문Ⅰ'
+]
 
 /**
  * PDF 파일에서 접수대장 데이터를 파싱합니다.
  * @param {File} file - 업로드된 PDF File 객체
- * @returns {Promise<{ records: Array, batchTime: string, stats: object }>}
+ * @returns {Promise<{ records: Array, batchTime: string, stats: object, totalCount: number, enrolledCount: number, gradCount: number }>}
  */
 export async function parseCsatPdf(file) {
   const arrayBuffer = await file.arrayBuffer()
@@ -40,12 +46,12 @@ export async function parseCsatPdf(file) {
     const textContent = await page.getTextContent()
     const items = textContent.items
 
-    // 1페이지에서 저장 일시 추출 (좌측 하단)
-    if (pageNum === 1) {
+    // 저장 일시 추출 (미발견 시 다음 페이지에서도 계속 탐색)
+    if (!batchTime) {
       batchTime = extractBatchTime(items)
     }
 
-    // 텍스트 아이템을 행(row) 단위로 그룹핑
+    // 텍스트 아이템을 Y좌표 클러스터링으로 행(row) 단위 그룹핑
     const rows = groupTextItemsToRows(items)
 
     // 각 행에서 데이터 레코드 파싱
@@ -63,22 +69,30 @@ export async function parseCsatPdf(file) {
   return {
     records: allRecords,
     batchTime,
-    stats
+    stats,
+    totalCount: stats.total,
+    enrolledCount: stats.enrolledCount,
+    gradCount: stats.graduatedCount
   }
 }
 
 /**
- * 1페이지 좌측 하단에서 저장 일시(YYYY-MM-DD HH:mm:ss) 추출
+ * 텍스트 아이템들에서 저장 일시(YYYY-MM-DD HH:mm:ss 등) 추출
  */
 function extractBatchTime(items) {
-  const dateRegex = /(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/
-  // 하단 영역의 텍스트에서 검색 (y좌표가 작을수록 하단)
-  const sortedByY = [...items].sort((a, b) => a.transform[5] - b.transform[5])
+  if (!items || items.length === 0) return null
+
+  // 다양한 날짜-시간 패턴 매칭 (YYYY-MM-DD HH:mm:ss, YYYY.MM.DD HH:mm:ss, YYYY/MM/DD HH:mm 등)
+  const dateRegex = /(\d{4}[-./]\d{1,2}[-./]\d{1,2})\s+(\d{1,2}:\d{2}(?::\d{2})?)/
   
+  // 하단 영역의 텍스트에서 우선 검색 (y좌표가 작을수록 하단)
+  const sortedByY = [...items].sort((a, b) => a.transform[5] - b.transform[5])
   for (const item of sortedByY) {
     const match = item.str.match(dateRegex)
     if (match) {
-      return `${match[1]} ${match[2]}`
+      const normalizedDate = match[1].replace(/[./]/g, '-')
+      const normalizedTime = match[2].length === 5 ? `${match[2]}:00` : match[2]
+      return `${normalizedDate} ${normalizedTime}`
     }
   }
 
@@ -86,118 +100,156 @@ function extractBatchTime(items) {
   const fullText = items.map(i => i.str).join(' ')
   const match = fullText.match(dateRegex)
   if (match) {
-    return `${match[1]} ${match[2]}`
+    const normalizedDate = match[1].replace(/[./]/g, '-')
+    const normalizedTime = match[2].length === 5 ? `${match[2]}:00` : match[2]
+    return `${normalizedDate} ${normalizedTime}`
   }
 
   return null
 }
 
 /**
- * 텍스트 아이템을 Y좌표 기준으로 행(row) 단위로 그룹핑
+ * 텍스트 아이템을 Y좌표 클러스터링(Tolerance 4pt) 기반으로 행(row) 단위 그룹핑
  */
 function groupTextItemsToRows(items) {
   if (!items || items.length === 0) return []
 
-  // Y좌표 기준 그룹핑 (같은 행은 Y좌표가 거의 동일)
-  const yThreshold = 3 // 같은 행으로 판단하는 Y좌표 차이 허용치
-  const rowMap = new Map()
+  // 공백 제외 및 Y좌표 역순(위에서 아래로) 정렬
+  const validItems = items
+    .filter(item => item.str && item.str.trim().length > 0)
+    .sort((a, b) => b.transform[5] - a.transform[5])
 
-  for (const item of items) {
-    const y = Math.round(item.transform[5] / yThreshold) * yThreshold
-    if (!rowMap.has(y)) rowMap.set(y, [])
-    rowMap.get(y).push({
-      text: item.str,
+  const rows = []
+  const yTolerance = 4 // 동일 행 Y좌표 허용 오차 (point)
+
+  for (const item of validItems) {
+    const y = item.transform[5]
+    const itemData = {
+      text: item.str.trim(),
       x: item.transform[4],
-      y: item.transform[5],
+      y: y,
       width: item.width
-    })
+    }
+
+    // 기존 행 중 Y좌표가 yTolerance 이내인 행 탐색
+    let matchedRow = null
+    for (const r of rows) {
+      if (Math.abs(r.avgY - y) <= yTolerance) {
+        matchedRow = r
+        break
+      }
+    }
+
+    if (matchedRow) {
+      matchedRow.items.push(itemData)
+      // 평균 Y좌표 점진적 갱신
+      matchedRow.avgY = (matchedRow.avgY * (matchedRow.items.length - 1) + y) / matchedRow.items.length
+    } else {
+      rows.push({
+        avgY: y,
+        items: [itemData]
+      })
+    }
   }
 
-  // Y좌표 역순(위에서 아래로) 정렬 후 각 행 내부는 X좌표순 정렬
-  return [...rowMap.entries()]
-    .sort(([a], [b]) => b - a)
-    .map(([, rowItems]) => rowItems.sort((a, b) => a.x - b.x))
+  // Y좌표 위->아래 순서 유지 및 각 행 내부는 X좌표 좌->우 정렬
+  return rows
+    .sort((a, b) => b.avgY - a.avgY)
+    .map(r => r.items.sort((a, b) => a.x - b.x))
 }
 
 /**
  * 단일 행에서 접수대장 데이터 레코드를 파싱합니다.
- * 일련번호로 시작하는 행만 데이터 레코드로 인식합니다.
+ * 일련번호로 시작하고 접수번호가 있는 행만 유효 레코드로 판정합니다.
  */
 function parseRecordFromRow(rowItems) {
-  if (!rowItems || rowItems.length < 3) return null
+  if (!rowItems || rowItems.length === 0) return null
 
-  // 행의 전체 텍스트 조합
-  const texts = rowItems.map(r => r.text.trim()).filter(t => t.length > 0)
-  if (texts.length < 3) return null
+  // 행 내 텍스트들을 토큰 단위로 평탄화
+  const tokens = []
+  for (const item of rowItems) {
+    const parts = item.text.split(/\s+/).filter(p => p.length > 0)
+    tokens.push(...parts)
+  }
 
-  // 첫 번째 셀이 숫자(일련번호)가 아니면 헤더/비데이터 행
-  const firstText = texts[0]
-  if (!/^\d+$/.test(firstText)) return null
-  const seqNo = parseInt(firstText, 10)
+  if (tokens.length < 3) return null
+
+  // 첫 번째 토큰이 숫자(일련번호)인지 확인
+  const firstToken = tokens[0]
+  if (!/^\d+$/.test(firstToken)) return null
+  const seqNo = parseInt(firstToken, 10)
   if (seqNo < 1 || seqNo > 9999) return null
 
-  // 두 번째 셀이 접수번호(6자리 숫자)인지 확인
-  const secondText = texts[1]
-  if (!/^\d{5,8}$/.test(secondText)) return null
-  const receiptNo = secondText
+  // 두 번째 토큰이 접수번호(5~8자리 숫자)인지 확인
+  const secondToken = tokens[1]
+  if (!/^\d{5,8}$/.test(secondToken)) return null
+  const receiptNo = secondToken
 
-  // 나머지 필드들을 위치 기반으로 파싱
-  return parseColumnsFromTexts(seqNo, receiptNo, texts.slice(2), rowItems)
+  // 나머지 토큰들로 14개 컬럼 데이터 파싱
+  return parseColumnsFromTokens(seqNo, receiptNo, tokens.slice(2))
 }
 
 /**
- * 일련번호, 접수번호 이후의 텍스트 배열에서 14개 컬럼 데이터를 파싱
+ * 일련번호, 접수번호 이후의 토큰 배열에서 14개 컬럼 데이터를 파싱
  */
-function parseColumnsFromTexts(seqNo, receiptNo, texts, rowItems) {
-  // 텍스트 배열을 결합하여 패턴 매칭
+function parseColumnsFromTokens(seqNo, receiptNo, tokens) {
   let idx = 0
 
-  // 성명 (한글 2~5자)
-  const name = texts[idx] || ''
+  // 1. 성명 (한글 2~5자 또는 영문)
+  const name = (tokens[idx] || '').trim()
   idx++
 
-  // 주민등록번호 (숫자-숫자 패턴)
-  let residentNo = ''
+  // 2. 주민등록번호 (숫자, '-', 마스킹 '*' 등 지원)
   const residentParts = []
-  while (idx < texts.length) {
-    const t = texts[idx]
-    if (/^\d{6}$/.test(t) || /^-$/.test(t) || /^\d{7}$/.test(t) || /^\d{6}\s*-\s*\d{7}$/.test(t.replace(/\s/g, ''))) {
+  while (idx < tokens.length) {
+    const t = tokens[idx].trim()
+    if (/^[\d*]{6}$/.test(t) || t === '-' || /^[\d*]{7}$/.test(t) || /^[\d*]{6}-[\d*]{7}$/.test(t) || /^[\d*]{13}$/.test(t)) {
       residentParts.push(t)
       idx++
-      // 주민번호가 완성되었는지 확인
       const joined = residentParts.join('')
-      if (/\d{6}.*\d{7}/.test(joined.replace(/\s/g, ''))) break
+      if (/[\d*]{6}-?[\d*]{7}/.test(joined) || /^[\d*]{13}$/.test(joined)) break
       if (residentParts.length >= 3) break
     } else {
       break
     }
   }
-  residentNo = residentParts.join('').replace(/\s+/g, ' ').trim()
-  if (!residentNo && idx < texts.length) {
-    // 주민번호가 파싱 안 된 경우 fallback
-    residentNo = texts[idx - 1] || ''
-  }
 
-  // 성별
+  let rawResident = residentParts.join('').replace(/\s+/g, '')
+  if (rawResident.length === 13 && !rawResident.includes('-')) {
+    rawResident = `${rawResident.slice(0, 6)}-${rawResident.slice(6)}`
+  } else if (residentParts.length === 3 && residentParts[1] === '-') {
+    rawResident = `${residentParts[0]}-${residentParts[2]}`
+  } else if (!rawResident && idx < tokens.length) {
+    rawResident = tokens[idx - 1] || ''
+  }
+  const residentNo = rawResident
+
+  // 3. 성별 (남자/여자, 남/여)
   let gender = ''
-  if (idx < texts.length && (texts[idx] === '남자' || texts[idx] === '여자')) {
-    gender = texts[idx]
-    idx++
+  if (idx < tokens.length) {
+    const gToken = tokens[idx]
+    if (gToken === '남자' || gToken === '남') {
+      gender = '남자'
+      idx++
+    } else if (gToken === '여자' || gToken === '여') {
+      gender = '여자'
+      idx++
+    }
   }
 
-  // 반(년) - 숫자
+  // 4. 반(년) - 숫자 (재학생: 학급번호 1~12, 졸업생: 졸업연도 2025 등)
   let classOrGradYear = 0
-  if (idx < texts.length && /^\d+$/.test(texts[idx])) {
-    classOrGradYear = parseInt(texts[idx], 10)
+  if (idx < tokens.length && /^\d+$/.test(tokens[idx])) {
+    classOrGradYear = parseInt(tokens[idx], 10)
     idx++
   }
 
   const isEnrolled = classOrGradYear < 1000
 
-  // 번호 - 재학생은 출석번호, 졸업생은 빈칸
+  // 5. 번호 - 재학생은 출석번호, 졸업생은 빈칸(null)
   let studentNo = null
-  if (isEnrolled && idx < texts.length && /^\d+$/.test(texts[idx])) {
-    studentNo = parseInt(texts[idx], 10)
+  if (isEnrolled && idx < tokens.length && /^\d+$/.test(tokens[idx])) {
+    studentNo = parseInt(tokens[idx], 10)
     idx++
   }
 
@@ -207,11 +259,11 @@ function parseColumnsFromTexts(seqNo, receiptNo, texts, rowItems) {
     studentCode = `3${String(classOrGradYear).padStart(2, '0')}${String(studentNo).padStart(2, '0')}`
   }
 
-  // 나머지 텍스트 합쳐서 과목 정보 파싱
-  const remaining = texts.slice(idx).join(' ')
+  // 6. 나머지 토큰들을 결합하여 교과목 선택 정보 파싱
+  const remainingText = tokens.slice(idx).join(' ')
 
   // 국어/수학 파싱
-  const { korean, math, restAfterKorMath } = parseKoreanMath(remaining)
+  const { korean, math, restAfterKorMath } = parseKoreanMath(remainingText)
 
   // 영어 (O/X)
   const { value: english, rest: restAfterEng } = extractOX(restAfterKorMath)
@@ -222,11 +274,8 @@ function parseColumnsFromTexts(seqNo, receiptNo, texts, rowItems) {
   // 탐구 유형
   const { inquiryType, rest: restAfterInquiry } = extractInquiryType(restAfterHist)
 
-  // 탐구 선택과목
-  const { subjects: inquirySubjects, rest: restAfterSubjects } = extractInquirySubjects(restAfterInquiry)
-
-  // 제2외국어/한문
-  const foreignLanguage = restAfterSubjects.trim() || 'X'
+  // 탐구 선택과목 & 제2외국어 분리
+  const { subjects: inquirySubjects, foreignLanguage } = extractInquiryAndForeign(restAfterInquiry)
 
   return {
     seq_no: seqNo,
@@ -249,69 +298,69 @@ function parseColumnsFromTexts(seqNo, receiptNo, texts, rowItems) {
 }
 
 /**
- * 국어/수학 과목 파싱 (텍스트가 붙어있는 경우 분리 처리)
+ * 국어/수학 과목 파싱 (텍스트가 붙어있거나 미응시 'X'인 경우 분리 처리)
  */
 function parseKoreanMath(text) {
   let korean = 'X'
   let math = 'X'
   let rest = text.trim()
 
-  // 국어 키워드 매칭
+  // 1. 국어 키워드 매칭
   for (const kw of KOREAN_SUBJECTS) {
     if (rest.includes(kw)) {
       korean = kw
-      rest = rest.replace(kw, '').trim()
+      rest = removeFirstOccurrence(rest, kw).trim()
       break
     }
   }
 
-  // 수학 키워드 매칭
+  // 국어가 미선택(X)인 경우
+  if (korean === 'X' && /^[Xx×✕]/.test(rest)) {
+    rest = rest.replace(/^[Xx×✕]\s*/, '').trim()
+  }
+
+  // 2. 수학 키워드 매칭
   for (const kw of MATH_SUBJECTS) {
     if (rest.includes(kw)) {
       math = kw
-      rest = rest.replace(kw, '').trim()
+      rest = removeFirstOccurrence(rest, kw).trim()
       break
     }
   }
 
-  // X 처리 (국어가 X인 경우)
-  if (korean === 'X' && rest.startsWith('X')) {
-    rest = rest.substring(1).trim()
-  }
-  if (math === 'X' && rest.startsWith('X')) {
-    rest = rest.substring(1).trim()
+  // 수학이 미선택(X)인 경우
+  if (math === 'X' && /^[Xx×✕]/.test(rest)) {
+    rest = rest.replace(/^[Xx×✕]\s*/, '').trim()
   }
 
   return { korean, math, restAfterKorMath: rest }
 }
 
 /**
- * O/X 값 추출
+ * O/X 기호 추출 (원형 문자 ○, 엑스 문자 ×, ✕ 등 호환)
  */
 function extractOX(text) {
   const trimmed = text.trim()
-  if (trimmed.startsWith('O')) {
-    return { value: 'O', rest: trimmed.substring(1).trim() }
+  if (/^[Oo○ㅇ]/.test(trimmed)) {
+    return { value: 'O', rest: trimmed.replace(/^[Oo○ㅇ]\s*/, '').trim() }
   }
-  if (trimmed.startsWith('X')) {
-    return { value: 'X', rest: trimmed.substring(1).trim() }
+  if (/^[Xx×✕]/.test(trimmed)) {
+    return { value: 'X', rest: trimmed.replace(/^[Xx×✕]\s*/, '').trim() }
   }
   return { value: 'X', rest: trimmed }
 }
 
 /**
- * 탐구 유형 추출 (줄바꿈 정규화 처리 포함)
+ * 탐구 유형 추출 (줄바꿈 및 점·기호 정규화 처리)
  */
 function extractInquiryType(text) {
-  // 줄바꿈/공백 정규화
   const normalized = text.replace(/\s+/g, ' ').trim()
 
   for (const type of INQUIRY_TYPES) {
-    const cleanType = type.replace(/\s+/g, '')
-    const cleanNorm = normalized.replace(/\s+/g, '')
+    const cleanType = type.replace(/[\s·./]/g, '')
+    const cleanNorm = normalized.replace(/[\s·./]/g, '')
     const idx = cleanNorm.indexOf(cleanType)
     if (idx !== -1) {
-      // 원본 텍스트에서 해당 부분 제거
       const rest = removeFirstOccurrence(normalized, type)
       return { inquiryType: type, rest }
     }
@@ -321,42 +370,51 @@ function extractInquiryType(text) {
 }
 
 /**
- * 탐구 선택과목 추출 (예: '생활과 윤리 / 세계사', '사회·문화 / X')
+ * 탐구 선택과목 및 제2외국어 분리 추출
  */
-function extractInquirySubjects(text) {
-  const trimmed = text.trim()
-  
-  // '/' 로 구분된 2개 과목 패턴 찾기
-  const slashMatch = trimmed.match(/^(.+?)\s*\/\s*(.+?)(?:\s+(.*))?$/)
-  if (slashMatch) {
-    const sub1 = slashMatch[1].trim()
-    const sub2 = slashMatch[2].trim()
-    // sub2에서 제2외국어 후보를 분리해야 할 수 있음
-    const foreignCandidates = ['일본어I', '중국어I', '프랑스어I', '스페인어I', '독일어I', '러시아어I', '아랍어I', '베트남어I', '한문I']
-    
-    let actualSub2 = sub2
-    let restText = slashMatch[3] || ''
-    
-    for (const fc of foreignCandidates) {
-      if (sub2.includes(fc) && sub2 !== fc) {
-        actualSub2 = sub2.replace(fc, '').trim()
-        restText = fc + ' ' + restText
-        break
-      }
-    }
-    
-    return {
-      subjects: `${sub1} / ${actualSub2}`,
-      rest: restText.trim()
+function extractInquiryAndForeign(text) {
+  let trimmed = text.trim()
+  if (!trimmed || trimmed === 'X' || trimmed === 'X / X') {
+    return { subjects: 'X / X', foreignLanguage: 'X' }
+  }
+
+  let foreignLanguage = 'X'
+
+  // 뒤쪽에서 제2외국어 과목명 매칭 검사
+  for (const fl of FOREIGN_LANGUAGES) {
+    if (trimmed.endsWith(fl)) {
+      foreignLanguage = fl
+      trimmed = trimmed.substring(0, trimmed.length - fl.length).trim()
+      break
     }
   }
 
-  // X / X 패턴
-  if (trimmed.startsWith('X') || trimmed === '') {
-    return { subjects: 'X / X', rest: trimmed.replace(/^X\s*\/?\s*X?\s*/, '').trim() }
+  // 제2외국어가 'X' 또는 '-' 로 끝나는 경우
+  if (foreignLanguage === 'X') {
+    if (/[\s/]+[Xx×✕]$/.test(trimmed)) {
+      foreignLanguage = 'X'
+      trimmed = trimmed.replace(/[\s/]+[Xx×✕]$/, '').trim()
+    } else if (/[\s/]+-$/.test(trimmed)) {
+      foreignLanguage = 'X'
+      trimmed = trimmed.replace(/[\s/]+-$/, '').trim()
+    }
   }
 
-  return { subjects: trimmed, rest: '' }
+  // 탐구 선택과목 형태 정리
+  let subjects = trimmed
+  if (trimmed.includes('/')) {
+    const parts = trimmed.split('/').map(p => p.trim())
+    const sub1 = parts[0] || 'X'
+    const sub2 = parts[1] || 'X'
+    subjects = `${sub1} / ${sub2}`
+  } else if (!trimmed || trimmed === 'X') {
+    subjects = 'X / X'
+  }
+
+  return {
+    subjects,
+    foreignLanguage
+  }
 }
 
 /**
@@ -364,7 +422,7 @@ function extractInquirySubjects(text) {
  */
 function cleanForeignLanguage(text) {
   const trimmed = text.trim()
-  if (!trimmed || trimmed === 'X' || trimmed === '-') return 'X'
+  if (!trimmed || trimmed === 'X' || trimmed === '-' || trimmed === 'x') return 'X'
   return trimmed
 }
 
@@ -374,15 +432,14 @@ function cleanForeignLanguage(text) {
 function removeFirstOccurrence(text, keyword) {
   const idx = text.indexOf(keyword)
   if (idx === -1) {
-    // 공백 제거 후 재시도
-    const cleanKw = keyword.replace(/\s+/g, '')
+    const cleanKw = keyword.replace(/[\s·./]/g, '')
     let result = text
     let pos = 0
     let matchStart = -1
     let matchLen = 0
-    
+
     for (let i = 0; i < cleanKw.length; i++) {
-      while (pos < result.length && result[pos] === ' ') pos++
+      while (pos < result.length && /[\s·./]/.test(result[pos])) pos++
       if (pos < result.length && result[pos] === cleanKw[i]) {
         if (matchStart === -1) matchStart = pos
         pos++
@@ -391,7 +448,7 @@ function removeFirstOccurrence(text, keyword) {
         return result
       }
     }
-    
+
     if (matchStart !== -1) {
       return (result.substring(0, matchStart) + result.substring(matchStart + matchLen)).trim()
     }

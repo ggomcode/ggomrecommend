@@ -1286,28 +1286,28 @@ export function printAbandonmentForm(app, studentInfo = {}) {
  */
 function getIntentFormStyles() {
   return `
-    @page { size: A4 portrait; margin: 20mm 20mm 15mm 20mm; }
+    @page { size: A4 portrait; margin: 15mm 20mm 15mm 20mm; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Pretendard', '맑은 고딕', sans-serif; color: #111; font-size: 14px; line-height: 1.7; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .page { width: 100%; max-width: 700px; margin: 0 auto; padding: 0; position: relative; min-height: 900px; page-break-after: always; }
+    body { font-family: 'Pretendard', '맑은 고딕', sans-serif; color: #111; font-size: 13.5px; line-height: 1.65; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { width: 100%; max-width: 700px; margin: 0 auto; padding: 0; display: flex; flex-direction: column; min-height: 255mm; page-break-after: always; }
     .page:last-child { page-break-after: avoid; }
-    .title { text-align: center; font-size: 22px; font-weight: 800; margin: 30px 0 30px 0; letter-spacing: 2px; }
-    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-    .info-table th, .info-table td { border: 1px solid #333; padding: 8px 12px; font-size: 13px; }
+    .title { text-align: center; font-size: 21px; font-weight: 800; margin: 10px 0 20px 0; letter-spacing: 1.5px; }
+    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    .info-table th, .info-table td { border: 1px solid #333; padding: 7px 10px; font-size: 12.5px; }
     .info-table th { background: #f3f4f6; font-weight: 700; text-align: center; width: 110px; }
     .info-table td { text-align: center; }
-    .content-box { border: 2px solid #333; padding: 28px 24px; margin: 20px 0 24px 0; font-size: 14.5px; line-height: 2; text-align: justify; }
-    .reason-box { border: 1px solid #999; padding: 14px 18px; margin: 0 0 20px 0; font-size: 13px; min-height: 50px; }
-    .reason-label { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
-    .date-line { text-align: center; font-size: 15px; font-weight: 600; margin: 28px 0 20px 0; }
-    .sig-table { width: 100%; border-collapse: collapse; margin: 0 auto 24px auto; max-width: 500px; }
-    .sig-table td { padding: 10px 16px; font-size: 14px; vertical-align: middle; }
+    .content-box { border: 2px solid #333; padding: 18px 20px; margin: 12px 0 16px 0; font-size: 13.5px; line-height: 1.85; text-align: justify; }
+    .reason-box { border: 1px solid #999; padding: 12px 16px; margin: 0 0 16px 0; font-size: 12.5px; min-height: 44px; }
+    .reason-label { font-weight: 700; font-size: 12.5px; margin-bottom: 4px; }
+    .date-line { text-align: center; font-size: 14.5px; font-weight: 600; margin: 20px 0 14px 0; }
+    .sig-table { width: 100%; border-collapse: collapse; margin: 0 auto 16px auto; max-width: 520px; }
+    .sig-table td { padding: 6px 14px; font-size: 13.5px; vertical-align: middle; }
     .sig-table .label { font-weight: 700; text-align: right; width: 90px; white-space: nowrap; }
     .sig-table .name-cell { text-align: left; min-width: 120px; }
     .sig-table .sig-cell { text-align: right; min-width: 120px; font-size: 13px; color: #666; }
-    .sig-table .sig-cell img { max-height: 40px; vertical-align: middle; }
-    .footer-line { position: absolute; bottom: 0; left: 0; width: 100%; text-align: left; font-size: 14px; font-weight: 700; padding-top: 10px; border-top: 1px solid #ccc; }
-    @media screen { .page { border: 1px solid #ddd; padding: 40px; margin: 20px auto; box-shadow: 0 2px 12px rgba(0,0,0,0.1); } }
+    .sig-table .sig-cell img { max-height: 38px; vertical-align: middle; }
+    .footer-line { margin-top: auto; width: 100%; text-align: left; font-size: 15px; font-weight: 800; padding-top: 14px; padding-bottom: 4px; border-top: 1px solid #bbb; letter-spacing: 0.5px; }
+    @media screen { .page { border: 1px solid #ddd; padding: 30px; margin: 20px auto; box-shadow: 0 2px 12px rgba(0,0,0,0.1); min-height: auto; } }
   `
 }
 

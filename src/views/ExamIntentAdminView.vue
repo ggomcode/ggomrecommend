@@ -244,20 +244,25 @@
               <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                 <div class="bg-white rounded-xl p-3 text-center border border-indigo-100">
                   <p class="text-xs font-bold text-slate-400">총 인원</p>
-                  <p class="text-xl font-extrabold text-indigo-900">{{ parsedResult?.totalCount }}명</p>
+                  <p class="text-xl font-extrabold text-indigo-900">{{ parsedResult?.stats?.total ?? parsedResult?.totalCount ?? parsedResult?.records?.length ?? 0 }}명</p>
                 </div>
                 <div class="bg-white rounded-xl p-3 text-center border border-indigo-100">
                   <p class="text-xs font-bold text-slate-400">재학생</p>
-                  <p class="text-xl font-extrabold text-emerald-600">{{ parsedResult?.enrolledCount }}명</p>
+                  <p class="text-xl font-extrabold text-emerald-600">{{ parsedResult?.stats?.enrolledCount ?? parsedResult?.enrolledCount ?? 0 }}명</p>
                 </div>
                 <div class="bg-white rounded-xl p-3 text-center border border-indigo-100">
                   <p class="text-xs font-bold text-slate-400">졸업생</p>
-                  <p class="text-xl font-extrabold text-amber-600">{{ parsedResult?.gradCount }}명</p>
+                  <p class="text-xl font-extrabold text-amber-600">{{ parsedResult?.stats?.graduatedCount ?? parsedResult?.gradCount ?? 0 }}명</p>
                 </div>
                 <div class="bg-white rounded-xl p-3 text-center border border-indigo-100">
                   <p class="text-xs font-bold text-slate-400">PDF 저장일시</p>
                   <p class="text-xs font-bold text-slate-700 mt-1">{{ parsedResult?.batchTime || '-' }}</p>
                 </div>
+              </div>
+
+              <!-- 0건 파싱 경고 -->
+              <div v-if="!parsedResult?.records?.length" class="p-4 bg-rose-50 rounded-xl border border-rose-300 text-rose-800 text-xs font-bold mb-4">
+                ⚠️ 추출된 데이터가 0건입니다. 업로드한 파일이 한국교육과정평가원 수능 원서접수 시스템의 '접수대장' 원본 PDF인지 확인해 주세요.
               </div>
 
               <!-- 시각 경고 -->
@@ -267,7 +272,7 @@
 
               <div class="flex gap-3 justify-end">
                 <button @click="cancelUpload" class="text-sm font-bold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 px-4 py-2 rounded-lg cursor-pointer transition-all">취소</button>
-                <button @click="confirmUpload" :disabled="uploading" class="text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-6 py-2 rounded-lg cursor-pointer transition-all shadow-md">
+                <button @click="confirmUpload" :disabled="uploading || !parsedResult?.records?.length" :class="['text-sm font-bold px-6 py-2 rounded-lg transition-all shadow-md', !parsedResult?.records?.length ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer']">
                   {{ uploading ? '업로드 중...' : '✅ DB 저장 확정' }}
                 </button>
               </div>

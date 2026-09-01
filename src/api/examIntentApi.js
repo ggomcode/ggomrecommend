@@ -323,7 +323,13 @@ export async function upsertCsatRecords(records, batchTime) {
   if (!supabase) throw new Error('DB 연결 없음')
   if (!records || records.length === 0) throw new Error('업로드할 데이터가 없습니다.')
 
-  const batchTimestamp = new Date(batchTime.replace(' ', 'T') + '+09:00').toISOString()
+  let batchTimestamp = new Date().toISOString()
+  if (batchTime) {
+    const parsedDate = new Date(batchTime.replace(' ', 'T') + '+09:00')
+    if (!isNaN(parsedDate.getTime())) {
+      batchTimestamp = parsedDate.toISOString()
+    }
+  }
 
   let inserted = 0
   let updated = 0
@@ -334,10 +340,10 @@ export async function upsertCsatRecords(records, batchTime) {
   for (let i = 0; i < records.length; i += batchSize) {
     const chunk = records.slice(i, i + batchSize)
     const encryptedChunk = await Promise.all(chunk.map(async (r) => {
-      const encName = await encryptText(r.name)
-      const nameHash = await hashText(r.name)
-      const encResident = await encryptText(r.resident_no)
-      const residentHash = await hashText(r.resident_no.replace(/[\s-]/g, ''))
+      const encName = await encryptText(r.name || '')
+      const nameHash = await hashText(r.name || '')
+      const encResident = await encryptText(r.resident_no || '')
+      const residentHash = await hashText((r.resident_no || '').replace(/[\s-]/g, ''))
 
       return {
         upload_batch_time: batchTimestamp,
