@@ -487,10 +487,14 @@ export async function buildComparisonData() {
       csat_no_take_reason: survey?.csat_no_take_reason || null,
       susi_general_intent: survey?.susi_general_intent || survey?.susi_intent || null,
       susi_general_no_reason: survey?.susi_general_no_reason || survey?.susi_no_apply_reason || null,
+      jungsi_general_intent: survey?.jungsi_general_intent || survey?.jungsi_intent || null,
+      jungsi_general_no_reason: survey?.jungsi_general_no_reason || survey?.jungsi_no_reason || null,
       susi_college_intent: survey?.susi_college_intent || null,
       susi_college_no_reason: survey?.susi_college_no_reason || null,
-      jungsi_intent: survey?.jungsi_intent || null,
-      jungsi_no_reason: survey?.jungsi_no_reason || null,
+      jungsi_college_intent: survey?.jungsi_college_intent || null,
+      jungsi_college_no_reason: survey?.jungsi_college_no_reason || null,
+      jungsi_intent: survey?.jungsi_general_intent || survey?.jungsi_intent || null, // 레거시 호환
+      jungsi_no_reason: survey?.jungsi_general_no_reason || survey?.jungsi_no_reason || null,
       susi_intent: survey?.susi_general_intent || survey?.susi_intent || null, // 레거시 호환
       susi_no_apply_reason: survey?.susi_general_no_reason || survey?.susi_no_apply_reason || null,
       student_signature: survey?.student_signature || null,

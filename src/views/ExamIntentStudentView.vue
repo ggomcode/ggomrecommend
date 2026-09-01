@@ -360,9 +360,9 @@
 
     <!-- 최초 등록 위저드 (아직 한 번도 등록 안 한 학생) -->
     <div v-else class="ei-container">
-      <!-- 진행 스텝 표시 (총 6단계) -->
+      <!-- 진행 스텝 표시 (총 7단계) -->
       <div class="ei-steps">
-        <div v-for="s in 6" :key="s" :class="['ei-step', { active: step >= s, current: step === s }]">
+        <div v-for="s in 7" :key="s" :class="['ei-step', { active: step >= s, current: step === s }]">
           <div class="ei-step-dot">{{ s }}</div>
           <span class="ei-step-label">{{ stepLabels[s - 1] }}</span>
         </div>
@@ -1089,17 +1089,19 @@ onMounted(async () => {
       survey.value = data
       isCompleted.value = true
       // form에도 로드
-      form.csat_intent = data.csat_intent
-      form.csat_no_take_reason = data.csat_no_take_reason
+      form.csat_intent = data.csat_intent || 'TAKE'
+      form.csat_no_take_reason = data.csat_no_take_reason || null
       form.susi_general_intent = data.susi_general_intent || data.susi_intent || 'APPLY'
-      form.susi_general_no_reason = data.susi_general_no_reason || data.susi_no_apply_reason
+      form.susi_general_no_reason = data.susi_general_no_reason || data.susi_no_apply_reason || null
+      form.jungsi_general_intent = data.jungsi_general_intent || data.jungsi_intent || 'APPLY'
+      form.jungsi_general_no_reason = data.jungsi_general_no_reason || data.jungsi_no_reason || null
       form.susi_college_intent = data.susi_college_intent || 'APPLY'
-      form.susi_college_no_reason = data.susi_college_no_reason
-      form.jungsi_intent = data.jungsi_intent || 'APPLY'
-      form.jungsi_no_reason = data.jungsi_no_reason
+      form.susi_college_no_reason = data.susi_college_no_reason || null
+      form.jungsi_college_intent = data.jungsi_college_intent || 'APPLY'
+      form.jungsi_college_no_reason = data.jungsi_college_no_reason || null
       form.parent_name = data.parent_name || ''
-      studentSigData.value = data.student_signature
-      parentSigData.value = data.parent_signature
+      studentSigData.value = data.student_signature || null
+      parentSigData.value = data.parent_signature || null
     }
   } catch (e) {
     console.warn('Failed to load intent survey:', e)

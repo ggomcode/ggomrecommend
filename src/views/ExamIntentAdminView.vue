@@ -150,29 +150,29 @@
                 <!-- (일반대) 수시 자가체크 -->
                 <td class="px-3 py-3 text-center">
                   <span v-if="!row.has_survey" class="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">미응답</span>
-                  <span v-else-if="(row.susi_general_intent || row.susi_intent) === 'APPLY'" class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">접수</span>
-                  <span v-else class="text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full" :title="row.susi_general_no_reason">미접수</span>
+                  <span v-else-if="(row.susi_general_intent || row.susi_intent) === 'NO_APPLY'" class="text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full" :title="row.susi_general_no_reason || row.susi_no_apply_reason">미접수</span>
+                  <span v-else class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">접수</span>
                 </td>
 
                 <!-- (일반대) 정시 자가체크 -->
                 <td class="px-3 py-3 text-center">
                   <span v-if="!row.has_survey" class="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">미응답</span>
-                  <span v-else-if="(row.jungsi_general_intent || row.jungsi_intent || 'APPLY') === 'APPLY'" class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">접수</span>
-                  <span v-else class="text-[11px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full" :title="row.jungsi_general_no_reason || row.jungsi_no_reason">미접수</span>
+                  <span v-else-if="(row.jungsi_general_intent || row.jungsi_intent) === 'NO_APPLY'" class="text-[11px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full" :title="row.jungsi_general_no_reason || row.jungsi_no_reason">미접수</span>
+                  <span v-else class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">접수</span>
                 </td>
 
                 <!-- (전문대) 수시 자가체크 -->
                 <td class="px-3 py-3 text-center">
                   <span v-if="!row.has_survey" class="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">미응답</span>
-                  <span v-else-if="(row.susi_college_intent || 'APPLY') === 'APPLY'" class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">접수</span>
-                  <span v-else class="text-[11px] font-bold text-pink-700 bg-pink-100 px-2 py-0.5 rounded-full" :title="row.susi_college_no_reason">미접수</span>
+                  <span v-else-if="row.susi_college_intent === 'NO_APPLY'" class="text-[11px] font-bold text-pink-700 bg-pink-100 px-2 py-0.5 rounded-full" :title="row.susi_college_no_reason">미접수</span>
+                  <span v-else class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">접수</span>
                 </td>
 
                 <!-- (전문대) 정시 자가체크 -->
                 <td class="px-3 py-3 text-center">
                   <span v-if="!row.has_survey" class="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">미응답</span>
-                  <span v-else-if="(row.jungsi_college_intent || 'APPLY') === 'APPLY'" class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">접수</span>
-                  <span v-else class="text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full" :title="row.jungsi_college_no_reason">미접수</span>
+                  <span v-else-if="row.jungsi_college_intent === 'NO_APPLY'" class="text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full" :title="row.jungsi_college_no_reason">미접수</span>
+                  <span v-else class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">접수</span>
                 </td>
 
                 <!-- 수정 이력 버튼 -->
@@ -394,11 +394,12 @@ const classList = computed(() => {
 })
 
 function hasStudentNoApply(r) {
-  const genSusi = r.susi_general_intent || r.susi_intent || 'APPLY'
-  const genJung = r.jungsi_general_intent || r.jungsi_intent || 'APPLY'
-  const colSusi = r.susi_college_intent || 'APPLY'
-  const colJung = r.jungsi_college_intent || 'APPLY'
-  return genSusi === 'NO_APPLY' || genJung === 'NO_APPLY' || colSusi === 'NO_APPLY' || colJung === 'NO_APPLY'
+  if (!r.has_survey) return false
+  const genSusi = (r.susi_general_intent || r.susi_intent) === 'NO_APPLY'
+  const genJung = (r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY'
+  const colSusi = r.susi_college_intent === 'NO_APPLY'
+  const colJung = r.jungsi_college_intent === 'NO_APPLY'
+  return genSusi || genJung || colSusi || colJung
 }
 
 const stats = computed(() => {
@@ -406,11 +407,11 @@ const stats = computed(() => {
   return {
     total: data.length,
     surveyed: data.filter(r => r.has_survey).length,
-    csatNoTake: data.filter(r => r.csat_intent === 'NO_TAKE').length,
-    susiGenNoApply: data.filter(r => (r.susi_general_intent || r.susi_intent) === 'NO_APPLY').length,
-    jungsiGenNoApply: data.filter(r => (r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY').length,
-    susiColNoApply: data.filter(r => r.susi_college_intent === 'NO_APPLY').length,
-    jungsiColNoApply: data.filter(r => r.jungsi_college_intent === 'NO_APPLY').length,
+    csatNoTake: data.filter(r => r.has_survey && r.csat_intent === 'NO_TAKE').length,
+    susiGenNoApply: data.filter(r => r.has_survey && (r.susi_general_intent || r.susi_intent) === 'NO_APPLY').length,
+    jungsiGenNoApply: data.filter(r => r.has_survey && (r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY').length,
+    susiColNoApply: data.filter(r => r.has_survey && r.susi_college_intent === 'NO_APPLY').length,
+    jungsiColNoApply: data.filter(r => r.has_survey && r.jungsi_college_intent === 'NO_APPLY').length,
     mismatch: data.filter(r => isMismatch(r)).length
   }
 })
@@ -423,12 +424,12 @@ const filteredData = computed(() => {
   if (filterStatus.value === 'mismatch') data = data.filter(r => isMismatch(r))
   else if (filterStatus.value === 'modified') data = data.filter(r => r.history_count > 0)
   else if (filterStatus.value === 'no_survey') data = data.filter(r => !r.has_survey)
-  else if (filterStatus.value === 'no_take') data = data.filter(r => r.csat_intent === 'NO_TAKE')
+  else if (filterStatus.value === 'no_take') data = data.filter(r => r.has_survey && r.csat_intent === 'NO_TAKE')
   else if (filterStatus.value === 'no_apply_any') data = data.filter(r => hasStudentNoApply(r))
-  else if (filterStatus.value === 'no_apply_gen_susi') data = data.filter(r => (r.susi_general_intent || r.susi_intent) === 'NO_APPLY')
-  else if (filterStatus.value === 'no_apply_gen_jung') data = data.filter(r => (r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY')
-  else if (filterStatus.value === 'no_apply_col_susi') data = data.filter(r => r.susi_college_intent === 'NO_APPLY')
-  else if (filterStatus.value === 'no_apply_col_jung') data = data.filter(r => r.jungsi_college_intent === 'NO_APPLY')
+  else if (filterStatus.value === 'no_apply_gen_susi') data = data.filter(r => r.has_survey && (r.susi_general_intent || r.susi_intent) === 'NO_APPLY')
+  else if (filterStatus.value === 'no_apply_gen_jung') data = data.filter(r => r.has_survey && (r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY')
+  else if (filterStatus.value === 'no_apply_col_susi') data = data.filter(r => r.has_survey && r.susi_college_intent === 'NO_APPLY')
+  else if (filterStatus.value === 'no_apply_col_jung') data = data.filter(r => r.has_survey && r.jungsi_college_intent === 'NO_APPLY')
   return data
 })
 
@@ -546,15 +547,15 @@ function downloadExcel() {
     '수능자가체크': r.has_survey ? (r.csat_intent === 'TAKE' ? '응시' : '미응시') : '미응답',
     '수능접수대장': r.csat_registered ? '접수됨' : '미접수',
     '수능매칭': r.csat_mismatch === 'MATCH' ? '일치' : (r.csat_mismatch === 'NO_SURVEY' ? '미응답' : '불일치'),
-    '수능미응시사유': r.csat_no_take_reason || '',
-    '일반대수시': r.has_survey ? ((r.susi_general_intent || r.susi_intent) === 'APPLY' ? '접수' : '미접수') : '미응답',
-    '일반대수시사유': r.susi_general_no_reason || r.susi_no_apply_reason || '',
-    '일반대정시': r.has_survey ? ((r.jungsi_general_intent || r.jungsi_intent || 'APPLY') === 'APPLY' ? '접수' : '미접수') : '미응답',
-    '일반대정시사유': r.jungsi_general_no_reason || r.jungsi_no_reason || '',
-    '전문대수시': r.has_survey ? ((r.susi_college_intent || 'APPLY') === 'APPLY' ? '접수' : '미접수') : '미응답',
-    '전문대수시사유': r.susi_college_no_reason || '',
-    '전문대정시': r.has_survey ? ((r.jungsi_college_intent || 'APPLY') === 'APPLY' ? '접수' : '미접수') : '미응답',
-    '전문대정시사유': r.jungsi_college_no_reason || '',
+    '수능미응시사유': r.csat_intent === 'NO_TAKE' ? (r.csat_no_take_reason || '') : '',
+    '일반대수시': r.has_survey ? ((r.susi_general_intent || r.susi_intent) === 'NO_APPLY' ? '미접수' : '접수') : '미응답',
+    '일반대수시사유': (r.susi_general_intent || r.susi_intent) === 'NO_APPLY' ? (r.susi_general_no_reason || r.susi_no_apply_reason || '') : '',
+    '일반대정시': r.has_survey ? ((r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY' ? '미접수' : '접수') : '미응답',
+    '일반대정시사유': (r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY' ? (r.jungsi_general_no_reason || r.jungsi_no_reason || '') : '',
+    '전문대수시': r.has_survey ? (r.susi_college_intent === 'NO_APPLY' ? '미접수' : '접수') : '미응답',
+    '전문대수시사유': r.susi_college_intent === 'NO_APPLY' ? (r.susi_college_no_reason || '') : '',
+    '전문대정시': r.has_survey ? (r.jungsi_college_intent === 'NO_APPLY' ? '미접수' : '접수') : '미응답',
+    '전문대정시사유': r.jungsi_college_intent === 'NO_APPLY' ? (r.jungsi_college_no_reason || '') : '',
     '수정횟수': r.history_count || 0,
     '최종수정자': r.last_modified_by || '',
     '최종수정일시': r.last_modified_at || '',
