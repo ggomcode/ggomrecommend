@@ -71,8 +71,12 @@ export async function upsertIntentSurvey(payload, actor = { name: '학생 본인
     csat_no_take_reason,
     susi_general_intent,
     susi_general_no_reason,
+    jungsi_general_intent,
+    jungsi_general_no_reason,
     susi_college_intent,
     susi_college_no_reason,
+    jungsi_college_intent,
+    jungsi_college_no_reason,
     jungsi_intent,
     jungsi_no_reason,
     susi_intent,
@@ -83,12 +87,18 @@ export async function upsertIntentSurvey(payload, actor = { name: '학생 본인
     memo
   } = payload
 
-  const genIntent = susi_general_intent || susi_intent || 'APPLY'
-  const genReason = genIntent === 'NO_APPLY' ? (susi_general_no_reason || susi_no_apply_reason || null) : null
-  const colIntent = susi_college_intent || 'APPLY'
-  const colReason = colIntent === 'NO_APPLY' ? (susi_college_no_reason || null) : null
-  const jungIntent = jungsi_intent || 'APPLY'
-  const jungReason = jungIntent === 'NO_APPLY' ? (jungsi_no_reason || null) : null
+  const genSusiIntent = susi_general_intent || susi_intent || 'APPLY'
+  const genSusiReason = genSusiIntent === 'NO_APPLY' ? (susi_general_no_reason || susi_no_apply_reason || null) : null
+
+  const genJungsiIntent = jungsi_general_intent || jungsi_intent || 'APPLY'
+  const genJungsiReason = genJungsiIntent === 'NO_APPLY' ? (jungsi_general_no_reason || jungsi_no_reason || null) : null
+
+  const colSusiIntent = susi_college_intent || 'APPLY'
+  const colSusiReason = colSusiIntent === 'NO_APPLY' ? (susi_college_no_reason || null) : null
+
+  const colJungsiIntent = jungsi_college_intent || 'APPLY'
+  const colJungsiReason = colJungsiIntent === 'NO_APPLY' ? (jungsi_college_no_reason || null) : null
+
   const nowIso = new Date().toISOString()
 
   // 1. 기존 데이터 조회
@@ -103,7 +113,7 @@ export async function upsertIntentSurvey(payload, actor = { name: '학생 본인
     existingLogs = Array.isArray(existing.change_logs) ? existing.change_logs : []
     historyCount = (existing.history_count || 0)
 
-    // Diff 계산
+    // 1) 수능 응시 Diff
     if (existing.csat_intent !== (csat_intent || 'TAKE')) {
       changes.push({
         field: 'csat_intent',
@@ -123,63 +133,87 @@ export async function upsertIntentSurvey(payload, actor = { name: '학생 본인
       })
     }
 
-    const prevGen = existing.susi_general_intent || existing.susi_intent || 'APPLY'
-    if (prevGen !== genIntent) {
+    // 2) (일반대·과기원) 수시 Diff
+    const prevGenSusi = existing.susi_general_intent || existing.susi_intent || 'APPLY'
+    if (prevGenSusi !== genSusiIntent) {
       changes.push({
         field: 'susi_general_intent',
         field_name: '(일반대·과기원) 수시',
-        from: prevGen,
-        from_label: prevGen === 'APPLY' ? '접수 예정' : '미접수',
-        to: genIntent,
-        to_label: genIntent === 'APPLY' ? '접수 예정' : '미접수',
-        reason: genReason
+        from: prevGenSusi,
+        from_label: prevGenSusi === 'APPLY' ? '접수 예정' : '미접수',
+        to: genSusiIntent,
+        to_label: genSusiIntent === 'APPLY' ? '접수 예정' : '미접수',
+        reason: genSusiReason
       })
-    } else if (genIntent === 'NO_APPLY' && (existing.susi_general_no_reason || existing.susi_no_apply_reason) !== genReason) {
+    } else if (genSusiIntent === 'NO_APPLY' && (existing.susi_general_no_reason || existing.susi_no_apply_reason) !== genSusiReason) {
       changes.push({
         field: 'susi_general_no_reason',
-        field_name: '일반대 수시 미접수 사유',
+        field_name: '(일반대·과기원) 수시 미접수 사유',
         from: existing.susi_general_no_reason || existing.susi_no_apply_reason || '',
-        to: genReason || ''
+        to: genSusiReason || ''
       })
     }
 
-    const prevCol = existing.susi_college_intent || 'APPLY'
-    if (prevCol !== colIntent) {
+    // 3) (일반대·과기원) 정시 Diff
+    const prevGenJungsi = existing.jungsi_general_intent || existing.jungsi_intent || 'APPLY'
+    if (prevGenJungsi !== genJungsiIntent) {
+      changes.push({
+        field: 'jungsi_general_intent',
+        field_name: '(일반대·과기원) 정시',
+        from: prevGenJungsi,
+        from_label: prevGenJungsi === 'APPLY' ? '접수 예정' : '미접수',
+        to: genJungsiIntent,
+        to_label: genJungsiIntent === 'APPLY' ? '접수 예정' : '미접수',
+        reason: genJungsiReason
+      })
+    } else if (genJungsiIntent === 'NO_APPLY' && (existing.jungsi_general_no_reason || existing.jungsi_no_reason) !== genJungsiReason) {
+      changes.push({
+        field: 'jungsi_general_no_reason',
+        field_name: '(일반대·과기원) 정시 미접수 사유',
+        from: existing.jungsi_general_no_reason || existing.jungsi_no_reason || '',
+        to: genJungsiReason || ''
+      })
+    }
+
+    // 4) (전문대) 수시 Diff
+    const prevColSusi = existing.susi_college_intent || 'APPLY'
+    if (prevColSusi !== colSusiIntent) {
       changes.push({
         field: 'susi_college_intent',
         field_name: '(전문대) 수시',
-        from: prevCol,
-        from_label: prevCol === 'APPLY' ? '접수 예정' : '미접수',
-        to: colIntent,
-        to_label: colIntent === 'APPLY' ? '접수 예정' : '미접수',
-        reason: colReason
+        from: prevColSusi,
+        from_label: prevColSusi === 'APPLY' ? '접수 예정' : '미접수',
+        to: colSusiIntent,
+        to_label: colSusiIntent === 'APPLY' ? '접수 예정' : '미접수',
+        reason: colSusiReason
       })
-    } else if (colIntent === 'NO_APPLY' && existing.susi_college_no_reason !== colReason) {
+    } else if (colSusiIntent === 'NO_APPLY' && existing.susi_college_no_reason !== colSusiReason) {
       changes.push({
         field: 'susi_college_no_reason',
-        field_name: '전문대 수시 미접수 사유',
+        field_name: '(전문대) 수시 미접수 사유',
         from: existing.susi_college_no_reason || '',
-        to: colReason || ''
+        to: colSusiReason || ''
       })
     }
 
-    const prevJung = existing.jungsi_intent || 'APPLY'
-    if (prevJung !== jungIntent) {
+    // 5) (전문대) 정시 Diff
+    const prevColJungsi = existing.jungsi_college_intent || 'APPLY'
+    if (prevColJungsi !== colJungsiIntent) {
       changes.push({
-        field: 'jungsi_intent',
-        field_name: '대학 정시',
-        from: prevJung,
-        from_label: prevJung === 'APPLY' ? '접수 예정' : '미접수',
-        to: jungIntent,
-        to_label: jungIntent === 'APPLY' ? '접수 예정' : '미접수',
-        reason: jungReason
+        field: 'jungsi_college_intent',
+        field_name: '(전문대) 정시',
+        from: prevColJungsi,
+        from_label: prevColJungsi === 'APPLY' ? '접수 예정' : '미접수',
+        to: colJungsiIntent,
+        to_label: colJungsiIntent === 'APPLY' ? '접수 예정' : '미접수',
+        reason: colJungsiReason
       })
-    } else if (jungIntent === 'NO_APPLY' && existing.jungsi_no_reason !== jungReason) {
+    } else if (colJungsiIntent === 'NO_APPLY' && existing.jungsi_college_no_reason !== colJungsiReason) {
       changes.push({
-        field: 'jungsi_no_reason',
-        field_name: '정시 미접수 사유',
-        from: existing.jungsi_no_reason || '',
-        to: jungReason || ''
+        field: 'jungsi_college_no_reason',
+        field_name: '(전문대) 정시 미접수 사유',
+        from: existing.jungsi_college_no_reason || '',
+        to: colJungsiReason || ''
       })
     }
 
@@ -227,14 +261,18 @@ export async function upsertIntentSurvey(payload, actor = { name: '학생 본인
     student_code,
     csat_intent: csat_intent || 'TAKE',
     csat_no_take_reason: csat_intent === 'NO_TAKE' ? (csat_no_take_reason || null) : null,
-    susi_general_intent: genIntent,
-    susi_general_no_reason: genReason,
-    susi_college_intent: colIntent,
-    susi_college_no_reason: colReason,
-    jungsi_intent: jungIntent,
-    jungsi_no_reason: jungReason,
-    susi_intent: genIntent, // 레거시 호환
-    susi_no_apply_reason: genReason,
+    susi_general_intent: genSusiIntent,
+    susi_general_no_reason: genSusiReason,
+    jungsi_general_intent: genJungsiIntent,
+    jungsi_general_no_reason: genJungsiReason,
+    susi_college_intent: colSusiIntent,
+    susi_college_no_reason: colSusiReason,
+    jungsi_college_intent: colJungsiIntent,
+    jungsi_college_no_reason: colJungsiReason,
+    jungsi_intent: genJungsiIntent, // 레거시 호환
+    jungsi_no_reason: genJungsiReason,
+    susi_intent: genSusiIntent, // 레거시 호환
+    susi_no_apply_reason: genSusiReason,
     student_signature: student_signature || existing?.student_signature || null,
     parent_signature: parent_signature || existing?.parent_signature || null,
     parent_name: parent_name || existing?.parent_name || null,

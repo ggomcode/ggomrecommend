@@ -23,10 +23,10 @@
     </header>
 
     <main class="max-w-7xl mx-auto px-6 py-8">
-      <!-- 통계 카드 -->
-      <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-8">
+      <!-- 대시보드 통계 카드 -->
+      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-8">
         <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-          <p class="text-xs font-bold text-slate-400 mb-1">전체 재학생</p>
+          <p class="text-xs font-bold text-slate-400 mb-1">전체 학생</p>
           <p class="text-2xl font-extrabold text-slate-900">{{ stats.total }}</p>
         </div>
         <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
@@ -42,11 +42,19 @@
           <p class="text-2xl font-extrabold text-purple-600">{{ stats.susiGenNoApply }}</p>
         </div>
         <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+          <p class="text-xs font-bold text-slate-400 mb-1">일반대 정시 미접수</p>
+          <p class="text-2xl font-extrabold text-indigo-600">{{ stats.jungsiGenNoApply }}</p>
+        </div>
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
           <p class="text-xs font-bold text-slate-400 mb-1">전문대 수시 미접수</p>
           <p class="text-2xl font-extrabold text-pink-600">{{ stats.susiColNoApply }}</p>
         </div>
         <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-          <p class="text-xs font-bold text-red-500 mb-1">⚠️ 수능 대조 불일치</p>
+          <p class="text-xs font-bold text-slate-400 mb-1">전문대 정시 미접수</p>
+          <p class="text-2xl font-extrabold text-rose-600">{{ stats.jungsiColNoApply }}</p>
+        </div>
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+          <p class="text-xs font-bold text-red-500 mb-1">⚠️ 수능 불일치</p>
           <p class="text-2xl font-extrabold text-red-600">{{ stats.mismatch }}</p>
         </div>
       </div>
@@ -73,9 +81,10 @@
               <option value="no_survey">미응답자만</option>
               <option value="no_take">수능 미응시만</option>
               <option value="no_apply_any">대입 원서 미접수자(어느 하나라도)</option>
-              <option value="no_apply_gen">일반대 수시 미접수만</option>
-              <option value="no_apply_col">전문대 수시 미접수만</option>
-              <option value="no_apply_jung">정시 미접수만</option>
+              <option value="no_apply_gen_susi">일반대 수시 미접수만</option>
+              <option value="no_apply_gen_jung">일반대 정시 미접수만</option>
+              <option value="no_apply_col_susi">전문대 수시 미접수만</option>
+              <option value="no_apply_col_jung">전문대 정시 미접수만</option>
             </select>
           </div>
           <div class="flex flex-wrap gap-2 items-center">
@@ -93,12 +102,13 @@
                 <th class="px-3 py-3 text-left font-bold text-slate-600">학번</th>
                 <th class="px-3 py-3 text-left font-bold text-slate-600">성명</th>
                 <th class="px-2 py-3 text-center font-bold text-slate-600">반</th>
-                <th class="px-3 py-3 text-center font-bold text-slate-600">수능 자가</th>
-                <th class="px-3 py-3 text-center font-bold text-slate-600">접수대장</th>
-                <th class="px-2 py-3 text-center font-bold text-slate-600">수능매칭</th>
+                <th class="px-3 py-3 text-center font-bold text-slate-600">수능(자가)</th>
+                <th class="px-3 py-3 text-center font-bold text-slate-600">수능(대장)</th>
+                <th class="px-2 py-3 text-center font-bold text-slate-600">매칭</th>
                 <th class="px-3 py-3 text-center font-bold text-slate-600">(일반대)수시</th>
+                <th class="px-3 py-3 text-center font-bold text-slate-600">(일반대)정시</th>
                 <th class="px-3 py-3 text-center font-bold text-slate-600">(전문대)수시</th>
-                <th class="px-3 py-3 text-center font-bold text-slate-600">정시</th>
+                <th class="px-3 py-3 text-center font-bold text-slate-600">(전문대)정시</th>
                 <th class="px-3 py-3 text-center font-bold text-slate-600">수정이력</th>
                 <th class="px-2 py-3 text-center font-bold text-slate-600">확인서</th>
                 <th class="px-3 py-3 text-center font-bold text-slate-600">개별인쇄</th>
@@ -106,10 +116,10 @@
             </thead>
             <tbody>
               <tr v-if="loading" class="border-b border-slate-100">
-                <td colspan="12" class="px-4 py-12 text-center text-slate-400 font-semibold">불러오는 중...</td>
+                <td colspan="13" class="px-4 py-12 text-center text-slate-400 font-semibold">불러오는 중...</td>
               </tr>
               <tr v-else-if="filteredData.length === 0" class="border-b border-slate-100">
-                <td colspan="12" class="px-4 py-12 text-center text-slate-400 font-semibold">표시할 데이터가 없습니다.</td>
+                <td colspan="13" class="px-4 py-12 text-center text-slate-400 font-semibold">표시할 데이터가 없습니다.</td>
               </tr>
               <tr v-for="row in filteredData" :key="row.student_code"
                 :class="['border-b border-slate-100 transition-colors text-xs', isMismatch(row) ? 'bg-red-50/70' : 'hover:bg-slate-50']">
@@ -144,6 +154,13 @@
                   <span v-else class="text-[11px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full" :title="row.susi_general_no_reason">미접수</span>
                 </td>
 
+                <!-- (일반대) 정시 자가체크 -->
+                <td class="px-3 py-3 text-center">
+                  <span v-if="!row.has_survey" class="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">미응답</span>
+                  <span v-else-if="(row.jungsi_general_intent || row.jungsi_intent || 'APPLY') === 'APPLY'" class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">접수</span>
+                  <span v-else class="text-[11px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full" :title="row.jungsi_general_no_reason || row.jungsi_no_reason">미접수</span>
+                </td>
+
                 <!-- (전문대) 수시 자가체크 -->
                 <td class="px-3 py-3 text-center">
                   <span v-if="!row.has_survey" class="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">미응답</span>
@@ -151,11 +168,11 @@
                   <span v-else class="text-[11px] font-bold text-pink-700 bg-pink-100 px-2 py-0.5 rounded-full" :title="row.susi_college_no_reason">미접수</span>
                 </td>
 
-                <!-- 정시 자가체크 -->
+                <!-- (전문대) 정시 자가체크 -->
                 <td class="px-3 py-3 text-center">
                   <span v-if="!row.has_survey" class="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">미응답</span>
-                  <span v-else-if="(row.jungsi_intent || 'APPLY') === 'APPLY'" class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">접수</span>
-                  <span v-else class="text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full" :title="row.jungsi_no_reason">미접수</span>
+                  <span v-else-if="(row.jungsi_college_intent || 'APPLY') === 'APPLY'" class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">접수</span>
+                  <span v-else class="text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full" :title="row.jungsi_college_no_reason">미접수</span>
                 </td>
 
                 <!-- 수정 이력 버튼 -->
@@ -377,10 +394,11 @@ const classList = computed(() => {
 })
 
 function hasStudentNoApply(r) {
-  const gen = r.susi_general_intent || r.susi_intent || 'APPLY'
-  const col = r.susi_college_intent || 'APPLY'
-  const jung = r.jungsi_intent || 'APPLY'
-  return gen === 'NO_APPLY' || col === 'NO_APPLY' || jung === 'NO_APPLY'
+  const genSusi = r.susi_general_intent || r.susi_intent || 'APPLY'
+  const genJung = r.jungsi_general_intent || r.jungsi_intent || 'APPLY'
+  const colSusi = r.susi_college_intent || 'APPLY'
+  const colJung = r.jungsi_college_intent || 'APPLY'
+  return genSusi === 'NO_APPLY' || genJung === 'NO_APPLY' || colSusi === 'NO_APPLY' || colJung === 'NO_APPLY'
 }
 
 const stats = computed(() => {
@@ -390,8 +408,9 @@ const stats = computed(() => {
     surveyed: data.filter(r => r.has_survey).length,
     csatNoTake: data.filter(r => r.csat_intent === 'NO_TAKE').length,
     susiGenNoApply: data.filter(r => (r.susi_general_intent || r.susi_intent) === 'NO_APPLY').length,
+    jungsiGenNoApply: data.filter(r => (r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY').length,
     susiColNoApply: data.filter(r => r.susi_college_intent === 'NO_APPLY').length,
-    jungsiNoApply: data.filter(r => r.jungsi_intent === 'NO_APPLY').length,
+    jungsiColNoApply: data.filter(r => r.jungsi_college_intent === 'NO_APPLY').length,
     mismatch: data.filter(r => isMismatch(r)).length
   }
 })
@@ -406,9 +425,10 @@ const filteredData = computed(() => {
   else if (filterStatus.value === 'no_survey') data = data.filter(r => !r.has_survey)
   else if (filterStatus.value === 'no_take') data = data.filter(r => r.csat_intent === 'NO_TAKE')
   else if (filterStatus.value === 'no_apply_any') data = data.filter(r => hasStudentNoApply(r))
-  else if (filterStatus.value === 'no_apply_gen') data = data.filter(r => (r.susi_general_intent || r.susi_intent) === 'NO_APPLY')
-  else if (filterStatus.value === 'no_apply_col') data = data.filter(r => r.susi_college_intent === 'NO_APPLY')
-  else if (filterStatus.value === 'no_apply_jung') data = data.filter(r => r.jungsi_intent === 'NO_APPLY')
+  else if (filterStatus.value === 'no_apply_gen_susi') data = data.filter(r => (r.susi_general_intent || r.susi_intent) === 'NO_APPLY')
+  else if (filterStatus.value === 'no_apply_gen_jung') data = data.filter(r => (r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY')
+  else if (filterStatus.value === 'no_apply_col_susi') data = data.filter(r => r.susi_college_intent === 'NO_APPLY')
+  else if (filterStatus.value === 'no_apply_col_jung') data = data.filter(r => r.jungsi_college_intent === 'NO_APPLY')
   return data
 })
 
@@ -454,12 +474,16 @@ function printSingleSusi(row) {
   printSusiNoApplyForm(student, {
     susi_general_intent: row.susi_general_intent,
     susi_general_no_reason: row.susi_general_no_reason,
+    jungsi_general_intent: row.jungsi_general_intent,
+    jungsi_general_no_reason: row.jungsi_general_no_reason,
     susi_college_intent: row.susi_college_intent,
     susi_college_no_reason: row.susi_college_no_reason,
-    jungsi_intent: row.jungsi_intent,
-    jungsi_no_reason: row.jungsi_no_reason,
+    jungsi_college_intent: row.jungsi_college_intent,
+    jungsi_college_no_reason: row.jungsi_college_no_reason,
     susi_intent: row.susi_intent,
     susi_no_apply_reason: row.susi_no_apply_reason,
+    jungsi_intent: row.jungsi_intent,
+    jungsi_no_reason: row.jungsi_no_reason,
     student_signature: row.student_signature,
     parent_signature: row.parent_signature,
     parent_name: row.parent_name,
@@ -492,12 +516,16 @@ function printBatchSusi() {
       intentData: {
         susi_general_intent: r.susi_general_intent,
         susi_general_no_reason: r.susi_general_no_reason,
+        jungsi_general_intent: r.jungsi_general_intent,
+        jungsi_general_no_reason: r.jungsi_general_no_reason,
         susi_college_intent: r.susi_college_intent,
         susi_college_no_reason: r.susi_college_no_reason,
-        jungsi_intent: r.jungsi_intent,
-        jungsi_no_reason: r.jungsi_no_reason,
+        jungsi_college_intent: r.jungsi_college_intent,
+        jungsi_college_no_reason: r.jungsi_college_no_reason,
         susi_intent: r.susi_intent,
         susi_no_apply_reason: r.susi_no_apply_reason,
+        jungsi_intent: r.jungsi_intent,
+        jungsi_no_reason: r.jungsi_no_reason,
         student_signature: r.student_signature,
         parent_signature: r.parent_signature,
         parent_name: r.parent_name,
@@ -521,10 +549,12 @@ function downloadExcel() {
     '수능미응시사유': r.csat_no_take_reason || '',
     '일반대수시': r.has_survey ? ((r.susi_general_intent || r.susi_intent) === 'APPLY' ? '접수' : '미접수') : '미응답',
     '일반대수시사유': r.susi_general_no_reason || r.susi_no_apply_reason || '',
+    '일반대정시': r.has_survey ? ((r.jungsi_general_intent || r.jungsi_intent || 'APPLY') === 'APPLY' ? '접수' : '미접수') : '미응답',
+    '일반대정시사유': r.jungsi_general_no_reason || r.jungsi_no_reason || '',
     '전문대수시': r.has_survey ? ((r.susi_college_intent || 'APPLY') === 'APPLY' ? '접수' : '미접수') : '미응답',
     '전문대수시사유': r.susi_college_no_reason || '',
-    '정시': r.has_survey ? ((r.jungsi_intent || 'APPLY') === 'APPLY' ? '접수' : '미접수') : '미응답',
-    '정시사유': r.jungsi_no_reason || '',
+    '전문대정시': r.has_survey ? ((r.jungsi_college_intent || 'APPLY') === 'APPLY' ? '접수' : '미접수') : '미응답',
+    '전문대정시사유': r.jungsi_college_no_reason || '',
     '수정횟수': r.history_count || 0,
     '최종수정자': r.last_modified_by || '',
     '최종수정일시': r.last_modified_at || '',

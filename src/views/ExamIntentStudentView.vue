@@ -69,7 +69,18 @@
             사유: {{ survey.susi_general_no_reason || survey.susi_no_apply_reason || '-' }}
           </div>
 
-          <!-- 3. (전문대) 수시 -->
+          <!-- 3. (일반대/과기원) 정시 -->
+          <div class="ei-summary-row">
+            <span class="ei-summary-label">(일반대·과기원) 정시</span>
+            <span :class="['ei-summary-badge', (survey.jungsi_general_intent || survey.jungsi_intent || 'APPLY') === 'APPLY' ? 'badge-blue' : 'badge-red']">
+              {{ (survey.jungsi_general_intent || survey.jungsi_intent || 'APPLY') === 'APPLY' ? '✔ 접수 예정' : '✖ 미접수' }}
+            </span>
+          </div>
+          <div v-if="(survey.jungsi_general_intent || survey.jungsi_intent) === 'NO_APPLY'" class="ei-summary-reason">
+            사유: {{ survey.jungsi_general_no_reason || survey.jungsi_no_reason || '-' }}
+          </div>
+
+          <!-- 4. (전문대) 수시 -->
           <div class="ei-summary-row">
             <span class="ei-summary-label">(전문대) 수시</span>
             <span :class="['ei-summary-badge', (survey.susi_college_intent || 'APPLY') === 'APPLY' ? 'badge-blue' : 'badge-red']">
@@ -80,15 +91,15 @@
             사유: {{ survey.susi_college_no_reason || '-' }}
           </div>
 
-          <!-- 4. 정시 -->
+          <!-- 5. (전문대) 정시 -->
           <div class="ei-summary-row">
-            <span class="ei-summary-label">대학 정시</span>
-            <span :class="['ei-summary-badge', (survey.jungsi_intent || 'APPLY') === 'APPLY' ? 'badge-blue' : 'badge-red']">
-              {{ (survey.jungsi_intent || 'APPLY') === 'APPLY' ? '✔ 접수 예정' : '✖ 미접수' }}
+            <span class="ei-summary-label">(전문대) 정시</span>
+            <span :class="['ei-summary-badge', (survey.jungsi_college_intent || 'APPLY') === 'APPLY' ? 'badge-blue' : 'badge-red']">
+              {{ (survey.jungsi_college_intent || 'APPLY') === 'APPLY' ? '✔ 접수 예정' : '✖ 미접수' }}
             </span>
           </div>
-          <div v-if="survey.jungsi_intent === 'NO_APPLY'" class="ei-summary-reason">
-            사유: {{ survey.jungsi_no_reason || '-' }}
+          <div v-if="survey.jungsi_college_intent === 'NO_APPLY'" class="ei-summary-reason">
+            사유: {{ survey.jungsi_college_no_reason || '-' }}
           </div>
         </div>
 
@@ -183,7 +194,7 @@
           </div>
         </div>
 
-        <!-- 2) 일반대/과기원 수시 토글 -->
+        <!-- 2) (일반대·과기원) 수시 토글 -->
         <div class="ei-edit-box">
           <div class="ei-edit-box-header">
             <span class="ei-edit-box-num">2</span>
@@ -220,10 +231,47 @@
           </div>
         </div>
 
-        <!-- 3) 전문대 수시 토글 -->
+        <!-- 3) (일반대·과기원) 정시 토글 -->
         <div class="ei-edit-box">
           <div class="ei-edit-box-header">
             <span class="ei-edit-box-num">3</span>
+            <span class="ei-edit-box-title">(일반대 · 과기원) 정시 원서접수</span>
+          </div>
+          <div class="ei-toggle-group">
+            <button
+              type="button"
+              @click="form.jungsi_general_intent = 'APPLY'"
+              :class="['ei-toggle-btn', { active: form.jungsi_general_intent === 'APPLY' }]"
+            >
+              ✔ 접수합니다
+            </button>
+            <button
+              type="button"
+              @click="form.jungsi_general_intent = 'NO_APPLY'"
+              :class="['ei-toggle-btn', 'btn-no', { active: form.jungsi_general_intent === 'NO_APPLY' }]"
+            >
+              ✖ 미접수합니다
+            </button>
+          </div>
+          <div v-if="form.jungsi_general_intent === 'NO_APPLY'" class="ei-edit-reason-area">
+            <div class="ei-reason-chips">
+              <button type="button" v-for="r in generalJungsiReasons" :key="r" @click="form.jungsi_general_no_reason = r"
+                :class="['ei-chip', { active: form.jungsi_general_no_reason === r }]">{{ r }}</button>
+            </div>
+            <input
+              v-if="form.jungsi_general_no_reason === '기타'"
+              v-model="form.jungsi_general_no_reason_detail"
+              type="text"
+              class="ei-input mt-2"
+              placeholder="기타 미접수 사유 입력"
+            />
+          </div>
+        </div>
+
+        <!-- 4) (전문대) 수시 토글 -->
+        <div class="ei-edit-box">
+          <div class="ei-edit-box-header">
+            <span class="ei-edit-box-num">4</span>
             <span class="ei-edit-box-title">(전문대) 수시 원서접수</span>
           </div>
           <div class="ei-toggle-group">
@@ -257,36 +305,36 @@
           </div>
         </div>
 
-        <!-- 4) 대학 정시 토글 -->
+        <!-- 5) (전문대) 정시 토글 -->
         <div class="ei-edit-box">
           <div class="ei-edit-box-header">
-            <span class="ei-edit-box-num">4</span>
-            <span class="ei-edit-box-title">대학 정시 원서접수</span>
+            <span class="ei-edit-box-num">5</span>
+            <span class="ei-edit-box-title">(전문대) 정시 원서접수</span>
           </div>
           <div class="ei-toggle-group">
             <button
               type="button"
-              @click="form.jungsi_intent = 'APPLY'"
-              :class="['ei-toggle-btn', { active: form.jungsi_intent === 'APPLY' }]"
+              @click="form.jungsi_college_intent = 'APPLY'"
+              :class="['ei-toggle-btn', { active: form.jungsi_college_intent === 'APPLY' }]"
             >
               ✔ 접수합니다
             </button>
             <button
               type="button"
-              @click="form.jungsi_intent = 'NO_APPLY'"
-              :class="['ei-toggle-btn', 'btn-no', { active: form.jungsi_intent === 'NO_APPLY' }]"
+              @click="form.jungsi_college_intent = 'NO_APPLY'"
+              :class="['ei-toggle-btn', 'btn-no', { active: form.jungsi_college_intent === 'NO_APPLY' }]"
             >
               ✖ 미접수합니다
             </button>
           </div>
-          <div v-if="form.jungsi_intent === 'NO_APPLY'" class="ei-edit-reason-area">
+          <div v-if="form.jungsi_college_intent === 'NO_APPLY'" class="ei-edit-reason-area">
             <div class="ei-reason-chips">
-              <button type="button" v-for="r in jungsiReasons" :key="r" @click="form.jungsi_no_reason = r"
-                :class="['ei-chip', { active: form.jungsi_no_reason === r }]">{{ r }}</button>
+              <button type="button" v-for="r in collegeJungsiReasons" :key="r" @click="form.jungsi_college_no_reason = r"
+                :class="['ei-chip', { active: form.jungsi_college_no_reason === r }]">{{ r }}</button>
             </div>
             <input
-              v-if="form.jungsi_no_reason === '기타'"
-              v-model="form.jungsi_no_reason_detail"
+              v-if="form.jungsi_college_no_reason === '기타'"
+              v-model="form.jungsi_college_no_reason_detail"
               type="text"
               class="ei-input mt-2"
               placeholder="기타 미접수 사유 입력"
@@ -411,9 +459,54 @@
         </div>
       </div>
 
-      <!-- Step 3: (전문대) 수시 접수 여부 -->
+      <!-- Step 3: (일반대 · 과기원) 정시 접수 여부 -->
       <div v-if="step === 3" class="ei-step-content">
-        <h2 class="ei-step-title">🏫 3. (전문대) 수시원서 접수 여부</h2>
+        <h2 class="ei-step-title">🎯 3. (일반대 · 과기원) 정시원서 접수 여부</h2>
+        <p class="ei-step-desc">4년제 일반대학 및 과학기술원 정시모집(가/나/다군)에 원서를 접수할 예정인가요?</p>
+
+        <div class="ei-choice-grid">
+          <button
+            @click="form.jungsi_general_intent = 'APPLY'"
+            :class="['ei-choice-card', { selected: form.jungsi_general_intent === 'APPLY' }]"
+          >
+            <span class="ei-choice-icon">✅</span>
+            <span class="ei-choice-text">정시 접수합니다</span>
+            <span class="ei-choice-sub">일반대/과기원 정시모집 원서를 접수할 예정입니다.</span>
+          </button>
+          <button
+            @click="form.jungsi_general_intent = 'NO_APPLY'"
+            :class="['ei-choice-card', 'card-red', { selected: form.jungsi_general_intent === 'NO_APPLY' }]"
+          >
+            <span class="ei-choice-icon">❌</span>
+            <span class="ei-choice-text">정시 미접수합니다</span>
+            <span class="ei-choice-sub">일반대/과기원 정시원서를 접수하지 않겠습니다.</span>
+          </button>
+        </div>
+
+        <div v-if="form.jungsi_general_intent === 'NO_APPLY'" class="ei-reason-section">
+          <label class="ei-label">미접수 사유를 선택해 주세요</label>
+          <div class="ei-reason-chips">
+            <button v-for="r in generalJungsiReasons" :key="r" @click="form.jungsi_general_no_reason = r"
+              :class="['ei-chip', { active: form.jungsi_general_no_reason === r }]">{{ r }}</button>
+          </div>
+          <textarea
+            v-if="form.jungsi_general_no_reason === '기타'"
+            v-model="form.jungsi_general_no_reason_detail"
+            class="ei-textarea"
+            placeholder="기타 사유를 입력해 주세요..."
+            rows="2"
+          ></textarea>
+        </div>
+
+        <div class="ei-nav-buttons">
+          <button @click="goStep(2)" class="ei-btn-secondary">← 이전</button>
+          <button @click="goStep(4)" :disabled="!form.jungsi_general_intent" class="ei-btn-primary">다음 →</button>
+        </div>
+      </div>
+
+      <!-- Step 4: (전문대) 수시 접수 여부 -->
+      <div v-if="step === 4" class="ei-step-content">
+        <h2 class="ei-step-title">🏫 4. (전문대) 수시원서 접수 여부</h2>
         <p class="ei-step-desc">전문대학 수시모집(1차/2차)에 원서를 접수하시나요?</p>
 
         <div class="ei-choice-grid">
@@ -451,44 +544,44 @@
         </div>
 
         <div class="ei-nav-buttons">
-          <button @click="goStep(2)" class="ei-btn-secondary">← 이전</button>
-          <button @click="goStep(4)" :disabled="!form.susi_college_intent" class="ei-btn-primary">다음 →</button>
+          <button @click="goStep(3)" class="ei-btn-secondary">← 이전</button>
+          <button @click="goStep(5)" :disabled="!form.susi_college_intent" class="ei-btn-primary">다음 →</button>
         </div>
       </div>
 
-      <!-- Step 4: 정시 접수 여부 -->
-      <div v-if="step === 4" class="ei-step-content">
-        <h2 class="ei-step-title">🎯 4. 대학 정시원서 접수 여부</h2>
-        <p class="ei-step-desc">2027학년도 대학 정시모집에 원서를 접수할 예정인가요?</p>
+      <!-- Step 5: (전문대) 정시 접수 여부 -->
+      <div v-if="step === 5" class="ei-step-content">
+        <h2 class="ei-step-title">🏢 5. (전문대) 정시원서 접수 여부</h2>
+        <p class="ei-step-desc">전문대학 정시모집에 원서를 접수할 예정인가요?</p>
 
         <div class="ei-choice-grid">
           <button
-            @click="form.jungsi_intent = 'APPLY'"
-            :class="['ei-choice-card', { selected: form.jungsi_intent === 'APPLY' }]"
+            @click="form.jungsi_college_intent = 'APPLY'"
+            :class="['ei-choice-card', { selected: form.jungsi_college_intent === 'APPLY' }]"
           >
             <span class="ei-choice-icon">✅</span>
-            <span class="ei-choice-text">정시 접수합니다</span>
-            <span class="ei-choice-sub">정시모집 원서를 접수할 예정입니다.</span>
+            <span class="ei-choice-text">전문대 정시 접수합니다</span>
+            <span class="ei-choice-sub">전문대학 정시모집 원서를 접수할 예정입니다.</span>
           </button>
           <button
-            @click="form.jungsi_intent = 'NO_APPLY'"
-            :class="['ei-choice-card', 'card-red', { selected: form.jungsi_intent === 'NO_APPLY' }]"
+            @click="form.jungsi_college_intent = 'NO_APPLY'"
+            :class="['ei-choice-card', 'card-red', { selected: form.jungsi_college_intent === 'NO_APPLY' }]"
           >
             <span class="ei-choice-icon">❌</span>
-            <span class="ei-choice-text">정시 미접수합니다</span>
-            <span class="ei-choice-sub">정시모집 원서를 접수하지 않겠습니다.</span>
+            <span class="ei-choice-text">전문대 정시 미접수합니다</span>
+            <span class="ei-choice-sub">전문대학 정시원서를 접수하지 않겠습니다.</span>
           </button>
         </div>
 
-        <div v-if="form.jungsi_intent === 'NO_APPLY'" class="ei-reason-section">
+        <div v-if="form.jungsi_college_intent === 'NO_APPLY'" class="ei-reason-section">
           <label class="ei-label">미접수 사유를 선택해 주세요</label>
           <div class="ei-reason-chips">
-            <button v-for="r in jungsiReasons" :key="r" @click="form.jungsi_no_reason = r"
-              :class="['ei-chip', { active: form.jungsi_no_reason === r }]">{{ r }}</button>
+            <button v-for="r in collegeJungsiReasons" :key="r" @click="form.jungsi_college_no_reason = r"
+              :class="['ei-chip', { active: form.jungsi_college_no_reason === r }]">{{ r }}</button>
           </div>
           <textarea
-            v-if="form.jungsi_no_reason === '기타'"
-            v-model="form.jungsi_no_reason_detail"
+            v-if="form.jungsi_college_no_reason === '기타'"
+            v-model="form.jungsi_college_no_reason_detail"
             class="ei-textarea"
             placeholder="기타 사유를 입력해 주세요..."
             rows="2"
@@ -496,14 +589,14 @@
         </div>
 
         <div class="ei-nav-buttons">
-          <button @click="goStep(3)" class="ei-btn-secondary">← 이전</button>
-          <button @click="goStep(5)" :disabled="!form.jungsi_intent" class="ei-btn-primary">다음 →</button>
+          <button @click="goStep(4)" class="ei-btn-secondary">← 이전</button>
+          <button @click="goStep(6)" :disabled="!form.jungsi_college_intent" class="ei-btn-primary">다음 →</button>
         </div>
       </div>
 
-      <!-- Step 5: 전자 서명 -->
-      <div v-if="step === 5" class="ei-step-content">
-        <h2 class="ei-step-title">✍️ 5. 전자 서명</h2>
+      <!-- Step 6: 전자 서명 -->
+      <div v-if="step === 6" class="ei-step-content">
+        <h2 class="ei-step-title">✍️ 6. 전자 서명</h2>
         <p class="ei-step-desc">학생 및 보호자의 서명을 입력해 주세요. (종이 수기 서명을 원하시면 건너뛸 수 있습니다.)</p>
 
         <!-- 보호자 성명 -->
@@ -551,14 +644,14 @@
         </div>
 
         <div class="ei-nav-buttons">
-          <button @click="goStep(4)" class="ei-btn-secondary">← 이전</button>
-          <button @click="goStep(6)" class="ei-btn-primary">다음 →</button>
+          <button @click="goStep(5)" class="ei-btn-secondary">← 이전</button>
+          <button @click="goStep(7)" class="ei-btn-primary">다음 →</button>
         </div>
       </div>
 
-      <!-- Step 6: 확인 및 제출 -->
-      <div v-if="step === 6" class="ei-step-content">
-        <h2 class="ei-step-title">📄 6. 등록 내용 최종 확인</h2>
+      <!-- Step 7: 확인 및 제출 -->
+      <div v-if="step === 7" class="ei-step-content">
+        <h2 class="ei-step-title">📄 7. 등록 내용 최종 확인</h2>
         <p class="ei-step-desc">아래 내용을 확인한 후 제출해 주세요.</p>
 
         <div class="ei-confirm-card">
@@ -581,7 +674,18 @@
             </span>
           </div>
           <div v-if="form.susi_general_intent === 'NO_APPLY'" class="ei-confirm-reason">
-            사유: {{ finalGenReason }}
+            사유: {{ finalGenSusiReason }}
+          </div>
+
+          <!-- (일반대/과기원) 정시 -->
+          <div class="ei-confirm-row">
+            <span class="ei-confirm-label">(일반대·과기원) 정시</span>
+            <span :class="['ei-summary-badge', form.jungsi_general_intent === 'APPLY' ? 'badge-blue' : 'badge-red']">
+              {{ form.jungsi_general_intent === 'APPLY' ? '✔ 접수 예정' : '✖ 미접수' }}
+            </span>
+          </div>
+          <div v-if="form.jungsi_general_intent === 'NO_APPLY'" class="ei-confirm-reason">
+            사유: {{ finalGenJungsiReason }}
           </div>
 
           <!-- (전문대) 수시 -->
@@ -592,18 +696,18 @@
             </span>
           </div>
           <div v-if="form.susi_college_intent === 'NO_APPLY'" class="ei-confirm-reason">
-            사유: {{ finalColReason }}
+            사유: {{ finalColSusiReason }}
           </div>
 
-          <!-- 정시 -->
+          <!-- (전문대) 정시 -->
           <div class="ei-confirm-row">
-            <span class="ei-confirm-label">대학 정시</span>
-            <span :class="['ei-summary-badge', form.jungsi_intent === 'APPLY' ? 'badge-blue' : 'badge-red']">
-              {{ form.jungsi_intent === 'APPLY' ? '✔ 접수 예정' : '✖ 미접수' }}
+            <span class="ei-confirm-label">(전문대) 정시</span>
+            <span :class="['ei-summary-badge', form.jungsi_college_intent === 'APPLY' ? 'badge-blue' : 'badge-red']">
+              {{ form.jungsi_college_intent === 'APPLY' ? '✔ 접수 예정' : '✖ 미접수' }}
             </span>
           </div>
-          <div v-if="form.jungsi_intent === 'NO_APPLY'" class="ei-confirm-reason">
-            사유: {{ finalJungReason }}
+          <div v-if="form.jungsi_college_intent === 'NO_APPLY'" class="ei-confirm-reason">
+            사유: {{ finalColJungsiReason }}
           </div>
 
           <div class="ei-confirm-row">
@@ -621,7 +725,7 @@
         </div>
 
         <div class="ei-nav-buttons">
-          <button @click="goStep(5)" class="ei-btn-secondary">← 이전</button>
+          <button @click="goStep(6)" class="ei-btn-secondary">← 이전</button>
           <button @click="submitSurvey" :disabled="submitting" class="ei-btn-submit">
             {{ submitting ? '저장 중...' : '✅ 최종 등록 제출' }}
           </button>
@@ -650,12 +754,13 @@ const isEditing = ref(false)
 const submitting = ref(false)
 const survey = ref(null)
 
-const stepLabels = ['수능', '일반대 수시', '전문대 수시', '정시', '서명', '확인']
+const stepLabels = ['수능', '일반대 수시', '일반대 정시', '전문대 수시', '전문대 정시', '서명', '확인']
 
 const csatReasons = ['수시 파이터', '기타']
 const applyReasons = ['전문대 수시만 접수', '정시 파이터', '기타']
+const generalJungsiReasons = ['수시 파이터', '전문대 정시만 지원', '기타']
 const collegeApplyReasons = ['일반대 수시만 지원', '정시 파이터', '기타']
-const jungsiReasons = ['수시 파이터', '기타']
+const collegeJungsiReasons = ['수시 파이터', '일반대 정시만 지원', '기타']
 
 const form = reactive({
   csat_intent: null,
@@ -664,13 +769,17 @@ const form = reactive({
   susi_general_intent: null,
   susi_general_no_reason: null,
   susi_general_no_reason_detail: '',
+  jungsi_general_intent: null,
+  jungsi_general_no_reason: null,
+  jungsi_general_no_reason_detail: '',
   susi_college_intent: null,
   susi_college_no_reason: null,
   susi_college_no_reason_detail: '',
-  jungsi_intent: null,
-  jungsi_no_reason: null,
-  jungsi_no_reason_detail: '',
-  parent_name: ''
+  jungsi_college_intent: null,
+  jungsi_college_no_reason: null,
+  jungsi_college_no_reason_detail: '',
+  parent_name: '',
+  edit_memo: ''
 })
 
 // 서명 캔버스 refs
@@ -685,28 +794,34 @@ const finalCsatReason = computed(() => {
   return form.csat_no_take_reason || ''
 })
 
-const finalGenReason = computed(() => {
+const finalGenSusiReason = computed(() => {
   if (form.susi_general_no_reason === '기타') return form.susi_general_no_reason_detail || '기타'
   return form.susi_general_no_reason || ''
 })
 
-const finalColReason = computed(() => {
+const finalGenJungsiReason = computed(() => {
+  if (form.jungsi_general_no_reason === '기타') return form.jungsi_general_no_reason_detail || '기타'
+  return form.jungsi_general_no_reason || ''
+})
+
+const finalColSusiReason = computed(() => {
   if (form.susi_college_no_reason === '기타') return form.susi_college_no_reason_detail || '기타'
   return form.susi_college_no_reason || ''
 })
 
-const finalJungReason = computed(() => {
-  if (form.jungsi_no_reason === '기타') return form.jungsi_no_reason_detail || '기타'
-  return form.jungsi_no_reason || ''
+const finalColJungsiReason = computed(() => {
+  if (form.jungsi_college_no_reason === '기타') return form.jungsi_college_no_reason_detail || '기타'
+  return form.jungsi_college_no_reason || ''
 })
 
 // 원서 미접수 항목이 1개라도 있는지 여부
 const hasAnyNoApply = computed(() => {
   if (!survey.value) return false
-  const gen = survey.value.susi_general_intent || survey.value.susi_intent || 'APPLY'
-  const col = survey.value.susi_college_intent || 'APPLY'
-  const jung = survey.value.jungsi_intent || 'APPLY'
-  return gen === 'NO_APPLY' || col === 'NO_APPLY' || jung === 'NO_APPLY'
+  const genSusi = survey.value.susi_general_intent || survey.value.susi_intent || 'APPLY'
+  const genJung = survey.value.jungsi_general_intent || survey.value.jungsi_intent || 'APPLY'
+  const colSusi = survey.value.susi_college_intent || 'APPLY'
+  const colJung = survey.value.jungsi_college_intent || 'APPLY'
+  return genSusi === 'NO_APPLY' || genJung === 'NO_APPLY' || colSusi === 'NO_APPLY' || colJung === 'NO_APPLY'
 })
 
 function formatDate(dateStr) {
@@ -718,7 +833,7 @@ function formatDate(dateStr) {
 function goStep(s) {
   step.value = s
   window.scrollTo({ top: 0, behavior: 'smooth' })
-  if (s === 5) {
+  if (s === 6) {
     nextTick(() => {
       initCanvas('student')
       initCanvas('parent')
@@ -795,7 +910,7 @@ function draw(e, type) {
 function endDraw(type) {
   if (!isDrawing.value[type]) return
   isDrawing.value[type] = false
-  saveSigData(type)
+  saveCanvasData(type)
 }
 
 function startDrawTouch(e, type) {
@@ -818,15 +933,10 @@ function drawTouch(e, type) {
   ctx.stroke()
 }
 
-function saveSigData(type) {
+function saveCanvasData(type) {
   const canvas = getCanvas(type)
   if (!canvas) return
   const dataUrl = canvas.toDataURL('image/png')
-  // 빈 캔버스 체크
-  const blankCanvas = document.createElement('canvas')
-  blankCanvas.width = canvas.width
-  blankCanvas.height = canvas.height
-  if (dataUrl === blankCanvas.toDataURL('image/png')) return
   if (type === 'student') studentSigData.value = dataUrl
   else parentSigData.value = dataUrl
 }
@@ -840,15 +950,23 @@ function startEditMode() {
     form.csat_intent = survey.value.csat_intent || 'TAKE'
     form.csat_no_take_reason = survey.value.csat_no_take_reason || null
     form.csat_no_take_reason_detail = survey.value.csat_no_take_reason || ''
+
     form.susi_general_intent = survey.value.susi_general_intent || survey.value.susi_intent || 'APPLY'
     form.susi_general_no_reason = survey.value.susi_general_no_reason || survey.value.susi_no_apply_reason || null
     form.susi_general_no_reason_detail = survey.value.susi_general_no_reason || survey.value.susi_no_apply_reason || ''
+
+    form.jungsi_general_intent = survey.value.jungsi_general_intent || survey.value.jungsi_intent || 'APPLY'
+    form.jungsi_general_no_reason = survey.value.jungsi_general_no_reason || survey.value.jungsi_no_reason || null
+    form.jungsi_general_no_reason_detail = survey.value.jungsi_general_no_reason || survey.value.jungsi_no_reason || ''
+
     form.susi_college_intent = survey.value.susi_college_intent || 'APPLY'
     form.susi_college_no_reason = survey.value.susi_college_no_reason || null
     form.susi_college_no_reason_detail = survey.value.susi_college_no_reason || ''
-    form.jungsi_intent = survey.value.jungsi_intent || 'APPLY'
-    form.jungsi_no_reason = survey.value.jungsi_no_reason || null
-    form.jungsi_no_reason_detail = survey.value.jungsi_no_reason || ''
+
+    form.jungsi_college_intent = survey.value.jungsi_college_intent || 'APPLY'
+    form.jungsi_college_no_reason = survey.value.jungsi_college_no_reason || null
+    form.jungsi_college_no_reason_detail = survey.value.jungsi_college_no_reason || ''
+
     form.parent_name = survey.value.parent_name || ''
     form.edit_memo = ''
   }
@@ -869,11 +987,13 @@ async function saveEditSurvey() {
       csat_intent: form.csat_intent,
       csat_no_take_reason: form.csat_intent === 'NO_TAKE' ? finalCsatReason.value : null,
       susi_general_intent: form.susi_general_intent,
-      susi_general_no_reason: form.susi_general_intent === 'NO_APPLY' ? finalGenReason.value : null,
+      susi_general_no_reason: form.susi_general_intent === 'NO_APPLY' ? finalGenSusiReason.value : null,
+      jungsi_general_intent: form.jungsi_general_intent,
+      jungsi_general_no_reason: form.jungsi_general_intent === 'NO_APPLY' ? finalGenJungsiReason.value : null,
       susi_college_intent: form.susi_college_intent,
-      susi_college_no_reason: form.susi_college_intent === 'NO_APPLY' ? finalColReason.value : null,
-      jungsi_intent: form.jungsi_intent,
-      jungsi_no_reason: form.jungsi_intent === 'NO_APPLY' ? finalJungReason.value : null,
+      susi_college_no_reason: form.susi_college_intent === 'NO_APPLY' ? finalColSusiReason.value : null,
+      jungsi_college_intent: form.jungsi_college_intent,
+      jungsi_college_no_reason: form.jungsi_college_intent === 'NO_APPLY' ? finalColJungsiReason.value : null,
       student_signature: studentSigData.value || survey.value?.student_signature,
       parent_signature: parentSigData.value || survey.value?.parent_signature,
       parent_name: form.parent_name || survey.value?.parent_name || null,
@@ -906,11 +1026,13 @@ async function submitSurvey() {
       csat_intent: form.csat_intent,
       csat_no_take_reason: form.csat_intent === 'NO_TAKE' ? finalCsatReason.value : null,
       susi_general_intent: form.susi_general_intent,
-      susi_general_no_reason: form.susi_general_intent === 'NO_APPLY' ? finalGenReason.value : null,
+      susi_general_no_reason: form.susi_general_intent === 'NO_APPLY' ? finalGenSusiReason.value : null,
+      jungsi_general_intent: form.jungsi_general_intent,
+      jungsi_general_no_reason: form.jungsi_general_intent === 'NO_APPLY' ? finalGenJungsiReason.value : null,
       susi_college_intent: form.susi_college_intent,
-      susi_college_no_reason: form.susi_college_intent === 'NO_APPLY' ? finalColReason.value : null,
-      jungsi_intent: form.jungsi_intent,
-      jungsi_no_reason: form.jungsi_intent === 'NO_APPLY' ? finalJungReason.value : null,
+      susi_college_no_reason: form.susi_college_intent === 'NO_APPLY' ? finalColSusiReason.value : null,
+      jungsi_college_intent: form.jungsi_college_intent,
+      jungsi_college_no_reason: form.jungsi_college_intent === 'NO_APPLY' ? finalColJungsiReason.value : null,
       student_signature: studentSigData.value,
       parent_signature: parentSigData.value,
       parent_name: form.parent_name || null
@@ -920,11 +1042,11 @@ async function submitSurvey() {
     survey.value = result
     isCompleted.value = true
     isEditing.value = false
-
+    step.value = 1
     await dialog.alert({ title: '✅ 등록 완료', message: '수능 및 대입 원서접수 의향이 성공적으로 등록되었습니다.' })
   } catch (e) {
     console.error('submitSurvey error:', e)
-    await dialog.alert({ title: '오류', message: '등록 중 오류가 발생했습니다: ' + (e.message || e) })
+    await dialog.alert({ title: '등록 오류', message: '등록 중 오류가 발생했습니다: ' + (e.message || e) })
   } finally {
     submitting.value = false
   }

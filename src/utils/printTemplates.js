@@ -1411,13 +1411,15 @@ export function printSusiNoApplyForm(student, intentData = {}) {
   const dateStr = formatKoreanDate(intentData.confirmed_at)
   const parentNameDisplay = intentData.parent_name || ''
 
-  const genIntent = intentData.susi_general_intent || intentData.susi_intent || 'APPLY'
-  const colIntent = intentData.susi_college_intent || 'APPLY'
-  const jungIntent = intentData.jungsi_intent || 'APPLY'
+  const genSusiIntent = intentData.susi_general_intent || intentData.susi_intent || 'APPLY'
+  const genJungIntent = intentData.jungsi_general_intent || intentData.jungsi_intent || 'APPLY'
+  const colSusiIntent = intentData.susi_college_intent || 'APPLY'
+  const colJungIntent = intentData.jungsi_college_intent || 'APPLY'
 
-  const genReason = genIntent === 'NO_APPLY' ? (intentData.susi_general_no_reason || intentData.susi_no_apply_reason || '(사유 미입력)') : '-'
-  const colReason = colIntent === 'NO_APPLY' ? (intentData.susi_college_no_reason || '(사유 미입력)') : '-'
-  const jungReason = jungIntent === 'NO_APPLY' ? (intentData.jungsi_no_reason || '(사유 미입력)') : '-'
+  const genSusiReason = genSusiIntent === 'NO_APPLY' ? (intentData.susi_general_no_reason || intentData.susi_no_apply_reason || '(사유 미입력)') : '-'
+  const genJungReason = genJungIntent === 'NO_APPLY' ? (intentData.jungsi_general_no_reason || intentData.jungsi_no_reason || '(사유 미입력)') : '-'
+  const colSusiReason = colSusiIntent === 'NO_APPLY' ? (intentData.susi_college_no_reason || '(사유 미입력)') : '-'
+  const colJungReason = colJungIntent === 'NO_APPLY' ? (intentData.jungsi_college_no_reason || '(사유 미입력)') : '-'
 
   const win = window.open('', '_blank')
   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>대입 원서 미접수 확인서</title>
@@ -1425,7 +1427,7 @@ export function printSusiNoApplyForm(student, intentData = {}) {
   <style>
     ${getIntentFormStyles()}
     .apply-table { width: 100%; border-collapse: collapse; margin: 16px 0 20px 0; }
-    .apply-table th, .apply-table td { border: 1px solid #333; padding: 9px 10px; font-size: 12.5px; }
+    .apply-table th, .apply-table td { border: 1px solid #333; padding: 8px 10px; font-size: 12px; }
     .apply-table th { background: #f3f4f6; font-weight: 700; text-align: center; }
     .status-tag { display: inline-block; font-weight: 700; padding: 2px 6px; border-radius: 3px; font-size: 11px; }
     .status-no { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
@@ -1459,8 +1461,8 @@ export function printSusiNoApplyForm(student, intentData = {}) {
     <table class="apply-table">
       <thead>
         <tr>
-          <th style="width: 25%;">전형 구분</th>
-          <th style="width: 18%;">접수 여부</th>
+          <th style="width: 26%;">전형 구분</th>
+          <th style="width: 17%;">접수 여부</th>
           <th style="width: 57%;">미접수 사유</th>
         </tr>
       </thead>
@@ -1468,29 +1470,38 @@ export function printSusiNoApplyForm(student, intentData = {}) {
         <tr>
           <td style="font-weight: 700; text-align: center;">(일반대·과기원) 수시모집</td>
           <td style="text-align: center;">
-            <span class="status-tag ${genIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">
-              ${genIntent === 'NO_APPLY' ? '미접수' : '접수'}
+            <span class="status-tag ${genSusiIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">
+              ${genSusiIntent === 'NO_APPLY' ? '미접수' : '접수'}
             </span>
           </td>
-          <td>${genReason}</td>
+          <td>${genSusiReason}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: 700; text-align: center;">(일반대·과기원) 정시모집</td>
+          <td style="text-align: center;">
+            <span class="status-tag ${genJungIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">
+              ${genJungIntent === 'NO_APPLY' ? '미접수' : '접수'}
+            </span>
+          </td>
+          <td>${genJungReason}</td>
         </tr>
         <tr>
           <td style="font-weight: 700; text-align: center;">(전문대) 수시모집</td>
           <td style="text-align: center;">
-            <span class="status-tag ${colIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">
-              ${colIntent === 'NO_APPLY' ? '미접수' : '접수'}
+            <span class="status-tag ${colSusiIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">
+              ${colSusiIntent === 'NO_APPLY' ? '미접수' : '접수'}
             </span>
           </td>
-          <td>${colReason}</td>
+          <td>${colSusiReason}</td>
         </tr>
         <tr>
-          <td style="font-weight: 700; text-align: center;">대학 정시모집</td>
+          <td style="font-weight: 700; text-align: center;">(전문대) 정시모집</td>
           <td style="text-align: center;">
-            <span class="status-tag ${jungIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">
-              ${jungIntent === 'NO_APPLY' ? '미접수' : '접수'}
+            <span class="status-tag ${colJungIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">
+              ${colJungIntent === 'NO_APPLY' ? '미접수' : '접수'}
             </span>
           </td>
-          <td>${jungReason}</td>
+          <td>${colJungReason}</td>
         </tr>
       </tbody>
     </table>
@@ -1568,13 +1579,15 @@ export function printBatchIntentForms(list, type = 'csat') {
         <div class="footer-line">${principalTitle}</div>
       </div>`
     } else {
-      const genIntent = intentData?.susi_general_intent || intentData?.susi_intent || 'APPLY'
-      const colIntent = intentData?.susi_college_intent || 'APPLY'
-      const jungIntent = intentData?.jungsi_intent || 'APPLY'
+      const genSusiIntent = intentData?.susi_general_intent || intentData?.susi_intent || 'APPLY'
+      const genJungIntent = intentData?.jungsi_general_intent || intentData?.jungsi_intent || 'APPLY'
+      const colSusiIntent = intentData?.susi_college_intent || 'APPLY'
+      const colJungIntent = intentData?.jungsi_college_intent || 'APPLY'
 
-      const genReason = genIntent === 'NO_APPLY' ? (intentData?.susi_general_no_reason || intentData?.susi_no_apply_reason || '(사유 미입력)') : '-'
-      const colReason = colIntent === 'NO_APPLY' ? (intentData?.susi_college_no_reason || '(사유 미입력)') : '-'
-      const jungReason = jungIntent === 'NO_APPLY' ? (intentData?.jungsi_no_reason || '(사유 미입력)') : '-'
+      const genSusiReason = genSusiIntent === 'NO_APPLY' ? (intentData?.susi_general_no_reason || intentData?.susi_no_apply_reason || '(사유 미입력)') : '-'
+      const genJungReason = genJungIntent === 'NO_APPLY' ? (intentData?.jungsi_general_no_reason || intentData?.jungsi_no_reason || '(사유 미입력)') : '-'
+      const colSusiReason = colSusiIntent === 'NO_APPLY' ? (intentData?.susi_college_no_reason || '(사유 미입력)') : '-'
+      const colJungReason = colJungIntent === 'NO_APPLY' ? (intentData?.jungsi_college_no_reason || '(사유 미입력)') : '-'
 
       return `
       <div class="page">
@@ -1591,26 +1604,31 @@ export function printBatchIntentForms(list, type = 'csat') {
         <table class="apply-table">
           <thead>
             <tr>
-              <th style="width: 25%;">전형 구분</th>
-              <th style="width: 18%;">접수 여부</th>
+              <th style="width: 26%;">전형 구분</th>
+              <th style="width: 17%;">접수 여부</th>
               <th style="width: 57%;">미접수 사유</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td style="font-weight: 700; text-align: center;">(일반대·과기원) 수시모집</td>
-              <td style="text-align: center;"><span class="status-tag ${genIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">${genIntent === 'NO_APPLY' ? '미접수' : '접수'}</span></td>
-              <td>${genReason}</td>
+              <td style="text-align: center;"><span class="status-tag ${genSusiIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">${genSusiIntent === 'NO_APPLY' ? '미접수' : '접수'}</span></td>
+              <td>${genSusiReason}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 700; text-align: center;">(일반대·과기원) 정시모집</td>
+              <td style="text-align: center;"><span class="status-tag ${genJungIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">${genJungIntent === 'NO_APPLY' ? '미접수' : '접수'}</span></td>
+              <td>${genJungReason}</td>
             </tr>
             <tr>
               <td style="font-weight: 700; text-align: center;">(전문대) 수시모집</td>
-              <td style="text-align: center;"><span class="status-tag ${colIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">${colIntent === 'NO_APPLY' ? '미접수' : '접수'}</span></td>
-              <td>${colReason}</td>
+              <td style="text-align: center;"><span class="status-tag ${colSusiIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">${colSusiIntent === 'NO_APPLY' ? '미접수' : '접수'}</span></td>
+              <td>${colSusiReason}</td>
             </tr>
             <tr>
-              <td style="font-weight: 700; text-align: center;">대학 정시모집</td>
-              <td style="text-align: center;"><span class="status-tag ${jungIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">${jungIntent === 'NO_APPLY' ? '미접수' : '접수'}</span></td>
-              <td>${jungReason}</td>
+              <td style="font-weight: 700; text-align: center;">(전문대) 정시모집</td>
+              <td style="text-align: center;"><span class="status-tag ${colJungIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">${colJungIntent === 'NO_APPLY' ? '미접수' : '접수'}</span></td>
+              <td>${colJungReason}</td>
             </tr>
           </tbody>
         </table>

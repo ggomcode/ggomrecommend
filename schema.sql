@@ -1200,8 +1200,12 @@ CREATE TABLE IF NOT EXISTS public.student_intent_surveys (
 -- 기존 테이블 마이그레이션 DDL
 ALTER TABLE public.student_intent_surveys ADD COLUMN IF NOT EXISTS susi_general_intent TEXT NOT NULL DEFAULT 'APPLY' CHECK (susi_general_intent IN ('APPLY', 'NO_APPLY'));
 ALTER TABLE public.student_intent_surveys ADD COLUMN IF NOT EXISTS susi_general_no_reason TEXT;
+ALTER TABLE public.student_intent_surveys ADD COLUMN IF NOT EXISTS jungsi_general_intent TEXT NOT NULL DEFAULT 'APPLY' CHECK (jungsi_general_intent IN ('APPLY', 'NO_APPLY'));
+ALTER TABLE public.student_intent_surveys ADD COLUMN IF NOT EXISTS jungsi_general_no_reason TEXT;
 ALTER TABLE public.student_intent_surveys ADD COLUMN IF NOT EXISTS susi_college_intent TEXT NOT NULL DEFAULT 'APPLY' CHECK (susi_college_intent IN ('APPLY', 'NO_APPLY'));
 ALTER TABLE public.student_intent_surveys ADD COLUMN IF NOT EXISTS susi_college_no_reason TEXT;
+ALTER TABLE public.student_intent_surveys ADD COLUMN IF NOT EXISTS jungsi_college_intent TEXT NOT NULL DEFAULT 'APPLY' CHECK (jungsi_college_intent IN ('APPLY', 'NO_APPLY'));
+ALTER TABLE public.student_intent_surveys ADD COLUMN IF NOT EXISTS jungsi_college_no_reason TEXT;
 ALTER TABLE public.student_intent_surveys ADD COLUMN IF NOT EXISTS jungsi_intent TEXT NOT NULL DEFAULT 'APPLY' CHECK (jungsi_intent IN ('APPLY', 'NO_APPLY'));
 ALTER TABLE public.student_intent_surveys ADD COLUMN IF NOT EXISTS jungsi_no_reason TEXT;
 ALTER TABLE public.student_intent_surveys ADD COLUMN IF NOT EXISTS change_logs JSONB NOT NULL DEFAULT '[]'::jsonb;
