@@ -35,8 +35,20 @@ const FOREIGN_LANGUAGES = [
  */
 export async function parseCsatPdf(file) {
   const arrayBuffer = await file.arrayBuffer()
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+  let pdf = null
+  try {
+    pdf = await pdfjsLib.getDocument({
+      data: arrayBuffer,
+      cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+      cMapPacked: true
+    }).promise
+  } catch (err) {
+    console.warn('PDF getDocument with cMaps failed, retrying simple getDocument:', err)
+    pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+  }
+
   const totalPages = pdf.numPages
+  console.log(`[CSAT Parser] PDF 로드 완료: 총 ${totalPages}페이지`)
 
   let batchTime = null
   const allRecords = []
@@ -52,29 +64,117 @@ export async function parseCsatPdf(file) {
       batchTime = extractBatchTime(items, viewport)
     }
 
-    // 텍스트 아이템을 뷰포트 시각 좌표(Visual Coordinate) 기준 Y좌표 클러스터링으로 행 그룹핑
-    const rows = groupTextItemsToRows(items, viewport)
+    // 전략 1: 토큰 스트림 경계 기반 파싱 (가장 강력하고 회전/줄바꿈에 영향 없음)
+    let pageRecords = parseRecordsFromPageTokens(items, viewport)
 
-    // 각 행에서 데이터 레코드 파싱
-    for (const row of rows) {
-      const record = parseRecordFromRow(row)
-      if (record) {
-        allRecords.push(record)
+    // 전략 2: 만약 전략 1이 0건이면 행 클러스터링 기반 파싱으로 폴백
+    if (pageRecords.length === 0) {
+      const rows = groupTextItemsToRows(items, viewport)
+      for (const row of rows) {
+        const record = parseRecordFromRow(row)
+        if (record) {
+          pageRecords.push(record)
+        }
       }
     }
+
+    console.log(`[CSAT Parser] ${pageNum}/${totalPages}페이지 파싱: ${pageRecords.length}명 추출됨`)
+    allRecords.push(...pageRecords)
   }
 
+  // 중복 접수번호 제거 (혹시 모를 중복 방지)
+  const uniqueMap = new Map()
+  for (const r of allRecords) {
+    if (!uniqueMap.has(r.receipt_no)) {
+      uniqueMap.set(r.receipt_no, r)
+    }
+  }
+  const finalRecords = [...uniqueMap.values()]
+
   // 통계 계산
-  const stats = computeStats(allRecords)
+  const stats = computeStats(finalRecords)
+  console.log(`[CSAT Parser] 파싱 완료: 총 ${finalRecords.length}명 (재학생: ${stats.enrolledCount}명, 졸업생: ${stats.graduatedCount}명)`)
 
   return {
-    records: allRecords,
+    records: finalRecords,
     batchTime,
     stats,
     totalCount: stats.total,
     enrolledCount: stats.enrolledCount,
     gradCount: stats.graduatedCount
   }
+}
+
+/**
+ * 페이지 내 전체 텍스트 토큰 스트림에서 [일련번호, 접수번호] 경계 기준으로 레코드 추출
+ */
+function parseRecordsFromPageTokens(items, viewport) {
+  if (!items || items.length === 0) return []
+
+  // 1. 뷰포트 시각 좌표 변환 및 상->하, 좌->우 정렬
+  const validItems = []
+  for (const item of items) {
+    if (!item.str || item.str.trim().length === 0) continue
+    const tx = item.transform[4]
+    const ty = item.transform[5]
+    let screenX = tx
+    let screenY = ty
+    if (viewport && typeof viewport.convertToViewportPoint === 'function') {
+      const pt = viewport.convertToViewportPoint(tx, ty)
+      screenX = pt[0]
+      screenY = pt[1]
+    }
+    validItems.push({
+      text: item.str.trim(),
+      x: screenX,
+      y: screenY
+    })
+  }
+
+  // 상단->하단 (Y), 동일 라인 좌측->우측 (X) 정렬
+  validItems.sort((a, b) => {
+    if (Math.abs(a.y - b.y) <= 4) {
+      return a.x - b.x
+    }
+    return a.y - b.y
+  })
+
+  // 전체 토큰 평탄화
+  const allTokens = []
+  for (const it of validItems) {
+    const parts = it.text.split(/\s+/).filter(Boolean)
+    allTokens.push(...parts)
+  }
+
+  // [연번(1~9999), 접수번호(5~8자리)] 시작 인덱스 탐색
+  const markers = []
+  for (let i = 0; i < allTokens.length - 1; i++) {
+    const t1 = allTokens[i]
+    const t2 = allTokens[i + 1]
+    if (/^\d{1,4}$/.test(t1) && /^\d{5,8}$/.test(t2)) {
+      const seqNo = parseInt(t1, 10)
+      if (seqNo >= 1 && seqNo <= 9999) {
+        markers.push({ idx: i, seqNo, receiptNo: t2 })
+      }
+    }
+  }
+
+  if (markers.length === 0) return []
+
+  const records = []
+  for (let m = 0; m < markers.length; m++) {
+    const current = markers[m]
+    const nextIdx = (m < markers.length - 1) ? markers[m + 1].idx : allTokens.length
+    const recordTokens = allTokens.slice(current.idx, nextIdx)
+    
+    const columns = recordTokens.slice(2)
+    const rec = parseColumnsFromTokens(current.seqNo, current.receiptNo, columns)
+    if (rec) {
+      records.push(rec)
+    }
+  }
+
+  return records
 }
 
 /**
