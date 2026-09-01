@@ -10,7 +10,7 @@ import * as pdfjsLib from 'pdfjs-dist'
 
 // PDF.js 워커 설정
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
 }
 
 // 국어 선택과목 키워드
@@ -214,19 +214,27 @@ function parseRecordFromRow(rowItems) {
 
   if (tokens.length < 3) return null
 
-  // 첫 번째 토큰이 숫자(일련번호)인지 확인
-  const firstToken = tokens[0]
-  if (!/^\d+$/.test(firstToken)) return null
-  const seqNo = parseInt(firstToken, 10)
-  if (seqNo < 1 || seqNo > 9999) return null
+  // 일련번호와 접수번호 위치 동적 탐색 (앞쪽 5개 토큰 내에서 검색)
+  let startIdx = -1
+  let seqNo = null
+  let receiptNo = null
 
-  // 두 번째 토큰이 접수번호(5~8자리 숫자)인지 확인
-  const secondToken = tokens[1]
-  if (!/^\d{5,8}$/.test(secondToken)) return null
-  const receiptNo = secondToken
+  for (let i = 0; i < Math.min(tokens.length - 1, 5); i++) {
+    if (/^\d{1,4}$/.test(tokens[i]) && /^\d{5,8}$/.test(tokens[i + 1])) {
+      const sNum = parseInt(tokens[i], 10)
+      if (sNum >= 1 && sNum <= 9999) {
+        startIdx = i
+        seqNo = sNum
+        receiptNo = tokens[i + 1]
+        break
+      }
+    }
+  }
+
+  if (startIdx === -1) return null
 
   // 나머지 토큰들로 14개 컬럼 데이터 파싱
-  return parseColumnsFromTokens(seqNo, receiptNo, tokens.slice(2))
+  return parseColumnsFromTokens(seqNo, receiptNo, tokens.slice(startIdx + 2))
 }
 
 /**
