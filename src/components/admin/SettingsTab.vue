@@ -410,16 +410,16 @@
         </div>
       </div>
 
-      <!-- 4-3. 수능 · 수시 응시 등록 시스템 활성화 -->
+      <!-- 4-3. 수능응시 · 수시/정시 원서접수계획 등록 시스템 활성화 -->
       <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
         <div class="flex items-center justify-between gap-4">
           <div>
             <h2 class="text-base font-bold text-slate-800 dark:text-white mb-1 flex items-center gap-2">
               <span class="w-1 h-3 bg-violet-600 rounded-full"></span>
-              수능 · 수시 응시 등록 시스템 활성화
+              수능응시 · 수시/정시 원서접수계획 등록 시스템 활성화
             </h2>
             <p class="text-xs text-slate-400">
-              재학생 대상 수능 미응시자 및 수시원서 미접수자 파악, 확인서 출력, 수능 접수대장 대조 시스템을 활성화합니다.
+              재학생 대상 수능 응시 여부 및 대학 수시·정시 원서접수 계획 파악, 확인서 출력, 수능 접수대장 대조 시스템을 활성화합니다.
             </p>
           </div>
           <button
@@ -863,7 +863,7 @@ async function toggleEnableExamIntentSystem() {
         .from('config')
         .upsert({ key: 'enable_exam_intent_system', value: String(enableExamIntentSystem.value) }, { onConflict: 'key' })
       if (error) throw error
-      alert(`수능 · 수시 응시 등록 시스템이 ${enableExamIntentSystem.value ? '활성화' : '비활성화'}되었습니다.`)
+      alert(`수능응시 · 수시/정시 원서접수계획 등록 시스템이 ${enableExamIntentSystem.value ? '활성화' : '비활성화'}되었습니다.`)
     } catch (e) {
       console.error(e)
       alert('설정 저장 중 오류가 발생했습니다.')

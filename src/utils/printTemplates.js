@@ -1333,8 +1333,9 @@ function renderSig(sigUrl) {
  * @param {object} intentData - { csat_no_take_reason, student_signature, parent_signature, parent_name, confirmed_at }
  */
 export function printCsatNoTakeForm(student, intentData = {}) {
-  const fullSchoolName = getFormattedSchoolName(schoolName)
-  const principalTitle = formatSchoolPrincipalTitle(schoolName)
+  const currentSchool = schoolName.value || schoolName
+  const fullSchoolName = getFormattedSchoolName(currentSchool)
+  const principalTitle = formatSchoolPrincipalTitle(currentSchool)
   const dateStr = formatKoreanDate(intentData.confirmed_at)
   const reason = intentData.csat_no_take_reason || '(사유 미입력)'
   const parentNameDisplay = intentData.parent_name || ''
@@ -1404,8 +1405,9 @@ export function printCsatNoTakeForm(student, intentData = {}) {
  * @param {object} intentData - { susi_general_intent, susi_general_no_reason, susi_college_intent, susi_college_no_reason, jungsi_intent, jungsi_no_reason, student_signature, parent_signature, parent_name, confirmed_at }
  */
 export function printSusiNoApplyForm(student, intentData = {}) {
-  const fullSchoolName = getFormattedSchoolName(schoolName)
-  const principalTitle = formatSchoolPrincipalTitle(schoolName)
+  const currentSchool = schoolName.value || schoolName
+  const fullSchoolName = getFormattedSchoolName(currentSchool)
+  const principalTitle = formatSchoolPrincipalTitle(currentSchool)
   const dateStr = formatKoreanDate(intentData.confirmed_at)
   const parentNameDisplay = intentData.parent_name || ''
 
@@ -1529,8 +1531,9 @@ export function printSusiNoApplyForm(student, intentData = {}) {
 export function printBatchIntentForms(list, type = 'csat') {
   if (!list || list.length === 0) return
 
-  const fullSchoolName = getFormattedSchoolName(schoolName)
-  const principalTitle = formatSchoolPrincipalTitle(schoolName)
+  const currentSchool = schoolName.value || schoolName
+  const fullSchoolName = getFormattedSchoolName(currentSchool)
+  const principalTitle = formatSchoolPrincipalTitle(currentSchool)
   const isCsat = type === 'csat'
 
   const title = isCsat

@@ -5,7 +5,8 @@ const initialCached = localStorage.getItem('pcm_school_name')
 export const schoolName = ref((!initialCached || initialCached === '우리학교') ? '우리고등학교' : initialCached)
 
 export function normalizeSchoolName(input) {
-  let name = String(input || '').trim()
+  const unwrapped = input && typeof input === 'object' && 'value' in input ? input.value : input
+  let name = String(unwrapped || '').trim()
   if (!name || name === '우리학교') return '우리고등학교'
   if (name.endsWith('고') && !name.endsWith('고등학교')) {
     name = name.slice(0, -1) + '고등학교'
@@ -14,7 +15,8 @@ export function normalizeSchoolName(input) {
 }
 
 export function formatSchoolPrincipalTitle(rawInput) {
-  let name = String(rawInput || '').trim()
+  const unwrapped = rawInput && typeof rawInput === 'object' && 'value' in rawInput ? rawInput.value : rawInput
+  let name = String(unwrapped || '').trim()
   if (!name || name === '우리학교' || name === '우리고등학교') {
     return '우리고등학교장 귀하'
   }

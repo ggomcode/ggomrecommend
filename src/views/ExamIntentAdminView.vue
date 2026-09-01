@@ -12,7 +12,7 @@
           </div>
           <div class="flex flex-col leading-tight">
             <span class="text-[11px] font-extrabold tracking-tight" style="color: #6366f1;">{{ schoolName }}</span>
-            <h1 class="text-base font-bold text-slate-900 m-0">수능 · 대입원서 응시 관리</h1>
+            <h1 class="text-base font-bold text-slate-900 m-0">수능응시 · 수시/정시 원서접수계획 관리</h1>
           </div>
         </div>
         <div class="flex items-center gap-3">
@@ -62,11 +62,11 @@
         <!-- 필터 및 액션 버튼 -->
         <div class="flex flex-wrap gap-3 mb-4 items-center justify-between">
           <div class="flex flex-wrap gap-2 items-center">
-            <select v-model="filterClass" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white font-semibold text-slate-700 cursor-pointer">
+            <select v-model="filterClass" class="text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-slate-700 cursor-pointer min-w-[110px] shadow-sm focus:outline-none focus:border-indigo-500 transition-all">
               <option value="all">전체 반</option>
               <option v-for="c in classList" :key="c" :value="c">{{ c }}반</option>
             </select>
-            <select v-model="filterStatus" class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white font-semibold text-slate-700 cursor-pointer">
+            <select v-model="filterStatus" class="text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-slate-700 cursor-pointer min-w-[160px] shadow-sm focus:outline-none focus:border-indigo-500 transition-all">
               <option value="all">전체 상태</option>
               <option value="mismatch">⚠️ 수능 불일치만</option>
               <option value="modified">🔄 계획 수정된 학생만</option>

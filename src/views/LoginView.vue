@@ -32,11 +32,21 @@
           <UserCheck v-else class="w-7 h-7" />
         </div>
         <p class="text-xs font-extrabold text-blue-600 mb-1.5 tracking-wide">{{ schoolName }}</p>
-        <h1 class="text-slate-900 m-0 flex flex-col items-center justify-center gap-1 font-extrabold tracking-tight">
-          <span class="text-base text-slate-900">학교장 추천자 선발 시스템</span>
-          <template v-if="isRuralSystemEnabled">
+        <h1 class="text-slate-900 m-0 flex flex-col items-center justify-center gap-1 font-extrabold tracking-tight leading-snug">
+          <span class="text-[15px] text-slate-900">학교장 추천자 선발 시스템</span>
+          <template v-if="isRuralSystemEnabled && isExamIntentSystemEnabled">
             <span class="text-xs text-blue-600 font-bold leading-none my-0.5">및</span>
-            <span class="text-base text-slate-900">농어촌(기회균형) 전형 추천 등록 시스템</span>
+            <span class="text-[15px] text-slate-900">농어촌(기회균형) 전형 추천 등록 시스템</span>
+            <span class="text-xs text-blue-600 font-bold leading-none my-0.5">및</span>
+            <span class="text-[15px] text-slate-900">수능응시 · 수시/정시 원서접수계획 등록 시스템</span>
+          </template>
+          <template v-else-if="isRuralSystemEnabled">
+            <span class="text-xs text-blue-600 font-bold leading-none my-0.5">및</span>
+            <span class="text-[15px] text-slate-900">농어촌(기회균형) 전형 추천 등록 시스템</span>
+          </template>
+          <template v-else-if="isExamIntentSystemEnabled">
+            <span class="text-xs text-blue-600 font-bold leading-none my-0.5">및</span>
+            <span class="text-[15px] text-slate-900">수능응시 · 수시/정시 원서접수계획 등록 시스템</span>
           </template>
         </h1>
       </div>
@@ -536,6 +546,7 @@ import { GraduationCap, School, UserCheck, CheckCircle } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
+import { checkExamIntentSystemEnabled } from '../api/examIntentApi.js'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -544,6 +555,7 @@ const auth = useAuthStore()
 const activeTab = ref('student')
 
 const isRuralSystemEnabled = ref(localStorage.getItem('pcm_enable_rural_system') === 'true')
+const isExamIntentSystemEnabled = ref(localStorage.getItem('pcm_enable_exam_intent_system') !== 'false')
 const isSignUp = ref(false)
 const loading = ref(false)
 const error = ref(null)
@@ -586,6 +598,9 @@ onMounted(async () => {
   try {
     const status = await checkRuralSystemOpenStatus()
     isRuralSystemEnabled.value = status.isEnabled === true
+  } catch (e) {}
+  try {
+    isExamIntentSystemEnabled.value = await checkExamIntentSystemEnabled()
   } catch (e) {}
 })
 

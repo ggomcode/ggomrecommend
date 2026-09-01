@@ -215,11 +215,11 @@
             </div>
 
             <h3 class="text-2xl font-bold text-slate-900 group-hover:text-violet-600 transition-colors mb-3">
-              수능 · 수시 응시 등록
+              수능응시 · 수시/정시 원서접수계획 등록
             </h3>
             
             <p class="text-sm text-slate-600 leading-relaxed">
-              수능 응시 여부 및 대학 수시원서 접수 여부 자가 등록, 미응시/미접수 확인서 출력 및 수능 접수대장 대조 관리를 수행합니다.
+              수능 응시 여부 및 대학 수시·정시 원서접수 계획 자가 등록, 미응시/미접수 확인서 출력 및 수능 접수대장 대조 관리를 수행합니다.
             </p>
           </div>
 
@@ -328,7 +328,7 @@ function enterPrincipalSystem() {
 async function enterExamIntentSystem() {
   if (isPortalLoading.value) return
   if (!isExamIntentSystemEnabled.value) {
-    await dialog.alert({ title: '시스템 이용 제한', message: '수능 · 수시 응시 등록 시스템이 현재 비활성화되어 있습니다.' })
+    await dialog.alert({ title: '시스템 이용 제한', message: '수능응시 · 수시/정시 원서접수계획 등록 시스템이 현재 비활성화되어 있습니다.' })
     return
   }
   if (auth.isStudent) router.push('/exam-intent')

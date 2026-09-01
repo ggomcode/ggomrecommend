@@ -12,7 +12,7 @@
           </div>
           <div class="ei-header-titles">
             <span class="ei-school-tag">{{ schoolName }}</span>
-            <h1 class="ei-page-title">수능 · 대입원서 응시 등록</h1>
+            <h1 class="ei-page-title">수능응시 · 수시/정시 원서접수계획 등록</h1>
           </div>
         </div>
         <div class="ei-header-right">
@@ -244,7 +244,7 @@
           </div>
           <div v-if="form.susi_college_intent === 'NO_APPLY'" class="ei-edit-reason-area">
             <div class="ei-reason-chips">
-              <button type="button" v-for="r in applyReasons" :key="r" @click="form.susi_college_no_reason = r"
+              <button type="button" v-for="r in collegeApplyReasons" :key="r" @click="form.susi_college_no_reason = r"
                 :class="['ei-chip', { active: form.susi_college_no_reason === r }]">{{ r }}</button>
             </div>
             <input
@@ -438,7 +438,7 @@
         <div v-if="form.susi_college_intent === 'NO_APPLY'" class="ei-reason-section">
           <label class="ei-label">미접수 사유를 선택해 주세요</label>
           <div class="ei-reason-chips">
-            <button v-for="r in applyReasons" :key="r" @click="form.susi_college_no_reason = r"
+            <button v-for="r in collegeApplyReasons" :key="r" @click="form.susi_college_no_reason = r"
               :class="['ei-chip', { active: form.susi_college_no_reason === r }]">{{ r }}</button>
           </div>
           <textarea
@@ -652,9 +652,10 @@ const survey = ref(null)
 
 const stepLabels = ['수능', '일반대 수시', '전문대 수시', '정시', '서명', '확인']
 
-const csatReasons = ['취업 준비', '군입대', '해외유학', '수시 합격 기대', '기타']
-const applyReasons = ['정시 집중', '취업 준비', '재수 준비', '해외유학', '군입대', '기타']
-const jungsiReasons = ['수시 합격 기대', '취업 준비', '재수 준비', '해외유학', '군입대', '기타']
+const csatReasons = ['수시 파이터', '기타']
+const applyReasons = ['전문대 수시만 접수', '정시 파이터', '기타']
+const collegeApplyReasons = ['일반대 수시만 지원', '정시 파이터', '기타']
+const jungsiReasons = ['수시 파이터', '기타']
 
 const form = reactive({
   csat_intent: null,
