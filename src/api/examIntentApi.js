@@ -60,24 +60,190 @@ export async function getMyIntentSurvey(studentCode) {
 }
 
 /**
- * 학생 의향 조사 등록/수정 (upsert)
+ * 학생 의향 조사 등록/수정 (upsert with Audit Log)
  */
-export async function upsertIntentSurvey(payload) {
+export async function upsertIntentSurvey(payload, actor = { name: '학생 본인', role: 'student' }) {
   if (!supabase) throw new Error('DB 연결 없음')
-  const { student_id, student_code, csat_intent, csat_no_take_reason, susi_intent, susi_no_apply_reason, student_signature, parent_signature, parent_name } = payload
+  const {
+    student_id,
+    student_code,
+    csat_intent,
+    csat_no_take_reason,
+    susi_general_intent,
+    susi_general_no_reason,
+    susi_college_intent,
+    susi_college_no_reason,
+    jungsi_intent,
+    jungsi_no_reason,
+    susi_intent,
+    susi_no_apply_reason,
+    student_signature,
+    parent_signature,
+    parent_name,
+    memo
+  } = payload
+
+  const genIntent = susi_general_intent || susi_intent || 'APPLY'
+  const genReason = genIntent === 'NO_APPLY' ? (susi_general_no_reason || susi_no_apply_reason || null) : null
+  const colIntent = susi_college_intent || 'APPLY'
+  const colReason = colIntent === 'NO_APPLY' ? (susi_college_no_reason || null) : null
+  const jungIntent = jungsi_intent || 'APPLY'
+  const jungReason = jungIntent === 'NO_APPLY' ? (jungsi_no_reason || null) : null
+  const nowIso = new Date().toISOString()
+
+  // 1. 기존 데이터 조회
+  const existing = await getMyIntentSurvey(student_code)
+
+  let existingLogs = []
+  let historyCount = 0
+  let isModified = false
+  const changes = []
+
+  if (existing) {
+    existingLogs = Array.isArray(existing.change_logs) ? existing.change_logs : []
+    historyCount = (existing.history_count || 0)
+
+    // Diff 계산
+    if (existing.csat_intent !== (csat_intent || 'TAKE')) {
+      changes.push({
+        field: 'csat_intent',
+        field_name: '수능 응시',
+        from: existing.csat_intent,
+        from_label: existing.csat_intent === 'TAKE' ? '응시' : '미응시',
+        to: csat_intent || 'TAKE',
+        to_label: (csat_intent || 'TAKE') === 'TAKE' ? '응시' : '미응시',
+        reason: (csat_intent === 'NO_TAKE') ? (csat_no_take_reason || null) : null
+      })
+    } else if (csat_intent === 'NO_TAKE' && existing.csat_no_take_reason !== csat_no_take_reason) {
+      changes.push({
+        field: 'csat_no_take_reason',
+        field_name: '수능 미응시 사유',
+        from: existing.csat_no_take_reason || '',
+        to: csat_no_take_reason || ''
+      })
+    }
+
+    const prevGen = existing.susi_general_intent || existing.susi_intent || 'APPLY'
+    if (prevGen !== genIntent) {
+      changes.push({
+        field: 'susi_general_intent',
+        field_name: '(일반대·과기원) 수시',
+        from: prevGen,
+        from_label: prevGen === 'APPLY' ? '접수 예정' : '미접수',
+        to: genIntent,
+        to_label: genIntent === 'APPLY' ? '접수 예정' : '미접수',
+        reason: genReason
+      })
+    } else if (genIntent === 'NO_APPLY' && (existing.susi_general_no_reason || existing.susi_no_apply_reason) !== genReason) {
+      changes.push({
+        field: 'susi_general_no_reason',
+        field_name: '일반대 수시 미접수 사유',
+        from: existing.susi_general_no_reason || existing.susi_no_apply_reason || '',
+        to: genReason || ''
+      })
+    }
+
+    const prevCol = existing.susi_college_intent || 'APPLY'
+    if (prevCol !== colIntent) {
+      changes.push({
+        field: 'susi_college_intent',
+        field_name: '(전문대) 수시',
+        from: prevCol,
+        from_label: prevCol === 'APPLY' ? '접수 예정' : '미접수',
+        to: colIntent,
+        to_label: colIntent === 'APPLY' ? '접수 예정' : '미접수',
+        reason: colReason
+      })
+    } else if (colIntent === 'NO_APPLY' && existing.susi_college_no_reason !== colReason) {
+      changes.push({
+        field: 'susi_college_no_reason',
+        field_name: '전문대 수시 미접수 사유',
+        from: existing.susi_college_no_reason || '',
+        to: colReason || ''
+      })
+    }
+
+    const prevJung = existing.jungsi_intent || 'APPLY'
+    if (prevJung !== jungIntent) {
+      changes.push({
+        field: 'jungsi_intent',
+        field_name: '대학 정시',
+        from: prevJung,
+        from_label: prevJung === 'APPLY' ? '접수 예정' : '미접수',
+        to: jungIntent,
+        to_label: jungIntent === 'APPLY' ? '접수 예정' : '미접수',
+        reason: jungReason
+      })
+    } else if (jungIntent === 'NO_APPLY' && existing.jungsi_no_reason !== jungReason) {
+      changes.push({
+        field: 'jungsi_no_reason',
+        field_name: '정시 미접수 사유',
+        from: existing.jungsi_no_reason || '',
+        to: jungReason || ''
+      })
+    }
+
+    if (changes.length > 0) {
+      isModified = true
+      historyCount += 1
+      const logEntry = {
+        id: `log_${Date.now()}`,
+        timestamp: nowIso,
+        actor_name: actor.name || '학생 본인',
+        actor_role: actor.role || 'student',
+        changes,
+        memo: memo || null
+      }
+      existingLogs = [logEntry, ...existingLogs]
+
+      // history 별도 테이블 저장 (비동기 안전 처리)
+      try {
+        await supabase.from('student_intent_history').insert({
+          student_code,
+          actor_name: actor.name || '학생 본인',
+          actor_role: actor.role || 'student',
+          changes,
+          memo: memo || null,
+          created_at: nowIso
+        })
+      } catch (e) {
+        console.warn('Failed to insert history log table:', e)
+      }
+    }
+  } else {
+    // 최초 등록
+    existingLogs = [{
+      id: `log_${Date.now()}`,
+      timestamp: nowIso,
+      actor_name: actor.name || '학생 본인',
+      actor_role: actor.role || 'student',
+      type: 'INITIAL',
+      summary: '최초 응시/원서접수 의향 등록 완료'
+    }]
+  }
 
   const upsertData = {
     student_id,
     student_code,
     csat_intent: csat_intent || 'TAKE',
     csat_no_take_reason: csat_intent === 'NO_TAKE' ? (csat_no_take_reason || null) : null,
-    susi_intent: susi_intent || 'APPLY',
-    susi_no_apply_reason: susi_intent === 'NO_APPLY' ? (susi_no_apply_reason || null) : null,
-    student_signature: student_signature || null,
-    parent_signature: parent_signature || null,
-    parent_name: parent_name || null,
-    confirmed_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    susi_general_intent: genIntent,
+    susi_general_no_reason: genReason,
+    susi_college_intent: colIntent,
+    susi_college_no_reason: colReason,
+    jungsi_intent: jungIntent,
+    jungsi_no_reason: jungReason,
+    susi_intent: genIntent, // 레거시 호환
+    susi_no_apply_reason: genReason,
+    student_signature: student_signature || existing?.student_signature || null,
+    parent_signature: parent_signature || existing?.parent_signature || null,
+    parent_name: parent_name || existing?.parent_name || null,
+    confirmed_at: existing?.confirmed_at || nowIso,
+    change_logs: existingLogs,
+    history_count: historyCount,
+    last_modified_by: isModified ? (actor.name || '학생 본인') : existing?.last_modified_by || null,
+    last_modified_at: isModified ? nowIso : existing?.last_modified_at || null,
+    updated_at: nowIso
   }
 
   const { data, error } = await supabase
@@ -281,13 +447,23 @@ export async function buildComparisonData() {
       has_survey: !!survey,
       csat_intent: survey?.csat_intent || null,
       csat_no_take_reason: survey?.csat_no_take_reason || null,
-      susi_intent: survey?.susi_intent || null,
-      susi_no_apply_reason: survey?.susi_no_apply_reason || null,
+      susi_general_intent: survey?.susi_general_intent || survey?.susi_intent || null,
+      susi_general_no_reason: survey?.susi_general_no_reason || survey?.susi_no_apply_reason || null,
+      susi_college_intent: survey?.susi_college_intent || null,
+      susi_college_no_reason: survey?.susi_college_no_reason || null,
+      jungsi_intent: survey?.jungsi_intent || null,
+      jungsi_no_reason: survey?.jungsi_no_reason || null,
+      susi_intent: survey?.susi_general_intent || survey?.susi_intent || null, // 레거시 호환
+      susi_no_apply_reason: survey?.susi_general_no_reason || survey?.susi_no_apply_reason || null,
       student_signature: survey?.student_signature || null,
       parent_signature: survey?.parent_signature || null,
       parent_name: survey?.parent_name || null,
       is_form_submitted: survey?.is_form_submitted || false,
       confirmed_at: survey?.confirmed_at || null,
+      change_logs: survey?.change_logs || [],
+      history_count: survey?.history_count || 0,
+      last_modified_by: survey?.last_modified_by || null,
+      last_modified_at: survey?.last_modified_at || null,
       // 접수대장 정보
       csat_registered: !!csatRec,
       csat_record: csatRec || null,

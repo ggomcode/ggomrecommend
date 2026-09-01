@@ -1399,23 +1399,38 @@ export function printCsatNoTakeForm(student, intentData = {}) {
 }
 
 /**
- * 2027학년도 대입 수시모집 원서 미접수 확인서 인쇄
+ * 2027학년도 대입 원서 미접수 확인서 인쇄 ((일반대·과기원) 수시, (전문대) 수시, 정시 3종 통합 서식)
  * @param {object} student - { name, grade, class_no, student_no, student_code }
- * @param {object} intentData - { susi_no_apply_reason, student_signature, parent_signature, parent_name, confirmed_at }
+ * @param {object} intentData - { susi_general_intent, susi_general_no_reason, susi_college_intent, susi_college_no_reason, jungsi_intent, jungsi_no_reason, student_signature, parent_signature, parent_name, confirmed_at }
  */
 export function printSusiNoApplyForm(student, intentData = {}) {
   const fullSchoolName = getFormattedSchoolName(schoolName)
   const principalTitle = formatSchoolPrincipalTitle(schoolName)
   const dateStr = formatKoreanDate(intentData.confirmed_at)
-  const reason = intentData.susi_no_apply_reason || '(사유 미입력)'
   const parentNameDisplay = intentData.parent_name || ''
 
+  const genIntent = intentData.susi_general_intent || intentData.susi_intent || 'APPLY'
+  const colIntent = intentData.susi_college_intent || 'APPLY'
+  const jungIntent = intentData.jungsi_intent || 'APPLY'
+
+  const genReason = genIntent === 'NO_APPLY' ? (intentData.susi_general_no_reason || intentData.susi_no_apply_reason || '(사유 미입력)') : '-'
+  const colReason = colIntent === 'NO_APPLY' ? (intentData.susi_college_no_reason || '(사유 미입력)') : '-'
+  const jungReason = jungIntent === 'NO_APPLY' ? (intentData.jungsi_no_reason || '(사유 미입력)') : '-'
+
   const win = window.open('', '_blank')
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>수시 미접수 확인서</title>
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>대입 원서 미접수 확인서</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
-  <style>${getIntentFormStyles()}</style></head><body>
+  <style>
+    ${getIntentFormStyles()}
+    .apply-table { width: 100%; border-collapse: collapse; margin: 16px 0 20px 0; }
+    .apply-table th, .apply-table td { border: 1px solid #333; padding: 9px 10px; font-size: 12.5px; }
+    .apply-table th { background: #f3f4f6; font-weight: 700; text-align: center; }
+    .status-tag { display: inline-block; font-weight: 700; padding: 2px 6px; border-radius: 3px; font-size: 11px; }
+    .status-no { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .status-yes { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+  </style></head><body>
   <div class="page">
-    <h1 class="title">2027학년도 대입 수시모집 원서 미접수 확인서</h1>
+    <h1 class="title">2027학년도 대입 원서 미접수 확인서</h1>
 
     <table class="info-table">
       <tr>
@@ -1435,11 +1450,48 @@ export function printSusiNoApplyForm(student, intentData = {}) {
     </table>
 
     <div class="content-box">
-      위 학생의 진로 및 진학에 대하여 충분히 상의하였으며, 이에 학생 및 보호자의 현재 의사에 따라 <strong>2027학년도 대학 진학을 위한 수시원서를 접수하지 않음</strong>을 본인과 학부모의 연서로 확인합니다.
+      위 학생의 진로 및 진학에 대하여 충분히 상의하였으며, 학생 및 보호자의 의사에 따라 <strong>2027학년도 대학 진학을 위한 원서접수를 아래와 같이 진행(미접수)</strong>함을 본인과 학부모의 연서로 확인합니다.
     </div>
 
-    <div class="reason-label">▶ 미접수 사유:</div>
-    <div class="reason-box">${reason}</div>
+    <div class="reason-label">▶ 대입 전형별 원서접수 여부 및 미접수 사유:</div>
+    <table class="apply-table">
+      <thead>
+        <tr>
+          <th style="width: 25%;">전형 구분</th>
+          <th style="width: 18%;">접수 여부</th>
+          <th style="width: 57%;">미접수 사유</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="font-weight: 700; text-align: center;">(일반대·과기원) 수시모집</td>
+          <td style="text-align: center;">
+            <span class="status-tag ${genIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">
+              ${genIntent === 'NO_APPLY' ? '미접수' : '접수'}
+            </span>
+          </td>
+          <td>${genReason}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: 700; text-align: center;">(전문대) 수시모집</td>
+          <td style="text-align: center;">
+            <span class="status-tag ${colIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">
+              ${colIntent === 'NO_APPLY' ? '미접수' : '접수'}
+            </span>
+          </td>
+          <td>${colReason}</td>
+        </tr>
+        <tr>
+          <td style="font-weight: 700; text-align: center;">대학 정시모집</td>
+          <td style="text-align: center;">
+            <span class="status-tag ${jungIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">
+              ${jungIntent === 'NO_APPLY' ? '미접수' : '접수'}
+            </span>
+          </td>
+          <td>${jungReason}</td>
+        </tr>
+      </tbody>
+    </table>
 
     <p class="date-line">${dateStr}</p>
 
@@ -1472,7 +1524,7 @@ export function printSusiNoApplyForm(student, intentData = {}) {
 /**
  * 학급별 일괄 연속 인쇄 (미응시/미접수 확인서)
  * @param {Array} list - 대상 학생 배열 (각 항목: { student, intentData })
- * @param {'csat'|'susi'} type - 'csat': 수능 미응시, 'susi': 수시 미접수
+ * @param {'csat'|'susi'} type - 'csat': 수능 미응시, 'susi': 원서 미접수
  */
 export function printBatchIntentForms(list, type = 'csat') {
   if (!list || list.length === 0) return
@@ -1483,44 +1535,105 @@ export function printBatchIntentForms(list, type = 'csat') {
 
   const title = isCsat
     ? '2027학년도 대학수학능력시험 미응시 확인서'
-    : '2027학년도 대입 수시모집 원서 미접수 확인서'
-
-  const contentText = isCsat
-    ? '위 학생은 <strong>2027학년도 대학수학능력시험</strong>에 응시하지 않음을 확인하며, 추후 본인의 미응시에 따른 모든 진학 관련 제반 사항에 대하여 충분히 인지하고 <strong>본인과 보호자의 동의</strong>하에 본 확인서를 제출합니다.'
-    : '위 학생의 진로 및 진학에 대하여 충분히 상의하였으며, 이에 학생 및 보호자의 현재 의사에 따라 <strong>2027학년도 대학 진학을 위한 수시원서를 접수하지 않음</strong>을 본인과 학부모의 연서로 확인합니다.'
+    : '2027학년도 대입 원서 미접수 확인서'
 
   const pages = list.map(({ student, intentData }) => {
     const dateStr = formatKoreanDate(intentData?.confirmed_at)
-    const reason = isCsat
-      ? (intentData?.csat_no_take_reason || '(사유 미입력)')
-      : (intentData?.susi_no_apply_reason || '(사유 미입력)')
     const parentNameDisplay = intentData?.parent_name || ''
 
-    return `
-    <div class="page">
-      <h1 class="title">${title}</h1>
-      <table class="info-table">
-        <tr><th>학 교 명</th><td colspan="3">${fullSchoolName}</td></tr>
-        <tr><th>학년 / 반 / 번호</th><td>${student.grade || 3}학년 ${student.class_no || ''}반 ${student.student_no || ''}번</td><th>학 번</th><td>${student.student_code || ''}</td></tr>
-        <tr><th>성 명</th><td colspan="3" style="font-weight:700; font-size:15px;">${student.name || ''}</td></tr>
-      </table>
-      <div class="content-box">${contentText}</div>
-      <div class="reason-label">▶ ${isCsat ? '미응시' : '미접수'} 사유:</div>
-      <div class="reason-box">${reason}</div>
-      <p class="date-line">${dateStr}</p>
-      <table class="sig-table">
-        <tr><td class="label">학 생 :</td><td class="name-cell">${student.name || ''}</td><td class="sig-cell">${renderSig(intentData?.student_signature)}</td></tr>
-        <tr><td class="label">보호자 :</td><td class="name-cell">${parentNameDisplay}</td><td class="sig-cell">${renderSig(intentData?.parent_signature)}</td></tr>
-        <tr><td class="label">담임교사 :</td><td class="name-cell"></td><td class="sig-cell">(서명 또는 인)</td></tr>
-      </table>
-      <div class="footer-line">${principalTitle}</div>
-    </div>`
+    if (isCsat) {
+      const reason = intentData?.csat_no_take_reason || '(사유 미입력)'
+      return `
+      <div class="page">
+        <h1 class="title">${title}</h1>
+        <table class="info-table">
+          <tr><th>학 교 명</th><td colspan="3">${fullSchoolName}</td></tr>
+          <tr><th>학년 / 반 / 번호</th><td>${student.grade || 3}학년 ${student.class_no || ''}반 ${student.student_no || ''}번</td><th>학 번</th><td>${student.student_code || ''}</td></tr>
+          <tr><th>성 명</th><td colspan="3" style="font-weight:700; font-size:15px;">${student.name || ''}</td></tr>
+        </table>
+        <div class="content-box">
+          위 학생은 <strong>2027학년도 대학수학능력시험</strong>에 응시하지 않음을 확인하며, 추후 본인의 미응시에 따른 모든 진학 관련 제반 사항에 대하여 충분히 인지하고 <strong>본인과 보호자의 동의</strong>하에 본 확인서를 제출합니다.
+        </div>
+        <div class="reason-label">▶ 미응시 사유:</div>
+        <div class="reason-box">${reason}</div>
+        <p class="date-line">${dateStr}</p>
+        <table class="sig-table">
+          <tr><td class="label">학 생 :</td><td class="name-cell">${student.name || ''}</td><td class="sig-cell">${renderSig(intentData?.student_signature)}</td></tr>
+          <tr><td class="label">보호자 :</td><td class="name-cell">${parentNameDisplay}</td><td class="sig-cell">${renderSig(intentData?.parent_signature)}</td></tr>
+          <tr><td class="label">담임교사 :</td><td class="name-cell"></td><td class="sig-cell">(서명 또는 인)</td></tr>
+        </table>
+        <div class="footer-line">${principalTitle}</div>
+      </div>`
+    } else {
+      const genIntent = intentData?.susi_general_intent || intentData?.susi_intent || 'APPLY'
+      const colIntent = intentData?.susi_college_intent || 'APPLY'
+      const jungIntent = intentData?.jungsi_intent || 'APPLY'
+
+      const genReason = genIntent === 'NO_APPLY' ? (intentData?.susi_general_no_reason || intentData?.susi_no_apply_reason || '(사유 미입력)') : '-'
+      const colReason = colIntent === 'NO_APPLY' ? (intentData?.susi_college_no_reason || '(사유 미입력)') : '-'
+      const jungReason = jungIntent === 'NO_APPLY' ? (intentData?.jungsi_no_reason || '(사유 미입력)') : '-'
+
+      return `
+      <div class="page">
+        <h1 class="title">${title}</h1>
+        <table class="info-table">
+          <tr><th>학 교 명</th><td colspan="3">${fullSchoolName}</td></tr>
+          <tr><th>학년 / 반 / 번호</th><td>${student.grade || 3}학년 ${student.class_no || ''}반 ${student.student_no || ''}번</td><th>학 번</th><td>${student.student_code || ''}</td></tr>
+          <tr><th>성 명</th><td colspan="3" style="font-weight:700; font-size:15px;">${student.name || ''}</td></tr>
+        </table>
+        <div class="content-box">
+          위 학생의 진로 및 진학에 대하여 충분히 상의하였으며, 학생 및 보호자의 의사에 따라 <strong>2027학년도 대학 진학을 위한 원서접수를 아래와 같이 진행(미접수)</strong>함을 본인과 학부모의 연서로 확인합니다.
+        </div>
+        <div class="reason-label">▶ 대입 전형별 원서접수 여부 및 미접수 사유:</div>
+        <table class="apply-table">
+          <thead>
+            <tr>
+              <th style="width: 25%;">전형 구분</th>
+              <th style="width: 18%;">접수 여부</th>
+              <th style="width: 57%;">미접수 사유</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="font-weight: 700; text-align: center;">(일반대·과기원) 수시모집</td>
+              <td style="text-align: center;"><span class="status-tag ${genIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">${genIntent === 'NO_APPLY' ? '미접수' : '접수'}</span></td>
+              <td>${genReason}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 700; text-align: center;">(전문대) 수시모집</td>
+              <td style="text-align: center;"><span class="status-tag ${colIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">${colIntent === 'NO_APPLY' ? '미접수' : '접수'}</span></td>
+              <td>${colReason}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 700; text-align: center;">대학 정시모집</td>
+              <td style="text-align: center;"><span class="status-tag ${jungIntent === 'NO_APPLY' ? 'status-no' : 'status-yes'}">${jungIntent === 'NO_APPLY' ? '미접수' : '접수'}</span></td>
+              <td>${jungReason}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="date-line">${dateStr}</p>
+        <table class="sig-table">
+          <tr><td class="label">학 생 :</td><td class="name-cell">${student.name || ''}</td><td class="sig-cell">${renderSig(intentData?.student_signature)}</td></tr>
+          <tr><td class="label">보호자 :</td><td class="name-cell">${parentNameDisplay}</td><td class="sig-cell">${renderSig(intentData?.parent_signature)}</td></tr>
+          <tr><td class="label">담임교사 :</td><td class="name-cell"></td><td class="sig-cell">(서명 또는 인)</td></tr>
+        </table>
+        <div class="footer-line">${principalTitle}</div>
+      </div>`
+    }
   }).join('')
 
   const win = window.open('', '_blank')
   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title} (일괄)</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
-  <style>${getIntentFormStyles()}</style></head><body>
+  <style>
+    ${getIntentFormStyles()}
+    .apply-table { width: 100%; border-collapse: collapse; margin: 16px 0 20px 0; }
+    .apply-table th, .apply-table td { border: 1px solid #333; padding: 9px 10px; font-size: 12.5px; }
+    .apply-table th { background: #f3f4f6; font-weight: 700; text-align: center; }
+    .status-tag { display: inline-block; font-weight: 700; padding: 2px 6px; border-radius: 3px; font-size: 11px; }
+    .status-no { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .status-yes { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+  </style></head><body>
   ${pages}
   <script>window.onload=function(){window.print();window.close();}<\/script>
   </body></html>`)
