@@ -43,16 +43,17 @@ export async function parseCsatPdf(file) {
 
   for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
     const page = await pdf.getPage(pageNum)
+    const viewport = page.getViewport({ scale: 1.0 })
     const textContent = await page.getTextContent()
     const items = textContent.items
 
     // 저장 일시 추출 (미발견 시 다음 페이지에서도 계속 탐색)
     if (!batchTime) {
-      batchTime = extractBatchTime(items)
+      batchTime = extractBatchTime(items, viewport)
     }
 
-    // 텍스트 아이템을 Y좌표 클러스터링으로 행(row) 단위 그룹핑
-    const rows = groupTextItemsToRows(items)
+    // 텍스트 아이템을 뷰포트 시각 좌표(Visual Coordinate) 기준 Y좌표 클러스터링으로 행 그룹핑
+    const rows = groupTextItemsToRows(items, viewport)
 
     // 각 행에서 데이터 레코드 파싱
     for (const row of rows) {
@@ -78,17 +79,18 @@ export async function parseCsatPdf(file) {
 
 /**
  * 텍스트 아이템들에서 저장 일시(YYYY-MM-DD HH:mm:ss 등) 추출
+ * 날짜와 시각이 분리된 텍스트 아이템으로 추출되는 경우도 통합 대응
  */
-function extractBatchTime(items) {
+function extractBatchTime(items, viewport) {
   if (!items || items.length === 0) return null
 
-  // 다양한 날짜-시간 패턴 매칭 (YYYY-MM-DD HH:mm:ss, YYYY.MM.DD HH:mm:ss, YYYY/MM/DD HH:mm 등)
-  const dateRegex = /(\d{4}[-./]\d{1,2}[-./]\d{1,2})\s+(\d{1,2}:\d{2}(?::\d{2})?)/
-  
-  // 하단 영역의 텍스트에서 우선 검색 (y좌표가 작을수록 하단)
-  const sortedByY = [...items].sort((a, b) => a.transform[5] - b.transform[5])
-  for (const item of sortedByY) {
-    const match = item.str.match(dateRegex)
+  const combinedRegex = /(\d{4}[-./]\d{1,2}[-./]\d{1,2})\s+(\d{1,2}:\d{2}(?::\d{2})?)/
+  const dateOnlyRegex = /(\d{4}[-./]\d{1,2}[-./]\d{1,2})/
+  const timeOnlyRegex = /(\d{1,2}:\d{2}(?::\d{2})?)/
+
+  // 1. 단일 아이템 내에 일시가 모두 있는 경우
+  for (const item of items) {
+    const match = item.str.match(combinedRegex)
     if (match) {
       const normalizedDate = match[1].replace(/[./]/g, '-')
       const normalizedTime = match[2].length === 5 ? `${match[2]}:00` : match[2]
@@ -96,65 +98,103 @@ function extractBatchTime(items) {
     }
   }
 
-  // 전체 텍스트에서 폴백 검색
+  // 2. 전체 텍스트에서 결합 검색
   const fullText = items.map(i => i.str).join(' ')
-  const match = fullText.match(dateRegex)
+  const match = fullText.match(combinedRegex)
   if (match) {
     const normalizedDate = match[1].replace(/[./]/g, '-')
     const normalizedTime = match[2].length === 5 ? `${match[2]}:00` : match[2]
     return `${normalizedDate} ${normalizedTime}`
   }
 
+  // 3. 하단 영역에서 날짜 아이템과 시각 아이템 분리 검색
+  let foundDate = null
+  let foundTime = null
+
+  // 하단 텍스트(뷰포트 하단 20%) 우선 탐색
+  for (const item of items) {
+    const text = item.str.trim()
+    if (!foundDate && dateOnlyRegex.test(text)) {
+      const dMatch = text.match(dateOnlyRegex)
+      // 기간(YYYY.MM.DD ~ YYYY.MM.DD)의 시작일이 아닌 하단 단독 날짜인지 확인
+      if (!text.includes('~') && !text.includes('기간')) {
+        foundDate = dMatch[1].replace(/[./]/g, '-')
+      }
+    }
+    if (!foundTime && timeOnlyRegex.test(text)) {
+      const tMatch = text.match(timeOnlyRegex)
+      foundTime = tMatch[1].length === 5 ? `${tMatch[1]}:00` : tMatch[1]
+    }
+  }
+
+  if (foundDate && foundTime) {
+    return `${foundDate} ${foundTime}`
+  }
+
   return null
 }
 
 /**
- * 텍스트 아이템을 Y좌표 클러스터링(Tolerance 4pt) 기반으로 행(row) 단위 그룹핑
+ * 텍스트 아이템을 뷰포트 시각 좌표계(Visual Coordinate) 기준으로 변환 후
+ * Y좌표 클러스터링(Tolerance 6pt) 기반으로 행(row) 단위 그룹핑
  */
-function groupTextItemsToRows(items) {
+function groupTextItemsToRows(items, viewport) {
   if (!items || items.length === 0) return []
 
-  // 공백 제외 및 Y좌표 역순(위에서 아래로) 정렬
-  const validItems = items
-    .filter(item => item.str && item.str.trim().length > 0)
-    .sort((a, b) => b.transform[5] - a.transform[5])
-
-  const rows = []
-  const yTolerance = 4 // 동일 행 Y좌표 허용 오차 (point)
-
-  for (const item of validItems) {
-    const y = item.transform[5]
-    const itemData = {
-      text: item.str.trim(),
-      x: item.transform[4],
-      y: y,
-      width: item.width
+  const validItems = []
+  for (const item of items) {
+    if (!item.str || item.str.trim().length === 0) continue
+    const tx = item.transform[4]
+    const ty = item.transform[5]
+    
+    // PDF 회전 및 가로/세로 매트릭스에 관계없이 화면 기준 시각 좌표(x: 좌->우, y: 상->하)로 변환
+    let screenX = tx
+    let screenY = ty
+    if (viewport && typeof viewport.convertToViewportPoint === 'function') {
+      const pt = viewport.convertToViewportPoint(tx, ty)
+      screenX = pt[0]
+      screenY = pt[1]
     }
 
-    // 기존 행 중 Y좌표가 yTolerance 이내인 행 탐색
+    validItems.push({
+      text: item.str.trim(),
+      x: screenX,
+      y: screenY,
+      width: item.width
+    })
+  }
+
+  // 화면 상단(작은 screenY)부터 하단(큰 screenY)으로 정렬
+  validItems.sort((a, b) => a.y - b.y)
+
+  const rows = []
+  const yTolerance = 6 // 동일 행 Y좌표 허용 오차 (point)
+
+  for (const item of validItems) {
+    // 기존 행 중 screenY가 yTolerance 이내인 행 탐색
     let matchedRow = null
     for (const r of rows) {
-      if (Math.abs(r.avgY - y) <= yTolerance) {
+      if (Math.abs(r.avgY - item.y) <= yTolerance) {
         matchedRow = r
         break
       }
     }
 
     if (matchedRow) {
-      matchedRow.items.push(itemData)
-      // 평균 Y좌표 점진적 갱신
-      matchedRow.avgY = (matchedRow.avgY * (matchedRow.items.length - 1) + y) / matchedRow.items.length
+      matchedRow.items.push(item)
+      // 평균 Y좌표 갱신
+      matchedRow.avgY = (matchedRow.avgY * (matchedRow.items.length - 1) + item.y) / matchedRow.items.length
     } else {
       rows.push({
-        avgY: y,
-        items: [itemData]
+        avgY: item.y,
+        items: [item]
       })
     }
   }
 
-  // Y좌표 위->아래 순서 유지 및 각 행 내부는 X좌표 좌->우 정렬
+  // Y좌표 상->하 순서 유지 및 각 행 내부는 X좌표 좌->우(오름차순) 정렬
   return rows
-    .sort((a, b) => b.avgY - a.avgY)
+    .sort((a, b) => a.avgY - b.avgY)
     .map(r => r.items.sort((a, b) => a.x - b.x))
 }
 
@@ -341,11 +381,11 @@ function parseKoreanMath(text) {
  */
 function extractOX(text) {
   const trimmed = text.trim()
-  if (/^[Oo○ㅇ]/.test(trimmed)) {
-    return { value: 'O', rest: trimmed.replace(/^[Oo○ㅇ]\s*/, '').trim() }
+  if (/^[Oo○◯ㅇ0〇]/.test(trimmed)) {
+    return { value: 'O', rest: trimmed.replace(/^[Oo○◯ㅇ0〇]\s*/, '').trim() }
   }
-  if (/^[Xx×✕]/.test(trimmed)) {
-    return { value: 'X', rest: trimmed.replace(/^[Xx×✕]\s*/, '').trim() }
+  if (/^[Xx×✕\-–—]/.test(trimmed)) {
+    return { value: 'X', rest: trimmed.replace(/^[Xx×✕\-–—]\s*/, '').trim() }
   }
   return { value: 'X', rest: trimmed }
 }
