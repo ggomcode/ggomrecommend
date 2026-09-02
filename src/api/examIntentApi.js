@@ -331,54 +331,62 @@ export async function upsertCsatRecords(records, batchTime) {
     }
   }
 
+  // 1. 전체 데이터 암호화 준비
+  const encryptedRecords = await Promise.all(records.map(async (r) => {
+    const encName = await encryptText(r.name || '')
+    const nameHash = await hashText(r.name || '')
+    const encResident = await encryptText(r.resident_no || '')
+    const residentHash = await hashText((r.resident_no || '').replace(/[\s-]/g, ''))
+
+    return {
+      upload_batch_time: batchTimestamp,
+      seq_no: r.seq_no,
+      receipt_no: r.receipt_no,
+      name: encName,
+      name_hash: nameHash,
+      resident_no: encResident,
+      resident_no_hash: residentHash,
+      gender: r.gender,
+      class_or_grad_year: r.class_or_grad_year,
+      student_no: r.student_no,
+      student_code: r.student_code,
+      is_enrolled: r.is_enrolled,
+      subject_korean: r.subject_korean,
+      subject_math: r.subject_math,
+      subject_english: r.subject_english,
+      subject_history: r.subject_history,
+      inquiry_type: r.inquiry_type,
+      inquiry_subjects: r.inquiry_subjects,
+      foreign_language: r.foreign_language,
+      updated_at: new Date().toISOString()
+    }
+  }))
+
+  // 2. 새 접수대장 업로드 전 이전 레코드 정리 (취소자 및 과거 잔여 데이터 완벽 동기화)
+  try {
+    await supabase
+      .from('csat_registration_records')
+      .delete()
+      .gte('created_at', '1970-01-01T00:00:00Z')
+  } catch (delErr) {
+    console.warn('Old csat records deletion warning:', delErr)
+  }
+
+  // 3. 배치 단위로 신규 레코드 일괄 삽입 (50건씩)
   let inserted = 0
-  let updated = 0
-  let skipped = 0
-
-  // 배치 단위로 upsert (50건씩)
   const batchSize = 50
-  for (let i = 0; i < records.length; i += batchSize) {
-    const chunk = records.slice(i, i + batchSize)
-    const encryptedChunk = await Promise.all(chunk.map(async (r) => {
-      const encName = await encryptText(r.name || '')
-      const nameHash = await hashText(r.name || '')
-      const encResident = await encryptText(r.resident_no || '')
-      const residentHash = await hashText((r.resident_no || '').replace(/[\s-]/g, ''))
-
-      return {
-        upload_batch_time: batchTimestamp,
-        seq_no: r.seq_no,
-        receipt_no: r.receipt_no,
-        name: encName,
-        name_hash: nameHash,
-        resident_no: encResident,
-        resident_no_hash: residentHash,
-        gender: r.gender,
-        class_or_grad_year: r.class_or_grad_year,
-        student_no: r.student_no,
-        student_code: r.student_code,
-        is_enrolled: r.is_enrolled,
-        subject_korean: r.subject_korean,
-        subject_math: r.subject_math,
-        subject_english: r.subject_english,
-        subject_history: r.subject_history,
-        inquiry_type: r.inquiry_type,
-        inquiry_subjects: r.inquiry_subjects,
-        foreign_language: r.foreign_language,
-        updated_at: new Date().toISOString()
-      }
-    }))
-
+  for (let i = 0; i < encryptedRecords.length; i += batchSize) {
+    const chunk = encryptedRecords.slice(i, i + batchSize)
     const { data, error } = await supabase
       .from('csat_registration_records')
-      .upsert(encryptedChunk, { onConflict: 'receipt_no' })
+      .upsert(chunk, { onConflict: 'receipt_no' })
       .select('id')
 
     if (error) throw error
     if (data) inserted += data.length
   }
 
-  return { inserted, updated, skipped, total: records.length }
+  return { inserted, total: records.length }
 }
 
 // ==========================================
@@ -399,13 +407,19 @@ export async function getAllIntentSurveys() {
 }
 
 /**
- * 전체 수능 접수대장 레코드 조회 (복호화 포함)
+ * 전체 수능 접수대장 레코드 조회 (최신 배치 기준 필터링 및 복호화)
  */
 export async function getAllCsatRecords() {
   if (!supabase) return []
+  
+  // 최신 업로드 배치 시각 조회
+  const latestBatch = await getLatestUploadBatchTime()
+  if (!latestBatch) return []
+
   const { data, error } = await supabase
     .from('csat_registration_records')
     .select('*')
+    .eq('upload_batch_time', latestBatch)
     .order('seq_no', { ascending: true })
   if (error) { console.warn('getAllCsatRecords error:', error); return [] }
 
