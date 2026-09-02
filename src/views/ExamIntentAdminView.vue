@@ -219,7 +219,7 @@
       <div v-if="activeTab === 'stats'" class="space-y-6">
         <!-- 상단 필터 및 총괄 인원 안내 -->
         <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
-          <div class="flex items-center gap-3">
+          <div class="flex flex-wrap items-center gap-3">
             <span class="text-sm font-bold text-slate-700">조회 학급:</span>
             <select v-model="filterClass" class="text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-slate-800 cursor-pointer min-w-[220px] shadow-sm focus:outline-none focus:border-indigo-500 transition-all">
               <option value="all">전체 (재학생 + 졸업생)</option>
@@ -227,6 +227,9 @@
               <option v-for="c in classList" :key="c" :value="c">{{ c }}반</option>
               <option value="grad">🎓 졸업생 (수능접수)</option>
             </select>
+            <button @click="handlePrintElectiveStats" class="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-sm cursor-pointer transition-all active:scale-95">
+              <span>🖨️ 선택과목 통계 인쇄 (1장)</span>
+            </button>
           </div>
           <div class="text-xs font-semibold text-slate-600 flex flex-wrap gap-4">
             <span>대상 인원: <strong class="text-slate-900 text-sm font-extrabold">{{ electiveStats.totalStudents }}명</strong></span>
@@ -685,7 +688,7 @@ import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { buildComparisonData, getLatestUploadBatchTime, upsertCsatRecords, toggleFormSubmitted } from '../api/examIntentApi'
 import { parseCsatPdf } from '../utils/csatPdfParser'
-import { printCsatNoTakeForm, printSusiNoApplyForm, printBatchIntentForms, printSummaryRoster } from '../utils/printTemplates'
+import { printCsatNoTakeForm, printSusiNoApplyForm, printBatchIntentForms, printSummaryRoster, printElectiveStatsReport } from '../utils/printTemplates'
 import * as XLSX from 'xlsx'
 
 const router = useRouter()
@@ -810,6 +813,19 @@ function executeRosterPrint() {
     filterSummary
   })
   isRosterModalOpen.value = false
+}
+
+function handlePrintElectiveStats() {
+  let label = '전체 (재학생 + 졸업생)'
+  if (filterClass.value === 'enrolled_all') label = '재학생 전체'
+  else if (filterClass.value === 'grad') label = '🎓 졸업생'
+  else if (filterClass.value !== 'all') label = `${filterClass.value}반`
+
+  printElectiveStatsReport({
+    filterLabel: label,
+    stats: electiveStats.value,
+    schoolName: schoolName.value || '포곡고등학교'
+  })
 }
 
 function openHistoryModal(row) {

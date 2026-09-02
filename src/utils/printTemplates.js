@@ -2365,7 +2365,6 @@ export function printSummaryRoster(records, options = {}) {
     .class-summary-table { width: 100%; border-collapse: collapse; }
     .class-summary-table th, .class-summary-table td { border: 1px solid #94a3b8; padding: 4px 5px; font-size: 9.5px; text-align: center; }
     .class-summary-table th { background: #e2e8f0 !important; color: #1e293b; font-weight: 700; }
-    .overview-table th, .overview-table td { padding: 6px 5px; font-size: 10.5px; }
     .footer-sign { margin-top: 14px; text-align: right; font-size: 11px; font-weight: 600; color: #475569; padding: 6px 4px 0 0; }
   </style>
   </head>
@@ -2375,4 +2374,257 @@ export function printSummaryRoster(records, options = {}) {
   </body></html>`)
   win.document.close()
 }
+
+/**
+ * 수능 선택과목 통계 전용 1페이지 단독 인쇄
+ */
+export function printElectiveStatsReport({ filterLabel, stats, schoolName = '포곡고등학교' }) {
+  const title = `[대학수학능력시험] 수능 선택과목 통계표 (${filterLabel})`
+  const printDate = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
+
+  const getP = (cnt, tot) => {
+    if (!tot || tot === 0 || !cnt) return '0.0'
+    return ((cnt / tot) * 100).toFixed(1)
+  }
+
+  // 국어 표 행
+  const korRows = Object.entries(stats.korean.map).map(([name, count]) => `
+    <tr>
+      <td style="padding: 4px 6px; font-weight: 600; text-align: left;">${name}</td>
+      <td style="padding: 4px 6px; font-weight: 700; color: #1e1b4b; text-align: right;">${count}명</td>
+      <td style="padding: 4px 6px; font-weight: 700; color: #4338ca; text-align: right;">${getP(count, stats.totalRegistered)}%</td>
+    </tr>
+  `).join('')
+
+  // 수학 표 행
+  const mathRows = Object.entries(stats.math.map).map(([name, count]) => `
+    <tr>
+      <td style="padding: 4px 6px; font-weight: 600; text-align: left;">${name}</td>
+      <td style="padding: 4px 6px; font-weight: 700; color: #1e1b4b; text-align: right;">${count}명</td>
+      <td style="padding: 4px 6px; font-weight: 700; color: #2563eb; text-align: right;">${getP(count, stats.totalRegistered)}%</td>
+    </tr>
+  `).join('')
+
+  // 제2외국어 표 행
+  const foreignEntries = Object.entries(stats.foreign.map)
+  const foreignRows = foreignEntries.length > 0 ? foreignEntries.map(([name, count]) => `
+    <tr>
+      <td style="padding: 4px 6px; font-weight: 600; text-align: left;">${name}</td>
+      <td style="padding: 4px 6px; font-weight: 700; color: #1e1b4b; text-align: right;">${count}명</td>
+      <td style="padding: 4px 6px; font-weight: 700; color: #059669; text-align: right;">${getP(count, stats.totalRegistered)}%</td>
+    </tr>
+  `).join('') : `<tr><td colspan="3" style="padding: 10px; color: #94a3b8; text-align: center;">응시자 없음</td></tr>`
+
+  // 사회탐구 표 행
+  const socialRows = stats.socialSubjects.map(sub => `
+    <tr>
+      <td style="padding: 3.5px 6px; font-weight: 600; text-align: left;">${sub.name}</td>
+      <td style="padding: 3.5px 6px; font-weight: 700; color: #9a3412; text-align: right;">${sub.count}건</td>
+      <td style="padding: 3.5px 6px; font-weight: 700; color: #ea580c; text-align: right;">${sub.pct}%</td>
+    </tr>
+  `).join('')
+
+  // 과학탐구 표 행
+  const scienceRows = stats.scienceSubjects.map(sub => `
+    <tr>
+      <td style="padding: 3.5px 6px; font-weight: 600; text-align: left;">${sub.name}</td>
+      <td style="padding: 3.5px 6px; font-weight: 700; color: #0e7490; text-align: right;">${sub.count}건</td>
+      <td style="padding: 3.5px 6px; font-weight: 700; color: #0891b2; text-align: right;">${sub.pct}%</td>
+    </tr>
+  `).join('')
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>${title}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <style>
+    @page { size: A4 portrait; margin: 10mm 12mm; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .no-print { display: none !important; }
+      .page-container { page-break-after: avoid; height: 100%; }
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a; margin: 0; padding: 0; font-size: 11px; line-height: 1.4; }
+    .page-container { display: flex; flex-direction: column; justify-content: space-between; height: 100%; min-height: 96vh; }
+    .header-section { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .title-block h1 { font-size: 19px; font-weight: 900; margin: 0 0 4px 0; color: #0f172a; letter-spacing: -0.5px; }
+    .title-block p { font-size: 11px; color: #64748b; margin: 0; font-weight: 600; }
+    .sign-table { border-collapse: collapse; text-align: center; }
+    .sign-table th, .sign-table td { border: 1px solid #475569; font-size: 9.5px; }
+    .sign-table th { background: #f1f5f9; padding: 2px 8px; font-weight: 700; }
+    .sign-table td { height: 36px; width: 44px; }
+
+    .summary-banner { display: flex; justify-content: space-around; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 12px; margin-bottom: 12px; }
+    .banner-item { font-size: 11px; font-weight: 600; color: #334155; }
+    .banner-item strong { font-size: 13px; font-weight: 900; color: #4338ca; }
+
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .card-box { border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #fff; }
+    .card-title { background: #f1f5f9; padding: 5px 8px; font-size: 11px; font-weight: 800; border-bottom: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center; }
+    .table-data { width: 100%; border-collapse: collapse; font-size: 10px; }
+    .table-data th, .table-data td { border-bottom: 1px solid #e2e8f0; padding: 3.5px 6px; }
+    .table-data th { background: #f8fafc; color: #475569; font-weight: 700; text-align: center; }
+
+    .combo-section { border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+    .combo-title { background: #f1f5f9; padding: 5px 8px; font-size: 11px; font-weight: 800; border-bottom: 1px solid #cbd5e1; display: flex; justify-content: space-between; }
+    .combo-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; background: #cbd5e1; text-align: center; }
+    .combo-item { background: #fff; padding: 6px 4px; }
+    .combo-label { font-size: 9.5px; font-weight: 700; color: #475569; margin-bottom: 2px; }
+    .combo-val { font-size: 13px; font-weight: 900; color: #0f172a; }
+    .combo-pct { font-size: 9px; font-weight: 600; color: #64748b; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .footer-section { margin-top: auto; padding-top: 8px; border-top: 1.5px solid #0f172a; display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: 600; color: #64748b; }
+  </style>
+  </head>
+  <body>
+    <div class="page-container">
+      <div>
+        <!-- 상단 헤더 및 결재란 -->
+        <div class="header-section">
+          <div class="title-block">
+            <h1>📊 대학수학능력시험 선택과목별 응시 현황 통계표</h1>
+            <p>소속: ${schoolName} &nbsp;|&nbsp; 대상 학급: <span style="color:#4338ca; font-weight:800;">${filterLabel}</span> &nbsp;|&nbsp; 출력 기준일: ${printDate}</p>
+          </div>
+          <table class="sign-table">
+            <tr><th rowspan="2" style="width:18px; writing-mode: vertical-rl; padding: 2px;">결재</th><th>담당</th><th>부장</th><th>교감</th><th>교장</th></tr>
+            <tr><td></td><td></td><td></td><td></td></tr>
+          </table>
+        </div>
+
+        <!-- 총괄 인원 요약 바 -->
+        <div class="summary-banner">
+          <div class="banner-item">조회 대상 인원: <strong>${stats.totalStudents}명</strong></div>
+          <div class="banner-item">수능 원서 접수: <strong>${stats.totalRegistered}명</strong> (${getP(stats.totalRegistered, stats.totalStudents)}%)</div>
+          <div class="banner-item">탐구 총 선택 과목수: <strong style="color:#7c3aed;">${stats.inquiry.totalPicks}과목</strong> <span style="font-size:10px; color:#64748b;">(과목별 분모)</span></div>
+        </div>
+
+        <!-- 1. 주요 영역별 (국어, 수학, 제2외국어) 3열 그리드 -->
+        <div class="grid-3">
+          <!-- 국어 -->
+          <div class="card-box">
+            <div class="card-title">
+              <span>📖 국어 영역</span>
+              <span style="font-size:9.5px; color:#4338ca;">응시 ${stats.korean.takers}명</span>
+            </div>
+            <table class="table-data">
+              <thead><tr><th>과목명</th><th>인원</th><th>비율</th></tr></thead>
+              <tbody>${korRows}</tbody>
+            </table>
+          </div>
+
+          <!-- 수학 -->
+          <div class="card-box">
+            <div class="card-title">
+              <span>📐 수학 영역</span>
+              <span style="font-size:9.5px; color:#2563eb;">응시 ${stats.math.takers}명</span>
+            </div>
+            <table class="table-data">
+              <thead><tr><th>과목명</th><th>인원</th><th>비율</th></tr></thead>
+              <tbody>${mathRows}</tbody>
+            </table>
+          </div>
+
+          <!-- 제2외국어 / 한문 -->
+          <div class="card-box">
+            <div class="card-title">
+              <span>🌐 제2외국어 / 한문</span>
+              <span style="font-size:9.5px; color:#059669;">응시 ${stats.foreign.takers}명 (${getP(stats.foreign.takers, stats.totalRegistered)}%)</span>
+            </div>
+            <table class="table-data">
+              <thead><tr><th>과목명</th><th>인원</th><th>비율</th></tr></thead>
+              <tbody>
+                ${foreignRows}
+                <tr style="background:#f8fafc; color:#64748b;">
+                  <td style="padding: 3.5px 6px; text-align: left;">미응시</td>
+                  <td style="padding: 3.5px 6px; text-align: right;">${stats.foreign.none}명</td>
+                  <td style="padding: 3.5px 6px; text-align: right;">${getP(stats.foreign.none, stats.totalRegistered)}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2. 탐구 조합 유형별 현황 (6대 조합) -->
+        <div class="combo-section">
+          <div class="combo-title">
+            <span>🔬 탐구 조합 유형별 인원 및 비율 현황 (수능 접수자 ${stats.totalRegistered}명 기준)</span>
+            <span style="font-size:10px; font-weight:700; color:#4338ca;">응시: ${stats.inquiry.takers}명 / 미응시: ${stats.inquiry.combo.none}명</span>
+          </div>
+          <div class="combo-grid">
+            <div class="combo-item">
+              <div class="combo-label" style="color:#c2410c;">사탐 2과목</div>
+              <div class="combo-val" style="color:#ea580c;">${stats.inquiry.combo.social2}명</div>
+              <div class="combo-pct">${getP(stats.inquiry.combo.social2, stats.totalRegistered)}%</div>
+            </div>
+            <div class="combo-item">
+              <div class="combo-label" style="color:#b45309;">사탐 1과목</div>
+              <div class="combo-val" style="color:#d97706;">${stats.inquiry.combo.social1}명</div>
+              <div class="combo-pct">${getP(stats.inquiry.combo.social1, stats.totalRegistered)}%</div>
+            </div>
+            <div class="combo-item">
+              <div class="combo-label" style="color:#7e22ce;">사탐 1 + 과탐 1</div>
+              <div class="combo-val" style="color:#9333ea;">${stats.inquiry.combo.social1_science1}명</div>
+              <div class="combo-pct">${getP(stats.inquiry.combo.social1_science1, stats.totalRegistered)}%</div>
+            </div>
+            <div class="combo-item">
+              <div class="combo-label" style="color:#0e7490;">과탐 2과목</div>
+              <div class="combo-val" style="color:#0891b2;">${stats.inquiry.combo.science2}명</div>
+              <div class="combo-pct">${getP(stats.inquiry.combo.science2, stats.totalRegistered)}%</div>
+            </div>
+            <div class="combo-item">
+              <div class="combo-label" style="color:#0369a1;">과탐 1과목</div>
+              <div class="combo-val" style="color:#0284c7;">${stats.inquiry.combo.science1}명</div>
+              <div class="combo-pct">${getP(stats.inquiry.combo.science1, stats.totalRegistered)}%</div>
+            </div>
+            <div class="combo-item">
+              <div class="combo-label" style="color:#475569;">직탐 / 미선택</div>
+              <div class="combo-val" style="color:#64748b;">${stats.inquiry.combo.vocational + stats.inquiry.combo.none}명</div>
+              <div class="combo-pct">${getP(stats.inquiry.combo.vocational + stats.inquiry.combo.none, stats.totalRegistered)}%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. 탐구 세부 과목별 선택 비율 (사회탐구 9과목 vs 과학탐구 8과목) -->
+        <div class="grid-2">
+          <!-- 사회탐구 -->
+          <div class="card-box">
+            <div class="card-title" style="background:#fff7ed; border-bottom:1px solid #fed7aa; color:#9a3412;">
+              <span>📙 사회탐구 영역 (9개 과목)</span>
+              <span style="font-size:9.5px; font-weight:600; color:#c2410c;">분모: 총 탐구 ${stats.inquiry.totalPicks}과목</span>
+            </div>
+            <table class="table-data">
+              <thead><tr><th>과목명</th><th>선택 건수</th><th>점유율 (%)</th></tr></thead>
+              <tbody>${socialRows}</tbody>
+            </table>
+          </div>
+
+          <!-- 과학탐구 -->
+          <div class="card-box">
+            <div class="card-title" style="background:#ecfeff; border-bottom:1px solid #a5f3fc; color:#155e75;">
+              <span>📘 과학탐구 영역 (8개 과목)</span>
+              <span style="font-size:9.5px; font-weight:600; color:#0e7490;">분모: 총 탐구 ${stats.inquiry.totalPicks}과목</span>
+            </div>
+            <table class="table-data">
+              <thead><tr><th>과목명</th><th>선택 건수</th><th>점유율 (%)</th></tr></thead>
+              <tbody>${scienceRows}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 하단 바 -->
+      <div class="footer-section">
+        <span>${schoolName} 진로진학상담부 &nbsp;|&nbsp; 대학수학능력시험 응시원서 공식 접수대장 연동 시스템</span>
+        <span>출력일시: ${new Date().toLocaleString('ko-KR')}</span>
+      </div>
+    </div>
+    <script>window.onload=function(){window.print();window.close();}<\/script>
+  </body></html>`
+
+  const win = window.open('', '_blank')
+  win.document.write(html)
+  win.document.close()
+}
+
 
