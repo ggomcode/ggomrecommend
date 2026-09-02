@@ -1811,7 +1811,7 @@ export function printSummaryRoster(records, options = {}) {
       }
 
       // 3. 제2외국어
-      const frg = rec.subject_foreign_language ? rec.subject_foreign_language.trim() : ''
+      const frg = (rec.foreign_language || rec.subject_foreign_language || '').trim()
       if (frg && frg !== 'X' && frg !== '-') {
         foreignMap[frg] = (foreignMap[frg] || 0) + 1
         foreignTakers++
@@ -1820,8 +1820,16 @@ export function printSummaryRoster(records, options = {}) {
       }
 
       // 4. 탐구
-      const s1 = (rec.inquiry_subject1 && rec.inquiry_subject1 !== 'X' && rec.inquiry_subject1 !== '-') ? rec.inquiry_subject1.trim() : null
-      const s2 = (rec.inquiry_subject2 && rec.inquiry_subject2 !== 'X' && rec.inquiry_subject2 !== '-') ? rec.inquiry_subject2.trim() : null
+      let s1 = null
+      let s2 = null
+      if (rec.inquiry_subjects && typeof rec.inquiry_subjects === 'string') {
+        const parts = rec.inquiry_subjects.split('/').map(s => s.trim())
+        if (parts[0] && parts[0] !== 'X' && parts[0] !== '-') s1 = parts[0]
+        if (parts[1] && parts[1] !== 'X' && parts[1] !== '-') s2 = parts[1]
+      } else {
+        if (rec.inquiry_subject1 && rec.inquiry_subject1 !== 'X' && rec.inquiry_subject1 !== '-') s1 = rec.inquiry_subject1.trim()
+        if (rec.inquiry_subject2 && rec.inquiry_subject2 !== 'X' && rec.inquiry_subject2 !== '-') s2 = rec.inquiry_subject2.trim()
+      }
 
       const subs = []
       if (s1) subs.push(s1)

@@ -952,7 +952,7 @@ const electiveStats = computed(() => {
     }
 
     // 3. 제2외국어
-    const frg = rec.subject_foreign_language ? rec.subject_foreign_language.trim() : ''
+    const frg = (rec.foreign_language || rec.subject_foreign_language || '').trim()
     if (frg && frg !== 'X' && frg !== '-') {
       foreignMap[frg] = (foreignMap[frg] || 0) + 1
       foreignTakers++
@@ -961,8 +961,16 @@ const electiveStats = computed(() => {
     }
 
     // 4. 탐구
-    const s1 = (rec.inquiry_subject1 && rec.inquiry_subject1 !== 'X' && rec.inquiry_subject1 !== '-') ? rec.inquiry_subject1.trim() : null
-    const s2 = (rec.inquiry_subject2 && rec.inquiry_subject2 !== 'X' && rec.inquiry_subject2 !== '-') ? rec.inquiry_subject2.trim() : null
+    let s1 = null
+    let s2 = null
+    if (rec.inquiry_subjects && typeof rec.inquiry_subjects === 'string') {
+      const parts = rec.inquiry_subjects.split('/').map(s => s.trim())
+      if (parts[0] && parts[0] !== 'X' && parts[0] !== '-') s1 = parts[0]
+      if (parts[1] && parts[1] !== 'X' && parts[1] !== '-') s2 = parts[1]
+    } else {
+      if (rec.inquiry_subject1 && rec.inquiry_subject1 !== 'X' && rec.inquiry_subject1 !== '-') s1 = rec.inquiry_subject1.trim()
+      if (rec.inquiry_subject2 && rec.inquiry_subject2 !== 'X' && rec.inquiry_subject2 !== '-') s2 = rec.inquiry_subject2.trim()
+    }
 
     const subs = []
     if (s1) subs.push(s1)
@@ -997,9 +1005,13 @@ const electiveStats = computed(() => {
     '생활과 윤리', '윤리와 사상', '한국지리', '세계지리', '동아시아사', '세계사', '경제', '정치와 법', '사회·문화'
   ]
   const socialSubjects = socialList.map(name => {
-    // 키 매칭 (사회문화 등 변형 포함)
-    let count = inquiryCounts[name] || 0
-    if (name === '사회·문화') count += (inquiryCounts['사회문화'] || 0)
+    let count = 0
+    const cleanName = name.replace(/[\s·./]/g, '')
+    for (const [subKey, subCount] of Object.entries(inquiryCounts)) {
+      if (subKey.replace(/[\s·./]/g, '') === cleanName) {
+        count += subCount
+      }
+    }
     const pct = totalInquiryPicks > 0 ? ((count / totalInquiryPicks) * 100).toFixed(1) : 0
     return { name, count, pct }
   })
@@ -1009,10 +1021,14 @@ const electiveStats = computed(() => {
     '물리학Ⅰ', '화학Ⅰ', '생명과학Ⅰ', '지구과학Ⅰ', '물리학Ⅱ', '화학Ⅱ', '생명과학Ⅱ', '지구과학Ⅱ'
   ]
   const scienceSubjects = scienceList.map(name => {
-    let count = inquiryCounts[name] || 0
-    // I, II 로마자/알파벳 변형 매칭
-    const altName = name.replace('Ⅰ', 'I').replace('Ⅱ', 'II')
-    if (altName !== name) count += (inquiryCounts[altName] || 0)
+    let count = 0
+    const cleanName = name.replace(/[\s·./]/g, '').replace(/Ⅰ/g, 'I').replace(/Ⅱ/g, 'II')
+    for (const [subKey, subCount] of Object.entries(inquiryCounts)) {
+      const cleanKey = subKey.replace(/[\s·./]/g, '').replace(/Ⅰ/g, 'I').replace(/Ⅱ/g, 'II')
+      if (cleanKey === cleanName) {
+        count += subCount
+      }
+    }
     const pct = totalInquiryPicks > 0 ? ((count / totalInquiryPicks) * 100).toFixed(1) : 0
     return { name, count, pct }
   })
