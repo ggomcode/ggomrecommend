@@ -935,7 +935,7 @@ const electiveStudentList = computed(() => {
   } else if (filterClass.value === 'grad') {
     list = list.filter(r => r.is_enrolled === false)
   } else if (filterClass.value !== 'all') {
-    list = list.filter(r => r.class_no === Number(filterClass.value))
+    list = list.filter(r => Number(r.class_no) === Number(filterClass.value))
   }
 
   return list.map(r => ({
@@ -992,9 +992,11 @@ function formatDate(dateStr) {
 }
 
 const classList = computed(() => {
-  const classes = new Set()
+  const classes = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
   for (const r of comparisonData.value) {
-    if (r.class_no) classes.add(r.class_no)
+    if (r.class_no && !isNaN(Number(r.class_no))) {
+      classes.add(Number(r.class_no))
+    }
   }
   return [...classes].sort((a, b) => a - b)
 })
@@ -1186,7 +1188,7 @@ const electiveStats = computed(() => {
   } else if (filterClass.value === 'grad') {
     targetRecords = targetRecords.filter(r => r.is_enrolled === false)
   } else if (filterClass.value !== 'all') {
-    targetRecords = targetRecords.filter(r => r.class_no === Number(filterClass.value))
+    targetRecords = targetRecords.filter(r => Number(r.class_no) === Number(filterClass.value))
   }
 
   const registered = targetRecords.filter(r => r.csat_registered && r.csat_record)
