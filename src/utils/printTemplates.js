@@ -1663,6 +1663,9 @@ export function printBatchIntentForms(list, type = 'csat') {
 
 /**
  * 수능 응시 및 원서접수 현황 대장 (A4 가로 종합대장 인쇄)
+ * - '전체' 인쇄 시 1페이지에 학교 총괄 오버뷰 통계 현황표 출력
+ * - 각 학급별(졸업생 포함)로 개별 페이지 분리 출력
+ * - 각 학급별 표 하단에 학급 통계 요약 및 결재란 출력
  * @param {Array} records - 대조 데이터 배열
  * @param {Object} options - { title, classInfo, filterSummary, orientation }
  */
@@ -1680,51 +1683,344 @@ export function printSummaryRoster(records, options = {}) {
   const now = new Date()
   const printDateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 
-  const enrolledCount = records.filter(r => r.is_enrolled !== false).length
-  const gradCount = records.filter(r => r.is_enrolled === false).length
+  // 통계 계산 헬퍼
+  function computeStats(items) {
+    const total = items.length
+    const surveyed = items.filter(r => r.has_survey).length
+    const noSurvey = total - surveyed
+    const csatTake = items.filter(r => r.has_survey && r.csat_intent === 'TAKE').length
+    const csatNoTake = items.filter(r => r.has_survey && r.csat_intent === 'NO_TAKE').length
+    const csatReg = items.filter(r => r.csat_registered).length
+    const csatNotReg = items.filter(r => !r.csat_registered).length
+    const mismatch = items.filter(r => r.csat_mismatch === 'SURVEY_YES_CSAT_NO' || r.csat_mismatch === 'SURVEY_NO_CSAT_YES').length
 
-  const rowsHtml = records.map((r, idx) => {
-    const csatSelf = !r.has_survey ? '<span class="badge-none">미응답</span>' : (r.csat_intent === 'TAKE' ? '<span class="badge-yes">응시</span>' : '<span class="badge-no">미응시</span>')
-    const csatOfficial = r.csat_registered ? '<span class="badge-yes">접수됨</span>' : '<span class="badge-none">미접수</span>'
-    let matchBadge = '-'
-    if (r.csat_mismatch === 'MATCH') matchBadge = '<span class="badge-yes">일치</span>'
-    else if (r.csat_mismatch === 'NO_SURVEY') matchBadge = '<span class="badge-none">-</span>'
-    else if (r.csat_mismatch === 'SURVEY_YES_CSAT_NO' || r.csat_mismatch === 'SURVEY_NO_CSAT_YES') matchBadge = '<span class="badge-mismatch">⚠️불일치</span>'
+    const susiGenNo = items.filter(r => r.has_survey && (r.susi_general_intent || r.susi_intent) === 'NO_APPLY').length
+    const jungGenNo = items.filter(r => r.has_survey && (r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY').length
+    const susiColNo = items.filter(r => r.has_survey && r.susi_college_intent === 'NO_APPLY').length
+    const jungColNo = items.filter(r => r.has_survey && r.jungsi_college_intent === 'NO_APPLY').length
 
-    const susiGen = !r.has_survey ? '<span class="badge-none">미응답</span>' : ((r.susi_general_intent || r.susi_intent) === 'NO_APPLY' ? '<span class="badge-no">미접수</span>' : '<span class="badge-yes">접수</span>')
-    const jungGen = !r.has_survey ? '<span class="badge-none">미응답</span>' : ((r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY' ? '<span class="badge-no">미접수</span>' : '<span class="badge-yes">접수</span>')
-    const susiCol = !r.has_survey ? '<span class="badge-none">미응답</span>' : (r.susi_college_intent === 'NO_APPLY' ? '<span class="badge-no">미접수</span>' : '<span class="badge-yes">접수</span>')
-    const jungCol = !r.has_survey ? '<span class="badge-none">미응답</span>' : (r.jungsi_college_intent === 'NO_APPLY' ? '<span class="badge-no">미접수</span>' : '<span class="badge-yes">접수</span>')
+    const formSub = items.filter(r => r.is_form_submitted).length
+    const formNotSub = items.filter(r => r.has_survey && !r.is_form_submitted && (r.csat_intent === 'NO_TAKE' || (r.susi_general_intent || r.susi_intent) === 'NO_APPLY' || (r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY' || r.susi_college_intent === 'NO_APPLY' || r.jungsi_college_intent === 'NO_APPLY')).length
 
-    const formSub = r.has_survey ? (r.is_form_submitted ? '<span class="badge-yes">✔제출</span>' : '<span class="badge-no">미제출</span>') : '-'
-    
-    // 비고란: 미응시 사유 또는 특이사항
-    let remarks = []
-    if (r.csat_intent === 'NO_TAKE' && r.csat_no_take_reason) remarks.push(`[수능미응시] ${r.csat_no_take_reason}`)
-    if ((r.susi_general_intent || r.susi_intent) === 'NO_APPLY' && (r.susi_general_no_reason || r.susi_no_apply_reason)) remarks.push(`[수시미접수] ${r.susi_general_no_reason || r.susi_no_apply_reason}`)
-    if (r.history_count > 0) remarks.push(`(수정 ${r.history_count}회)`)
-    const remarksStr = remarks.join(' / ') || '-'
+    return {
+      total, surveyed, noSurvey, csatTake, csatNoTake, csatReg, csatNotReg, mismatch,
+      susiGenNo, jungGenNo, susiColNo, jungColNo, formSub, formNotSub
+    }
+  }
 
-    const classDisplay = r.class_no ? `${r.class_no}반` : (r.is_enrolled === false ? `졸업생(${r.grad_year || ''})` : '-')
-    const noDisplay = r.student_no ? `${r.student_no}번` : '-'
+  // 1. 학급별 그룹핑
+  const groups = []
+  const classMap = new Map()
+  const graduates = []
 
-    return `
-    <tr>
-      <td>${idx + 1}</td>
-      <td style="font-family:monospace; font-weight:700;">${r.student_code || '-'}</td>
-      <td style="font-weight:700;">${r.name || '-'}</td>
-      <td>${classDisplay} ${noDisplay !== '-' ? noDisplay : ''}</td>
-      <td>${csatSelf}</td>
-      <td>${csatOfficial}</td>
-      <td>${matchBadge}</td>
-      <td>${susiGen}</td>
-      <td>${jungGen}</td>
-      <td>${susiCol}</td>
-      <td>${jungCol}</td>
-      <td>${formSub}</td>
-      <td class="text-left" style="font-size:9.5px; max-width:220px;">${remarksStr}</td>
+  for (const r of records) {
+    if (r.is_enrolled === false || !r.class_no) {
+      graduates.push(r)
+    } else {
+      if (!classMap.has(r.class_no)) classMap.set(r.class_no, [])
+      classMap.get(r.class_no).push(r)
+    }
+  }
+
+  // 1반 ~ 11반 오름차순 정렬
+  const sortedClasses = [...classMap.keys()].sort((a, b) => a - b)
+  for (const c of sortedClasses) {
+    const classItems = classMap.get(c).sort((a, b) => (a.student_no || 0) - (b.student_no || 0))
+    groups.push({
+      key: `class_${c}`,
+      name: `3학년 ${c}반`,
+      isGrad: false,
+      items: classItems
+    })
+  }
+
+  if (graduates.length > 0) {
+    groups.push({
+      key: 'graduates',
+      name: '졸업생 (수능접수대장 등록자)',
+      isGrad: true,
+      items: graduates
+    })
+  }
+
+  const isMultiClass = groups.length > 1
+  let pagesHtml = ''
+
+  // ================================================================
+  // 1페이지: 전체 학급 총괄 오버뷰 현황표 (전체 또는 다중 학급 출력 시)
+  // ================================================================
+  if (isMultiClass) {
+    const enrolledOnly = records.filter(r => r.is_enrolled !== false)
+    const enrolledStats = computeStats(enrolledOnly)
+    const gradStats = computeStats(graduates)
+    const grandStats = computeStats(records)
+
+    const overviewRows = groups.filter(g => !g.isGrad).map(g => {
+      const s = computeStats(g.items)
+      return `
+      <tr>
+        <td style="font-weight:700; background:#f8fafc;">${g.name}</td>
+        <td style="font-weight:700;">${s.total}</td>
+        <td>${s.csatTake}</td>
+        <td class="${s.csatNoTake > 0 ? 'cell-warn' : ''}">${s.csatNoTake}</td>
+        <td class="${s.noSurvey > 0 ? 'cell-muted' : ''}">${s.noSurvey}</td>
+        <td style="font-weight:600;">${s.csatReg}</td>
+        <td class="${s.csatNotReg > 0 ? 'cell-muted' : ''}">${s.csatNotReg}</td>
+        <td class="${s.mismatch > 0 ? 'cell-danger' : ''}">${s.mismatch > 0 ? `⚠️ ${s.mismatch}` : '-'}</td>
+        <td class="${s.susiGenNo > 0 ? 'cell-warn' : ''}">${s.susiGenNo}</td>
+        <td class="${s.jungGenNo > 0 ? 'cell-warn' : ''}">${s.jungGenNo}</td>
+        <td class="${s.susiColNo > 0 ? 'cell-warn' : ''}">${s.susiColNo}</td>
+        <td class="${s.jungColNo > 0 ? 'cell-warn' : ''}">${s.jungColNo}</td>
+        <td style="color:#15803d; font-weight:700;">${s.formSub}</td>
+        <td class="${s.formNotSub > 0 ? 'cell-danger' : ''}">${s.formNotSub}</td>
+      </tr>`
+    }).join('')
+
+    const enrolledSubtotalRow = `
+    <tr style="background:#eef2ff; font-weight:700; border-top:2px solid #6366f1;">
+      <td>[재학생 소계]</td>
+      <td>${enrolledStats.total}</td>
+      <td>${enrolledStats.csatTake}</td>
+      <td class="${enrolledStats.csatNoTake > 0 ? 'cell-warn' : ''}">${enrolledStats.csatNoTake}</td>
+      <td>${enrolledStats.noSurvey}</td>
+      <td>${enrolledStats.csatReg}</td>
+      <td>${enrolledStats.csatNotReg}</td>
+      <td class="${enrolledStats.mismatch > 0 ? 'cell-danger' : ''}">${enrolledStats.mismatch}</td>
+      <td>${enrolledStats.susiGenNo}</td>
+      <td>${enrolledStats.jungGenNo}</td>
+      <td>${enrolledStats.susiColNo}</td>
+      <td>${enrolledStats.jungColNo}</td>
+      <td style="color:#15803d;">${enrolledStats.formSub}</td>
+      <td class="${enrolledStats.formNotSub > 0 ? 'cell-danger' : ''}">${enrolledStats.formNotSub}</td>
     </tr>`
-  }).join('')
+
+    const gradRow = graduates.length > 0 ? `
+    <tr style="background:#fffbeb; font-weight:700;">
+      <td>[졸업생]</td>
+      <td>${gradStats.total}</td>
+      <td>${gradStats.total}</td>
+      <td>-</td>
+      <td>-</td>
+      <td>${gradStats.total}</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>` : ''
+
+    const grandTotalRow = `
+    <tr style="background:#f1f5f9; font-weight:800; border-top:2px solid #0f172a; font-size:11.5px;">
+      <td>[총 합계]</td>
+      <td>${grandStats.total}</td>
+      <td>${grandStats.csatTake + gradStats.total}</td>
+      <td class="${grandStats.csatNoTake > 0 ? 'cell-warn' : ''}">${grandStats.csatNoTake}</td>
+      <td>${grandStats.noSurvey}</td>
+      <td>${grandStats.csatReg}</td>
+      <td>${grandStats.csatNotReg}</td>
+      <td class="${grandStats.mismatch > 0 ? 'cell-danger' : ''}">${grandStats.mismatch}</td>
+      <td>${grandStats.susiGenNo}</td>
+      <td>${grandStats.jungGenNo}</td>
+      <td>${grandStats.susiColNo}</td>
+      <td>${grandStats.jungColNo}</td>
+      <td style="color:#15803d;">${grandStats.formSub}</td>
+      <td class="${grandStats.formNotSub > 0 ? 'cell-danger' : ''}">${grandStats.formNotSub}</td>
+    </tr>`
+
+    pagesHtml += `
+    <div class="page-container">
+      <div>
+        <div class="header-box">
+          <h1 class="header-title">${fullSchoolName} 2027학년도 수능 응시 및 대입 원서접수 학교 총괄 현황표</h1>
+          <div class="info-bar">
+            <div>
+              <span>학교명: <strong>${fullSchoolName}</strong></span>
+              <span>출력 대상: <strong>${classInfo}</strong></span>
+              <span>출력 조건: <strong>${filterSummary}</strong></span>
+            </div>
+            <div>
+              <span>총 대상 인원: <strong>${records.length}명</strong> (재학생 ${enrolledStats.total}명, 졸업생 ${gradStats.total}명)</span>
+              <span>출력일시: ${printDateStr}</span>
+            </div>
+          </div>
+        </div>
+
+        <table class="roster-table overview-table">
+          <thead>
+            <tr>
+              <th rowspan="2" style="width: 120px;">학급 구분</th>
+              <th rowspan="2" style="width: 50px;">총원</th>
+              <th colspan="3">수능 응시 의향 (자가조사)</th>
+              <th colspan="2">수능 접수대장 (공식)</th>
+              <th rowspan="2" style="width: 75px;">⚠️수능<br>불일치</th>
+              <th colspan="2">일반대/과기원 미접수</th>
+              <th colspan="2">전문대 미접수</th>
+              <th colspan="2">확인서 제출 현황</th>
+            </tr>
+            <tr>
+              <th style="width: 50px;">응시</th>
+              <th style="width: 55px;">미응시</th>
+              <th style="width: 50px;">미응답</th>
+              <th style="width: 55px;">접수됨</th>
+              <th style="width: 50px;">미접수</th>
+              <th style="width: 55px;">수시</th>
+              <th style="width: 55px;">정시</th>
+              <th style="width: 55px;">수시</th>
+              <th style="width: 55px;">정시</th>
+              <th style="width: 50px;">제출</th>
+              <th style="width: 50px;">미제출</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${overviewRows}
+            ${enrolledSubtotalRow}
+            ${gradRow}
+            ${grandTotalRow}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="footer-sign">
+        <span>작성자(진학담당) : _________________ (인)</span>
+        <span style="margin-left: 30px;">진로진학부장 : _________________ (인)</span>
+        <span style="margin-left: 30px;">교감 : _________________ (인)</span>
+        <span style="margin-left: 30px;">교장 : _________________ (인)</span>
+      </div>
+    </div>`
+  }
+
+  // ================================================================
+  // 학급별 개별 대장 페이지 (학급별 페이지 분리 + 하단 학급 통계 요약)
+  // ================================================================
+  for (const group of groups) {
+    const gStats = computeStats(group.items)
+
+    const rowsHtml = group.items.map((r, idx) => {
+      const csatSelf = !r.has_survey ? '<span class="badge-none">미응답</span>' : (r.csat_intent === 'TAKE' ? '<span class="badge-yes">응시</span>' : '<span class="badge-no">미응시</span>')
+      const csatOfficial = r.csat_registered ? '<span class="badge-yes">접수됨</span>' : '<span class="badge-none">미접수</span>'
+      let matchBadge = '-'
+      if (r.csat_mismatch === 'MATCH') matchBadge = '<span class="badge-yes">일치</span>'
+      else if (r.csat_mismatch === 'NO_SURVEY') matchBadge = '<span class="badge-none">-</span>'
+      else if (r.csat_mismatch === 'SURVEY_YES_CSAT_NO' || r.csat_mismatch === 'SURVEY_NO_CSAT_YES') matchBadge = '<span class="badge-mismatch">⚠️불일치</span>'
+
+      const susiGen = !r.has_survey ? '<span class="badge-none">미응답</span>' : ((r.susi_general_intent || r.susi_intent) === 'NO_APPLY' ? '<span class="badge-no">미접수</span>' : '<span class="badge-yes">접수</span>')
+      const jungGen = !r.has_survey ? '<span class="badge-none">미응답</span>' : ((r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY' ? '<span class="badge-no">미접수</span>' : '<span class="badge-yes">접수</span>')
+      const susiCol = !r.has_survey ? '<span class="badge-none">미응답</span>' : (r.susi_college_intent === 'NO_APPLY' ? '<span class="badge-no">미접수</span>' : '<span class="badge-yes">접수</span>')
+      const jungCol = !r.has_survey ? '<span class="badge-none">미응답</span>' : (r.jungsi_college_intent === 'NO_APPLY' ? '<span class="badge-no">미접수</span>' : '<span class="badge-yes">접수</span>')
+
+      const formSub = r.has_survey ? (r.is_form_submitted ? '<span class="badge-yes">✔제출</span>' : '<span class="badge-no">미제출</span>') : '-'
+
+      let remarks = []
+      if (r.csat_intent === 'NO_TAKE' && r.csat_no_take_reason) remarks.push(`[수능미응시] ${r.csat_no_take_reason}`)
+      if ((r.susi_general_intent || r.susi_intent) === 'NO_APPLY' && (r.susi_general_no_reason || r.susi_no_apply_reason)) remarks.push(`[수시미접수] ${r.susi_general_no_reason || r.susi_no_apply_reason}`)
+      if (r.history_count > 0) remarks.push(`(수정 ${r.history_count}회)`)
+      const remarksStr = remarks.join(' / ') || '-'
+
+      const classDisplay = r.class_no ? `${r.class_no}반` : (r.is_enrolled === false ? `졸업생(${r.grad_year || ''})` : '-')
+      const noDisplay = r.student_no ? `${r.student_no}번` : '-'
+
+      return `
+      <tr>
+        <td>${idx + 1}</td>
+        <td style="font-family:monospace; font-weight:700;">${r.student_code || '-'}</td>
+        <td style="font-weight:700;">${r.name || '-'}</td>
+        <td>${classDisplay} ${noDisplay !== '-' ? noDisplay : ''}</td>
+        <td>${csatSelf}</td>
+        <td>${csatOfficial}</td>
+        <td>${matchBadge}</td>
+        <td>${susiGen}</td>
+        <td>${jungGen}</td>
+        <td>${susiCol}</td>
+        <td>${jungCol}</td>
+        <td>${formSub}</td>
+        <td class="text-left" style="font-size:9.5px; max-width:220px;">${remarksStr}</td>
+      </tr>`
+    }).join('')
+
+    pagesHtml += `
+    <div class="page-container">
+      <div>
+        <div class="header-box">
+          <h1 class="header-title">${title} (${group.name})</h1>
+          <div class="info-bar">
+            <div>
+              <span>학교명: <strong>${fullSchoolName}</strong></span>
+              <span>대상 학급: <strong>${group.name}</strong></span>
+              <span>출력 조건: <strong>${filterSummary}</strong></span>
+            </div>
+            <div>
+              <span>학급 인원: <strong>총 ${group.items.length}명</strong></span>
+              <span>출력일시: ${printDateStr}</span>
+            </div>
+          </div>
+        </div>
+
+        <table class="roster-table">
+          <thead>
+            <tr>
+              <th style="width: 30px;">No</th>
+              <th style="width: 55px;">학번</th>
+              <th style="width: 65px;">성명</th>
+              <th style="width: 65px;">반/번호</th>
+              <th style="width: 58px;">수능(자가)</th>
+              <th style="width: 62px;">수능(대장)</th>
+              <th style="width: 52px;">매칭</th>
+              <th style="width: 62px;">(일반대)수시</th>
+              <th style="width: 62px;">(일반대)정시</th>
+              <th style="width: 62px;">(전문대)수시</th>
+              <th style="width: 62px;">(전문대)정시</th>
+              <th style="width: 55px;">확인서</th>
+              <th>비고 (미응시·미접수 사유 및 특이사항)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <!-- 표 하단 학급 통계 요약 바 -->
+        <div class="class-summary-box">
+          <div class="summary-header">📊 <strong>[ ${group.name} 현황 통계 요약 ]</strong></div>
+          <table class="class-summary-table">
+            <tr>
+              <th>학급 총원</th>
+              <th>수능 응시(자가)</th>
+              <th>수능 미응시</th>
+              <th>수능 접수대장</th>
+              <th>⚠️수능 불일치</th>
+              <th>일반대 수시미접수</th>
+              <th>일반대 정시미접수</th>
+              <th>전문대 수시미접수</th>
+              <th>전문대 정시미접수</th>
+              <th>확인서 제출</th>
+            </tr>
+            <tr>
+              <td style="font-weight:700;">${gStats.total}명</td>
+              <td>${gStats.csatTake}명</td>
+              <td class="${gStats.csatNoTake > 0 ? 'cell-warn' : ''}">${gStats.csatNoTake}명</td>
+              <td style="font-weight:600;">${gStats.csatReg}명</td>
+              <td class="${gStats.mismatch > 0 ? 'cell-danger' : ''}">${gStats.mismatch > 0 ? `⚠️ ${gStats.mismatch}명` : '0명'}</td>
+              <td class="${gStats.susiGenNo > 0 ? 'cell-warn' : ''}">${gStats.susiGenNo}명</td>
+              <td class="${gStats.jungGenNo > 0 ? 'cell-warn' : ''}">${gStats.jungGenNo}명</td>
+              <td class="${gStats.susiColNo > 0 ? 'cell-warn' : ''}">${gStats.susiColNo}명</td>
+              <td class="${gStats.jungColNo > 0 ? 'cell-warn' : ''}">${gStats.jungColNo}명</td>
+              <td style="color:#15803d; font-weight:700;">${gStats.formSub}명</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="footer-sign">
+        <span>담임교사 : _________________ (인)</span>
+        <span style="margin-left: 30px;">진로진학부장 : _________________ (인)</span>
+        <span style="margin-left: 30px;">교감 : _________________ (인)</span>
+        <span style="margin-left: 30px;">교장 : _________________ (인)</span>
+      </div>
+    </div>`
+  }
 
   const win = window.open('', '_blank')
   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
@@ -1735,73 +2031,42 @@ export function printSummaryRoster(records, options = {}) {
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .no-print { display: none !important; }
+      .page-container { page-break-after: always; min-height: 98vh; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 0 !important; }
+      .page-container:last-child { page-break-after: auto; }
     }
     * { box-sizing: border-box; }
     body { font-family: 'Pretendard', sans-serif; color: #1e293b; margin: 0; padding: 10px; font-size: 11px; }
-    .header-box { margin-bottom: 12px; }
-    .header-title { font-size: 19px; font-weight: 800; text-align: center; margin: 0 0 8px 0; color: #0f172a; letter-spacing: -0.5px; }
-    .info-bar { display: flex; justify-content: space-between; align-items: center; border-top: 1.5px solid #0f172a; border-bottom: 1px solid #cbd5e1; padding: 6px 4px; font-size: 11.5px; font-weight: 600; background: #f8fafc; }
+    .page-container { page-break-after: always; min-height: 98vh; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 25px; padding-bottom: 10px; border-bottom: 1px dashed #cbd5e1; }
+    .page-container:last-child { page-break-after: auto; margin-bottom: 0; border-bottom: none; }
+    .header-box { margin-bottom: 10px; }
+    .header-title { font-size: 18px; font-weight: 800; text-align: center; margin: 0 0 6px 0; color: #0f172a; letter-spacing: -0.5px; }
+    .info-bar { display: flex; justify-content: space-between; align-items: center; border-top: 1.5px solid #0f172a; border-bottom: 1px solid #cbd5e1; padding: 5px 4px; font-size: 11px; font-weight: 600; background: #f8fafc; }
     .info-bar span { margin-right: 14px; }
     .info-bar span strong { color: #4338ca; }
-    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    table.roster-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
     thead { display: table-header-group; }
     tr { page-break-inside: avoid; }
-    th, td { border: 1px solid #64748b; padding: 5px 4px; text-align: center; font-size: 10.5px; line-height: 1.3; }
+    th, td { border: 1px solid #64748b; padding: 4.5px 4px; text-align: center; font-size: 10px; line-height: 1.3; }
     th { background: #f1f5f9 !important; font-weight: 700; color: #0f172a; }
     .text-left { text-align: left !important; }
     .badge-yes { color: #166534; font-weight: 700; }
     .badge-no { color: #991b1b; font-weight: 700; background: #fee2e2; padding: 1px 4px; border-radius: 3px; border: 1px solid #fca5a5; display: inline-block; }
     .badge-mismatch { color: #b91c1c; font-weight: 800; background: #fecaca; padding: 1px 4px; border-radius: 3px; border: 1px solid #f87171; display: inline-block; }
     .badge-none { color: #94a3b8; }
-    .footer-sign { margin-top: 14px; text-align: right; font-size: 11px; font-weight: 600; color: #475569; }
+    .cell-warn { color: #c2410c; font-weight: 700; background: #fff7ed !important; }
+    .cell-danger { color: #b91c1c; font-weight: 800; background: #fee2e2 !important; }
+    .cell-muted { color: #94a3b8; }
+    .class-summary-box { margin-top: 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; padding: 6px 8px; }
+    .summary-header { font-size: 11px; color: #334155; margin-bottom: 4px; }
+    .class-summary-table { width: 100%; border-collapse: collapse; }
+    .class-summary-table th, .class-summary-table td { border: 1px solid #94a3b8; padding: 4px 5px; font-size: 9.5px; text-align: center; }
+    .class-summary-table th { background: #e2e8f0 !important; color: #1e293b; font-weight: 700; }
+    .overview-table th, .overview-table td { padding: 6px 5px; font-size: 10.5px; }
+    .footer-sign { margin-top: 14px; text-align: right; font-size: 11px; font-weight: 600; color: #475569; padding: 6px 4px 0 0; }
   </style>
   </head>
   <body>
-    <div class="header-box">
-      <h1 class="header-title">${title}</h1>
-      <div class="info-bar">
-        <div>
-          <span>학교명: <strong>${fullSchoolName}</strong></span>
-          <span>학급 구분: <strong>${classInfo}</strong></span>
-          <span>출력 조건: <strong>${filterSummary}</strong></span>
-        </div>
-        <div>
-          <span>출력 인원: <strong>총 ${records.length}명</strong> (재학생 ${enrolledCount}명, 졸업생 ${gradCount}명)</span>
-          <span>출력일시: ${printDateStr}</span>
-        </div>
-      </div>
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th style="width: 32px;">No</th>
-          <th style="width: 58px;">학번</th>
-          <th style="width: 65px;">성명</th>
-          <th style="width: 68px;">반/번호</th>
-          <th style="width: 58px;">수능(자가)</th>
-          <th style="width: 62px;">수능(대장)</th>
-          <th style="width: 55px;">매칭</th>
-          <th style="width: 65px;">(일반대)수시</th>
-          <th style="width: 65px;">(일반대)정시</th>
-          <th style="width: 65px;">(전문대)수시</th>
-          <th style="width: 65px;">(전문대)정시</th>
-          <th style="width: 58px;">확인서</th>
-          <th>비고 (미응시·미접수 사유 및 특이사항)</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rowsHtml}
-      </tbody>
-    </table>
-
-    <div class="footer-sign">
-      <span>담당교사 : _________________ (인)</span>
-      <span style="margin-left: 20px;">진로진학부장 : _________________ (인)</span>
-      <span style="margin-left: 20px;">교감 : _________________ (인)</span>
-      <span style="margin-left: 20px;">교장 : _________________ (인)</span>
-    </div>
-
+    ${pagesHtml}
     <script>window.onload=function(){window.print();window.close();}<\/script>
   </body></html>`)
   win.document.close()
