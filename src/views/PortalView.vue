@@ -60,27 +60,26 @@
       </div>
 
       <!-- 시스템 선택 카드 뷰 -->
-      <div :class="['grid gap-8 w-full', portalGridClass]">
+      <div :class="['grid gap-6 sm:gap-7 w-full max-w-7xl', portalGridClass]">
         
         <!-- 카드 1: 학교장 추천자 선발 시스템 -->
         <div
           @click="enterPrincipalSystem"
-          class="group relative bg-white rounded-3xl p-8 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-blue-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
+          class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-blue-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
         >
-          <!-- 카드 호버 그라데이션 장식 -->
           <div class="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
 
           <div>
-            <div class="flex items-center justify-between mb-6">
-              <div class="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm border border-blue-100">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <div class="flex items-center justify-between gap-3 mb-6">
+              <div class="w-13 h-13 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-xs border border-blue-100">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
                   <path d="M6 12v5c3 3 9 3 12 0v-5"/>
                 </svg>
               </div>
               <span
                 :class="[
-                  'px-3 py-1 rounded-full text-xs font-bold shadow-xs',
+                  'px-3 py-1.5 rounded-full text-xs font-bold shadow-xs whitespace-nowrap shrink-0',
                   principalPeriodState === 'OPEN'
                     ? 'bg-blue-100 text-blue-800 border border-blue-200'
                     : (principalPeriodState === 'DRAFT'
@@ -98,11 +97,11 @@
               전국 대입
             </div>
 
-            <h3 class="text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors mb-3">
+            <h3 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors mb-3">
               학교장 추천자 선발 시스템
             </h3>
             
-            <p class="text-sm text-slate-600 leading-relaxed">
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
               주요 대학 학교장추천전형(지역균형) 신청서 제출, 대학별 정원 관리, 교내 석차 심의 및 최종 추천 확정을 관리합니다.
             </p>
           </div>
@@ -120,7 +119,7 @@
           v-if="isRuralSystemEnabled"
           @click="enterRuralSystem"
           :class="[
-            'group relative bg-white rounded-3xl p-8 border shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer',
+            'group relative bg-white rounded-3xl p-6 sm:p-7 border shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer',
             (!auth.isStudent || isRuralEligible)
               ? 'border-slate-200/80 hover:shadow-xl hover:border-emerald-500'
               : 'border-amber-300 bg-amber-50/40 opacity-70 hover:opacity-100 hover:border-amber-400'
@@ -129,23 +128,23 @@
           <div class="absolute -top-20 -right-20 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
 
           <div>
-            <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center justify-between gap-3 mb-6">
               <div
                 :class="[
-                  'w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-sm border',
+                  'w-13 h-13 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 shadow-xs border',
                   (!auth.isStudent || isRuralEligible)
                     ? 'bg-emerald-50 text-emerald-600 border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white'
                     : 'bg-amber-100 text-amber-700 border-amber-200'
                 ]"
               >
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                   <path d="m9 12 2 2 4-4"/>
                 </svg>
               </div>
               <span
                 :class="[
-                  'px-3 py-1 rounded-full text-xs font-bold shadow-xs',
+                  'px-3 py-1.5 rounded-full text-xs font-bold shadow-xs whitespace-nowrap shrink-0',
                   (!auth.isStudent || isRuralEligible)
                     ? (isRuralSystemOpen
                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
@@ -153,7 +152,7 @@
                     : 'bg-amber-100 text-amber-900 border border-amber-300 font-extrabold'
                 ]"
               >
-                <template v-if="auth.isStudent && !isRuralEligible">🔒 농어촌 대상 자격 미달</template>
+                <template v-if="auth.isStudent && !isRuralEligible">🔒 농어촌 자격 미달</template>
                 <template v-else>{{ ruralStatusText }}</template>
               </span>
             </div>
@@ -162,11 +161,11 @@
               <span>기회균형 포함</span>
             </div>
 
-            <h3 class="text-2xl font-bold text-slate-900 group-hover:text-emerald-600 transition-colors mb-3">
+            <h3 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-emerald-600 transition-colors mb-3">
               농어촌 전형 추천자 관리 시스템
             </h3>
             
-            <p class="text-sm text-slate-600 leading-relaxed">
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
               기회균형 내 농어촌 특별전형 자격 검증, 지원 희망자 배정 관리 및 거주 요건 이력을 통합 관리합니다.
             </p>
           </div>
@@ -180,7 +179,7 @@
             ]"
           >
             <span>
-              <template v-if="auth.isStudent && !isRuralEligible">⚠️ 농어촌 대상 자격 미달 (진입 시 확인 필요)</template>
+              <template v-if="auth.isStudent && !isRuralEligible">⚠️ 자격 미확인 (진입 시 확인)</template>
               <template v-else>시스템 바로가기</template>
             </span>
             <svg class="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -193,19 +192,19 @@
         <div
           v-if="showExamIntentCard"
           @click="enterExamIntentSystem"
-          class="group relative bg-white rounded-3xl p-8 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-violet-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
+          class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-violet-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
         >
           <div class="absolute -top-20 -right-20 w-40 h-40 bg-violet-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
 
           <div>
-            <div class="flex items-center justify-between mb-6">
-              <div class="w-16 h-16 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center group-hover:bg-violet-600 group-hover:text-white transition-all duration-300 shadow-sm border border-violet-100">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <div class="flex items-center justify-between gap-3 mb-6">
+              <div class="w-13 h-13 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0 group-hover:bg-violet-600 group-hover:text-white transition-all duration-300 shadow-xs border border-violet-100">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M9 5H2v7l6.29 6.29c.94.94 2.48.94 3.42 0l3.58-3.58c.94-.94.94-2.48 0-3.42L9 5Z"/>
                   <path d="M6 9.01V9"/>
                 </svg>
               </div>
-              <span class="px-3 py-1 rounded-full text-xs font-bold shadow-xs bg-violet-100 text-violet-800 border border-violet-200">
+              <span class="px-3 py-1.5 rounded-full text-xs font-bold shadow-xs whitespace-nowrap shrink-0 bg-violet-100 text-violet-800 border border-violet-200">
                 재학생 전수 조사
               </span>
             </div>
@@ -214,11 +213,11 @@
               진학 관리
             </div>
 
-            <h3 class="text-2xl font-bold text-slate-900 group-hover:text-violet-600 transition-colors mb-3">
+            <h3 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-violet-600 transition-colors mb-3">
               수능응시 · 수시/정시 원서접수계획 등록
             </h3>
             
-            <p class="text-sm text-slate-600 leading-relaxed">
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
               수능 응시 여부 및 대학 수시·정시 원서접수 계획 자가 등록, 미응시/미접수 확인서 출력 및 수능 접수대장 대조 관리를 수행합니다.
             </p>
           </div>
@@ -235,19 +234,19 @@
         <div
           v-if="auth.isAdmin"
           @click="enterSystemSettings"
-          class="group relative bg-white rounded-3xl p-8 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-slate-800 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
+          class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-slate-800 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
         >
           <div class="absolute -top-20 -right-20 w-40 h-40 bg-slate-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
 
           <div>
-            <div class="flex items-center justify-between mb-6">
-              <div class="w-16 h-16 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all duration-300 shadow-sm border border-slate-200">
-                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <div class="flex items-center justify-between gap-3 mb-6">
+              <div class="w-13 h-13 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 group-hover:bg-slate-900 group-hover:text-white transition-all duration-300 shadow-xs border border-slate-200">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
                   <circle cx="12" cy="12" r="3"/>
                 </svg>
               </div>
-              <span class="px-3 py-1 rounded-full text-xs font-bold shadow-xs bg-slate-100 text-slate-800 border border-slate-200">
+              <span class="px-3 py-1.5 rounded-full text-xs font-bold shadow-xs whitespace-nowrap shrink-0 bg-slate-100 text-slate-800 border border-slate-200">
                 관리자 전용
               </span>
             </div>
@@ -256,11 +255,11 @@
               통합 관리
             </div>
 
-            <h3 class="text-2xl font-bold text-slate-900 group-hover:text-slate-800 transition-colors mb-3">
+            <h3 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-slate-800 transition-colors mb-3">
               설정
             </h3>
             
-            <p class="text-sm text-slate-600 leading-relaxed">
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
               학생 가입 승인, 재학생/졸업생 명단 및 학생 관리, 학교 기본 정보 및 가입코드 등 시스템 환경 설정을 통합 관리합니다.
             </p>
           </div>
