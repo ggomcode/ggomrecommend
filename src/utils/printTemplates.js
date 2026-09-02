@@ -2378,7 +2378,7 @@ export function printSummaryRoster(records, options = {}) {
 /**
  * 수능 선택과목 통계 전용 1페이지 단독 인쇄
  */
-export function printElectiveStatsReport({ filterLabel, stats, schoolName = '포곡고등학교' }) {
+export function printElectiveStatsReport({ filterLabel, stats, schoolName = '포곡고등학교', batchTime = null }) {
   const title = `[대학수학능력시험] 수능 선택과목 통계표 (${filterLabel})`
   const printDate = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
 
@@ -2484,7 +2484,7 @@ export function printElectiveStatsReport({ filterLabel, stats, schoolName = '포
         <div class="header-section">
           <div class="title-block">
             <h1>📊 대학수학능력시험 선택과목별 응시 현황 통계표</h1>
-            <p>소속: ${schoolName} &nbsp;|&nbsp; 대상 학급: <span style="color:#4338ca; font-weight:800;">${filterLabel}</span> &nbsp;|&nbsp; 출력 기준일: ${printDate}</p>
+            <p>소속: ${schoolName} &nbsp;|&nbsp; 대상 학급: <span style="color:#4338ca; font-weight:800;">${filterLabel}</span> &nbsp;|&nbsp; 조회 기준 시간(PDF 저장일시): <strong style="color:#0f172a;">${batchTime || '-'}</strong> &nbsp;|&nbsp; 출력일: ${printDate}</p>
           </div>
           <table class="sign-table">
             <tr><th rowspan="2" style="width:18px; writing-mode: vertical-rl; padding: 2px;">결재</th><th>담당</th><th>부장</th><th>교감</th><th>교장</th></tr>

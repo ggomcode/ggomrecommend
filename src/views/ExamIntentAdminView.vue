@@ -231,7 +231,12 @@
               <span>🖨️ 선택과목 통계 인쇄 (1장)</span>
             </button>
           </div>
-          <div class="text-xs font-semibold text-slate-600 flex flex-wrap gap-4">
+          <div class="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-600">
+            <div v-if="latestBatchTime" class="flex items-center gap-1.5 bg-indigo-50/80 border border-indigo-100 px-3 py-1.5 rounded-xl text-indigo-900">
+              <span class="text-indigo-600">🕒</span>
+              <span class="text-slate-600">조회기준시간 (PDF 저장일시):</span>
+              <strong class="text-indigo-700 font-extrabold text-sm">{{ formatBatchTime(latestBatchTime) }}</strong>
+            </div>
             <span>대상 인원: <strong class="text-slate-900 text-sm font-extrabold">{{ electiveStats.totalStudents }}명</strong></span>
             <span>수능 접수 인원: <strong class="text-indigo-600 text-sm font-extrabold">{{ electiveStats.totalRegistered }}명</strong></span>
             <span>탐구 총 선택 과목수: <strong class="text-purple-600 text-sm font-extrabold">{{ electiveStats.inquiry.totalPicks }}과목</strong> (분모)</span>
@@ -699,6 +704,7 @@ const loading = ref(true)
 const comparisonData = ref([])
 const filterClass = ref('all')
 const filterStatus = ref('all')
+const latestBatchTime = ref(null)
 
 // Upload state
 const isDragOver = ref(false)
@@ -824,8 +830,16 @@ function handlePrintElectiveStats() {
   printElectiveStatsReport({
     filterLabel: label,
     stats: electiveStats.value,
-    schoolName: schoolName.value || '포곡고등학교'
+    schoolName: schoolName.value || '포곡고등학교',
+    batchTime: formatBatchTime(latestBatchTime.value)
   })
+}
+
+function formatBatchTime(dateStr) {
+  if (!dateStr) return '-'
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`
 }
 
 function openHistoryModal(row) {
@@ -1179,7 +1193,12 @@ function isMismatch(row) {
 async function loadData() {
   loading.value = true
   try {
-    comparisonData.value = await buildComparisonData()
+    const [data, bTime] = await Promise.all([
+      buildComparisonData(),
+      getLatestUploadBatchTime()
+    ])
+    comparisonData.value = data
+    latestBatchTime.value = bTime
   } catch (e) {
     console.error('loadData error:', e)
   } finally {
