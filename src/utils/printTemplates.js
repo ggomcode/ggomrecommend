@@ -1776,6 +1776,117 @@ export function printSummaryRoster(records, options = {}) {
       none: 0
     }
 
+    const ALL_INQUIRY_KEYWORDS = [
+      '통합사회', '통합과학',
+      '생활과 윤리', '생활과윤리',
+      '윤리와 사상', '윤리와사상',
+      '한국지리', '세계지리', '동아시아사', '세계사', '경제',
+      '정치와 법', '정치와법',
+      '사회·문화', '사회문화', '사회.문화',
+      '물리학Ⅰ', '물리학I', '물리학1', '물리Ⅰ', '물리I',
+      '화학Ⅰ', '화학I', '화학1',
+      '생명과학Ⅰ', '생명과학I', '생명과학1', '생명Ⅰ', '생명I',
+      '지구과학Ⅰ', '지구과학I', '지구과학1', '지구Ⅰ', '지구I',
+      '물리학Ⅱ', '물리학II', '물리학2', '물리Ⅱ', '물리II',
+      '화학Ⅱ', '화학II', '화학2',
+      '생명과학Ⅱ', '생명과학II', '생명과학2', '생명Ⅱ', '생명II',
+      '지구과학Ⅱ', '지구과학II', '지구과학2', '지구Ⅱ', '지구II',
+      '성공적인 직업생활', '농업 기초 기술', '공업 일반', '상업 경제', '수산·해운 산업 기초', '인간 발달'
+    ]
+
+    function standardizeSubjectName(sub) {
+      if (!sub) return ''
+      const c = sub.replace(/[\s·./]/g, '')
+      if (c.includes('통합사회')) return '통합사회'
+      if (c.includes('통합과학')) return '통합과학'
+      if (c.includes('생활과윤리') || c === '생윤') return '생활과 윤리'
+      if (c.includes('윤리와사상') || c === '윤사') return '윤리와 사상'
+      if (c.includes('한국지리') || c === '한지') return '한국지리'
+      if (c.includes('세계지리') || c === '세지') return '세계지리'
+      if (c.includes('동아시아사') || c === '동사') return '동아시아사'
+      if (c.includes('세계사')) return '세계사'
+      if (c.includes('경제')) return '경제'
+      if (c.includes('정치와법') || c === '정법') return '정치와 법'
+      if (c.includes('사회문화') || c === '사문') return '사회·문화'
+      if (c.includes('물리') && (c.includes('Ⅱ') || c.includes('II') || c.includes('2'))) return '물리학Ⅱ'
+      if (c.includes('물리')) return '물리학Ⅰ'
+      if (c.includes('화학') && (c.includes('Ⅱ') || c.includes('II') || c.includes('2'))) return '화학Ⅱ'
+      if (c.includes('화학')) return '화학Ⅰ'
+      if (c.includes('생명') && (c.includes('Ⅱ') || c.includes('II') || c.includes('2'))) return '생명과학Ⅱ'
+      if (c.includes('생명')) return '생명과학Ⅰ'
+      if (c.includes('지구') && (c.includes('Ⅱ') || c.includes('II') || c.includes('2'))) return '지구과학Ⅱ'
+      if (c.includes('지구')) return '지구과학Ⅰ'
+      if (c.includes('직업생활')) return '성공적인 직업생활'
+      if (c.includes('농업')) return '농업 기초 기술'
+      if (c.includes('공업')) return '공업 일반'
+      if (c.includes('상업')) return '상업 경제'
+      if (c.includes('수산')) return '수산·해운 산업 기초'
+      if (c.includes('인간발달')) return '인간 발달'
+      return sub.trim()
+    }
+
+    function parseInquirySubjects(rawText) {
+      if (!rawText || rawText === 'X' || rawText === 'X / X' || rawText === '-') return []
+      const results = []
+      let text = String(rawText).trim()
+      if (text.includes('/')) {
+        const parts = text.split('/').map(s => s.trim()).filter(s => s && s !== 'X' && s !== '-')
+        for (const p of parts) {
+          const std = standardizeSubjectName(p)
+          if (std && !results.includes(std)) results.push(std)
+        }
+        if (results.length > 0) return results.slice(0, 2)
+      }
+      const sortedKeywords = [...ALL_INQUIRY_KEYWORDS].sort((a, b) => b.length - a.length)
+      for (const kw of sortedKeywords) {
+        if (results.length >= 2) break
+        const cleanKw = kw.replace(/[\s·./]/g, '')
+        const cleanText = text.replace(/[\s·./]/g, '')
+        if (cleanText.includes(cleanKw)) {
+          const std = standardizeSubjectName(kw)
+          if (std && !results.includes(std)) {
+            results.push(std)
+            text = text.replace(kw, '').trim()
+          }
+        }
+      }
+      return results.slice(0, 2)
+    }
+
+    const ALL_FOREIGN_KEYWORDS = [
+      '독일어Ⅰ', '독일어I', '프랑스어Ⅰ', '프랑스어I', '스페인어Ⅰ', '스페인어I',
+      '중국어Ⅰ', '중국어I', '일본어Ⅰ', '일본어I', '러시아어Ⅰ', '러시아어I',
+      '아랍어Ⅰ', '아랍어I', '베트남어Ⅰ', '베트남어I', '한문Ⅰ', '한문I'
+    ]
+
+    function standardizeForeignLanguage(fl) {
+      if (!fl || fl === 'X' || fl === '-' || fl === 'x') return null
+      const c = fl.replace(/[\s·./]/g, '')
+      if (c.includes('독일어')) return '독일어Ⅰ'
+      if (c.includes('프랑스어')) return '프랑스어Ⅰ'
+      if (c.includes('스페인어')) return '스페인어Ⅰ'
+      if (c.includes('중국어')) return '중국어Ⅰ'
+      if (c.includes('일본어')) return '일본어Ⅰ'
+      if (c.includes('러시아어')) return '러시아어Ⅰ'
+      if (c.includes('아랍어')) return '아랍어Ⅰ'
+      if (c.includes('베트남어')) return '베트남어Ⅰ'
+      if (c.includes('한문')) return '한문Ⅰ'
+      return fl.trim()
+    }
+
+    function parseForeignLanguage(rawText) {
+      if (!rawText || rawText === 'X' || rawText === '-' || rawText === 'x') return null
+      const text = String(rawText).trim()
+      for (const kw of ALL_FOREIGN_KEYWORDS) {
+        const cleanKw = kw.replace(/[\s·./]/g, '')
+        const cleanText = text.replace(/[\s·./]/g, '')
+        if (cleanText.includes(cleanKw)) {
+          return standardizeForeignLanguage(kw)
+        }
+      }
+      return null
+    }
+
     const SOCIAL_NAMES = ['통합사회', '생활과 윤리', '윤리와 사상', '한국지리', '세계지리', '동아시아사', '세계사', '경제', '정치와 법', '사회·문화', '사회문화']
     const SCIENCE_NAMES = ['통합과학', '물리학Ⅰ', '물리학I', '화학Ⅰ', '화학I', '생명과학Ⅰ', '생명과학I', '지구과학Ⅰ', '지구과학I', '물리학Ⅱ', '물리학II', '화학Ⅱ', '화학II', '생명과학Ⅱ', '생명과학II', '지구과학Ⅱ', '지구과학II']
     const VOCATIONAL_NAMES = ['성공적인 직업생활', '농업 기초 기술', '공업 일반', '상업 경제', '수산·해운 산업 기초', '인간 발달']
@@ -1811,8 +1922,9 @@ export function printSummaryRoster(records, options = {}) {
       }
 
       // 3. 제2외국어
-      const frg = (rec.foreign_language || rec.subject_foreign_language || '').trim()
-      if (frg && frg !== 'X' && frg !== '-') {
+      const rawForeign = rec.foreign_language || rec.subject_foreign_language || ''
+      const frg = parseForeignLanguage(rawForeign)
+      if (frg) {
         foreignMap[frg] = (foreignMap[frg] || 0) + 1
         foreignTakers++
       } else {
@@ -1820,28 +1932,16 @@ export function printSummaryRoster(records, options = {}) {
       }
 
       // 4. 탐구
-      let s1 = null
-      let s2 = null
-      if (rec.inquiry_subjects && typeof rec.inquiry_subjects === 'string') {
-        const parts = rec.inquiry_subjects.split('/').map(s => s.trim())
-        if (parts[0] && parts[0] !== 'X' && parts[0] !== '-') s1 = parts[0]
-        if (parts[1] && parts[1] !== 'X' && parts[1] !== '-') s2 = parts[1]
-      } else {
-        if (rec.inquiry_subject1 && rec.inquiry_subject1 !== 'X' && rec.inquiry_subject1 !== '-') s1 = rec.inquiry_subject1.trim()
-        if (rec.inquiry_subject2 && rec.inquiry_subject2 !== 'X' && rec.inquiry_subject2 !== '-') s2 = rec.inquiry_subject2.trim()
-      }
-
-      const subs = []
-      if (s1) subs.push(s1)
-      if (s2) subs.push(s2)
+      const rawInquiry = rec.inquiry_subjects || `${rec.inquiry_subject1 || ''} / ${rec.inquiry_subject2 || ''}`
+      const subs = parseInquirySubjects(rawInquiry)
 
       totalInquiryPicks += subs.length
       for (const s of subs) {
         inquiryCounts[s] = (inquiryCounts[s] || 0) + 1
       }
 
-      const c1 = getCategory(s1)
-      const c2 = getCategory(s2)
+      const c1 = subs[0] ? getCategory(subs[0]) : null
+      const c2 = subs[1] ? getCategory(subs[1]) : null
 
       if (subs.length === 0) {
         comboCounts.none++
