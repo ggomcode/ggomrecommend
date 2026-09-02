@@ -1989,7 +1989,7 @@ async function submitAbandonRequest() {
           <style>
             @page {
               size: A4 portrait;
-              margin: 15mm 20mm;
+              margin: 15mm;
             }
             * { box-sizing: border-box; }
             html, body {
@@ -2134,7 +2134,7 @@ function printAbandonForm(ap) {
         <style>
           @page {
             size: A4 portrait;
-            margin: 15mm 20mm;
+            margin: 15mm;
           }
           * { box-sizing: border-box; }
           html, body {

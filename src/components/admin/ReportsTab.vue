@@ -1038,7 +1038,7 @@ onMounted(async () => {
 
   @page {
     size: A4 portrait;
-    margin: 12mm 10mm 12mm 10mm;
+    margin: 15mm;
   }
 
   /* 화면 요소 완전 숨김 */
@@ -1059,7 +1059,7 @@ onMounted(async () => {
 
   @page {
     size: A4 landscape;
-    margin: 8mm 10mm;
+    margin: 15mm;
   }
 
   body * {

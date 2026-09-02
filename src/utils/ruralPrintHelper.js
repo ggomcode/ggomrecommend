@@ -585,7 +585,7 @@ export function printRuralClassRoster(title, rosterRows) {
       <style>
         @page {
           size: A4 landscape;
-          margin: 12mm 15mm 12mm 15mm;
+          margin: 15mm;
         }
         * {
           box-sizing: border-box;

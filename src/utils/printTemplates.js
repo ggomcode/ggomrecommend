@@ -264,7 +264,7 @@ export function printApplicationForm(apps, studentInfo) {
 <meta charset="utf-8">
 <title>2027학년도 대입 학교장추천전형 지원 신청서</title>
 <style>
-@page { size: A4 portrait; margin: 15mm 20mm; }
+@page { size: A4 portrait; margin: 15mm; }
 html, body { margin:0; padding:0; background:#fff; height:100%; }
 body { font-family:'Malgun Gothic','Dotum',sans-serif; font-size:13px; color:#111; line-height:1.5; }
 .container { display:flex; flex-direction:column; justify-content:space-between; height:calc(297mm - 30mm); box-sizing:border-box; }
@@ -580,7 +580,7 @@ export function printClassApplicationsReport({
       <style>
         @page {
           size: A4 landscape;
-          margin: 10mm 12mm;
+          margin: 15mm;
         }
         * {
           box-sizing: border-box;
@@ -1026,7 +1026,7 @@ export function printAllClassesApplicationsReport({
       <style>
         @page {
           size: A4 landscape;
-          margin: 10mm 12mm;
+          margin: 15mm;
         }
         * {
           box-sizing: border-box;
@@ -1294,7 +1294,7 @@ export function printAbandonmentForm(app, studentInfo = {}) {
         <style>
           @page {
             size: A4 portrait;
-            margin: 15mm 20mm;
+            margin: 15mm;
           }
           * { box-sizing: border-box; }
           html, body {
@@ -1410,7 +1410,7 @@ export function printAbandonmentForm(app, studentInfo = {}) {
  */
 function getIntentFormStyles() {
   return `
-    @page { size: A4 portrait; margin: 15mm 20mm 15mm 20mm; }
+    @page { size: A4 portrait; margin: 15mm; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Pretendard', '맑은 고딕', sans-serif; color: #111; font-size: 13.5px; line-height: 1.65; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .page { width: 100%; max-width: 700px; margin: 0 auto; padding: 0; display: flex; flex-direction: column; min-height: 255mm; page-break-after: always; }
@@ -2331,7 +2331,7 @@ export function printSummaryRoster(records, options = {}) {
   <title>${title}</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
   <style>
-    @page { size: A4 landscape; margin: 8mm 10mm; }
+    @page { size: A4 landscape; margin: 15mm; }
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .no-print { display: none !important; }
@@ -2693,7 +2693,7 @@ export function printElectiveStatsReport({ filterClass = 'all', filterLabel = '�
   <title>${title}</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
   <style>
-    @page { size: A4 portrait; margin: 8mm 10mm; }
+    @page { size: A4 portrait; margin: 15mm; }
     @media print {
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .no-print { display: none !important; }
