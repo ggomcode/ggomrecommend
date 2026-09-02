@@ -2624,10 +2624,22 @@ export function printElectiveStatsReport({ filterClass = 'all', filterLabel = '�
 
     // 학생 테이블 행 생성
     const trHtml = rows.map((r, idx) => {
-      const subs = getRowSubjects(r)
       const classCol = r.is_enrolled !== false ? `${r.class_no}반` : `${r.grad_year || '-'}년`
       const noCol = r.student_no ? `${r.student_no}번` : '-'
 
+      if (!r.csat_registered) {
+        return `
+          <tr style="background: #f8fafc;">
+            <td style="padding: 3px 4px; text-align: center; color: #94a3b8;">${idx + 1}</td>
+            <td style="padding: 3px 4px; text-align: center; font-weight: 600; color: #64748b;">${classCol}</td>
+            <td style="padding: 3px 4px; text-align: center; color: #64748b;">${noCol}</td>
+            <td style="padding: 3px 6px; text-align: center; font-weight: 800; color: #64748b;">${r.name}</td>
+            <td colspan="7" style="padding: 3px 6px; text-align: center; font-weight: 700; color: #94a3b8; letter-spacing: 1px;">수능 원서 미접수</td>
+          </tr>
+        `
+      }
+
+      const subs = getRowSubjects(r)
       return `
         <tr>
           <td style="padding: 3px 4px; text-align: center; color: #64748b;">${idx + 1}</td>

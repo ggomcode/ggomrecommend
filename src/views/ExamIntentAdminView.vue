@@ -437,39 +437,49 @@
                 <tr v-if="filteredElectiveStudentList.length === 0">
                   <td colspan="11" class="py-12 text-center text-slate-400 font-medium">조회된 학생 데이터가 없습니다.</td>
                 </tr>
-                <tr v-for="(row, idx) in filteredElectiveStudentList" :key="row.student_code || idx" class="hover:bg-slate-50/80 transition-colors">
-                  <td class="py-2.5 px-3 text-center font-medium text-slate-400">{{ idx + 1 }}</td>
+                <tr v-for="(row, idx) in filteredElectiveStudentList" :key="row.student_code || idx" :class="['hover:bg-slate-50/80 transition-colors', !row.csat_registered ? 'bg-slate-50/40' : '']">
+                  <td class="py-2.5 px-3 text-center font-medium" :class="row.csat_registered ? 'text-slate-400' : 'text-slate-300'">{{ idx + 1 }}</td>
                   <td class="py-2.5 px-3 text-center font-bold">
-                    <span v-if="row.is_enrolled !== false" class="text-slate-800">{{ row.class_no }}반</span>
+                    <span v-if="row.is_enrolled !== false" :class="row.csat_registered ? 'text-slate-800' : 'text-slate-400'">{{ row.class_no }}반</span>
                     <span v-else class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[11px] font-semibold">{{ row.grad_year }}년</span>
                   </td>
-                  <td class="py-2.5 px-3 text-center text-slate-600 font-semibold">
+                  <td class="py-2.5 px-3 text-center font-semibold" :class="row.csat_registered ? 'text-slate-600' : 'text-slate-400'">
                     {{ row.student_no ? `${row.student_no}번` : '-' }}
                   </td>
-                  <td class="py-2.5 px-4 text-center font-bold text-slate-900">{{ row.name }}</td>
-                  <td class="py-2.5 px-4 text-center font-semibold" :class="row.subjects.korean !== 'X' ? 'text-indigo-600' : 'text-slate-300'">
-                    {{ row.subjects.korean }}
-                  </td>
-                  <td class="py-2.5 px-4 text-center font-semibold" :class="row.subjects.math !== 'X' ? 'text-blue-600' : 'text-slate-300'">
-                    {{ row.subjects.math }}
-                  </td>
-                  <td class="py-2.5 px-3 text-center font-bold">
-                    <span v-if="row.subjects.english === 'O'" class="text-emerald-600">○</span>
-                    <span v-else class="text-slate-300">✕</span>
-                  </td>
-                  <td class="py-2.5 px-3 text-center font-bold">
-                    <span v-if="row.subjects.history === 'O'" class="text-emerald-600">○</span>
-                    <span v-else class="text-slate-300">✕</span>
-                  </td>
-                  <td class="py-2.5 px-4 text-center font-semibold" :class="row.subjects.inquiry1 !== 'X' ? 'text-orange-700' : 'text-slate-300'">
-                    {{ row.subjects.inquiry1 }}
-                  </td>
-                  <td class="py-2.5 px-4 text-center font-semibold" :class="row.subjects.inquiry2 !== 'X' ? 'text-cyan-700' : 'text-slate-300'">
-                    {{ row.subjects.inquiry2 }}
-                  </td>
-                  <td class="py-2.5 px-4 text-center font-semibold" :class="row.subjects.foreign !== 'X' ? 'text-emerald-700 bg-emerald-50/60 px-2 py-0.5 rounded' : 'text-slate-300'">
-                    {{ row.subjects.foreign }}
-                  </td>
+                  <td class="py-2.5 px-4 text-center font-bold" :class="row.csat_registered ? 'text-slate-900' : 'text-slate-500'">{{ row.name }}</td>
+
+                  <template v-if="row.csat_registered">
+                    <td class="py-2.5 px-4 text-center font-semibold" :class="row.subjects.korean !== 'X' ? 'text-indigo-600' : 'text-slate-300'">
+                      {{ row.subjects.korean }}
+                    </td>
+                    <td class="py-2.5 px-4 text-center font-semibold" :class="row.subjects.math !== 'X' ? 'text-blue-600' : 'text-slate-300'">
+                      {{ row.subjects.math }}
+                    </td>
+                    <td class="py-2.5 px-3 text-center font-bold">
+                      <span v-if="row.subjects.english === 'O'" class="text-emerald-600">○</span>
+                      <span v-else class="text-slate-300">✕</span>
+                    </td>
+                    <td class="py-2.5 px-3 text-center font-bold">
+                      <span v-if="row.subjects.history === 'O'" class="text-emerald-600">○</span>
+                      <span v-else class="text-slate-300">✕</span>
+                    </td>
+                    <td class="py-2.5 px-4 text-center font-semibold" :class="row.subjects.inquiry1 !== 'X' ? 'text-orange-700' : 'text-slate-300'">
+                      {{ row.subjects.inquiry1 }}
+                    </td>
+                    <td class="py-2.5 px-4 text-center font-semibold" :class="row.subjects.inquiry2 !== 'X' ? 'text-cyan-700' : 'text-slate-300'">
+                      {{ row.subjects.inquiry2 }}
+                    </td>
+                    <td class="py-2.5 px-4 text-center font-semibold" :class="row.subjects.foreign !== 'X' ? 'text-emerald-700 bg-emerald-50/60 px-2 py-0.5 rounded' : 'text-slate-300'">
+                      {{ row.subjects.foreign }}
+                    </td>
+                  </template>
+                  <template v-else>
+                    <td colspan="7" class="py-2.5 px-4 text-center bg-slate-50/60">
+                      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-500 font-bold text-xs border border-slate-200">
+                        수능 원서 미접수
+                      </span>
+                    </td>
+                  </template>
                 </tr>
               </tbody>
             </table>
