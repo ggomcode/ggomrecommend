@@ -462,9 +462,16 @@ export async function buildComparisonData() {
   }
 
   const results = []
+  const matchedReceiptNos = new Set()
+
+  // 1. 재학생 대조
   for (const student of students) {
     const survey = surveyMap.get(student.student_code) || null
     const csatRec = csatMap.get(student.student_code) || null
+
+    if (csatRec) {
+      matchedReceiptNos.add(csatRec.receipt_no)
+    }
 
     // 불일치 유형 판정
     let csatMismatch = 'NONE'
@@ -487,6 +494,8 @@ export async function buildComparisonData() {
       grade: student.grade,
       class_no: student.class_no,
       student_no: student.student_no,
+      is_enrolled: true,
+      grad_year: null,
       // 의향 조사 정보
       has_survey: !!survey,
       csat_intent: survey?.csat_intent || null,
@@ -518,6 +527,52 @@ export async function buildComparisonData() {
       // 불일치 정보
       csat_mismatch: csatMismatch
     })
+  }
+
+  // 2. 접수대장에 등록된 졸업생 (재학생에 매칭되지 않은 접수대장 레코드)
+  for (const r of csatRecords) {
+    if (!matchedReceiptNos.has(r.receipt_no)) {
+      results.push({
+        student_code: r.student_code || `졸업생(${r.receipt_no})`,
+        student_id: null,
+        name: r.name_decrypted || '졸업생',
+        grade: null,
+        class_no: null,
+        student_no: null,
+        is_enrolled: false,
+        grad_year: r.class_or_grad_year,
+        // 의향 조사 정보
+        has_survey: false,
+        csat_intent: 'TAKE',
+        csat_no_take_reason: null,
+        susi_general_intent: null,
+        susi_general_no_reason: null,
+        jungsi_general_intent: null,
+        jungsi_general_no_reason: null,
+        susi_college_intent: null,
+        susi_college_no_reason: null,
+        jungsi_college_intent: null,
+        jungsi_college_no_reason: null,
+        jungsi_intent: null,
+        jungsi_no_reason: null,
+        susi_intent: null,
+        susi_no_apply_reason: null,
+        student_signature: null,
+        parent_signature: null,
+        parent_name: null,
+        is_form_submitted: false,
+        confirmed_at: null,
+        change_logs: [],
+        history_count: 0,
+        last_modified_by: null,
+        last_modified_at: null,
+        // 접수대장 정보
+        csat_registered: true,
+        csat_record: r,
+        // 불일치 정보
+        csat_mismatch: 'MATCH'
+      })
+    }
   }
 
   return results

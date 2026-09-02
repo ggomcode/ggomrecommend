@@ -70,9 +70,11 @@
         <!-- 필터 및 액션 버튼 -->
         <div class="flex flex-wrap gap-3 mb-4 items-center justify-between">
           <div class="flex flex-wrap gap-2 items-center">
-            <select v-model="filterClass" class="text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-slate-700 cursor-pointer min-w-[110px] shadow-sm focus:outline-none focus:border-indigo-500 transition-all">
-              <option value="all">전체 반</option>
+            <select v-model="filterClass" class="text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-slate-700 cursor-pointer min-w-[140px] shadow-sm focus:outline-none focus:border-indigo-500 transition-all">
+              <option value="all">전체 (재학생 + 졸업생)</option>
+              <option value="enrolled_all">재학생 전체 (1~11반)</option>
               <option v-for="c in classList" :key="c" :value="c">{{ c }}반</option>
+              <option value="grad">🎓 졸업생 (수능접수)</option>
             </select>
             <select v-model="filterStatus" class="text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-slate-700 cursor-pointer min-w-[160px] shadow-sm focus:outline-none focus:border-indigo-500 transition-all">
               <option value="all">전체 상태</option>
@@ -89,8 +91,9 @@
           </div>
           <div class="flex flex-wrap gap-2 items-center">
             <button @click="downloadExcel" class="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer">📥 엑셀 다운로드</button>
-            <button @click="printBatchCsat" class="text-xs font-bold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer">🖨️ 수능 미응시 일괄출력</button>
-            <button @click="printBatchSusi" class="text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer">🖨️ 원서 미접수 일괄출력 (통합 1장)</button>
+            <button @click="openRosterModal" class="text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer shadow-sm">🖨️ 대장 인쇄</button>
+            <button @click="printBatchCsat" class="text-xs font-bold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer">🖨️ 수능 미응시 확인서 일괄출력</button>
+            <button @click="printBatchSusi" class="text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer">🖨️ 원서 미접수 확인서 일괄출력</button>
           </div>
         </div>
 
@@ -125,7 +128,10 @@
                 :class="['border-b border-slate-100 transition-colors text-xs', isMismatch(row) ? 'bg-red-50/70' : 'hover:bg-slate-50']">
                 <td class="px-3 py-3 font-mono text-slate-700 font-bold">{{ row.student_code }}</td>
                 <td class="px-3 py-3 font-semibold text-slate-800">{{ row.name }}</td>
-                <td class="px-2 py-3 text-center text-slate-600">{{ row.class_no }}반</td>
+                <td class="px-2 py-3 text-center text-slate-600">
+                  <span v-if="row.class_no">{{ row.class_no }}반</span>
+                  <span v-else class="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">졸업생({{ row.grad_year || '졸업' }})</span>
+                </td>
 
                 <!-- 수능 자가체크 -->
                 <td class="px-3 py-3 text-center">
@@ -346,6 +352,149 @@
           </div>
         </div>
       </div>
+
+      <!-- 대장 인쇄 조건 설정 모달 -->
+      <div v-if="isRosterModalOpen" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+          <!-- 모달 헤더 -->
+          <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-base">🖨️</div>
+              <div>
+                <h3 class="text-base font-bold text-slate-900">수능·원서접수 대장 인쇄 설정</h3>
+                <p class="text-xs text-slate-500 mt-0.5">인쇄할 대장 종류와 학급 및 상세 필터 조건을 선택하세요 (A4 가로 서식).</p>
+              </div>
+            </div>
+            <button @click="isRosterModalOpen = false" class="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-600 cursor-pointer font-bold transition-all">✕</button>
+          </div>
+
+          <!-- 모달 바디 -->
+          <div class="p-6 overflow-y-auto flex-1 space-y-5 text-sm">
+            <!-- 1. 대장 종류 선택 -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-2">1. 대장 종류 (출력 서식)</label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <label :class="['border rounded-xl p-3 flex items-start gap-2.5 cursor-pointer transition-all', rosterType === 'all' ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500' : 'border-slate-200 hover:bg-slate-50']">
+                  <input type="radio" v-model="rosterType" value="all" class="mt-0.5 text-indigo-600" />
+                  <div>
+                    <p class="text-xs font-bold text-slate-800">📊 종합 대장 (전체 현황)</p>
+                    <p class="text-[11px] text-slate-500 mt-0.5">수능 + 수시/정시 원서접수 전체 계획</p>
+                  </div>
+                </label>
+                <label :class="['border rounded-xl p-3 flex items-start gap-2.5 cursor-pointer transition-all', rosterType === 'csat' ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500' : 'border-slate-200 hover:bg-slate-50']">
+                  <input type="radio" v-model="rosterType" value="csat" class="mt-0.5 text-indigo-600" />
+                  <div>
+                    <p class="text-xs font-bold text-slate-800">📝 수능 응시 대조 대장</p>
+                    <p class="text-[11px] text-slate-500 mt-0.5">자가체크 vs 평가원 접수대장 대조</p>
+                  </div>
+                </label>
+                <label :class="['border rounded-xl p-3 flex items-start gap-2.5 cursor-pointer transition-all', rosterType === 'apply' ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500' : 'border-slate-200 hover:bg-slate-50']">
+                  <input type="radio" v-model="rosterType" value="apply" class="mt-0.5 text-indigo-600" />
+                  <div>
+                    <p class="text-xs font-bold text-slate-800">📑 대입 원서접수 계획 대장</p>
+                    <p class="text-[11px] text-slate-500 mt-0.5">일반대/전문대 수시 및 정시 현황</p>
+                  </div>
+                </label>
+                <label :class="['border rounded-xl p-3 flex items-start gap-2.5 cursor-pointer transition-all', rosterType === 'mismatch' ? 'border-rose-500 bg-rose-50/50 ring-1 ring-rose-500' : 'border-slate-200 hover:bg-slate-50']">
+                  <input type="radio" v-model="rosterType" value="mismatch" class="mt-0.5 text-rose-600" />
+                  <div>
+                    <p class="text-xs font-bold text-rose-800">⚠️ 수능 불일치 명단 대장</p>
+                    <p class="text-[11px] text-rose-600 mt-0.5">자가조사 vs 접수대장 불일치자만</p>
+                  </div>
+                </label>
+                <label :class="['border rounded-xl p-3 flex items-start gap-2.5 cursor-pointer transition-all', rosterType === 'no_take' ? 'border-amber-500 bg-amber-50/50 ring-1 ring-amber-500' : 'border-slate-200 hover:bg-slate-50']">
+                  <input type="radio" v-model="rosterType" value="no_take" class="mt-0.5 text-amber-600" />
+                  <div>
+                    <p class="text-xs font-bold text-amber-800">🚫 수능 미응시자 명단 대장</p>
+                    <p class="text-[11px] text-amber-600 mt-0.5">전체 재학생 중 업로드된 접수대장 PDF에 없는 학생</p>
+                  </div>
+                </label>
+                <label :class="['border rounded-xl p-3 flex items-start gap-2.5 cursor-pointer transition-all', rosterType === 'no_apply' ? 'border-purple-500 bg-purple-50/50 ring-1 ring-purple-500' : 'border-slate-200 hover:bg-slate-50']">
+                  <input type="radio" v-model="rosterType" value="no_apply" class="mt-0.5 text-purple-600" />
+                  <div>
+                    <p class="text-xs font-bold text-purple-800">🚫 원서 미접수자 명단 대장</p>
+                    <p class="text-[11px] text-purple-600 mt-0.5">수시/정시 중 미접수 전형 보유자</p>
+                  </div>
+                </label>
+                <label :class="['border rounded-xl p-3 flex items-start gap-2.5 cursor-pointer transition-all', rosterType === 'no_form' ? 'border-amber-500 bg-amber-50/50 ring-1 ring-amber-500' : 'border-slate-200 hover:bg-slate-50']">
+                  <input type="radio" v-model="rosterType" value="no_form" class="mt-0.5 text-amber-600" />
+                  <div>
+                    <p class="text-xs font-bold text-amber-800">⏳ 확인서 미제출자 명단</p>
+                    <p class="text-[11px] text-amber-600 mt-0.5">실물 확인서 미제출 대상자</p>
+                  </div>
+                </label>
+                <label :class="['border rounded-xl p-3 flex items-start gap-2.5 cursor-pointer transition-all', rosterType === 'no_survey' ? 'border-slate-400 bg-slate-100 ring-1 ring-slate-400' : 'border-slate-200 hover:bg-slate-50']">
+                  <input type="radio" v-model="rosterType" value="no_survey" class="mt-0.5 text-slate-600" />
+                  <div>
+                    <p class="text-xs font-bold text-slate-800">⏳ 조사 미응답자 명단</p>
+                    <p class="text-[11px] text-slate-500 mt-0.5">계획 조사를 아직 완료하지 않은 학생</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- 2. 학급 선택 -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">2. 대상 학급</label>
+              <select v-model="rosterClass" class="w-full text-xs font-semibold border border-slate-200 rounded-xl px-3.5 py-2.5 bg-white text-slate-800 cursor-pointer shadow-sm focus:outline-none focus:border-indigo-500">
+                <option value="all">전체 (재학생 + 졸업생)</option>
+                <option value="enrolled_all">재학생 전체 (1~11반)</option>
+                <option v-for="c in classList" :key="c" :value="c">{{ c }}반</option>
+                <option value="grad">🎓 졸업생 전체 (수능접수대장 등록자)</option>
+              </select>
+            </div>
+
+            <!-- 3. 상세 필터 조건 (수능 대장, 수시, 정시) -->
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+              <p class="text-xs font-bold text-slate-700">3. 상세 조건 필터 (선택 사항)</p>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-500 mb-1">수능(접수대장) 상태</label>
+                  <select v-model="rosterCsatFilter" class="w-full text-xs font-medium border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white text-slate-700">
+                    <option value="all">전체 (접수/미접수)</option>
+                    <option value="registered">접수됨만</option>
+                    <option value="not_registered">미접수만</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-500 mb-1">(일반대) 수시 상태</label>
+                  <select v-model="rosterSusiGenFilter" class="w-full text-xs font-medium border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white text-slate-700">
+                    <option value="all">전체</option>
+                    <option value="apply">접수 예정만</option>
+                    <option value="no_apply">미접수만</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-500 mb-1">(일반대) 정시 상태</label>
+                  <select v-model="rosterJungGenFilter" class="w-full text-xs font-medium border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white text-slate-700">
+                    <option value="all">전체</option>
+                    <option value="apply">접수 예정만</option>
+                    <option value="no_apply">미접수만</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- 대상 인원 실시간 요약 바 -->
+            <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-3.5 flex items-center justify-between">
+              <span class="text-xs font-bold text-indigo-900">
+                🎯 선택된 조건의 인쇄 대상 인원:
+              </span>
+              <span class="text-sm font-extrabold text-indigo-700">
+                총 {{ rosterFilteredList.length }}명 (재학생 {{ rosterFilteredList.filter(r => r.is_enrolled !== false).length }}명, 졸업생 {{ rosterFilteredList.filter(r => r.is_enrolled === false).length }}명)
+              </span>
+            </div>
+          </div>
+
+          <!-- 모달 풋터 -->
+          <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+            <button @click="isRosterModalOpen = false" class="text-xs font-bold text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 px-4 py-2.5 rounded-xl cursor-pointer transition-all">취소</button>
+            <button @click="executeRosterPrint" :disabled="rosterFilteredList.length === 0" :class="['text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-1.5', rosterFilteredList.length === 0 ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer']">
+              <span>🖨️ 대장 인쇄하기 (A4 가로)</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 </template>
@@ -357,7 +506,7 @@ import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { buildComparisonData, getLatestUploadBatchTime, upsertCsatRecords, toggleFormSubmitted } from '../api/examIntentApi'
 import { parseCsatPdf } from '../utils/csatPdfParser'
-import { printCsatNoTakeForm, printSusiNoApplyForm, printBatchIntentForms } from '../utils/printTemplates'
+import { printCsatNoTakeForm, printSusiNoApplyForm, printBatchIntentForms, printSummaryRoster } from '../utils/printTemplates'
 import * as XLSX from 'xlsx'
 
 const router = useRouter()
@@ -379,6 +528,110 @@ const uploadResultMsg = ref('')
 
 // History Modal
 const selectedHistoryStudent = ref(null)
+
+// Roster Print Modal State
+const isRosterModalOpen = ref(false)
+const rosterType = ref('all') // all, csat, apply, mismatch, no_take, no_apply, no_survey, no_form
+const rosterClass = ref('all')
+const rosterCsatFilter = ref('all') // all, registered, not_registered
+const rosterSusiGenFilter = ref('all') // all, apply, no_apply
+const rosterJungGenFilter = ref('all') // all, apply, no_apply
+
+function openRosterModal() {
+  rosterClass.value = filterClass.value
+  isRosterModalOpen.value = true
+}
+
+const rosterFilteredList = computed(() => {
+  let list = comparisonData.value
+
+  // 1. 학급 필터 ('all'은 재학생 + 졸업생 전체)
+  if (rosterClass.value === 'enrolled_all') {
+    list = list.filter(r => r.is_enrolled !== false)
+  } else if (rosterClass.value === 'grad') {
+    list = list.filter(r => r.is_enrolled === false)
+  } else if (rosterClass.value !== 'all') {
+    list = list.filter(r => r.class_no === Number(rosterClass.value))
+  }
+
+  // 2. 대장 종류 필터
+  if (rosterType.value === 'mismatch') {
+    list = list.filter(r => isMismatch(r))
+  } else if (rosterType.value === 'no_take') {
+    // 전체 재학생 중 업로드된 수능 접수대장 PDF에 등록되지 않은 학생
+    list = list.filter(r => r.is_enrolled !== false && !r.csat_registered)
+  } else if (rosterType.value === 'no_apply') {
+    list = list.filter(r => hasStudentNoApply(r))
+  } else if (rosterType.value === 'no_survey') {
+    list = list.filter(r => !r.has_survey && r.is_enrolled !== false)
+  } else if (rosterType.value === 'no_form') {
+    list = list.filter(r => r.has_survey && !r.is_form_submitted && (r.csat_intent === 'NO_TAKE' || hasStudentNoApply(r)))
+  }
+
+  // 3. 수능 접수대장 상태 필터
+  if (rosterCsatFilter.value === 'registered') {
+    list = list.filter(r => r.csat_registered)
+  } else if (rosterCsatFilter.value === 'not_registered') {
+    list = list.filter(r => !r.csat_registered)
+  }
+
+  // 4. 일반대 수시 상태 필터
+  if (rosterSusiGenFilter.value === 'apply') {
+    list = list.filter(r => r.has_survey && (r.susi_general_intent || r.susi_intent) !== 'NO_APPLY')
+  } else if (rosterSusiGenFilter.value === 'no_apply') {
+    list = list.filter(r => r.has_survey && (r.susi_general_intent || r.susi_intent) === 'NO_APPLY')
+  }
+
+  // 5. 일반대 정시 상태 필터
+  if (rosterJungGenFilter.value === 'apply') {
+    list = list.filter(r => r.has_survey && (r.jungsi_general_intent || r.jungsi_intent) !== 'NO_APPLY')
+  } else if (rosterJungGenFilter.value === 'no_apply') {
+    list = list.filter(r => r.has_survey && (r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY')
+  }
+
+  return list
+})
+
+function executeRosterPrint() {
+  const targets = rosterFilteredList.value
+  if (targets.length === 0) {
+    alert('선택된 조건에 해당하는 인쇄 대상이 없습니다.')
+    return
+  }
+
+  let title = '2027학년도 수능 응시 및 대입 원서접수 종합대장'
+  if (rosterType.value === 'csat') title = '2027학년도 수능 응시 및 접수대장 대조 대장'
+  else if (rosterType.value === 'apply') title = '2027학년도 대입 원서접수(수시/정시) 계획 대장'
+  else if (rosterType.value === 'mismatch') title = '2027학년도 수능 불일치 대상자 명단 대장'
+  else if (rosterType.value === 'no_take') title = '2027학년도 수능 미응시자 명단 대장'
+  else if (rosterType.value === 'no_apply') title = '2027학년도 대입 원서 미접수자 명단 대장'
+  else if (rosterType.value === 'no_survey') title = '2027학년도 의향 조사 미응답자 명단 대장'
+  else if (rosterType.value === 'no_form') title = '2027학년도 확인서 미제출자 명단 대장'
+
+  let classInfo = '전체 (재학생 + 졸업생)'
+  if (rosterClass.value === 'enrolled_all') classInfo = '재학생 전체 (1~11반)'
+  else if (rosterClass.value === 'grad') classInfo = '졸업생 전체 (수능접수)'
+  else if (rosterClass.value !== 'all') classInfo = `3학년 ${rosterClass.value}반`
+
+  const filterSummaryList = []
+  if (rosterCsatFilter.value === 'registered') filterSummaryList.push('수능접수:접수됨')
+  else if (rosterCsatFilter.value === 'not_registered') filterSummaryList.push('수능접수:미접수')
+
+  if (rosterSusiGenFilter.value === 'apply') filterSummaryList.push('일반대수시:접수')
+  else if (rosterSusiGenFilter.value === 'no_apply') filterSummaryList.push('일반대수시:미접수')
+
+  if (rosterJungGenFilter.value === 'apply') filterSummaryList.push('일반대정시:접수')
+  else if (rosterJungGenFilter.value === 'no_apply') filterSummaryList.push('일반대정시:미접수')
+
+  const filterSummary = filterSummaryList.length > 0 ? filterSummaryList.join(' / ') : '전체'
+
+  printSummaryRoster(targets, {
+    title,
+    classInfo,
+    filterSummary
+  })
+  isRosterModalOpen.value = false
+}
 
 function openHistoryModal(row) {
   selectedHistoryStudent.value = row
@@ -423,7 +676,11 @@ const stats = computed(() => {
 
 const filteredData = computed(() => {
   let data = comparisonData.value
-  if (filterClass.value !== 'all') {
+  if (filterClass.value === 'enrolled_all') {
+    data = data.filter(r => r.is_enrolled !== false)
+  } else if (filterClass.value === 'grad') {
+    data = data.filter(r => r.is_enrolled === false)
+  } else if (filterClass.value !== 'all') {
     data = data.filter(r => r.class_no === Number(filterClass.value))
   }
   if (filterStatus.value === 'mismatch') data = data.filter(r => isMismatch(r))
@@ -589,6 +846,7 @@ async function processPdf(file) {
   uploadState.value = 'parsing'
   try {
     const result = await parseCsatPdf(file)
+    console.log('[ExamIntentAdminView] 파싱 완료 result:', result)
     parsedResult.value = result
 
     // 기존 배치시간과 비교

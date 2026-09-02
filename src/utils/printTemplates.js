@@ -1660,3 +1660,150 @@ export function printBatchIntentForms(list, type = 'csat') {
   </body></html>`)
   win.document.close()
 }
+
+/**
+ * 수능 응시 및 원서접수 현황 대장 (A4 가로 종합대장 인쇄)
+ * @param {Array} records - 대조 데이터 배열
+ * @param {Object} options - { title, classInfo, filterSummary, orientation }
+ */
+export function printSummaryRoster(records, options = {}) {
+  if (!records || records.length === 0) {
+    alert('인쇄할 대상 데이터가 없습니다.')
+    return
+  }
+
+  const currentSchool = schoolName.value || schoolName
+  const fullSchoolName = getFormattedSchoolName(currentSchool)
+  const title = options.title || '2027학년도 수능 응시 및 대입 원서접수 계획 현황 대장'
+  const classInfo = options.classInfo || '전체 학급'
+  const filterSummary = options.filterSummary || '전체 조건'
+  const now = new Date()
+  const printDateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+
+  const enrolledCount = records.filter(r => r.is_enrolled !== false).length
+  const gradCount = records.filter(r => r.is_enrolled === false).length
+
+  const rowsHtml = records.map((r, idx) => {
+    const csatSelf = !r.has_survey ? '<span class="badge-none">미응답</span>' : (r.csat_intent === 'TAKE' ? '<span class="badge-yes">응시</span>' : '<span class="badge-no">미응시</span>')
+    const csatOfficial = r.csat_registered ? '<span class="badge-yes">접수됨</span>' : '<span class="badge-none">미접수</span>'
+    let matchBadge = '-'
+    if (r.csat_mismatch === 'MATCH') matchBadge = '<span class="badge-yes">일치</span>'
+    else if (r.csat_mismatch === 'NO_SURVEY') matchBadge = '<span class="badge-none">-</span>'
+    else if (r.csat_mismatch === 'SURVEY_YES_CSAT_NO' || r.csat_mismatch === 'SURVEY_NO_CSAT_YES') matchBadge = '<span class="badge-mismatch">⚠️불일치</span>'
+
+    const susiGen = !r.has_survey ? '<span class="badge-none">미응답</span>' : ((r.susi_general_intent || r.susi_intent) === 'NO_APPLY' ? '<span class="badge-no">미접수</span>' : '<span class="badge-yes">접수</span>')
+    const jungGen = !r.has_survey ? '<span class="badge-none">미응답</span>' : ((r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY' ? '<span class="badge-no">미접수</span>' : '<span class="badge-yes">접수</span>')
+    const susiCol = !r.has_survey ? '<span class="badge-none">미응답</span>' : (r.susi_college_intent === 'NO_APPLY' ? '<span class="badge-no">미접수</span>' : '<span class="badge-yes">접수</span>')
+    const jungCol = !r.has_survey ? '<span class="badge-none">미응답</span>' : (r.jungsi_college_intent === 'NO_APPLY' ? '<span class="badge-no">미접수</span>' : '<span class="badge-yes">접수</span>')
+
+    const formSub = r.has_survey ? (r.is_form_submitted ? '<span class="badge-yes">✔제출</span>' : '<span class="badge-no">미제출</span>') : '-'
+    
+    // 비고란: 미응시 사유 또는 특이사항
+    let remarks = []
+    if (r.csat_intent === 'NO_TAKE' && r.csat_no_take_reason) remarks.push(`[수능미응시] ${r.csat_no_take_reason}`)
+    if ((r.susi_general_intent || r.susi_intent) === 'NO_APPLY' && (r.susi_general_no_reason || r.susi_no_apply_reason)) remarks.push(`[수시미접수] ${r.susi_general_no_reason || r.susi_no_apply_reason}`)
+    if (r.history_count > 0) remarks.push(`(수정 ${r.history_count}회)`)
+    const remarksStr = remarks.join(' / ') || '-'
+
+    const classDisplay = r.class_no ? `${r.class_no}반` : (r.is_enrolled === false ? `졸업생(${r.grad_year || ''})` : '-')
+    const noDisplay = r.student_no ? `${r.student_no}번` : '-'
+
+    return `
+    <tr>
+      <td>${idx + 1}</td>
+      <td style="font-family:monospace; font-weight:700;">${r.student_code || '-'}</td>
+      <td style="font-weight:700;">${r.name || '-'}</td>
+      <td>${classDisplay} ${noDisplay !== '-' ? noDisplay : ''}</td>
+      <td>${csatSelf}</td>
+      <td>${csatOfficial}</td>
+      <td>${matchBadge}</td>
+      <td>${susiGen}</td>
+      <td>${jungGen}</td>
+      <td>${susiCol}</td>
+      <td>${jungCol}</td>
+      <td>${formSub}</td>
+      <td class="text-left" style="font-size:9.5px; max-width:220px;">${remarksStr}</td>
+    </tr>`
+  }).join('')
+
+  const win = window.open('', '_blank')
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>${title}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <style>
+    @page { size: A4 landscape; margin: 8mm 10mm; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .no-print { display: none !important; }
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Pretendard', sans-serif; color: #1e293b; margin: 0; padding: 10px; font-size: 11px; }
+    .header-box { margin-bottom: 12px; }
+    .header-title { font-size: 19px; font-weight: 800; text-align: center; margin: 0 0 8px 0; color: #0f172a; letter-spacing: -0.5px; }
+    .info-bar { display: flex; justify-content: space-between; align-items: center; border-top: 1.5px solid #0f172a; border-bottom: 1px solid #cbd5e1; padding: 6px 4px; font-size: 11.5px; font-weight: 600; background: #f8fafc; }
+    .info-bar span { margin-right: 14px; }
+    .info-bar span strong { color: #4338ca; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    thead { display: table-header-group; }
+    tr { page-break-inside: avoid; }
+    th, td { border: 1px solid #64748b; padding: 5px 4px; text-align: center; font-size: 10.5px; line-height: 1.3; }
+    th { background: #f1f5f9 !important; font-weight: 700; color: #0f172a; }
+    .text-left { text-align: left !important; }
+    .badge-yes { color: #166534; font-weight: 700; }
+    .badge-no { color: #991b1b; font-weight: 700; background: #fee2e2; padding: 1px 4px; border-radius: 3px; border: 1px solid #fca5a5; display: inline-block; }
+    .badge-mismatch { color: #b91c1c; font-weight: 800; background: #fecaca; padding: 1px 4px; border-radius: 3px; border: 1px solid #f87171; display: inline-block; }
+    .badge-none { color: #94a3b8; }
+    .footer-sign { margin-top: 14px; text-align: right; font-size: 11px; font-weight: 600; color: #475569; }
+  </style>
+  </head>
+  <body>
+    <div class="header-box">
+      <h1 class="header-title">${title}</h1>
+      <div class="info-bar">
+        <div>
+          <span>학교명: <strong>${fullSchoolName}</strong></span>
+          <span>학급 구분: <strong>${classInfo}</strong></span>
+          <span>출력 조건: <strong>${filterSummary}</strong></span>
+        </div>
+        <div>
+          <span>출력 인원: <strong>총 ${records.length}명</strong> (재학생 ${enrolledCount}명, 졸업생 ${gradCount}명)</span>
+          <span>출력일시: ${printDateStr}</span>
+        </div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 32px;">No</th>
+          <th style="width: 58px;">학번</th>
+          <th style="width: 65px;">성명</th>
+          <th style="width: 68px;">반/번호</th>
+          <th style="width: 58px;">수능(자가)</th>
+          <th style="width: 62px;">수능(대장)</th>
+          <th style="width: 55px;">매칭</th>
+          <th style="width: 65px;">(일반대)수시</th>
+          <th style="width: 65px;">(일반대)정시</th>
+          <th style="width: 65px;">(전문대)수시</th>
+          <th style="width: 65px;">(전문대)정시</th>
+          <th style="width: 58px;">확인서</th>
+          <th>비고 (미응시·미접수 사유 및 특이사항)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+      </tbody>
+    </table>
+
+    <div class="footer-sign">
+      <span>담당교사 : _________________ (인)</span>
+      <span style="margin-left: 20px;">진로진학부장 : _________________ (인)</span>
+      <span style="margin-left: 20px;">교감 : _________________ (인)</span>
+      <span style="margin-left: 20px;">교장 : _________________ (인)</span>
+    </div>
+
+    <script>window.onload=function(){window.print();window.close();}<\/script>
+  </body></html>`)
+  win.document.close()
+}
+
