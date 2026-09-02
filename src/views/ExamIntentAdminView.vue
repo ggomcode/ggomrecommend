@@ -410,9 +410,6 @@
                   총 {{ electiveStudentList.length }}명
                 </span>
               </h4>
-              <p class="text-xs text-slate-500 mt-1">
-                순번, 반(년도), 번호, 이름 및 7대 영역(국어·수학·영어·한국사·탐구1·탐구2·제2외국어) 선택 현황
-              </p>
             </div>
             <div class="flex items-center gap-2">
               <input v-model="statsStudentSearch" type="text" placeholder="이름/학번 검색..." class="text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none focus:border-indigo-500 w-44 shadow-sm" />
