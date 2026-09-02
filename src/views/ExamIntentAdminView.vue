@@ -228,7 +228,7 @@
               <option value="grad">🎓 졸업생 (수능접수)</option>
             </select>
             <button @click="handlePrintElectiveStats" class="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-sm cursor-pointer transition-all active:scale-95">
-              <span>🖨️ 선택과목 통계 인쇄 (1장)</span>
+              <span>🖨️ 선택과목 통계 인쇄</span>
             </button>
           </div>
           <div class="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-600">
