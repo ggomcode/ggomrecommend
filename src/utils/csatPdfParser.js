@@ -682,13 +682,13 @@ function extractInquiryAndForeign(text) {
 
   // 탐구 선택과목 형태 정리
   let subjects = trimmed
-  if (trimmed.includes('/')) {
+  if (!trimmed || trimmed === 'X' || /^[Xx×✕\s\d\-/]+$/.test(trimmed)) {
+    subjects = 'X / X'
+  } else if (trimmed.includes('/')) {
     const parts = trimmed.split('/').map(p => p.trim())
     const sub1 = parts[0] || 'X'
     const sub2 = parts[1] || 'X'
     subjects = `${sub1} / ${sub2}`
-  } else if (!trimmed || trimmed === 'X') {
-    subjects = 'X / X'
   }
 
   return {

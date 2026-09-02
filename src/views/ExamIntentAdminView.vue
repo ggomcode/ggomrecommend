@@ -1096,7 +1096,7 @@ function standardizeSubjectName(sub) {
   if (c.includes('상업')) return '상업 경제'
   if (c.includes('수산')) return '수산·해운 산업 기초'
   if (c.includes('인간발달')) return '인간 발달'
-  return sub.trim()
+  return ''
 }
 
 function parseInquirySubjects(rawText) {
