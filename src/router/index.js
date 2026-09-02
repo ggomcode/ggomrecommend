@@ -32,6 +32,11 @@ const routes = [
     meta: { requiresAdmin: true },
   },
   {
+    path: '/system-settings',
+    component: () => import('../views/SystemSettingsAdminView.vue'),
+    meta: { requiresAdmin: true },
+  },
+  {
     path: '/teacher',
     component: () => import('../views/TeacherView.vue'),
     meta: { requiresTeacher: true },

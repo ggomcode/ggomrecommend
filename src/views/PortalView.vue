@@ -230,6 +230,48 @@
             </svg>
           </div>
         </div>
+
+        <!-- 카드 4: 설정 (관리자 전용) -->
+        <div
+          v-if="auth.isAdmin"
+          @click="enterSystemSettings"
+          class="group relative bg-white rounded-3xl p-8 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-slate-800 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
+        >
+          <div class="absolute -top-20 -right-20 w-40 h-40 bg-slate-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
+
+          <div>
+            <div class="flex items-center justify-between mb-6">
+              <div class="w-16 h-16 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all duration-300 shadow-sm border border-slate-200">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </div>
+              <span class="px-3 py-1 rounded-full text-xs font-bold shadow-xs bg-slate-100 text-slate-800 border border-slate-200">
+                관리자 전용
+              </span>
+            </div>
+
+            <div class="inline-block px-2.5 py-1 rounded-md text-xs font-extrabold bg-slate-100 text-slate-800 mb-3">
+              통합 관리
+            </div>
+
+            <h3 class="text-2xl font-bold text-slate-900 group-hover:text-slate-800 transition-colors mb-3">
+              설정
+            </h3>
+            
+            <p class="text-sm text-slate-600 leading-relaxed">
+              학생 가입 승인, 재학생/졸업생 명단 및 학생 관리, 학교 기본 정보 및 가입코드 등 시스템 환경 설정을 통합 관리합니다.
+            </p>
+          </div>
+
+          <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-slate-700">
+            <span>설정 바로가기</span>
+            <svg class="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </div>
+        </div>
       </div>
     </main>
 
@@ -312,8 +354,13 @@ const showExamIntentCard = computed(() => {
 
 // 그리드 레이아웃 클래스 (카드 수에 따라 동적 조정)
 const portalGridClass = computed(() => {
-  const cardCount = 1 + (isRuralSystemEnabled.value ? 1 : 0) + (showExamIntentCard.value ? 1 : 0)
-  if (cardCount >= 3) return 'grid-cols-1 md:grid-cols-3 max-w-6xl'
+  let cardCount = 1
+  if (isRuralSystemEnabled.value) cardCount++
+  if (showExamIntentCard.value) cardCount++
+  if (auth.isAdmin) cardCount++
+
+  if (cardCount >= 4) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 max-w-7xl'
+  if (cardCount === 3) return 'grid-cols-1 md:grid-cols-3 max-w-6xl'
   if (cardCount === 2) return 'grid-cols-1 md:grid-cols-2 max-w-4xl'
   return 'grid-cols-1 max-w-xl'
 })
@@ -323,6 +370,10 @@ function enterPrincipalSystem() {
   else if (auth.isTeacher) router.push('/teacher')
   else if (auth.isStudent) router.push('/student')
   else router.push('/login')
+}
+
+function enterSystemSettings() {
+  router.push('/system-settings')
 }
 
 async function enterExamIntentSystem() {

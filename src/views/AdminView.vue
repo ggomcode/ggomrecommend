@@ -82,45 +82,36 @@
           </span>
         </button>
 
-        <div style="margin: 8px 0; border-top: 1px solid #f1f5f9;" />
-
         <!-- 하단 서브 메뉴 -->
-        <button
-          v-for="item in subMenus"
-          :key="item.key"
-          @click="handleMenuClick(item)"
-          :title="item.label"
-          class="w-full rounded-lg text-base transition-all duration-150"
-          :style="{
-            display: 'flex',
-            alignItems: 'center',
-            gap: collapsed ? '0' : '12px',
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            padding: collapsed ? '10px 0' : '10px 14px',
-            border: 'none',
-            cursor: 'pointer',
-            fontWeight: active === item.key ? '600' : '400',
-            color: active === item.key ? '#1d4ed8' : '#64748b',
-            background: active === item.key ? '#eff6ff' : 'transparent',
-          }"
-        >
-          <span class="relative shrink-0 flex">
-            <component :is="item.icon" :size="20" />
-            <span
-              v-if="item.badge"
-              class="absolute rounded-full"
-              style="top: -3px; right: -3px; width: 7px; height: 7px; background: #ef4444; border: 1.5px solid white;"
-            />
-          </span>
-          <template v-if="!collapsed">
-            <span class="whitespace-nowrap">{{ item.label }}</span>
-            <span
-              v-if="item.badge"
-              class="ml-auto text-xs font-bold"
-              style="color: #dc2626; background: #fee2e2; padding: 2px 8px; border-radius: 999px;"
-            >NEW</span><!-- 이 곳에서만 text-xs 허용함 -->
-          </template>
-        </button>
+        <template v-if="subMenus.length > 0">
+          <div style="margin: 8px 0; border-top: 1px solid #f1f5f9;" />
+          <button
+            v-for="item in subMenus"
+            :key="item.key"
+            @click="handleMenuClick(item)"
+            :title="item.label"
+            class="w-full rounded-lg text-base transition-all duration-150"
+            :style="{
+              display: 'flex',
+              alignItems: 'center',
+              gap: collapsed ? '0' : '12px',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              padding: collapsed ? '10px 0' : '10px 14px',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: active === item.key ? '600' : '400',
+              color: active === item.key ? '#1d4ed8' : '#64748b',
+              background: active === item.key ? '#eff6ff' : 'transparent',
+            }"
+          >
+            <span class="relative shrink-0 flex">
+              <component :is="item.icon" :size="20" />
+            </span>
+            <template v-if="!collapsed">
+              <span class="whitespace-nowrap">{{ item.label }}</span>
+            </template>
+          </button>
+        </template>
       </nav>
 
       <!-- 하단 사용자 카드 & 라운드 상태/시스템 전환 -->
@@ -167,7 +158,6 @@
               농어촌 전형 시스템
             </button>
             <button
-              v-if="isRuralSystemEnabled"
               @click="goToPortal"
               class="w-full text-left text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
             >
@@ -339,14 +329,12 @@ const mainMenus = computed(() => {
   const menus = [
     { key: 'home',     label: '개요',          icon: Home },
     { key: 'classes',  label: '학급 현황',     icon: School },
-    { key: 'approval', label: '가입 승인',     icon: UserCheck },
-    { key: 'students', label: '학생 관리',     icon: Users },
     { key: 'univs',    label: '대학 설정',     icon: Building2 },
     { key: 'areas',    label: '추천순위 기준 설정', icon: SlidersHorizontal },
     { key: 'rounds',   label: '학교장 추천 선발', icon: Trophy },
   ]
   if (pendingAbandonCount.value > 0) {
-    menus.splice(6, 0, {
+    menus.splice(4, 0, {
       key: 'rounds',
       label: '포기원 접수확인',
       icon: FileText,
@@ -363,11 +351,9 @@ const mainMenus = computed(() => {
 
 const hasUpdate = ref(false)
 
-const subMenus = computed(() => [
-  { key: 'update',  label: '환경 설정', icon: Settings,  badge: false },
-])
+const subMenus = computed(() => [])
 
-const allMenus = computed(() => [...mainMenus.value, ...subMenus.value])
+const allMenus = computed(() => mainMenus.value)
 
 // ── 활성 탭 ──────────────────────────────────────────────────
 const active = ref('home')
@@ -385,14 +371,11 @@ function handleMenuClick(item) {
 
 const currentTab = computed(() => {
   if (active.value === 'home')     return OverviewTab
-  if (active.value === 'approval') return ApprovalTab
   if (active.value === 'classes')  return ClassesTab
-  if (active.value === 'students') return StudentsTab
   if (active.value === 'areas')    return AreasTab
   if (active.value === 'univs')    return UnivTab
   if (active.value === 'rounds')   return RoundsTab
   if (active.value === 'reports')  return ReportsTab
-  if (active.value === 'update')   return SettingsTab
   if (active.value === 'audit')    return AuditTab
   return null
 })
