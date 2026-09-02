@@ -71,7 +71,7 @@
         <!-- 필터 및 액션 버튼 -->
         <div class="flex flex-wrap gap-3 mb-4 items-center justify-between">
           <div class="flex flex-wrap gap-2 items-center">
-            <select v-model="filterClass" class="text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-slate-700 cursor-pointer min-w-[140px] shadow-sm focus:outline-none focus:border-indigo-500 transition-all">
+            <select v-model="filterClass" class="text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-slate-700 cursor-pointer min-w-[220px] shadow-sm focus:outline-none focus:border-indigo-500 transition-all">
               <option value="all">전체 (재학생 + 졸업생)</option>
               <option value="enrolled_all">재학생 전체 (1~11반)</option>
               <option v-for="c in classList" :key="c" :value="c">{{ c }}반</option>
@@ -221,7 +221,7 @@
         <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
           <div class="flex items-center gap-3">
             <span class="text-sm font-bold text-slate-700">조회 학급:</span>
-            <select v-model="filterClass" class="text-sm border border-slate-200 rounded-xl px-4 py-2 bg-white font-semibold text-slate-800 cursor-pointer shadow-sm focus:outline-none focus:border-indigo-500">
+            <select v-model="filterClass" class="text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-slate-800 cursor-pointer min-w-[220px] shadow-sm focus:outline-none focus:border-indigo-500 transition-all">
               <option value="all">전체 (재학생 + 졸업생)</option>
               <option value="enrolled_all">재학생 전체 (1~11반)</option>
               <option v-for="c in classList" :key="c" :value="c">{{ c }}반</option>
