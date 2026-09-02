@@ -399,6 +399,85 @@
             </div>
           </div>
         </div>
+
+        <!-- 6. 학생별 과목별 응시 현황 및 선택과목 명단 테이블 -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h4 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                <span>📋 학생별 수능 과목별 응시 및 선택과목 현황</span>
+                <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  총 {{ electiveStudentList.length }}명
+                </span>
+              </h4>
+              <p class="text-xs text-slate-500 mt-1">
+                순번, 반(년도), 번호, 이름 및 7대 영역(국어·수학·영어·한국사·탐구1·탐구2·제2외국어) 선택 현황
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <input v-model="statsStudentSearch" type="text" placeholder="이름/학번 검색..." class="text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 focus:bg-white focus:outline-none focus:border-indigo-500 w-44 shadow-sm" />
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                  <th class="py-3 px-3 text-center w-12">순번</th>
+                  <th class="py-3 px-3 text-center w-20">반(년도)</th>
+                  <th class="py-3 px-3 text-center w-16">번호</th>
+                  <th class="py-3 px-4 text-center w-24">이름</th>
+                  <th class="py-3 px-4 text-center">국어</th>
+                  <th class="py-3 px-4 text-center">수학</th>
+                  <th class="py-3 px-3 text-center w-14">영어</th>
+                  <th class="py-3 px-3 text-center w-14">한국사</th>
+                  <th class="py-3 px-4 text-center">탐구 1 선택과목</th>
+                  <th class="py-3 px-4 text-center">탐구 2 선택과목</th>
+                  <th class="py-3 px-4 text-center">제2외국어/한문</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-if="filteredElectiveStudentList.length === 0">
+                  <td colspan="11" class="py-12 text-center text-slate-400 font-medium">조회된 학생 데이터가 없습니다.</td>
+                </tr>
+                <tr v-for="(row, idx) in filteredElectiveStudentList" :key="row.student_code || idx" class="hover:bg-slate-50/80 transition-colors">
+                  <td class="py-2.5 px-3 text-center font-medium text-slate-400">{{ idx + 1 }}</td>
+                  <td class="py-2.5 px-3 text-center font-bold">
+                    <span v-if="row.is_enrolled !== false" class="text-slate-800">{{ row.class_no }}반</span>
+                    <span v-else class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[11px] font-semibold">{{ row.grad_year }}년</span>
+                  </td>
+                  <td class="py-2.5 px-3 text-center text-slate-600 font-semibold">
+                    {{ row.student_no ? `${row.student_no}번` : '-' }}
+                  </td>
+                  <td class="py-2.5 px-4 text-center font-bold text-slate-900">{{ row.name }}</td>
+                  <td class="py-2.5 px-4 text-center font-semibold" :class="row.subjects.korean !== 'X' ? 'text-indigo-600' : 'text-slate-300'">
+                    {{ row.subjects.korean }}
+                  </td>
+                  <td class="py-2.5 px-4 text-center font-semibold" :class="row.subjects.math !== 'X' ? 'text-blue-600' : 'text-slate-300'">
+                    {{ row.subjects.math }}
+                  </td>
+                  <td class="py-2.5 px-3 text-center font-bold">
+                    <span v-if="row.subjects.english === 'O'" class="text-emerald-600">○</span>
+                    <span v-else class="text-slate-300">✕</span>
+                  </td>
+                  <td class="py-2.5 px-3 text-center font-bold">
+                    <span v-if="row.subjects.history === 'O'" class="text-emerald-600">○</span>
+                    <span v-else class="text-slate-300">✕</span>
+                  </td>
+                  <td class="py-2.5 px-4 text-center font-semibold" :class="row.subjects.inquiry1 !== 'X' ? 'text-orange-700' : 'text-slate-300'">
+                    {{ row.subjects.inquiry1 }}
+                  </td>
+                  <td class="py-2.5 px-4 text-center font-semibold" :class="row.subjects.inquiry2 !== 'X' ? 'text-cyan-700' : 'text-slate-300'">
+                    {{ row.subjects.inquiry2 }}
+                  </td>
+                  <td class="py-2.5 px-4 text-center font-semibold" :class="row.subjects.foreign !== 'X' ? 'text-emerald-700 bg-emerald-50/60 px-2 py-0.5 rounded' : 'text-slate-300'">
+                    {{ row.subjects.foreign }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- 접수대장 업로드 탭 -->
@@ -821,6 +900,67 @@ function executeRosterPrint() {
   isRosterModalOpen.value = false
 }
 
+const statsStudentSearch = ref('')
+
+function getStudentRowSubjects(row) {
+  if (!row.csat_registered || !row.csat_record) {
+    return {
+      korean: 'X',
+      math: 'X',
+      english: 'X',
+      history: 'X',
+      inquiry1: 'X',
+      inquiry2: 'X',
+      foreign: 'X'
+    }
+  }
+  const rec = row.csat_record
+  const rawInquiry = rec.inquiry_subjects || `${rec.inquiry_subject1 || ''} / ${rec.inquiry_subject2 || ''}`
+  const subs = parseInquirySubjects(rawInquiry)
+  const rawForeign = rec.foreign_language || rec.subject_foreign_language || ''
+  const foreign = parseForeignLanguage(rawForeign) || 'X'
+
+  return {
+    korean: rec.subject_korean && rec.subject_korean !== '-' ? rec.subject_korean : 'X',
+    math: rec.subject_math && rec.subject_math !== '-' ? rec.subject_math : 'X',
+    english: rec.subject_english === 'O' ? 'O' : 'X',
+    history: rec.subject_history === 'O' ? 'O' : 'X',
+    inquiry1: subs[0] || 'X',
+    inquiry2: subs[1] || 'X',
+    foreign: foreign
+  }
+}
+
+const electiveStudentList = computed(() => {
+  let list = comparisonData.value
+  if (filterClass.value === 'enrolled_all') {
+    list = list.filter(r => r.is_enrolled !== false)
+  } else if (filterClass.value === 'grad') {
+    list = list.filter(r => r.is_enrolled === false)
+  } else if (filterClass.value !== 'all') {
+    list = list.filter(r => r.class_no === Number(filterClass.value))
+  }
+
+  return list.map(r => ({
+    ...r,
+    subjects: getStudentRowSubjects(r)
+  })).sort((a, b) => {
+    if (a.is_enrolled !== b.is_enrolled) return a.is_enrolled ? -1 : 1
+    if (a.class_no !== b.class_no) return (a.class_no || 0) - (b.class_no || 0)
+    if (a.student_no && b.student_no) return a.student_no - b.student_no
+    return (a.student_code || '').localeCompare(b.student_code || '')
+  })
+})
+
+const filteredElectiveStudentList = computed(() => {
+  const query = statsStudentSearch.value.trim().toLowerCase()
+  if (!query) return electiveStudentList.value
+  return electiveStudentList.value.filter(r =>
+    (r.name && r.name.toLowerCase().includes(query)) ||
+    (r.student_code && r.student_code.toLowerCase().includes(query))
+  )
+})
+
 function handlePrintElectiveStats() {
   let label = '전체 (재학생 + 졸업생)'
   if (filterClass.value === 'enrolled_all') label = '재학생 전체'
@@ -828,8 +968,10 @@ function handlePrintElectiveStats() {
   else if (filterClass.value !== 'all') label = `${filterClass.value}반`
 
   printElectiveStatsReport({
+    filterClass: filterClass.value,
     filterLabel: label,
     stats: electiveStats.value,
+    studentRecords: electiveStudentList.value,
     schoolName: schoolName.value || '포곡고등학교',
     batchTime: formatBatchTime(latestBatchTime.value)
   })

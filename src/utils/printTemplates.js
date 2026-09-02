@@ -2378,8 +2378,11 @@ export function printSummaryRoster(records, options = {}) {
 /**
  * 수능 선택과목 통계 전용 1페이지 단독 인쇄
  */
-export function printElectiveStatsReport({ filterLabel, stats, schoolName = '포곡고등학교', batchTime = null }) {
-  const title = `[대학수학능력시험] 수능 선택과목 통계표 (${filterLabel})`
+/**
+ * 수능 선택과목 통계 및 학생별 응시/선택과목 명단 대장 인쇄 (전체/재학생 인쇄 시 학급별 페이지 자동 분할)
+ */
+export function printElectiveStatsReport({ filterClass = 'all', filterLabel = '전체', stats, studentRecords = [], schoolName = '포곡고등학교', batchTime = null }) {
+  const title = `[대학수학능력시험] 수능 선택과목 통계 및 응시명단 (${filterLabel})`
   const printDate = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
 
   const getP = (cnt, tot) => {
@@ -2387,104 +2390,58 @@ export function printElectiveStatsReport({ filterLabel, stats, schoolName = '포
     return ((cnt / tot) * 100).toFixed(1)
   }
 
-  // 국어 표 행
+  // 1페이지: 전체 총괄 통계표 렌더링
   const korRows = Object.entries(stats.korean.map).map(([name, count]) => `
     <tr>
-      <td style="padding: 4px 6px; font-weight: 600; text-align: left;">${name}</td>
-      <td style="padding: 4px 6px; font-weight: 700; color: #1e1b4b; text-align: right;">${count}명</td>
-      <td style="padding: 4px 6px; font-weight: 700; color: #4338ca; text-align: right;">${getP(count, stats.totalRegistered)}%</td>
+      <td style="padding: 3.5px 6px; font-weight: 600; text-align: left;">${name}</td>
+      <td style="padding: 3.5px 6px; font-weight: 700; color: #1e1b4b; text-align: right;">${count}명</td>
+      <td style="padding: 3.5px 6px; font-weight: 700; color: #4338ca; text-align: right;">${getP(count, stats.totalRegistered)}%</td>
     </tr>
   `).join('')
 
-  // 수학 표 행
   const mathRows = Object.entries(stats.math.map).map(([name, count]) => `
     <tr>
-      <td style="padding: 4px 6px; font-weight: 600; text-align: left;">${name}</td>
-      <td style="padding: 4px 6px; font-weight: 700; color: #1e1b4b; text-align: right;">${count}명</td>
-      <td style="padding: 4px 6px; font-weight: 700; color: #2563eb; text-align: right;">${getP(count, stats.totalRegistered)}%</td>
+      <td style="padding: 3.5px 6px; font-weight: 600; text-align: left;">${name}</td>
+      <td style="padding: 3.5px 6px; font-weight: 700; color: #1e1b4b; text-align: right;">${count}명</td>
+      <td style="padding: 3.5px 6px; font-weight: 700; color: #2563eb; text-align: right;">${getP(count, stats.totalRegistered)}%</td>
     </tr>
   `).join('')
 
-  // 제2외국어 표 행
   const foreignEntries = Object.entries(stats.foreign.map)
   const foreignRows = foreignEntries.length > 0 ? foreignEntries.map(([name, count]) => `
     <tr>
-      <td style="padding: 4px 6px; font-weight: 600; text-align: left;">${name}</td>
-      <td style="padding: 4px 6px; font-weight: 700; color: #1e1b4b; text-align: right;">${count}명</td>
-      <td style="padding: 4px 6px; font-weight: 700; color: #059669; text-align: right;">${getP(count, stats.totalRegistered)}%</td>
+      <td style="padding: 3.5px 6px; font-weight: 600; text-align: left;">${name}</td>
+      <td style="padding: 3.5px 6px; font-weight: 700; color: #1e1b4b; text-align: right;">${count}명</td>
+      <td style="padding: 3.5px 6px; font-weight: 700; color: #059669; text-align: right;">${getP(count, stats.totalRegistered)}%</td>
     </tr>
-  `).join('') : `<tr><td colspan="3" style="padding: 10px; color: #94a3b8; text-align: center;">응시자 없음</td></tr>`
+  `).join('') : `<tr><td colspan="3" style="padding: 8px; color: #94a3b8; text-align: center;">응시자 없음</td></tr>`
 
-  // 사회탐구 표 행
   const socialRows = stats.socialSubjects.map(sub => `
     <tr>
-      <td style="padding: 3.5px 6px; font-weight: 600; text-align: left;">${sub.name}</td>
-      <td style="padding: 3.5px 6px; font-weight: 700; color: #9a3412; text-align: right;">${sub.count}건</td>
-      <td style="padding: 3.5px 6px; font-weight: 700; color: #ea580c; text-align: right;">${sub.pct}%</td>
+      <td style="padding: 3px 6px; font-weight: 600; text-align: left;">${sub.name}</td>
+      <td style="padding: 3px 6px; font-weight: 700; color: #9a3412; text-align: right;">${sub.count}건</td>
+      <td style="padding: 3px 6px; font-weight: 700; color: #ea580c; text-align: right;">${sub.pct}%</td>
     </tr>
   `).join('')
 
-  // 과학탐구 표 행
   const scienceRows = stats.scienceSubjects.map(sub => `
     <tr>
-      <td style="padding: 3.5px 6px; font-weight: 600; text-align: left;">${sub.name}</td>
-      <td style="padding: 3.5px 6px; font-weight: 700; color: #0e7490; text-align: right;">${sub.count}건</td>
-      <td style="padding: 3.5px 6px; font-weight: 700; color: #0891b2; text-align: right;">${sub.pct}%</td>
+      <td style="padding: 3px 6px; font-weight: 600; text-align: left;">${sub.name}</td>
+      <td style="padding: 3px 6px; font-weight: 700; color: #0e7490; text-align: right;">${sub.count}건</td>
+      <td style="padding: 3px 6px; font-weight: 700; color: #0891b2; text-align: right;">${sub.pct}%</td>
     </tr>
   `).join('')
 
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>${title}</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
-  <style>
-    @page { size: A4 portrait; margin: 10mm 12mm; }
-    @media print {
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .no-print { display: none !important; }
-      .page-container { page-break-after: avoid; height: 100%; }
-    }
-    * { box-sizing: border-box; }
-    body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a; margin: 0; padding: 0; font-size: 11px; line-height: 1.4; }
-    .page-container { display: flex; flex-direction: column; justify-content: space-between; height: 100%; min-height: 96vh; }
-    .header-section { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-    .title-block h1 { font-size: 19px; font-weight: 900; margin: 0 0 4px 0; color: #0f172a; letter-spacing: -0.5px; }
-    .title-block p { font-size: 11px; color: #64748b; margin: 0; font-weight: 600; }
-    .sign-table { border-collapse: collapse; text-align: center; }
-    .sign-table th, .sign-table td { border: 1px solid #475569; font-size: 9.5px; }
-    .sign-table th { background: #f1f5f9; padding: 2px 8px; font-weight: 700; }
-    .sign-table td { height: 36px; width: 44px; }
+  let pagesHtml = ''
 
-    .summary-banner { display: flex; justify-content: space-around; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 7px 12px; margin-bottom: 12px; }
-    .banner-item { font-size: 11px; font-weight: 600; color: #334155; }
-    .banner-item strong { font-size: 13px; font-weight: 900; color: #4338ca; }
-
-    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-    .card-box { border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #fff; }
-    .card-title { background: #f1f5f9; padding: 5px 8px; font-size: 11px; font-weight: 800; border-bottom: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center; }
-    .table-data { width: 100%; border-collapse: collapse; font-size: 10px; }
-    .table-data th, .table-data td { border-bottom: 1px solid #e2e8f0; padding: 3.5px 6px; }
-    .table-data th { background: #f8fafc; color: #475569; font-weight: 700; text-align: center; }
-
-    .combo-section { border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
-    .combo-title { background: #f1f5f9; padding: 5px 8px; font-size: 11px; font-weight: 800; border-bottom: 1px solid #cbd5e1; display: flex; justify-content: space-between; }
-    .combo-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; background: #cbd5e1; text-align: center; }
-    .combo-item { background: #fff; padding: 6px 4px; }
-    .combo-label { font-size: 9.5px; font-weight: 700; color: #475569; margin-bottom: 2px; }
-    .combo-val { font-size: 13px; font-weight: 900; color: #0f172a; }
-    .combo-pct { font-size: 9px; font-weight: 600; color: #64748b; }
-
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-    .footer-section { margin-top: auto; padding-top: 8px; border-top: 1.5px solid #0f172a; display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: 600; color: #64748b; }
-  </style>
-  </head>
-  <body>
+  // 1. 첫 페이지: 총괄 통계표
+  pagesHtml += `
     <div class="page-container">
       <div>
-        <!-- 상단 헤더 및 결재란 -->
         <div class="header-section">
           <div class="title-block">
-            <h1>📊 대학수학능력시험 선택과목별 응시 현황 통계표</h1>
-            <p>소속: ${schoolName} &nbsp;|&nbsp; 대상 학급: <span style="color:#4338ca; font-weight:800;">${filterLabel}</span> &nbsp;|&nbsp; 조회 기준 시간(PDF 저장일시): <strong style="color:#0f172a;">${batchTime || '-'}</strong> &nbsp;|&nbsp; 출력일: ${printDate}</p>
+            <h1>📊 대학수학능력시험 선택과목별 응시 현황 총괄표</h1>
+            <p>소속: ${schoolName} &nbsp;|&nbsp; 대상 학급: <span style="color:#4338ca; font-weight:800;">${filterLabel}</span> &nbsp;|&nbsp; 조회기준시간(PDF 저장일시): <strong style="color:#0f172a;">${batchTime || '-'}</strong> &nbsp;|&nbsp; 출력일: ${printDate}</p>
           </div>
           <table class="sign-table">
             <tr><th rowspan="2" style="width:18px; writing-mode: vertical-rl; padding: 2px;">결재</th><th>담당</th><th>부장</th><th>교감</th><th>교장</th></tr>
@@ -2492,16 +2449,13 @@ export function printElectiveStatsReport({ filterLabel, stats, schoolName = '포
           </table>
         </div>
 
-        <!-- 총괄 인원 요약 바 -->
         <div class="summary-banner">
           <div class="banner-item">조회 대상 인원: <strong>${stats.totalStudents}명</strong></div>
           <div class="banner-item">수능 원서 접수: <strong>${stats.totalRegistered}명</strong> (${getP(stats.totalRegistered, stats.totalStudents)}%)</div>
           <div class="banner-item">탐구 총 선택 과목수: <strong style="color:#7c3aed;">${stats.inquiry.totalPicks}과목</strong> <span style="font-size:10px; color:#64748b;">(과목별 분모)</span></div>
         </div>
 
-        <!-- 1. 주요 영역별 (국어, 수학, 제2외국어) 3열 그리드 -->
         <div class="grid-3">
-          <!-- 국어 -->
           <div class="card-box">
             <div class="card-title">
               <span>📖 국어 영역</span>
@@ -2513,7 +2467,6 @@ export function printElectiveStatsReport({ filterLabel, stats, schoolName = '포
             </table>
           </div>
 
-          <!-- 수학 -->
           <div class="card-box">
             <div class="card-title">
               <span>📐 수학 영역</span>
@@ -2525,7 +2478,6 @@ export function printElectiveStatsReport({ filterLabel, stats, schoolName = '포
             </table>
           </div>
 
-          <!-- 제2외국어 / 한문 -->
           <div class="card-box">
             <div class="card-title">
               <span>🌐 제2외국어 / 한문</span>
@@ -2536,16 +2488,15 @@ export function printElectiveStatsReport({ filterLabel, stats, schoolName = '포
               <tbody>
                 ${foreignRows}
                 <tr style="background:#f8fafc; color:#64748b;">
-                  <td style="padding: 3.5px 6px; text-align: left;">미응시</td>
-                  <td style="padding: 3.5px 6px; text-align: right;">${stats.foreign.none}명</td>
-                  <td style="padding: 3.5px 6px; text-align: right;">${getP(stats.foreign.none, stats.totalRegistered)}%</td>
+                  <td style="padding: 3px 6px; text-align: left;">미응시</td>
+                  <td style="padding: 3px 6px; text-align: right;">${stats.foreign.none}명</td>
+                  <td style="padding: 3px 6px; text-align: right;">${getP(stats.foreign.none, stats.totalRegistered)}%</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <!-- 2. 탐구 조합 유형별 현황 (6대 조합) -->
         <div class="combo-section">
           <div class="combo-title">
             <span>🔬 탐구 조합 유형별 인원 및 비율 현황 (수능 접수자 ${stats.totalRegistered}명 기준)</span>
@@ -2585,9 +2536,7 @@ export function printElectiveStatsReport({ filterLabel, stats, schoolName = '포
           </div>
         </div>
 
-        <!-- 3. 탐구 세부 과목별 선택 비율 (사회탐구 9과목 vs 과학탐구 8과목) -->
         <div class="grid-2">
-          <!-- 사회탐구 -->
           <div class="card-box">
             <div class="card-title" style="background:#fff7ed; border-bottom:1px solid #fed7aa; color:#9a3412;">
               <span>📙 사회탐구 영역 (9개 과목)</span>
@@ -2599,7 +2548,6 @@ export function printElectiveStatsReport({ filterLabel, stats, schoolName = '포
             </table>
           </div>
 
-          <!-- 과학탐구 -->
           <div class="card-box">
             <div class="card-title" style="background:#ecfeff; border-bottom:1px solid #a5f3fc; color:#155e75;">
               <span>📘 과학탐구 영역 (8개 과목)</span>
@@ -2613,12 +2561,186 @@ export function printElectiveStatsReport({ filterLabel, stats, schoolName = '포
         </div>
       </div>
 
-      <!-- 하단 바 -->
       <div class="footer-section">
         <span>${schoolName} 진로진학상담부 &nbsp;|&nbsp; 대학수학능력시험 응시원서 공식 접수대장 연동 시스템</span>
         <span>출력일시: ${new Date().toLocaleString('ko-KR')}</span>
       </div>
     </div>
+  `
+
+  // 2. 학생별 과목별 응시현황 명단 대장 (학급별 페이지 분할)
+  // 학생 레코드에서 과목 정보 추출 함수
+  function getRowSubjects(row) {
+    if (!row.csat_registered || !row.csat_record) {
+      return { korean: 'X', math: 'X', english: 'X', history: 'X', inquiry1: 'X', inquiry2: 'X', foreign: 'X' }
+    }
+    const rec = row.csat_record
+    const rawInquiry = rec.inquiry_subjects || `${rec.inquiry_subject1 || ''} / ${rec.inquiry_subject2 || ''}`
+    const subs = parseInquirySubjects(rawInquiry)
+    const rawForeign = rec.foreign_language || rec.subject_foreign_language || ''
+    const foreign = parseForeignLanguage(rawForeign) || 'X'
+
+    return {
+      korean: rec.subject_korean && rec.subject_korean !== '-' ? rec.subject_korean : 'X',
+      math: rec.subject_math && rec.subject_math !== '-' ? rec.subject_math : 'X',
+      english: rec.subject_english === 'O' ? 'O' : 'X',
+      history: rec.subject_history === 'O' ? 'O' : 'X',
+      inquiry1: subs[0] || 'X',
+      inquiry2: subs[1] || 'X',
+      foreign: foreign
+    }
+  }
+
+  // 학급별 그룹핑
+  const classGroups = new Map()
+  for (const r of studentRecords) {
+    let groupKey = 'grad'
+    if (r.is_enrolled !== false && r.class_no) {
+      groupKey = String(r.class_no)
+    }
+    if (!classGroups.has(groupKey)) {
+      classGroups.set(groupKey, [])
+    }
+    classGroups.get(groupKey).push(r)
+  }
+
+  // 그룹 정렬 (1반 ~ 11반, 그리고 grad)
+  const sortedKeys = [...classGroups.keys()].sort((a, b) => {
+    if (a === 'grad') return 1
+    if (b === 'grad') return -1
+    return Number(a) - Number(b)
+  })
+
+  for (const key of sortedKeys) {
+    const rows = classGroups.get(key)
+    rows.sort((a, b) => {
+      if (a.student_no && b.student_no) return a.student_no - b.student_no
+      return (a.student_code || '').localeCompare(b.student_code || '')
+    })
+
+    const isGrad = key === 'grad'
+    const classLabel = isGrad ? '🎓 졸업생' : `3학년 ${key}반`
+    const registeredCount = rows.filter(r => r.csat_registered).length
+
+    // 학생 테이블 행 생성
+    const trHtml = rows.map((r, idx) => {
+      const subs = getRowSubjects(r)
+      const classCol = r.is_enrolled !== false ? `${r.class_no}반` : `${r.grad_year || '-'}년`
+      const noCol = r.student_no ? `${r.student_no}번` : '-'
+
+      return `
+        <tr>
+          <td style="padding: 3px 4px; text-align: center; color: #64748b;">${idx + 1}</td>
+          <td style="padding: 3px 4px; text-align: center; font-weight: 600;">${classCol}</td>
+          <td style="padding: 3px 4px; text-align: center;">${noCol}</td>
+          <td style="padding: 3px 6px; text-align: center; font-weight: 800; color: #0f172a;">${r.name}</td>
+          <td style="padding: 3px 6px; text-align: center; font-weight: 600; color: ${subs.korean !== 'X' ? '#4338ca' : '#cbd5e1'};">${subs.korean}</td>
+          <td style="padding: 3px 6px; text-align: center; font-weight: 600; color: ${subs.math !== 'X' ? '#2563eb' : '#cbd5e1'};">${subs.math}</td>
+          <td style="padding: 3px 4px; text-align: center; font-weight: 800; color: ${subs.english === 'O' ? '#16a34a' : '#cbd5e1'};">${subs.english === 'O' ? '○' : '✕'}</td>
+          <td style="padding: 3px 4px; text-align: center; font-weight: 800; color: ${subs.history === 'O' ? '#16a34a' : '#cbd5e1'};">${subs.history === 'O' ? '○' : '✕'}</td>
+          <td style="padding: 3px 6px; text-align: center; font-weight: 600; color: ${subs.inquiry1 !== 'X' ? '#c2410c' : '#cbd5e1'};">${subs.inquiry1}</td>
+          <td style="padding: 3px 6px; text-align: center; font-weight: 600; color: ${subs.inquiry2 !== 'X' ? '#0e7490' : '#cbd5e1'};">${subs.inquiry2}</td>
+          <td style="padding: 3px 6px; text-align: center; font-weight: 600; color: ${subs.foreign !== 'X' ? '#059669' : '#cbd5e1'};">${subs.foreign !== 'X' ? subs.foreign : '-'}</td>
+        </tr>
+      `
+    }).join('')
+
+    pagesHtml += `
+      <div class="page-container">
+        <div>
+          <div class="header-section" style="margin-bottom: 8px;">
+            <div class="title-block">
+              <h1 style="font-size: 17px;">📋 [대학수학능력시험] ${classLabel} 선택과목별 응시 및 명단 대장</h1>
+              <p>소속: ${schoolName} &nbsp;|&nbsp; 학급: <strong style="color:#4338ca;">${classLabel}</strong> &nbsp;|&nbsp; 대상 인원: <strong>${rows.length}명</strong> (수능접수: <strong style="color:#4338ca;">${registeredCount}명</strong>) &nbsp;|&nbsp; 조회기준시간: ${batchTime || '-'}</p>
+            </div>
+            <table class="sign-table">
+              <tr><th rowspan="2" style="width:18px; writing-mode: vertical-rl; padding: 2px;">결재</th><th>담임</th><th>부장</th><th>교감</th><th>교장</th></tr>
+              <tr><td></td><td></td><td></td><td></td></tr>
+            </table>
+          </div>
+
+          <table class="roster-table">
+            <thead>
+              <tr>
+                <th style="width: 32px;">순번</th>
+                <th style="width: 48px;">${isGrad ? '년도' : '반'}</th>
+                <th style="width: 40px;">번호</th>
+                <th style="width: 65px;">성명</th>
+                <th style="width: 85px;">국어</th>
+                <th style="width: 85px;">수학</th>
+                <th style="width: 36px;">영어</th>
+                <th style="width: 42px;">한국사</th>
+                <th>탐구 1 선택과목</th>
+                <th>탐구 2 선택과목</th>
+                <th style="width: 95px;">제2외국어/한문</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${trHtml}
+            </tbody>
+          </table>
+        </div>
+
+        <div style="margin-top: 10px; border-top: 1px dashed #cbd5e1; padding-top: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #475569;">
+          <span>* 기호 설명: ○(응시), ✕(미응시), -(미선택)</span>
+          <span>담임교사 확인 : ________________________ (인)</span>
+        </div>
+      </div>
+    `
+  }
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>${title}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <style>
+    @page { size: A4 portrait; margin: 8mm 10mm; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .no-print { display: none !important; }
+      .page-container { page-break-after: always; min-height: 98vh; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 0 !important; }
+      .page-container:last-child { page-break-after: auto; }
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a; margin: 0; padding: 10px; font-size: 10.5px; line-height: 1.35; }
+    .page-container { page-break-after: always; min-height: 98vh; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 25px; padding-bottom: 10px; border-bottom: 1px dashed #cbd5e1; }
+    .page-container:last-child { page-break-after: auto; margin-bottom: 0; border-bottom: none; }
+    .header-section { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .title-block h1 { font-size: 18px; font-weight: 900; margin: 0 0 3px 0; color: #0f172a; letter-spacing: -0.5px; }
+    .title-block p { font-size: 10.5px; color: #64748b; margin: 0; font-weight: 600; }
+    .sign-table { border-collapse: collapse; text-align: center; }
+    .sign-table th, .sign-table td { border: 1px solid #475569; font-size: 9px; }
+    .sign-table th { background: #f1f5f9; padding: 2px 7px; font-weight: 700; }
+    .sign-table td { height: 32px; width: 40px; }
+
+    .summary-banner { display: flex; justify-content: space-around; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 6px 10px; margin-bottom: 10px; font-size: 10.5px; }
+    .banner-item { font-weight: 600; color: #334155; }
+    .banner-item strong { font-size: 12px; font-weight: 900; color: #4338ca; }
+
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .card-box { border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; background: #fff; }
+    .card-title { background: #f1f5f9; padding: 4px 6px; font-size: 10.5px; font-weight: 800; border-bottom: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center; }
+    .table-data { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+    .table-data th, .table-data td { border-bottom: 1px solid #e2e8f0; padding: 3px 5px; }
+    .table-data th { background: #f8fafc; color: #475569; font-weight: 700; text-align: center; }
+
+    .combo-section { border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 10px; overflow: hidden; }
+    .combo-title { background: #f1f5f9; padding: 4px 6px; font-size: 10.5px; font-weight: 800; border-bottom: 1px solid #cbd5e1; display: flex; justify-content: space-between; }
+    .combo-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; background: #cbd5e1; text-align: center; }
+    .combo-item { background: #fff; padding: 5px 3px; }
+    .combo-label { font-size: 9px; font-weight: 700; color: #475569; margin-bottom: 1px; }
+    .combo-val { font-size: 12px; font-weight: 900; color: #0f172a; }
+    .combo-pct { font-size: 8.5px; font-weight: 600; color: #64748b; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .footer-section { margin-top: auto; padding-top: 6px; border-top: 1.5px solid #0f172a; display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; font-weight: 600; color: #64748b; }
+
+    table.roster-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+    table.roster-table th, table.roster-table td { border: 1px solid #64748b; font-size: 9.5px; }
+    table.roster-table th { background: #f1f5f9; padding: 4px 3px; font-weight: 700; color: #0f172a; text-align: center; }
+  </style>
+  </head>
+  <body>
+    ${pagesHtml}
     <script>window.onload=function(){window.print();window.close();}<\/script>
   </body></html>`
 
@@ -2626,5 +2748,6 @@ export function printElectiveStatsReport({ filterLabel, stats, schoolName = '포
   win.document.write(html)
   win.document.close()
 }
+
 
 
