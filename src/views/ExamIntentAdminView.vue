@@ -62,6 +62,7 @@
       <!-- 탭 -->
       <div class="flex gap-2 mb-6 flex-wrap">
         <button @click="activeTab = 'overview'" :class="['px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer border', activeTab === 'overview' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50']">📊 대조 및 원서접수 현황</button>
+        <button @click="activeTab = 'stats'" :class="['px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer border', activeTab === 'stats' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50']">📈 수능 선택과목 통계</button>
         <button @click="activeTab = 'upload'" :class="['px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer border', activeTab === 'upload' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50']">📤 수능 접수대장 PDF 업로드</button>
       </div>
 
@@ -211,6 +212,184 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- 수능 선택과목 통계 탭 -->
+      <div v-if="activeTab === 'stats'" class="space-y-6">
+        <!-- 상단 필터 및 총괄 인원 안내 -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <span class="text-sm font-bold text-slate-700">조회 학급:</span>
+            <select v-model="filterClass" class="text-sm border border-slate-200 rounded-xl px-4 py-2 bg-white font-semibold text-slate-800 cursor-pointer shadow-sm focus:outline-none focus:border-indigo-500">
+              <option value="all">전체 (재학생 + 졸업생)</option>
+              <option value="enrolled_all">재학생 전체 (1~11반)</option>
+              <option v-for="c in classList" :key="c" :value="c">{{ c }}반</option>
+              <option value="grad">🎓 졸업생 (수능접수)</option>
+            </select>
+          </div>
+          <div class="text-xs font-semibold text-slate-600 flex flex-wrap gap-4">
+            <span>대상 인원: <strong class="text-slate-900 text-sm font-extrabold">{{ electiveStats.totalStudents }}명</strong></span>
+            <span>수능 접수 인원: <strong class="text-indigo-600 text-sm font-extrabold">{{ electiveStats.totalRegistered }}명</strong></span>
+            <span>탐구 총 선택 과목수: <strong class="text-purple-600 text-sm font-extrabold">{{ electiveStats.inquiry.totalPicks }}과목</strong> (분모)</span>
+          </div>
+        </div>
+
+        <!-- 주요 영역별 카드 그리드 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <!-- 1. 국어 영역 선택과목 -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <h4 class="font-bold text-slate-900 text-sm flex items-center gap-2">📖 국어 영역 선택과목</h4>
+              <span class="text-xs font-semibold text-slate-500">응시 {{ electiveStats.korean.takers }}명</span>
+            </div>
+            <div class="space-y-3">
+              <div v-for="(count, name) in electiveStats.korean.map" :key="name">
+                <div class="flex justify-between text-xs font-semibold mb-1">
+                  <span class="text-slate-700">{{ name }}</span>
+                  <span class="text-indigo-600 font-bold">{{ count }}명 ({{ getPct(count, electiveStats.totalRegistered) }}%)</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                  <div class="bg-indigo-500 h-2.5 rounded-full transition-all duration-500" :style="{ width: `${getPct(count, electiveStats.totalRegistered)}%` }"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. 수학 영역 선택과목 -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <h4 class="font-bold text-slate-900 text-sm flex items-center gap-2">📐 수학 영역 선택과목</h4>
+              <span class="text-xs font-semibold text-slate-500">응시 {{ electiveStats.math.takers }}명</span>
+            </div>
+            <div class="space-y-3">
+              <div v-for="(count, name) in electiveStats.math.map" :key="name">
+                <div class="flex justify-between text-xs font-semibold mb-1">
+                  <span class="text-slate-700">{{ name }}</span>
+                  <span class="text-blue-600 font-bold">{{ count }}명 ({{ getPct(count, electiveStats.totalRegistered) }}%)</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                  <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-500" :style="{ width: `${getPct(count, electiveStats.totalRegistered)}%` }"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. 제2외국어 / 한문 영역 -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <h4 class="font-bold text-slate-900 text-sm flex items-center gap-2">🌐 제2외국어 / 한문</h4>
+              <span class="text-xs font-semibold text-emerald-600">응시 {{ electiveStats.foreign.takers }}명 ({{ getPct(electiveStats.foreign.takers, electiveStats.totalRegistered) }}%)</span>
+            </div>
+            <div class="space-y-2.5 max-h-[160px] overflow-y-auto pr-1 text-xs">
+              <div v-if="Object.keys(electiveStats.foreign.map).length === 0" class="text-center text-slate-400 py-6">응시자 없음</div>
+              <div v-for="(count, name) in electiveStats.foreign.map" :key="name" class="flex justify-between items-center py-1 border-b border-slate-50">
+                <span class="font-medium text-slate-700">{{ name }}</span>
+                <span class="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-[11px]">{{ count }}명 ({{ getPct(count, electiveStats.totalRegistered) }}%)</span>
+              </div>
+              <div class="flex justify-between items-center py-1 text-slate-400">
+                <span>미응시</span>
+                <span>{{ electiveStats.foreign.none }}명</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. 탐구 조합 유형별 통계 (사탐1, 사탐2, 사탐1+과탐1, 과탐1, 과탐2, 직탐) -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 mb-5">
+            <div>
+              <h4 class="font-bold text-slate-900 text-base flex items-center gap-2">🔬 탐구 조합 유형별 인원 및 비율 현황</h4>
+              <p class="text-xs text-slate-500 mt-1">사탐/과탐/직탐 과목 선택 조합에 따른 학생 수 및 비율 (수능 접수자 {{ electiveStats.totalRegistered }}명 기준)</p>
+            </div>
+            <div class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100">
+              탐구 응시자: {{ electiveStats.inquiry.takers }}명 / 미응시: {{ electiveStats.inquiry.combo.none }}명
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div class="bg-orange-50/70 border border-orange-200 rounded-xl p-3.5 text-center">
+              <p class="text-xs font-bold text-orange-800 mb-1">사탐 2과목</p>
+              <p class="text-xl font-extrabold text-orange-600">{{ electiveStats.inquiry.combo.social2 }}명</p>
+              <p class="text-[11px] font-semibold text-orange-700 mt-0.5">{{ getPct(electiveStats.inquiry.combo.social2, electiveStats.totalRegistered) }}%</p>
+            </div>
+            <div class="bg-amber-50/70 border border-amber-200 rounded-xl p-3.5 text-center">
+              <p class="text-xs font-bold text-amber-800 mb-1">사탐 1과목</p>
+              <p class="text-xl font-extrabold text-amber-600">{{ electiveStats.inquiry.combo.social1 }}명</p>
+              <p class="text-[11px] font-semibold text-amber-700 mt-0.5">{{ getPct(electiveStats.inquiry.combo.social1, electiveStats.totalRegistered) }}%</p>
+            </div>
+            <div class="bg-purple-50/70 border border-purple-200 rounded-xl p-3.5 text-center">
+              <p class="text-xs font-bold text-purple-800 mb-1">사탐 1 + 과탐 1</p>
+              <p class="text-xl font-extrabold text-purple-600">{{ electiveStats.inquiry.combo.social1_science1 }}명</p>
+              <p class="text-[11px] font-semibold text-purple-700 mt-0.5">{{ getPct(electiveStats.inquiry.combo.social1_science1, electiveStats.totalRegistered) }}%</p>
+            </div>
+            <div class="bg-cyan-50/70 border border-cyan-200 rounded-xl p-3.5 text-center">
+              <p class="text-xs font-bold text-cyan-800 mb-1">과탐 2과목</p>
+              <p class="text-xl font-extrabold text-cyan-600">{{ electiveStats.inquiry.combo.science2 }}명</p>
+              <p class="text-[11px] font-semibold text-cyan-700 mt-0.5">{{ getPct(electiveStats.inquiry.combo.science2, electiveStats.totalRegistered) }}%</p>
+            </div>
+            <div class="bg-sky-50/70 border border-sky-200 rounded-xl p-3.5 text-center">
+              <p class="text-xs font-bold text-sky-800 mb-1">과탐 1과목</p>
+              <p class="text-xl font-extrabold text-sky-600">{{ electiveStats.inquiry.combo.science1 }}명</p>
+              <p class="text-[11px] font-semibold text-sky-700 mt-0.5">{{ getPct(electiveStats.inquiry.combo.science1, electiveStats.totalRegistered) }}%</p>
+            </div>
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-center">
+              <p class="text-xs font-bold text-slate-700 mb-1">직탐 / 미선택</p>
+              <p class="text-xl font-extrabold text-slate-700">{{ electiveStats.inquiry.combo.vocational + electiveStats.inquiry.combo.none }}명</p>
+              <p class="text-[11px] font-semibold text-slate-500 mt-0.5">{{ getPct(electiveStats.inquiry.combo.vocational + electiveStats.inquiry.combo.none, electiveStats.totalRegistered) }}%</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. 탐구 영역 세부 과목별 선택 비율 (분모: 전체 탐구 선택 총 과목수) -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 mb-5">
+            <div>
+              <h4 class="font-bold text-slate-900 text-base flex items-center gap-2">🧪 탐구 영역 세부 과목별 선택 비율</h4>
+              <p class="text-xs text-slate-500 mt-1">선택된 탐구 과목 총 합계(<strong class="text-indigo-600">{{ electiveStats.inquiry.totalPicks }}과목</strong>)를 분모로 한 과목별 점유율</p>
+            </div>
+            <div class="text-xs font-semibold text-slate-500">
+              * 분모 = 전체 학생이 선택한 탐구 과목의 총 개수 합계
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- 사회탐구 과목들 -->
+            <div class="bg-orange-50/40 rounded-xl p-4 border border-orange-100">
+              <h5 class="text-xs font-extrabold text-orange-900 mb-3 flex items-center gap-1.5">
+                <span>📙 사회탐구 영역 (9개 과목)</span>
+              </h5>
+              <div class="space-y-2.5">
+                <div v-for="sub in electiveStats.socialSubjects" :key="sub.name">
+                  <div class="flex justify-between text-xs font-semibold mb-1">
+                    <span class="text-slate-800">{{ sub.name }}</span>
+                    <span class="text-orange-700 font-bold">{{ sub.count }}건 ({{ sub.pct }}%)</span>
+                  </div>
+                  <div class="w-full bg-orange-100/70 rounded-full h-2 overflow-hidden">
+                    <div class="bg-orange-500 h-2 rounded-full transition-all duration-500" :style="{ width: `${sub.pct}%` }"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 과학탐구 과목들 -->
+            <div class="bg-cyan-50/40 rounded-xl p-4 border border-cyan-100">
+              <h5 class="text-xs font-extrabold text-cyan-900 mb-3 flex items-center gap-1.5">
+                <span>📘 과학탐구 영역 (8개 과목)</span>
+              </h5>
+              <div class="space-y-2.5">
+                <div v-for="sub in electiveStats.scienceSubjects" :key="sub.name">
+                  <div class="flex justify-between text-xs font-semibold mb-1">
+                    <span class="text-slate-800">{{ sub.name }}</span>
+                    <span class="text-cyan-700 font-bold">{{ sub.count }}건 ({{ sub.pct }}%)</span>
+                  </div>
+                  <div class="w-full bg-cyan-100/70 rounded-full h-2 overflow-hidden">
+                    <div class="bg-cyan-600 h-2 rounded-full transition-all duration-500" :style="{ width: `${sub.pct}%` }"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -693,6 +872,166 @@ const filteredData = computed(() => {
   else if (filterStatus.value === 'no_apply_col_susi') data = data.filter(r => r.has_survey && r.susi_college_intent === 'NO_APPLY')
   else if (filterStatus.value === 'no_apply_col_jung') data = data.filter(r => r.has_survey && r.jungsi_college_intent === 'NO_APPLY')
   return data
+})
+
+function getPct(count, total) {
+  if (!total || total === 0 || !count) return 0
+  return ((count / total) * 100).toFixed(1)
+}
+
+const SOCIAL_NAMES = ['생활과 윤리', '윤리와 사상', '한국지리', '세계지리', '동아시아사', '세계사', '경제', '정치와 법', '사회·문화', '사회문화']
+const SCIENCE_NAMES = ['물리학Ⅰ', '물리학I', '화학Ⅰ', '화학I', '생명과학Ⅰ', '생명과학I', '지구과학Ⅰ', '지구과학I', '물리학Ⅱ', '물리학II', '화학Ⅱ', '화학II', '생명과학Ⅱ', '생명과학II', '지구과학Ⅱ', '지구과학II']
+const VOCATIONAL_NAMES = ['성공적인 직업생활', '농업 기초 기술', '공업 일반', '상업 경제', '수산·해운 산업 기초', '인간 발달']
+
+function getSubCategory(sub) {
+  if (!sub || sub === 'X' || sub === '-') return null
+  const c = sub.replace(/\s+/g, '')
+  if (SOCIAL_NAMES.some(s => c.includes(s.replace(/\s+/g, '')))) return 'SOCIAL'
+  if (SCIENCE_NAMES.some(s => c.includes(s.replace(/\s+/g, '')))) return 'SCIENCE'
+  if (VOCATIONAL_NAMES.some(s => c.includes(s.replace(/\s+/g, '')))) return 'VOCATIONAL'
+  return 'OTHER'
+}
+
+const electiveStats = computed(() => {
+  // 학급 필터가 적용된 대상 레코드들
+  let targetRecords = comparisonData.value
+  if (filterClass.value === 'enrolled_all') {
+    targetRecords = targetRecords.filter(r => r.is_enrolled !== false)
+  } else if (filterClass.value === 'grad') {
+    targetRecords = targetRecords.filter(r => r.is_enrolled === false)
+  } else if (filterClass.value !== 'all') {
+    targetRecords = targetRecords.filter(r => r.class_no === Number(filterClass.value))
+  }
+
+  const registered = targetRecords.filter(r => r.csat_registered && r.csat_record)
+  const totalStudents = targetRecords.length
+  const totalRegistered = registered.length
+
+  const koreanMap = { '화법과 작문': 0, '언어와 매체': 0, '미선택': 0 }
+  let korTakers = 0
+
+  const mathMap = { '확률과 통계': 0, '미적분': 0, '기하': 0, '미선택': 0 }
+  let mathTakers = 0
+
+  const foreignMap = {}
+  let foreignTakers = 0
+  let foreignNone = 0
+
+  const inquiryCounts = {}
+  let totalInquiryPicks = 0
+
+  const comboCounts = {
+    social2: 0,
+    social1: 0,
+    social1_science1: 0,
+    science2: 0,
+    science1: 0,
+    vocational: 0,
+    none: 0
+  }
+
+  for (const r of registered) {
+    const rec = r.csat_record
+
+    // 1. 국어
+    const kor = rec.subject_korean ? rec.subject_korean.trim() : ''
+    if (kor && kor !== 'X' && kor !== '-') {
+      koreanMap[kor] = (koreanMap[kor] || 0) + 1
+      korTakers++
+    } else {
+      koreanMap['미선택']++
+    }
+
+    // 2. 수학
+    const mat = rec.subject_math ? rec.subject_math.trim() : ''
+    if (mat && mat !== 'X' && mat !== '-') {
+      mathMap[mat] = (mathMap[mat] || 0) + 1
+      mathTakers++
+    } else {
+      mathMap['미선택']++
+    }
+
+    // 3. 제2외국어
+    const frg = rec.subject_foreign_language ? rec.subject_foreign_language.trim() : ''
+    if (frg && frg !== 'X' && frg !== '-') {
+      foreignMap[frg] = (foreignMap[frg] || 0) + 1
+      foreignTakers++
+    } else {
+      foreignNone++
+    }
+
+    // 4. 탐구
+    const s1 = (rec.inquiry_subject1 && rec.inquiry_subject1 !== 'X' && rec.inquiry_subject1 !== '-') ? rec.inquiry_subject1.trim() : null
+    const s2 = (rec.inquiry_subject2 && rec.inquiry_subject2 !== 'X' && rec.inquiry_subject2 !== '-') ? rec.inquiry_subject2.trim() : null
+
+    const subs = []
+    if (s1) subs.push(s1)
+    if (s2) subs.push(s2)
+
+    totalInquiryPicks += subs.length
+    for (const s of subs) {
+      inquiryCounts[s] = (inquiryCounts[s] || 0) + 1
+    }
+
+    const c1 = getSubCategory(s1)
+    const c2 = getSubCategory(s2)
+
+    if (subs.length === 0) {
+      comboCounts.none++
+    } else if (c1 === 'VOCATIONAL' || c2 === 'VOCATIONAL') {
+      comboCounts.vocational++
+    } else if (subs.length === 2) {
+      if (c1 === 'SOCIAL' && c2 === 'SOCIAL') comboCounts.social2++
+      else if (c1 === 'SCIENCE' && c2 === 'SCIENCE') comboCounts.science2++
+      else if ((c1 === 'SOCIAL' && c2 === 'SCIENCE') || (c1 === 'SCIENCE' && c2 === 'SOCIAL')) comboCounts.social1_science1++
+      else comboCounts.social2++
+    } else if (subs.length === 1) {
+      if (c1 === 'SOCIAL' || c2 === 'SOCIAL') comboCounts.social1++
+      else if (c1 === 'SCIENCE' || c2 === 'SCIENCE') comboCounts.science1++
+      else comboCounts.social1++
+    }
+  }
+
+  // 사회탐구 9과목 세부 배열
+  const socialList = [
+    '생활과 윤리', '윤리와 사상', '한국지리', '세계지리', '동아시아사', '세계사', '경제', '정치와 법', '사회·문화'
+  ]
+  const socialSubjects = socialList.map(name => {
+    // 키 매칭 (사회문화 등 변형 포함)
+    let count = inquiryCounts[name] || 0
+    if (name === '사회·문화') count += (inquiryCounts['사회문화'] || 0)
+    const pct = totalInquiryPicks > 0 ? ((count / totalInquiryPicks) * 100).toFixed(1) : 0
+    return { name, count, pct }
+  })
+
+  // 과학탐구 8과목 세부 배열
+  const scienceList = [
+    '물리학Ⅰ', '화학Ⅰ', '생명과학Ⅰ', '지구과학Ⅰ', '물리학Ⅱ', '화학Ⅱ', '생명과학Ⅱ', '지구과학Ⅱ'
+  ]
+  const scienceSubjects = scienceList.map(name => {
+    let count = inquiryCounts[name] || 0
+    // I, II 로마자/알파벳 변형 매칭
+    const altName = name.replace('Ⅰ', 'I').replace('Ⅱ', 'II')
+    if (altName !== name) count += (inquiryCounts[altName] || 0)
+    const pct = totalInquiryPicks > 0 ? ((count / totalInquiryPicks) * 100).toFixed(1) : 0
+    return { name, count, pct }
+  })
+
+  return {
+    totalStudents,
+    totalRegistered,
+    korean: { map: koreanMap, takers: korTakers },
+    math: { map: mathMap, takers: mathTakers },
+    foreign: { map: foreignMap, takers: foreignTakers, none: foreignNone },
+    inquiry: {
+      totalPicks: totalInquiryPicks,
+      counts: inquiryCounts,
+      combo: comboCounts,
+      takers: totalRegistered - comboCounts.none
+    },
+    socialSubjects,
+    scienceSubjects
+  }
 })
 
 function isMismatch(row) {

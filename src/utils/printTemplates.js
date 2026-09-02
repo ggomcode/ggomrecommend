@@ -1747,6 +1747,120 @@ export function printSummaryRoster(records, options = {}) {
   let pagesHtml = ''
 
   // ================================================================
+  // 선택과목 통계 계산 헬퍼 (국어/수학/탐구 조합 및 세부과목/제2외국어)
+  // ================================================================
+  function computeSubjectStats(items) {
+    const registered = items.filter(r => r.csat_registered && r.csat_record)
+    const totalReg = registered.length
+
+    const koreanMap = { '화법과 작문': 0, '언어와 매체': 0, '미선택': 0 }
+    let korTakers = 0
+
+    const mathMap = { '확률과 통계': 0, '미적분': 0, '기하': 0, '미선택': 0 }
+    let mathTakers = 0
+
+    const foreignMap = {}
+    let foreignTakers = 0
+    let foreignNone = 0
+
+    const inquiryCounts = {}
+    let totalInquiryPicks = 0
+
+    const comboCounts = {
+      social2: 0,
+      social1: 0,
+      social1_science1: 0,
+      science2: 0,
+      science1: 0,
+      vocational: 0,
+      none: 0
+    }
+
+    const SOCIAL_NAMES = ['생활과 윤리', '윤리와 사상', '한국지리', '세계지리', '동아시아사', '세계사', '경제', '정치와 법', '사회·문화', '사회문화']
+    const SCIENCE_NAMES = ['물리학Ⅰ', '물리학I', '화학Ⅰ', '화학I', '생명과학Ⅰ', '생명과학I', '지구과학Ⅰ', '지구과학I', '물리학Ⅱ', '물리학II', '화학Ⅱ', '화학II', '생명과학Ⅱ', '생명과학II', '지구과학Ⅱ', '지구과학II']
+    const VOCATIONAL_NAMES = ['성공적인 직업생활', '농업 기초 기술', '공업 일반', '상업 경제', '수산·해운 산업 기초', '인간 발달']
+
+    function getCategory(sub) {
+      if (!sub || sub === 'X' || sub === '-') return null
+      const c = sub.replace(/\s+/g, '')
+      if (SOCIAL_NAMES.some(s => c.includes(s.replace(/\s+/g, '')))) return 'SOCIAL'
+      if (SCIENCE_NAMES.some(s => c.includes(s.replace(/\s+/g, '')))) return 'SCIENCE'
+      if (VOCATIONAL_NAMES.some(s => c.includes(s.replace(/\s+/g, '')))) return 'VOCATIONAL'
+      return 'OTHER'
+    }
+
+    for (const r of registered) {
+      const rec = r.csat_record
+
+      // 1. 국어
+      const kor = rec.subject_korean ? rec.subject_korean.trim() : ''
+      if (kor && kor !== 'X' && kor !== '-') {
+        koreanMap[kor] = (koreanMap[kor] || 0) + 1
+        korTakers++
+      } else {
+        koreanMap['미선택']++
+      }
+
+      // 2. 수학
+      const mat = rec.subject_math ? rec.subject_math.trim() : ''
+      if (mat && mat !== 'X' && mat !== '-') {
+        mathMap[mat] = (mathMap[mat] || 0) + 1
+        mathTakers++
+      } else {
+        mathMap['미선택']++
+      }
+
+      // 3. 제2외국어
+      const frg = rec.subject_foreign_language ? rec.subject_foreign_language.trim() : ''
+      if (frg && frg !== 'X' && frg !== '-') {
+        foreignMap[frg] = (foreignMap[frg] || 0) + 1
+        foreignTakers++
+      } else {
+        foreignNone++
+      }
+
+      // 4. 탐구
+      const s1 = (rec.inquiry_subject1 && rec.inquiry_subject1 !== 'X' && rec.inquiry_subject1 !== '-') ? rec.inquiry_subject1.trim() : null
+      const s2 = (rec.inquiry_subject2 && rec.inquiry_subject2 !== 'X' && rec.inquiry_subject2 !== '-') ? rec.inquiry_subject2.trim() : null
+
+      const subs = []
+      if (s1) subs.push(s1)
+      if (s2) subs.push(s2)
+
+      totalInquiryPicks += subs.length
+      for (const s of subs) {
+        inquiryCounts[s] = (inquiryCounts[s] || 0) + 1
+      }
+
+      const c1 = getCategory(s1)
+      const c2 = getCategory(s2)
+
+      if (subs.length === 0) {
+        comboCounts.none++
+      } else if (c1 === 'VOCATIONAL' || c2 === 'VOCATIONAL') {
+        comboCounts.vocational++
+      } else if (subs.length === 2) {
+        if (c1 === 'SOCIAL' && c2 === 'SOCIAL') comboCounts.social2++
+        else if (c1 === 'SCIENCE' && c2 === 'SCIENCE') comboCounts.science2++
+        else if ((c1 === 'SOCIAL' && c2 === 'SCIENCE') || (c1 === 'SCIENCE' && c2 === 'SOCIAL')) comboCounts.social1_science1++
+        else comboCounts.social2++
+      } else if (subs.length === 1) {
+        if (c1 === 'SOCIAL' || c2 === 'SOCIAL') comboCounts.social1++
+        else if (c1 === 'SCIENCE' || c2 === 'SCIENCE') comboCounts.science1++
+        else comboCounts.social1++
+      }
+    }
+
+    return {
+      totalRegistered: totalReg,
+      korean: { map: koreanMap, takers: korTakers },
+      math: { map: mathMap, takers: mathTakers },
+      foreign: { map: foreignMap, takers: foreignTakers, none: foreignNone },
+      inquiry: { totalPicks: totalInquiryPicks, counts: inquiryCounts, combo: comboCounts, takers: totalReg - comboCounts.none }
+    }
+  }
+
+  // ================================================================
   // 1페이지: 전체 학급 총괄 오버뷰 현황표 (전체 또는 다중 학급 출력 시)
   // ================================================================
   if (isMultiClass) {
@@ -1754,6 +1868,7 @@ export function printSummaryRoster(records, options = {}) {
     const enrolledStats = computeStats(enrolledOnly)
     const gradStats = computeStats(graduates)
     const grandStats = computeStats(records)
+    const subStats = computeSubjectStats(records)
 
     const overviewRows = groups.filter(g => !g.isGrad).map(g => {
       const s = computeStats(g.items)
@@ -1813,7 +1928,7 @@ export function printSummaryRoster(records, options = {}) {
     </tr>` : ''
 
     const grandTotalRow = `
-    <tr style="background:#f1f5f9; font-weight:800; border-top:2px solid #0f172a; font-size:11.5px;">
+    <tr style="background:#f1f5f9; font-weight:800; border-top:2px solid #0f172a; font-size:11px;">
       <td>[총 합계]</td>
       <td>${grandStats.total}</td>
       <td>${grandStats.csatTake + gradStats.total}</td>
@@ -1829,6 +1944,44 @@ export function printSummaryRoster(records, options = {}) {
       <td style="color:#15803d;">${grandStats.formSub}</td>
       <td class="${grandStats.formNotSub > 0 ? 'cell-danger' : ''}">${grandStats.formNotSub}</td>
     </tr>`
+
+    // 탐구 세부 과목 정렬 및 출력 (분모: 총 선택과목수)
+    const inquiryRows = Object.entries(subStats.inquiry.counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => {
+        const pct = subStats.inquiry.totalPicks > 0 ? ((count / subStats.inquiry.totalPicks) * 100).toFixed(1) : 0
+        return `<span style="display:inline-block; margin:2px 6px; font-size:10px; background:#fff; border:1px solid #cbd5e1; padding:2px 6px; border-radius:4px;"><strong>${name}</strong>: ${count}건 (${pct}%)</span>`
+      }).join('') || '<span class="cell-muted">선택 내역 없음</span>'
+
+    // 국어/수학/외국어/탐구조합 요약 텍스트
+    const korHwawon = subStats.korean.map['화법과 작문'] || 0
+    const korEonmae = subStats.korean.map['언어와 매체'] || 0
+    const korNone = subStats.korean.map['미선택'] || 0
+    const korHwawonPct = subStats.totalRegistered > 0 ? ((korHwawon / subStats.totalRegistered) * 100).toFixed(1) : 0
+    const korEonmaePct = subStats.totalRegistered > 0 ? ((korEonmae / subStats.totalRegistered) * 100).toFixed(1) : 0
+
+    const mathHwatong = subStats.math.map['확률과 통계'] || 0
+    const mathMijeok = subStats.math.map['미적분'] || 0
+    const mathGiha = subStats.math.map['기하'] || 0
+    const mathNone = subStats.math.map['미선택'] || 0
+    const mathHwatongPct = subStats.totalRegistered > 0 ? ((mathHwatong / subStats.totalRegistered) * 100).toFixed(1) : 0
+    const mathMijeokPct = subStats.totalRegistered > 0 ? ((mathMijeok / subStats.totalRegistered) * 100).toFixed(1) : 0
+    const mathGihaPct = subStats.totalRegistered > 0 ? ((mathGiha / subStats.totalRegistered) * 100).toFixed(1) : 0
+
+    const cb = subStats.inquiry.combo
+    const regTot = subStats.totalRegistered || 1
+    const s2Pct = ((cb.social2 / regTot) * 100).toFixed(1)
+    const s1Pct = ((cb.social1 / regTot) * 100).toFixed(1)
+    const s1c1Pct = ((cb.social1_science1 / regTot) * 100).toFixed(1)
+    const c2Pct = ((cb.science2 / regTot) * 100).toFixed(1)
+    const c1Pct = ((cb.science1 / regTot) * 100).toFixed(1)
+    const vocPct = ((cb.vocational / regTot) * 100).toFixed(1)
+    const inqNonePct = ((cb.none / regTot) * 100).toFixed(1)
+
+    const foreignEntries = Object.entries(subStats.foreign.map)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => `${name}: ${count}명`)
+      .join(', ') || '없음'
 
     pagesHtml += `
     <div class="page-container">
@@ -1848,30 +2001,31 @@ export function printSummaryRoster(records, options = {}) {
           </div>
         </div>
 
+        <!-- 1. 학급별 총괄 매트릭스 표 -->
         <table class="roster-table overview-table">
           <thead>
             <tr>
-              <th rowspan="2" style="width: 120px;">학급 구분</th>
-              <th rowspan="2" style="width: 50px;">총원</th>
+              <th rowspan="2" style="width: 100px;">학급 구분</th>
+              <th rowspan="2" style="width: 45px;">총원</th>
               <th colspan="3">수능 응시 의향 (자가조사)</th>
               <th colspan="2">수능 접수대장 (공식)</th>
-              <th rowspan="2" style="width: 75px;">⚠️수능<br>불일치</th>
+              <th rowspan="2" style="width: 70px;">⚠️수능<br>불일치</th>
               <th colspan="2">일반대/과기원 미접수</th>
               <th colspan="2">전문대 미접수</th>
               <th colspan="2">확인서 제출 현황</th>
             </tr>
             <tr>
-              <th style="width: 50px;">응시</th>
-              <th style="width: 55px;">미응시</th>
-              <th style="width: 50px;">미응답</th>
-              <th style="width: 55px;">접수됨</th>
-              <th style="width: 50px;">미접수</th>
-              <th style="width: 55px;">수시</th>
-              <th style="width: 55px;">정시</th>
-              <th style="width: 55px;">수시</th>
-              <th style="width: 55px;">정시</th>
-              <th style="width: 50px;">제출</th>
-              <th style="width: 50px;">미제출</th>
+              <th style="width: 45px;">응시</th>
+              <th style="width: 50px;">미응시</th>
+              <th style="width: 45px;">미응답</th>
+              <th style="width: 50px;">접수됨</th>
+              <th style="width: 45px;">미접수</th>
+              <th style="width: 50px;">수시</th>
+              <th style="width: 50px;">정시</th>
+              <th style="width: 50px;">수시</th>
+              <th style="width: 50px;">정시</th>
+              <th style="width: 45px;">제출</th>
+              <th style="width: 45px;">미제출</th>
             </tr>
           </thead>
           <tbody>
@@ -1881,6 +2035,48 @@ export function printSummaryRoster(records, options = {}) {
             ${grandTotalRow}
           </tbody>
         </table>
+
+        <!-- 2. 수능 선택과목 통계 현황표 (국어, 수학, 탐구 조합, 제2외국어) -->
+        <div style="margin-top: 10px; border: 1.5px solid #4338ca; border-radius: 6px; padding: 8px; background: #faf5ff;">
+          <div style="font-size: 11.5px; font-weight: 800; color: #3730a3; margin-bottom: 6px;">
+            📊 2027학년도 수능 접수대장 선택과목 통계 요약 (총 접수인원: ${subStats.totalRegistered}명 기준)
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 10px;">
+            <!-- 국어/수학 -->
+            <div style="background:#fff; border:1px solid #c7d2fe; border-radius:4px; padding:6px;">
+              <div style="font-weight:700; color:#1e1b4b; border-bottom:1px solid #e0e7ff; padding-bottom:3px; margin-bottom:4px;">📖 국어 / 수학 선택과목</div>
+              <div>• <strong>국어</strong>: 화법과 작문 <strong>${korHwawon}명</strong> (${korHwawonPct}%) / 언어와 매체 <strong>${korEonmae}명</strong> (${korEonmaePct}%) / 미선택 ${korNone}명</div>
+              <div style="margin-top:3px;">• <strong>수학</strong>: 확통 <strong>${mathHwatong}명</strong> (${mathHwatongPct}%) / 미적분 <strong>${mathMijeok}명</strong> (${mathMijeokPct}%) / 기하 <strong>${mathGiha}명</strong> (${mathGihaPct}%) / 미선택 ${mathNone}명</div>
+            </div>
+
+            <!-- 탐구 조합 유형 -->
+            <div style="background:#fff; border:1px solid #c7d2fe; border-radius:4px; padding:6px;">
+              <div style="font-weight:700; color:#1e1b4b; border-bottom:1px solid #e0e7ff; padding-bottom:3px; margin-bottom:4px;">🔬 탐구 조합 유형별 인원 및 비율</div>
+              <div>• 사탐 2과목: <strong>${cb.social2}명</strong> (${s2Pct}%) / 사탐 1과목: <strong>${cb.social1}명</strong> (${s1Pct}%)</div>
+              <div style="margin-top:2px;">• 사탐1+과탐1: <strong>${cb.social1_science1}명</strong> (${s1c1Pct}%)</div>
+              <div style="margin-top:2px;">• 과탐 2과목: <strong>${cb.science2}명</strong> (${c2Pct}%) / 과탐 1과목: <strong>${cb.science1}명</strong> (${c1Pct}%)</div>
+              <div style="margin-top:2px;">• 직업탐구: <strong>${cb.vocational}명</strong> (${vocPct}%) / 미선택: <strong>${cb.none}명</strong> (${inqNonePct}%)</div>
+            </div>
+
+            <!-- 제2외국어/한문 -->
+            <div style="background:#fff; border:1px solid #c7d2fe; border-radius:4px; padding:6px;">
+              <div style="font-weight:700; color:#1e1b4b; border-bottom:1px solid #e0e7ff; padding-bottom:3px; margin-bottom:4px;">🌐 제2외국어 / 한문 영역</div>
+              <div>• 응시자: <strong>${subStats.foreign.takers}명</strong> (${((subStats.foreign.takers / regTot) * 100).toFixed(1)}%) / 미응시: <strong>${subStats.foreign.none}명</strong></div>
+              <div style="margin-top:3px; color:#475569; font-size:9.5px; line-height:1.3;">• 과목: ${foreignEntries}</div>
+            </div>
+          </div>
+
+          <!-- 3. 탐구 영역 세부 과목별 선택 통계 (분모: 총 선택과목수) -->
+          <div style="margin-top: 6px; background: #fff; border: 1px solid #c7d2fe; border-radius: 4px; padding: 6px;">
+            <div style="font-size: 10px; font-weight: 700; color: #1e1b4b; margin-bottom: 3px;">
+              🧪 탐구 영역 세부 과목별 선택 비율 (총 선택 과목수 분모: <strong>${subStats.inquiry.totalPicks}과목</strong> 기준)
+            </div>
+            <div style="line-height: 1.6;">
+              ${inquiryRows}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="footer-sign">
