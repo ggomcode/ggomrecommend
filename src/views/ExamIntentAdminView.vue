@@ -79,7 +79,6 @@
               <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
               ✍️ 셀프 체크 참여
             </span>
-            <span class="text-[11px] font-bold text-slate-400">학생 자가 응답</span>
           </div>
           <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
             <!-- 셀프 체크 참여 -->
@@ -173,8 +172,8 @@
                 <th class="px-3 py-3 text-left font-bold text-slate-600">학번</th>
                 <th class="px-3 py-3 text-left font-bold text-slate-600">성명</th>
                 <th class="px-2 py-3 text-center font-bold text-slate-600">반</th>
-                <th class="px-3 py-3 text-center font-bold text-slate-600">수능(자가)</th>
                 <th class="px-3 py-3 text-center font-bold text-slate-600">수능(대장)</th>
+                <th class="px-3 py-3 text-center font-bold text-slate-600">수능(셀프)</th>
                 <th class="px-2 py-3 text-center font-bold text-slate-600">매칭</th>
                 <th class="px-3 py-3 text-center font-bold text-slate-600">(일반대)수시</th>
                 <th class="px-3 py-3 text-center font-bold text-slate-600">(일반대)정시</th>
@@ -201,17 +200,29 @@
                   <span v-else class="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">졸업생({{ row.grad_year || '졸업' }})</span>
                 </td>
 
-                <!-- 수능 자가체크 -->
-                <td class="px-3 py-3 text-center">
-                  <span v-if="!row.has_survey" class="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">미응답</span>
-                  <span v-else-if="row.csat_intent === 'TAKE'" class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">응시</span>
-                  <span v-else class="text-[11px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full" :title="row.csat_no_take_reason">미응시</span>
-                </td>
-
-                <!-- 수능 접수대장 -->
+                <!-- 1. 수능 접수대장 (수능(대장)) -->
                 <td class="px-3 py-3 text-center">
                   <span v-if="row.csat_registered" class="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">접수됨</span>
                   <span v-else class="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">미접수</span>
+                </td>
+
+                <!-- 2. 수능 셀프체크 (수능(셀프)) - 클릭 시 응시/미응시 토글 -->
+                <td class="px-3 py-3 text-center">
+                  <button v-if="!row.has_survey" @click="toggleCsatIntent(row)"
+                    class="text-[11px] font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 shadow-2xs"
+                    title="셀프체크 미응답 (클릭 시 응시로 변경)">
+                    미응답 🔄
+                  </button>
+                  <button v-else-if="row.csat_intent === 'TAKE'" @click="toggleCsatIntent(row)"
+                    class="text-[11px] font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 border border-blue-200 px-2 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 shadow-2xs"
+                    title="수능 응시 (클릭 시 미응시로 변경)">
+                    응시 🔄
+                  </button>
+                  <button v-else @click="toggleCsatIntent(row)"
+                    class="text-[11px] font-bold text-red-700 bg-red-100 hover:bg-red-200 border border-red-200 px-2 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 shadow-2xs"
+                    :title="(row.csat_no_take_reason ? row.csat_no_take_reason + ' ' : '') + '(클릭 시 응시로 변경)'">
+                    미응시 🔄
+                  </button>
                 </td>
 
                 <!-- 수능 매칭 -->
@@ -259,13 +270,25 @@
                   <span v-else class="text-xs text-slate-300">-</span>
                 </td>
 
-                <!-- 확인서 제출 토글 -->
+                <!-- 확인서 제출 토글 (수능 미응시 / 대입 원서 미접수 개별 토글) -->
                 <td class="px-2 py-3 text-center">
-                  <button v-if="row.has_survey" @click="toggleSubmitted(row)"
-                    :class="['text-[11px] font-bold px-2 py-0.5 rounded-full cursor-pointer transition-all border', row.is_form_submitted ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100']">
-                    {{ row.is_form_submitted ? '✔제출' : '⏳미제출' }}
-                  </button>
-                  <span v-else class="text-xs text-slate-300">-</span>
+                  <div class="flex flex-col gap-1 items-center justify-center">
+                    <!-- 1. 수능 미응시 확인서 (수능 미응시 학생 대상) -->
+                    <button v-if="row.csat_intent === 'NO_TAKE'"
+                      @click="toggleCsatFormSubmitted(row)"
+                      :class="['text-[10px] font-bold px-1.5 py-0.5 rounded-full cursor-pointer transition-all border whitespace-nowrap', row.is_csat_form_submitted ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100']"
+                      :title="row.is_csat_form_submitted ? '수능 미응시 확인서 제출 완료 (클릭 시 미제출로 전환)' : '수능 미응시 확인서 미제출 (클릭 시 제출 완료로 전환)'">
+                      수능: {{ row.is_csat_form_submitted ? '✔제출' : '⏳미제출' }}
+                    </button>
+                    <!-- 2. 대입 원서 미접수 확인서 (원서 미접수 학생 대상) -->
+                    <button v-if="hasStudentNoApply(row)"
+                      @click="toggleSusiFormSubmitted(row)"
+                      :class="['text-[10px] font-bold px-1.5 py-0.5 rounded-full cursor-pointer transition-all border whitespace-nowrap', row.is_susi_form_submitted ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100']"
+                      :title="row.is_susi_form_submitted ? '원서 미접수 확인서 제출 완료 (클릭 시 미제출로 전환)' : '원서 미접수 확인서 미제출 (클릭 시 제출 완료로 전환)'">
+                      원서: {{ row.is_susi_form_submitted ? '✔제출' : '⏳미제출' }}
+                    </button>
+                    <span v-if="row.csat_intent !== 'NO_TAKE' && !hasStudentNoApply(row)" class="text-xs text-slate-300">-</span>
+                  </div>
                 </td>
 
                 <!-- 인쇄 -->
@@ -849,7 +872,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
-import { buildComparisonData, getLatestUploadBatchTime, upsertCsatRecords, toggleFormSubmitted } from '../api/examIntentApi'
+import { buildComparisonData, getLatestUploadBatchTime, upsertCsatRecords, toggleFormSubmitted, upsertIntentSurvey } from '../api/examIntentApi'
 import { parseCsatPdf } from '../utils/csatPdfParser'
 import { printCsatNoTakeForm, printSusiNoApplyForm, printBatchIntentForms, printSummaryRoster, printElectiveStatsReport } from '../utils/printTemplates'
 import * as XLSX from 'xlsx'
@@ -1454,13 +1477,83 @@ async function loadData() {
   }
 }
 
-async function toggleSubmitted(row) {
+async function toggleCsatIntent(row) {
+  const currentIntent = row.csat_intent || 'NO_TAKE'
+  const newIntent = currentIntent === 'TAKE' ? 'NO_TAKE' : 'TAKE'
+  const newLabel = newIntent === 'TAKE' ? '응시' : '미응시'
+
+  if (!confirm(`[${row.name}] 학생의 수능 셀프체크 상태를 '${newLabel}'(으)로 변경하시겠습니까?`)) {
+    return
+  }
+
   try {
-    const newVal = !row.is_form_submitted
-    await toggleFormSubmitted(row.student_code, newVal)
-    row.is_form_submitted = newVal
+    const payload = {
+      student_id: row.student_id,
+      student_code: row.student_code,
+      csat_intent: newIntent,
+      csat_no_take_reason: newIntent === 'NO_TAKE' ? (row.csat_no_take_reason || '관리자 변경') : null,
+      susi_general_intent: row.susi_general_intent || 'APPLY',
+      susi_general_no_reason: row.susi_general_no_reason,
+      jungsi_general_intent: row.jungsi_general_intent || 'APPLY',
+      jungsi_general_no_reason: row.jungsi_general_no_reason,
+      susi_college_intent: row.susi_college_intent || 'APPLY',
+      susi_college_no_reason: row.susi_college_no_reason,
+      jungsi_college_intent: row.jungsi_college_intent || 'APPLY',
+      jungsi_college_no_reason: row.jungsi_college_no_reason,
+      memo: `관리자 수능 셀프체크 ${newLabel} 변경`
+    }
+
+    await upsertIntentSurvey(payload, { name: '관리자', role: 'admin' })
+
+    row.has_survey = true
+    row.csat_intent = newIntent
+    if (newIntent === 'NO_TAKE' && !row.csat_no_take_reason) {
+      row.csat_no_take_reason = '관리자 변경'
+    }
+
+    // Re-evaluate mismatch
+    if (newIntent === 'TAKE' && row.csat_registered) {
+      row.csat_mismatch = 'MATCH'
+    } else if (newIntent === 'NO_TAKE' && !row.csat_registered) {
+      row.csat_mismatch = 'MATCH'
+    } else if (newIntent === 'TAKE' && !row.csat_registered) {
+      row.csat_mismatch = 'SURVEY_YES_CSAT_NO'
+    } else if (newIntent === 'NO_TAKE' && row.csat_registered) {
+      row.csat_mismatch = 'SURVEY_NO_CSAT_YES'
+    }
+
+    row.history_count = (row.history_count || 0) + 1
   } catch (e) {
-    console.error('toggleSubmitted error:', e)
+    console.error('toggleCsatIntent error:', e)
+    alert('수능 셀프체크 상태 변경 중 오류가 발생했습니다.')
+  }
+}
+
+async function toggleCsatFormSubmitted(row) {
+  try {
+    const newVal = !row.is_csat_form_submitted
+    await toggleFormSubmitted(row.student_code, newVal, 'csat')
+    row.is_csat_form_submitted = newVal
+    if (!hasStudentNoApply(row)) {
+      row.is_form_submitted = newVal
+    }
+  } catch (e) {
+    console.error('toggleCsatFormSubmitted error:', e)
+    alert('수능 미응시 확인서 상태 변경 중 오류가 발생했습니다.')
+  }
+}
+
+async function toggleSusiFormSubmitted(row) {
+  try {
+    const newVal = !row.is_susi_form_submitted
+    await toggleFormSubmitted(row.student_code, newVal, 'susi')
+    row.is_susi_form_submitted = newVal
+    if (row.csat_intent !== 'NO_TAKE') {
+      row.is_form_submitted = newVal
+    }
+  } catch (e) {
+    console.error('toggleSusiFormSubmitted error:', e)
+    alert('대입 원서 미접수 확인서 상태 변경 중 오류가 발생했습니다.')
   }
 }
 

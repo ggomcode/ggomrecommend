@@ -2215,7 +2215,17 @@ export function printSummaryRoster(records, options = {}) {
       const susiCol = !r.has_survey ? '<span class="badge-none">미응답</span>' : (r.susi_college_intent === 'NO_APPLY' ? '<span class="badge-no">미접수</span>' : '<span class="badge-yes">접수</span>')
       const jungCol = !r.has_survey ? '<span class="badge-none">미응답</span>' : (r.jungsi_college_intent === 'NO_APPLY' ? '<span class="badge-no">미접수</span>' : '<span class="badge-yes">접수</span>')
 
-      const formSub = r.has_survey ? (r.is_form_submitted ? '<span class="badge-yes">✔제출</span>' : '<span class="badge-no">미제출</span>') : '-'
+      let formSub = '-'
+      if (r.has_survey) {
+        const forms = []
+        if (r.csat_intent === 'NO_TAKE') {
+          forms.push(r.is_csat_form_submitted ? '<span class="badge-yes">수능:제출</span>' : '<span class="badge-no">수능:미제출</span>')
+        }
+        if ((r.susi_general_intent || r.susi_intent) === 'NO_APPLY' || (r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY' || r.susi_college_intent === 'NO_APPLY' || r.jungsi_college_intent === 'NO_APPLY') {
+          forms.push(r.is_susi_form_submitted ? '<span class="badge-yes">원서:제출</span>' : '<span class="badge-no">원서:미제출</span>')
+        }
+        formSub = forms.length > 0 ? forms.join('<br>') : '-'
+      }
 
       let remarks = []
       if (r.csat_intent === 'NO_TAKE' && r.csat_no_take_reason) remarks.push(`[수능미응시] ${r.csat_no_take_reason}`)
@@ -2232,8 +2242,8 @@ export function printSummaryRoster(records, options = {}) {
         <td style="font-family:monospace; font-weight:700;">${r.student_code || '-'}</td>
         <td style="font-weight:700;">${r.name || '-'}</td>
         <td>${classDisplay} ${noDisplay !== '-' ? noDisplay : ''}</td>
-        <td>${csatSelf}</td>
         <td>${csatOfficial}</td>
+        <td>${csatSelf}</td>
         <td>${matchBadge}</td>
         <td>${susiGen}</td>
         <td>${jungGen}</td>
@@ -2269,14 +2279,14 @@ export function printSummaryRoster(records, options = {}) {
               <th style="width: 55px;">학번</th>
               <th style="width: 65px;">성명</th>
               <th style="width: 65px;">반/번호</th>
-              <th style="width: 58px;">수능(자가)</th>
               <th style="width: 62px;">수능(대장)</th>
+              <th style="width: 58px;">수능(셀프)</th>
               <th style="width: 52px;">매칭</th>
               <th style="width: 62px;">(일반대)수시</th>
               <th style="width: 62px;">(일반대)정시</th>
               <th style="width: 62px;">(전문대)수시</th>
               <th style="width: 62px;">(전문대)정시</th>
-              <th style="width: 55px;">확인서</th>
+              <th style="width: 65px;">확인서</th>
               <th>비고 (미응시·미접수 사유 및 특이사항)</th>
             </tr>
           </thead>

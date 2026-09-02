@@ -530,6 +530,8 @@ export async function buildComparisonData() {
       parent_signature: survey?.parent_signature || null,
       parent_name: survey?.parent_name || null,
       is_form_submitted: survey?.is_form_submitted || false,
+      is_csat_form_submitted: survey?.is_csat_form_submitted !== undefined ? survey.is_csat_form_submitted : (survey?.is_form_submitted || false),
+      is_susi_form_submitted: survey?.is_susi_form_submitted !== undefined ? survey.is_susi_form_submitted : (survey?.is_form_submitted || false),
       confirmed_at: survey?.confirmed_at || null,
       change_logs: survey?.change_logs || [],
       history_count: survey?.history_count || 0,
@@ -575,6 +577,8 @@ export async function buildComparisonData() {
         parent_signature: null,
         parent_name: null,
         is_form_submitted: false,
+        is_csat_form_submitted: false,
+        is_susi_form_submitted: false,
         confirmed_at: null,
         change_logs: [],
         history_count: 0,
@@ -593,15 +597,40 @@ export async function buildComparisonData() {
 }
 
 /**
- * 담임교사: 확인서 실물 제출 완료 체크 토글
+ * 담임교사: 확인서 실물 제출 완료 체크 토글 (수능 미응시 / 대입 원서 미접수 개별 처리 지원)
  */
-export async function toggleFormSubmitted(studentCode, isSubmitted) {
+export async function toggleFormSubmitted(studentCode, isSubmitted, formType = 'all') {
   if (!supabase) throw new Error('DB 연결 없음')
-  const { error } = await supabase
-    .from('student_intent_surveys')
-    .update({ is_form_submitted: isSubmitted, updated_at: new Date().toISOString() })
-    .eq('student_code', studentCode)
-  if (error) throw error
+  const updatePayload = { updated_at: new Date().toISOString() }
+
+  if (formType === 'csat') {
+    updatePayload.is_csat_form_submitted = isSubmitted
+    updatePayload.is_form_submitted = isSubmitted
+  } else if (formType === 'susi') {
+    updatePayload.is_susi_form_submitted = isSubmitted
+    updatePayload.is_form_submitted = isSubmitted
+  } else {
+    updatePayload.is_form_submitted = isSubmitted
+    updatePayload.is_csat_form_submitted = isSubmitted
+    updatePayload.is_susi_form_submitted = isSubmitted
+  }
+
+  try {
+    const { error } = await supabase
+      .from('student_intent_surveys')
+      .update(updatePayload)
+      .eq('student_code', studentCode)
+    if (error) {
+      console.warn('Update specific form error, fallback to is_form_submitted:', error)
+      await supabase
+        .from('student_intent_surveys')
+        .update({ is_form_submitted: isSubmitted, updated_at: new Date().toISOString() })
+        .eq('student_code', studentCode)
+    }
+  } catch (e) {
+    console.error('toggleFormSubmitted error:', e)
+    throw e
+  }
 }
 
 /**
