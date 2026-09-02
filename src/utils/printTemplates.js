@@ -180,7 +180,7 @@ export function printApplicationForm(apps, studentInfo) {
   const studentNumberDisplay = cleanCode || rawCode
 
   // 재학생/졸업생 체크박스
-  const enrolledBox  = isEnrolled ? '☑ 재학생' : '☐ 재학생'
+  const enrolledBox = isEnrolled ? '☑ 재학생' : '☐ 재학생'
   const graduatedBox = isEnrolled
     ? '☐ 졸업생: (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)년 2월 졸업'
     : `☑ 졸업생: (${studentInfo.grad_year || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'})년 2월 졸업`
@@ -194,7 +194,7 @@ export function printApplicationForm(apps, studentInfo) {
     return raw
   }
   const studentPhoneFmt = fmtPhone(studentInfo.student_phone) || '010 -&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -'
-  const parentPhoneFmt  = fmtPhone(studentInfo.parent_phone)  || '010 -&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -'
+  const parentPhoneFmt = fmtPhone(studentInfo.parent_phone) || '010 -&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -'
 
   // 서명
   const studentSig = studentInfo.student_signature_url
@@ -218,11 +218,11 @@ export function printApplicationForm(apps, studentInfo) {
         <td style="text-align:center;"></td>
       </tr>`
     }
-    const univName  = ap.universities?.univ_name  || ap.univ_name  || ''
+    const univName = ap.universities?.univ_name || ap.univ_name || ''
     const trackName = ap.universities?.track_name || ap.track_name || ''
-    const dept      = ap.department_name || ''
-    const ql        = ap.universities?.quota_limit
-    const hasQuota  = ap.universities?.has_quota
+    const dept = ap.department_name || ''
+    const ql = ap.universities?.quota_limit
+    const hasQuota = ap.universities?.has_quota
 
     let quotaDisplay = '무'
     if (hasQuota !== false && ql != null && ql !== '' && ql !== '없음' && ql !== '무제한' && ql !== 0 && ql !== '0') {
@@ -236,7 +236,7 @@ export function printApplicationForm(apps, studentInfo) {
       try {
         const parsed = typeof scanned === 'string' ? JSON.parse(scanned) : scanned
         isAbandonRequested = parsed?.abandon_requested === true
-      } catch {}
+      } catch { }
     }
     const rowStyle = isAbandonRequested ? ' class="abandoned-row"' : ''
     const abandonNote = isAbandonRequested ? ' <span style="font-size:10px;color:#b91c1c;font-weight:bold;">(포기 신청)</span>' : ''
@@ -254,10 +254,10 @@ export function printApplicationForm(apps, studentInfo) {
 
   const principalTitle = formatSchoolPrincipalTitle(schoolName.value)
   const formattedSchoolName = getFormattedSchoolName(schoolName.value)
-  const now  = new Date()
+  const now = new Date()
   const yyyy = now.getFullYear()
-  const mm   = now.getMonth() + 1
-  const dd   = now.getDate()
+  const mm = now.getMonth() + 1
+  const dd = now.getDate()
 
   win.document.write(`<!DOCTYPE html>
 <html><head>
@@ -521,7 +521,7 @@ export function printClassApplicationsReport({
           const univName = app.univ_name || '—'
           const trackName = app.track_name || '—'
           const deptName = app.department_name || '—'
-          
+
           let statusText = '접수완료'
           let statusClass = 'status-open'
           if (app.abandoned) {
@@ -842,8 +842,8 @@ export function printAllClassesApplicationsReport({
   // appliedOnly일 경우 지원자가 1명 이상 있는 학급만 필터링 (전체 0명일 때는 기본 목록 유지)
   const targetClassesList = appliedOnly
     ? (classesData.filter(cls => (cls.students || []).some(s => s.apps && s.apps.length > 0)).length > 0
-        ? classesData.filter(cls => (cls.students || []).some(s => s.apps && s.apps.length > 0))
-        : classesData)
+      ? classesData.filter(cls => (cls.students || []).some(s => s.apps && s.apps.length > 0))
+      : classesData)
     : classesData
 
   // 각 학급별 HTML 생성
@@ -902,7 +902,7 @@ export function printAllClassesApplicationsReport({
             const univName = app.univ_name || '—'
             const trackName = app.track_name || '—'
             const deptName = app.department_name || '—'
-            
+
             let statusText = '접수완료'
             let statusClass = 'status-open'
             if (app.abandoned) {
@@ -1247,7 +1247,7 @@ export function printAbandonmentForm(app, studentInfo = {}) {
   if (app.scanned_doc_url) {
     try {
       req = typeof app.scanned_doc_url === 'string' ? JSON.parse(app.scanned_doc_url) : app.scanned_doc_url
-    } catch {}
+    } catch { }
   }
 
   const studentName = app.name || app.student_name || studentInfo.name || ''
@@ -1499,7 +1499,7 @@ export function printCsatNoTakeForm(student, intentData = {}) {
 
     <table class="sig-table">
       <tr>
-        <td class="label">학 생 :</td>
+        <td class="label">학생 :</td>
         <td class="name-cell">${student.name || ''}</td>
         <td class="sig-cell">${renderSig(intentData.student_signature)}</td>
       </tr>
@@ -1509,7 +1509,7 @@ export function printCsatNoTakeForm(student, intentData = {}) {
         <td class="sig-cell">${renderSig(intentData.parent_signature)}</td>
       </tr>
       <tr>
-        <td class="label">담임교사 :</td>
+        <td class="label">담임 :</td>
         <td class="name-cell"></td>
         <td class="sig-cell">(서명 또는 인)</td>
       </tr>
@@ -1634,7 +1634,7 @@ export function printSusiNoApplyForm(student, intentData = {}) {
 
     <table class="sig-table">
       <tr>
-        <td class="label">학 생 :</td>
+        <td class="label">학생 :</td>
         <td class="name-cell">${student.name || ''}</td>
         <td class="sig-cell">${renderSig(intentData.student_signature)}</td>
       </tr>
@@ -1644,7 +1644,7 @@ export function printSusiNoApplyForm(student, intentData = {}) {
         <td class="sig-cell">${renderSig(intentData.parent_signature)}</td>
       </tr>
       <tr>
-        <td class="label">담임교사 :</td>
+        <td class="label">담임 :</td>
         <td class="name-cell"></td>
         <td class="sig-cell">(서명 또는 인)</td>
       </tr>
@@ -1696,9 +1696,9 @@ export function printBatchIntentForms(list, type = 'csat') {
         <div class="reason-box">${reason}</div>
         <p class="date-line">${dateStr}</p>
         <table class="sig-table">
-          <tr><td class="label">학 생 :</td><td class="name-cell">${student.name || ''}</td><td class="sig-cell">${renderSig(intentData?.student_signature)}</td></tr>
+          <tr><td class="label">학생 :</td><td class="name-cell">${student.name || ''}</td><td class="sig-cell">${renderSig(intentData?.student_signature)}</td></tr>
           <tr><td class="label">보호자 :</td><td class="name-cell">${parentNameDisplay}</td><td class="sig-cell">${renderSig(intentData?.parent_signature)}</td></tr>
-          <tr><td class="label">담임교사 :</td><td class="name-cell"></td><td class="sig-cell">(서명 또는 인)</td></tr>
+          <tr><td class="label">담임 :</td><td class="name-cell"></td><td class="sig-cell">(서명 또는 인)</td></tr>
         </table>
         <div class="footer-line">${principalTitle}</div>
       </div>`
@@ -1758,9 +1758,9 @@ export function printBatchIntentForms(list, type = 'csat') {
         </table>
         <p class="date-line">${dateStr}</p>
         <table class="sig-table">
-          <tr><td class="label">학 생 :</td><td class="name-cell">${student.name || ''}</td><td class="sig-cell">${renderSig(intentData?.student_signature)}</td></tr>
+          <tr><td class="label">학생 :</td><td class="name-cell">${student.name || ''}</td><td class="sig-cell">${renderSig(intentData?.student_signature)}</td></tr>
           <tr><td class="label">보호자 :</td><td class="name-cell">${parentNameDisplay}</td><td class="sig-cell">${renderSig(intentData?.parent_signature)}</td></tr>
-          <tr><td class="label">담임교사 :</td><td class="name-cell"></td><td class="sig-cell">(서명 또는 인)</td></tr>
+          <tr><td class="label">담임 :</td><td class="name-cell"></td><td class="sig-cell">(서명 또는 인)</td></tr>
         </table>
         <div class="footer-line">${principalTitle}</div>
       </div>`
@@ -2189,7 +2189,7 @@ export function printSummaryRoster(records, options = {}) {
 
       <div class="footer-sign">
         <span>작성자(진학담당) : _________________ (인)</span>
-        <span style="margin-left: 30px;">진로진학부장 : _________________ (인)</span>
+        <span style="margin-left: 30px;">부장 : _________________ (인)</span>
         <span style="margin-left: 30px;">교감 : _________________ (인)</span>
         <span style="margin-left: 30px;">교장 : _________________ (인)</span>
       </div>
@@ -2328,8 +2328,8 @@ export function printSummaryRoster(records, options = {}) {
       </div>
 
       <div class="footer-sign">
-        <span>담임교사 : _________________ (인)</span>
-        <span style="margin-left: 30px;">진로진학부장 : _________________ (인)</span>
+        <span>담임 : _________________ (인)</span>
+        <span style="margin-left: 30px;">부장 : _________________ (인)</span>
         <span style="margin-left: 30px;">교감 : _________________ (인)</span>
         <span style="margin-left: 30px;">교장 : _________________ (인)</span>
       </div>
