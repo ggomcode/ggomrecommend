@@ -24,7 +24,7 @@
 
     <main class="max-w-7xl mx-auto px-6 py-8">
       <!-- 대시보드 통계 카드 -->
-      <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-8">
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-3 mb-8">
         <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
           <p class="text-xs font-bold text-slate-400 mb-1">전체 학생</p>
           <p class="text-2xl font-extrabold text-slate-900">{{ stats.total }}</p>
@@ -32,6 +32,10 @@
         <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
           <p class="text-xs font-bold text-slate-400 mb-1">응답 완료</p>
           <p class="text-2xl font-extrabold text-emerald-600">{{ stats.surveyed }}</p>
+        </div>
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+          <p class="text-xs font-bold text-slate-400 mb-1">수능 접수완료</p>
+          <p class="text-2xl font-extrabold text-indigo-600">{{ stats.csatRegistered }}</p>
         </div>
         <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
           <p class="text-xs font-bold text-slate-400 mb-1">수능 미응시</p>
@@ -61,8 +65,8 @@
 
       <!-- 탭 -->
       <div class="flex gap-2 mb-6 flex-wrap">
-        <button @click="activeTab = 'overview'" :class="['px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer border', activeTab === 'overview' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50']">📊 대조 및 원서접수 현황</button>
-        <button @click="activeTab = 'stats'" :class="['px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer border', activeTab === 'stats' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50']">📈 수능 선택과목 통계</button>
+        <button @click="activeTab = 'overview'" :class="['px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer border', activeTab === 'overview' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50']">📊 원서접수계획 현황</button>
+        <button @click="activeTab = 'stats'" :class="['px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer border', activeTab === 'stats' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50']">📈 수능 통계</button>
         <button @click="activeTab = 'upload'" :class="['px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer border', activeTab === 'upload' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50']">📤 수능 접수대장 PDF 업로드</button>
       </div>
 
@@ -1026,10 +1030,19 @@ function hasStudentNoApply(r) {
 }
 
 const stats = computed(() => {
-  const data = comparisonData.value
+  let data = comparisonData.value
+  if (filterClass.value === 'enrolled_all') {
+    data = data.filter(r => r.is_enrolled !== false)
+  } else if (filterClass.value === 'grad') {
+    data = data.filter(r => r.is_enrolled === false)
+  } else if (filterClass.value !== 'all') {
+    data = data.filter(r => Number(r.class_no) === Number(filterClass.value))
+  }
+
   return {
     total: data.length,
     surveyed: data.filter(r => r.has_survey).length,
+    csatRegistered: data.filter(r => r.csat_registered).length,
     csatNoTake: data.filter(r => r.has_survey && r.csat_intent === 'NO_TAKE').length,
     susiGenNoApply: data.filter(r => r.has_survey && (r.susi_general_intent || r.susi_intent) === 'NO_APPLY').length,
     jungsiGenNoApply: data.filter(r => r.has_survey && (r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY').length,
