@@ -13,12 +13,13 @@ if (typeof window !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
 }
 
-// 국어 선택과목 키워드
-const KOREAN_SUBJECTS = ['화법과 작문', '언어와 매체']
-// 수학 선택과목 키워드
-const MATH_SUBJECTS = ['확률과 통계', '미적분', '기하']
-// 탐구 유형 키워드 (7종) - 긴 것부터 매칭
+// 국어 과목 키워드 (현행 선택과목 및 2028+ 통합형 공통 국어)
+const KOREAN_SUBJECTS = ['화법과 작문', '언어와 매체', '공통', '국어']
+// 수학 과목 키워드 (현행 선택과목 및 2028+ 통합형 공통 수학)
+const MATH_SUBJECTS = ['확률과 통계', '미적분', '기하', '공통', '수학']
+// 탐구 유형 키워드 (현행 선택형 및 2028+ 통합사회·통합과학) - 긴 것부터 매칭
 const INQUIRY_TYPES = [
+  '통합사회·통합과학', '통합사회/통합과학', '통합사회', '통합과학',
   '사회·과학탐구', '사회·직업탐구', '과학·직업탐구',
   '사회탐구', '과학탐구', '직업탐구', 'X'
 ]
