@@ -2529,9 +2529,14 @@ export function printElectiveStatsReport({ filterClass = 'all', filterLabel = '�
               <div class="combo-pct">${getP(stats.inquiry.combo.science1, stats.totalRegistered)}%</div>
             </div>
             <div class="combo-item">
-              <div class="combo-label" style="color:#475569;">직탐 / 미선택</div>
-              <div class="combo-val" style="color:#64748b;">${stats.inquiry.combo.vocational + stats.inquiry.combo.none}명</div>
-              <div class="combo-pct">${getP(stats.inquiry.combo.vocational + stats.inquiry.combo.none, stats.totalRegistered)}%</div>
+              <div class="combo-label" style="color:#4f46e5;">직업탐구</div>
+              <div class="combo-val" style="color:#4338ca;">${stats.inquiry.combo.vocational}명</div>
+              <div class="combo-pct">${getP(stats.inquiry.combo.vocational, stats.totalRegistered)}%</div>
+            </div>
+            <div class="combo-item">
+              <div class="combo-label" style="color:#64748b;">탐구 미선택</div>
+              <div class="combo-val" style="color:#475569;">${stats.inquiry.combo.none}명</div>
+              <div class="combo-pct">${getP(stats.inquiry.combo.none, stats.totalRegistered)}%</div>
             </div>
           </div>
         </div>
@@ -2737,7 +2742,7 @@ export function printElectiveStatsReport({ filterClass = 'all', filterLabel = '�
 
     .combo-section { border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 10px; overflow: hidden; }
     .combo-title { background: #f1f5f9; padding: 4px 6px; font-size: 10.5px; font-weight: 800; border-bottom: 1px solid #cbd5e1; display: flex; justify-content: space-between; }
-    .combo-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; background: #cbd5e1; text-align: center; }
+    .combo-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: #cbd5e1; text-align: center; }
     .combo-item { background: #fff; padding: 5px 3px; }
     .combo-label { font-size: 9px; font-weight: 700; color: #475569; margin-bottom: 1px; }
     .combo-val { font-size: 12px; font-weight: 900; color: #0f172a; }

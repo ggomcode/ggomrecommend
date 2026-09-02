@@ -315,7 +315,7 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             <div class="bg-orange-50/70 border border-orange-200 rounded-xl p-3.5 text-center">
               <p class="text-xs font-bold text-orange-800 mb-1">사탐 2과목</p>
               <p class="text-xl font-extrabold text-orange-600">{{ electiveStats.inquiry.combo.social2 }}명</p>
@@ -341,10 +341,15 @@
               <p class="text-xl font-extrabold text-sky-600">{{ electiveStats.inquiry.combo.science1 }}명</p>
               <p class="text-[11px] font-semibold text-sky-700 mt-0.5">{{ getPct(electiveStats.inquiry.combo.science1, electiveStats.totalRegistered) }}%</p>
             </div>
+            <div class="bg-indigo-50/70 border border-indigo-200 rounded-xl p-3.5 text-center">
+              <p class="text-xs font-bold text-indigo-800 mb-1">직업탐구</p>
+              <p class="text-xl font-extrabold text-indigo-600">{{ electiveStats.inquiry.combo.vocational }}명</p>
+              <p class="text-[11px] font-semibold text-indigo-700 mt-0.5">{{ getPct(electiveStats.inquiry.combo.vocational, electiveStats.totalRegistered) }}%</p>
+            </div>
             <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-center">
-              <p class="text-xs font-bold text-slate-700 mb-1">직탐 / 미선택</p>
-              <p class="text-xl font-extrabold text-slate-700">{{ electiveStats.inquiry.combo.vocational + electiveStats.inquiry.combo.none }}명</p>
-              <p class="text-[11px] font-semibold text-slate-500 mt-0.5">{{ getPct(electiveStats.inquiry.combo.vocational + electiveStats.inquiry.combo.none, electiveStats.totalRegistered) }}%</p>
+              <p class="text-xs font-bold text-slate-700 mb-1">탐구 미선택</p>
+              <p class="text-xl font-extrabold text-slate-700">{{ electiveStats.inquiry.combo.none }}명</p>
+              <p class="text-[11px] font-semibold text-slate-500 mt-0.5">{{ getPct(electiveStats.inquiry.combo.none, electiveStats.totalRegistered) }}%</p>
             </div>
           </div>
         </div>
