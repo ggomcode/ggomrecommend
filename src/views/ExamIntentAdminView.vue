@@ -273,8 +273,8 @@
                 <!-- 확인서 제출 토글 (수능 미응시 / 대입 원서 미접수 개별 토글) -->
                 <td class="px-2 py-3 text-center">
                   <div class="flex flex-col gap-1 items-center justify-center">
-                    <!-- 1. 수능 미응시 확인서 (수능 미응시 학생 대상) -->
-                    <button v-if="row.csat_intent === 'NO_TAKE'"
+                    <!-- 1. 수능 미응시 확인서 (수능 대장 미접수 또는 셀프 미응시 학생 대상) -->
+                    <button v-if="!row.csat_registered || row.csat_intent === 'NO_TAKE'"
                       @click="toggleCsatFormSubmitted(row)"
                       :class="['text-[10px] font-bold px-1.5 py-0.5 rounded-full cursor-pointer transition-all border whitespace-nowrap', row.is_csat_form_submitted ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100']"
                       :title="row.is_csat_form_submitted ? '수능 미응시 확인서 제출 완료 (클릭 시 미제출로 전환)' : '수능 미응시 확인서 미제출 (클릭 시 제출 완료로 전환)'">
@@ -287,16 +287,16 @@
                       :title="row.is_susi_form_submitted ? '원서 미접수 확인서 제출 완료 (클릭 시 미제출로 전환)' : '원서 미접수 확인서 미제출 (클릭 시 제출 완료로 전환)'">
                       원서: {{ row.is_susi_form_submitted ? '✔제출' : '⏳미제출' }}
                     </button>
-                    <span v-if="row.csat_intent !== 'NO_TAKE' && !hasStudentNoApply(row)" class="text-xs text-slate-300">-</span>
+                    <span v-if="row.csat_registered && row.csat_intent !== 'NO_TAKE' && !hasStudentNoApply(row)" class="text-xs text-slate-300">-</span>
                   </div>
                 </td>
 
                 <!-- 인쇄 -->
                 <td class="px-3 py-3 text-center">
                   <div class="flex gap-1 justify-center">
-                    <button v-if="row.csat_intent === 'NO_TAKE'" @click="printSingleCsat(row)" class="text-[11px] font-bold text-orange-600 hover:bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded cursor-pointer" title="수능 미응시 확인서">📄수능</button>
+                    <button v-if="!row.csat_registered || row.csat_intent === 'NO_TAKE'" @click="printSingleCsat(row)" class="text-[11px] font-bold text-orange-600 hover:bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded cursor-pointer" title="수능 미응시 확인서">📄수능</button>
                     <button v-if="hasStudentNoApply(row)" @click="printSingleSusi(row)" class="text-[11px] font-bold text-purple-600 hover:bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded cursor-pointer" title="대입 원서 미접수 확인서">📄원서</button>
-                    <span v-if="row.csat_intent !== 'NO_TAKE' && !hasStudentNoApply(row)" class="text-xs text-slate-300">-</span>
+                    <span v-if="row.csat_registered && row.csat_intent !== 'NO_TAKE' && !hasStudentNoApply(row)" class="text-xs text-slate-300">-</span>
                   </div>
                 </td>
               </tr>
@@ -983,6 +983,14 @@ function executeRosterPrint() {
   else if (rosterClass.value !== 'all') classInfo = `3학년 ${rosterClass.value}반`
 
   const filterSummaryList = []
+  if (rosterType.value === 'csat') filterSummaryList.push('수능접수대조')
+  else if (rosterType.value === 'apply') filterSummaryList.push('원서접세계획')
+  else if (rosterType.value === 'mismatch') filterSummaryList.push('수능불일치자만')
+  else if (rosterType.value === 'no_take') filterSummaryList.push('수능미응시자만')
+  else if (rosterType.value === 'no_apply') filterSummaryList.push('원서미접수자만')
+  else if (rosterType.value === 'no_form') filterSummaryList.push('확인서미제출자만')
+  else if (rosterType.value === 'no_survey') filterSummaryList.push('조사미응답자만')
+
   if (rosterCsatFilter.value === 'registered') filterSummaryList.push('수능접수:접수됨')
   else if (rosterCsatFilter.value === 'not_registered') filterSummaryList.push('수능접수:미접수')
 
@@ -994,10 +1002,21 @@ function executeRosterPrint() {
 
   const filterSummary = filterSummaryList.length > 0 ? filterSummaryList.join(' / ') : '전체'
 
+  // 1페이지 학교 총괄 현황표는 선택된 대상 학급 범위에 해당하는 학교 원적 전체 학생을 기준으로 온전한 통계 산출
+  let allTargetRecords = comparisonData.value
+  if (rosterClass.value === 'enrolled_all') {
+    allTargetRecords = allTargetRecords.filter(r => r.is_enrolled !== false)
+  } else if (rosterClass.value === 'grad') {
+    allTargetRecords = allTargetRecords.filter(r => r.is_enrolled === false)
+  } else if (rosterClass.value !== 'all') {
+    allTargetRecords = allTargetRecords.filter(r => Number(r.class_no) === Number(rosterClass.value))
+  }
+
   printSummaryRoster(targets, {
     title,
     classInfo,
-    filterSummary
+    filterSummary,
+    allRecords: allTargetRecords
   })
   isRosterModalOpen.value = false
 }
@@ -1559,13 +1578,19 @@ async function toggleSusiFormSubmitted(row) {
 
 // Print
 function printSingleCsat(row) {
-  const student = { name: row.name, grade: row.grade, class_no: row.class_no, student_no: row.student_no, student_code: row.student_code }
+  const student = {
+    name: row.name,
+    grade: row.grade || 3,
+    class_no: row.class_no,
+    student_no: row.student_no,
+    student_code: row.student_code
+  }
   printCsatNoTakeForm(student, {
-    csat_no_take_reason: row.csat_no_take_reason,
-    student_signature: row.student_signature,
-    parent_signature: row.parent_signature,
-    parent_name: row.parent_name,
-    confirmed_at: row.confirmed_at
+    csat_no_take_reason: row.has_survey ? (row.csat_no_take_reason || '') : '',
+    student_signature: row.has_survey && row.student_signature ? row.student_signature : null,
+    parent_signature: row.has_survey && row.parent_signature ? row.parent_signature : null,
+    parent_name: row.parent_name || '',
+    confirmed_at: row.has_survey ? (row.confirmed_at || null) : null
   })
 }
 
@@ -1592,19 +1617,46 @@ function printSingleSusi(row) {
 }
 
 function printBatchCsat() {
-  const targets = filteredData.value
-    .filter(r => r.csat_intent === 'NO_TAKE')
+  // 학급 필터가 걸려있으면 해당 학급 대상, 아니면 전체 대상
+  let baseList = comparisonData.value
+  if (filterClass.value === 'enrolled_all') {
+    baseList = baseList.filter(r => r.is_enrolled !== false)
+  } else if (filterClass.value === 'grad') {
+    baseList = baseList.filter(r => r.is_enrolled === false)
+  } else if (filterClass.value !== 'all') {
+    baseList = baseList.filter(r => Number(r.class_no) === Number(filterClass.value))
+  }
+
+  // '수능(대장)'을 기준으로 '미접수' 상태(!r.csat_registered)에 있는 학생 전원 (또는 셀프 미응시 체크 학생)
+  const targets = baseList
+    .filter(r => !r.csat_registered || r.csat_intent === 'NO_TAKE')
     .map(r => ({
-      student: { name: r.name, grade: r.grade, class_no: r.class_no, student_no: r.student_no, student_code: r.student_code },
+      student: {
+        name: r.name,
+        grade: r.grade || 3,
+        class_no: r.class_no,
+        student_no: r.student_no,
+        student_code: r.student_code
+      },
       intentData: {
-        csat_no_take_reason: r.csat_no_take_reason,
-        student_signature: r.student_signature,
-        parent_signature: r.parent_signature,
-        parent_name: r.parent_name,
-        confirmed_at: r.confirmed_at
+        csat_no_take_reason: r.has_survey ? (r.csat_no_take_reason || '') : '',
+        student_signature: r.has_survey && r.student_signature ? r.student_signature : null,
+        parent_signature: r.has_survey && r.parent_signature ? r.parent_signature : null,
+        parent_name: r.parent_name || '',
+        confirmed_at: r.has_survey ? (r.confirmed_at || null) : null
       }
     }))
-  if (targets.length === 0) return alert('수능 미응시 인쇄 대상이 없습니다.')
+    .sort((a, b) => {
+      const cA = Number(a.student.class_no) || 0
+      const cB = Number(b.student.class_no) || 0
+      if (cA !== cB) return cA - cB
+      const nA = Number(a.student.student_no) || 0
+      const nB = Number(b.student.student_no) || 0
+      if (nA !== nB) return nA - nB
+      return (a.student.student_code || '').localeCompare(b.student.student_code || '')
+    })
+
+  if (targets.length === 0) return alert('수능(대장) 기준 미접수 상태인 대상 학생이 없습니다.')
   printBatchIntentForms(targets, 'csat')
 }
 

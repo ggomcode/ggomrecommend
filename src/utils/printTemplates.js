@@ -1461,7 +1461,7 @@ export function printCsatNoTakeForm(student, intentData = {}) {
   const fullSchoolName = getFormattedSchoolName(currentSchool)
   const principalTitle = formatSchoolPrincipalTitle(currentSchool)
   const dateStr = formatKoreanDate(intentData.confirmed_at)
-  const reason = intentData.csat_no_take_reason || '(사유 미입력)'
+  const reason = intentData.csat_no_take_reason || ''
   const parentNameDisplay = intentData.parent_name || ''
 
   const win = window.open('', '_blank')
@@ -1680,7 +1680,7 @@ export function printBatchIntentForms(list, type = 'csat') {
     const parentNameDisplay = intentData?.parent_name || ''
 
     if (isCsat) {
-      const reason = intentData?.csat_no_take_reason || '(사유 미입력)'
+      const reason = intentData?.csat_no_take_reason || ''
       return `
       <div class="page">
         <h1 class="title">${title}</h1>
@@ -1832,7 +1832,22 @@ export function printSummaryRoster(records, options = {}) {
     }
   }
 
-  // 1. 학급별 그룹핑
+  const allRecords = options.allRecords && options.allRecords.length > 0 ? options.allRecords : records
+
+  // 전체 원적 학생 기준 학급 맵 (1페이지 학교 총괄표 및 각 학급 요약 통계 산출용)
+  const overviewClassMap = new Map()
+  const overviewGraduates = []
+
+  for (const r of allRecords) {
+    if (r.is_enrolled === false || !r.class_no) {
+      overviewGraduates.push(r)
+    } else {
+      if (!overviewClassMap.has(r.class_no)) overviewClassMap.set(r.class_no, [])
+      overviewClassMap.get(r.class_no).push(r)
+    }
+  }
+
+  // 1. 학급별 그룹핑 (실제 인쇄 명단 대상 records 기준)
   const groups = []
   const classMap = new Map()
   const graduates = []
@@ -1867,7 +1882,7 @@ export function printSummaryRoster(records, options = {}) {
     })
   }
 
-  const isMultiClass = groups.length > 1
+  const isMultiClass = groups.length > 1 || overviewClassMap.size > 1
   let pagesHtml = ''
 
   // ================================================================
@@ -1972,23 +1987,31 @@ export function printSummaryRoster(records, options = {}) {
   // 1페이지: 전체 학급 총괄 오버뷰 현황표 (전체 또는 다중 학급 출력 시)
   // ================================================================
   if (isMultiClass) {
-    const enrolledOnly = records.filter(r => r.is_enrolled !== false)
+    const enrolledOnly = allRecords.filter(r => r.is_enrolled !== false)
     const enrolledStats = computeStats(enrolledOnly)
-    const gradStats = computeStats(graduates)
-    const grandStats = computeStats(records)
-    const subStats = computeSubjectStats(records)
+    const gradStats = computeStats(overviewGraduates)
+    const grandStats = computeStats(allRecords)
+    const subStats = computeSubjectStats(allRecords)
 
-    const overviewRows = groups.filter(g => !g.isGrad).map(g => {
+    const sortedOverviewClasses = [...overviewClassMap.keys()].sort((a, b) => a - b)
+    const overviewGroups = sortedOverviewClasses.map(c => ({
+      key: `class_${c}`,
+      name: `3학년 ${c}반`,
+      isGrad: false,
+      items: overviewClassMap.get(c)
+    }))
+
+    const overviewRows = overviewGroups.map(g => {
       const s = computeStats(g.items)
       return `
       <tr>
         <td style="font-weight:700; background:#f8fafc;">${g.name}</td>
         <td style="font-weight:700;">${s.total}</td>
+        <td style="font-weight:600;">${s.csatReg}</td>
+        <td class="${s.csatNotReg > 0 ? 'cell-muted' : ''}">${s.csatNotReg}</td>
         <td>${s.csatTake}</td>
         <td class="${s.csatNoTake > 0 ? 'cell-warn' : ''}">${s.csatNoTake}</td>
         <td class="${s.noSurvey > 0 ? 'cell-muted' : ''}">${s.noSurvey}</td>
-        <td style="font-weight:600;">${s.csatReg}</td>
-        <td class="${s.csatNotReg > 0 ? 'cell-muted' : ''}">${s.csatNotReg}</td>
         <td class="${s.mismatch > 0 ? 'cell-danger' : ''}">${s.mismatch > 0 ? `⚠️ ${s.mismatch}` : '-'}</td>
         <td class="${s.susiGenNo > 0 ? 'cell-warn' : ''}">${s.susiGenNo}</td>
         <td class="${s.jungGenNo > 0 ? 'cell-warn' : ''}">${s.jungGenNo}</td>
@@ -2003,11 +2026,11 @@ export function printSummaryRoster(records, options = {}) {
     <tr style="background:#eef2ff; font-weight:700; border-top:2px solid #6366f1;">
       <td>[재학생 소계]</td>
       <td>${enrolledStats.total}</td>
+      <td>${enrolledStats.csatReg}</td>
+      <td>${enrolledStats.csatNotReg}</td>
       <td>${enrolledStats.csatTake}</td>
       <td class="${enrolledStats.csatNoTake > 0 ? 'cell-warn' : ''}">${enrolledStats.csatNoTake}</td>
       <td>${enrolledStats.noSurvey}</td>
-      <td>${enrolledStats.csatReg}</td>
-      <td>${enrolledStats.csatNotReg}</td>
       <td class="${enrolledStats.mismatch > 0 ? 'cell-danger' : ''}">${enrolledStats.mismatch}</td>
       <td>${enrolledStats.susiGenNo}</td>
       <td>${enrolledStats.jungGenNo}</td>
@@ -2017,14 +2040,14 @@ export function printSummaryRoster(records, options = {}) {
       <td class="${enrolledStats.formNotSub > 0 ? 'cell-danger' : ''}">${enrolledStats.formNotSub}</td>
     </tr>`
 
-    const gradRow = graduates.length > 0 ? `
+    const gradRow = overviewGraduates.length > 0 ? `
     <tr style="background:#fffbeb; font-weight:700;">
       <td>[졸업생]</td>
       <td>${gradStats.total}</td>
-      <td>${gradStats.total}</td>
+      <td>${gradStats.csatReg}</td>
       <td>-</td>
+      <td>${gradStats.csatTake || gradStats.total}</td>
       <td>-</td>
-      <td>${gradStats.total}</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -2039,11 +2062,11 @@ export function printSummaryRoster(records, options = {}) {
     <tr style="background:#f1f5f9; font-weight:800; border-top:2px solid #0f172a; font-size:11px;">
       <td>[총 합계]</td>
       <td>${grandStats.total}</td>
-      <td>${grandStats.csatTake + gradStats.total}</td>
-      <td class="${grandStats.csatNoTake > 0 ? 'cell-warn' : ''}">${grandStats.csatNoTake}</td>
-      <td>${grandStats.noSurvey}</td>
       <td>${grandStats.csatReg}</td>
       <td>${grandStats.csatNotReg}</td>
+      <td>${grandStats.csatTake + (gradStats.csatTake || gradStats.total)}</td>
+      <td class="${grandStats.csatNoTake > 0 ? 'cell-warn' : ''}">${grandStats.csatNoTake}</td>
+      <td>${grandStats.noSurvey}</td>
       <td class="${grandStats.mismatch > 0 ? 'cell-danger' : ''}">${grandStats.mismatch}</td>
       <td>${grandStats.susiGenNo}</td>
       <td>${grandStats.jungGenNo}</td>
@@ -2103,7 +2126,7 @@ export function printSummaryRoster(records, options = {}) {
               <span>출력 조건: <strong>${filterSummary}</strong></span>
             </div>
             <div>
-              <span>총 대상 인원: <strong>${records.length}명</strong> (재학생 ${enrolledStats.total}명, 졸업생 ${gradStats.total}명)</span>
+              <span>학교 총원: <strong>${grandStats.total}명</strong> (재학생 ${enrolledStats.total}명, 졸업생 ${gradStats.total}명)${records.length !== grandStats.total ? ` / [인쇄 명단: <strong>${records.length}명</strong>]` : ''}</span>
               <span>출력일시: ${printDateStr}</span>
             </div>
           </div>
@@ -2115,19 +2138,19 @@ export function printSummaryRoster(records, options = {}) {
             <tr>
               <th rowspan="2" style="width: 100px;">학급 구분</th>
               <th rowspan="2" style="width: 45px;">총원</th>
-              <th colspan="3">수능 응시 의향 (자가조사)</th>
               <th colspan="2">수능 접수대장 (공식)</th>
+              <th colspan="3">수능 응시 의향 (셀프)</th>
               <th rowspan="2" style="width: 70px;">⚠️수능<br>불일치</th>
               <th colspan="2">일반대/과기원 미접수</th>
               <th colspan="2">전문대 미접수</th>
               <th colspan="2">확인서 제출 현황</th>
             </tr>
             <tr>
+              <th style="width: 50px;">접수됨</th>
+              <th style="width: 45px;">미접수</th>
               <th style="width: 45px;">응시</th>
               <th style="width: 50px;">미응시</th>
               <th style="width: 45px;">미응답</th>
-              <th style="width: 50px;">접수됨</th>
-              <th style="width: 45px;">미접수</th>
               <th style="width: 50px;">수시</th>
               <th style="width: 50px;">정시</th>
               <th style="width: 50px;">수시</th>
@@ -2200,7 +2223,9 @@ export function printSummaryRoster(records, options = {}) {
   // 학급별 개별 대장 페이지 (학급별 페이지 분리 + 하단 학급 통계 요약)
   // ================================================================
   for (const group of groups) {
-    const gStats = computeStats(group.items)
+    const classNum = group.key.startsWith('class_') ? Number(group.key.replace('class_', '')) : null
+    const classAllItems = classNum && overviewClassMap.has(classNum) ? overviewClassMap.get(classNum) : group.items
+    const gStats = computeStats(classAllItems)
 
     const rowsHtml = group.items.map((r, idx) => {
       const csatSelf = !r.has_survey ? '<span class="badge-none">미응답</span>' : (r.csat_intent === 'TAKE' ? '<span class="badge-yes">응시</span>' : '<span class="badge-no">미응시</span>')
@@ -2301,9 +2326,9 @@ export function printSummaryRoster(records, options = {}) {
           <table class="class-summary-table">
             <tr>
               <th>학급 총원</th>
-              <th>수능 응시(자가)</th>
-              <th>수능 미응시</th>
               <th>수능 접수대장</th>
+              <th>수능 응시(셀프)</th>
+              <th>수능 미응시(셀프)</th>
               <th>⚠️수능 불일치</th>
               <th>일반대 수시미접수</th>
               <th>일반대 정시미접수</th>
@@ -2313,9 +2338,9 @@ export function printSummaryRoster(records, options = {}) {
             </tr>
             <tr>
               <td style="font-weight:700;">${gStats.total}명</td>
+              <td style="font-weight:600;">${gStats.csatReg}명</td>
               <td>${gStats.csatTake}명</td>
               <td class="${gStats.csatNoTake > 0 ? 'cell-warn' : ''}">${gStats.csatNoTake}명</td>
-              <td style="font-weight:600;">${gStats.csatReg}명</td>
               <td class="${gStats.mismatch > 0 ? 'cell-danger' : ''}">${gStats.mismatch > 0 ? `⚠️ ${gStats.mismatch}명` : '0명'}</td>
               <td class="${gStats.susiGenNo > 0 ? 'cell-warn' : ''}">${gStats.susiGenNo}명</td>
               <td class="${gStats.jungGenNo > 0 ? 'cell-warn' : ''}">${gStats.jungGenNo}명</td>
