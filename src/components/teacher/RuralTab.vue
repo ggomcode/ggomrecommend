@@ -56,107 +56,180 @@
           <span>3학년 재학생 현황</span>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <button
+            type="button"
+            @click="selectStatCard('enrolled', 'all')"
+            :class="[
+              'p-4 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between group',
+              filterClass === 'enrolled' && filterStatus === 'all'
+                ? 'bg-blue-50/90 border-blue-500 ring-2 ring-blue-500/40 shadow-sm'
+                : 'bg-white border-slate-200 shadow-xs hover:border-blue-300 hover:bg-slate-50/80 hover:shadow-xs'
+            ]"
+          >
             <div>
-              <p class="text-xs font-medium text-slate-500">3학년 전체 대상 학생</p>
+              <p class="text-xs font-medium text-slate-500 group-hover:text-blue-600 transition-colors">3학년 전체 대상 학생</p>
               <p class="text-2xl font-bold text-slate-900 mt-1">{{ grade3TotalCount }}명</p>
             </div>
-            <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600">
+            <div :class="['w-10 h-10 rounded-lg flex items-center justify-center transition-colors', filterClass === 'enrolled' && filterStatus === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-600']">
               <Users class="w-5 h-5" />
             </div>
-          </div>
+          </button>
 
-          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <button
+            type="button"
+            @click="selectStatCard('enrolled', 'eligible')"
+            :class="[
+              'p-4 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between group',
+              filterClass === 'enrolled' && filterStatus === 'eligible'
+                ? 'bg-emerald-50/90 border-emerald-500 ring-2 ring-emerald-500/40 shadow-sm'
+                : 'bg-white border-slate-200 shadow-xs hover:border-emerald-300 hover:bg-slate-50/80 hover:shadow-xs'
+            ]"
+          >
             <div>
               <p class="text-xs font-medium text-emerald-600">지원가능 (자동 적격)</p>
               <p class="text-2xl font-bold text-emerald-600 mt-1">{{ grade3EligibleCount }}명</p>
             </div>
-            <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <div :class="['w-10 h-10 rounded-lg flex items-center justify-center transition-colors', filterClass === 'enrolled' && filterStatus === 'eligible' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100']">
               <CheckCircle2 class="w-5 h-5" />
             </div>
-          </div>
+          </button>
 
-          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <button
+            type="button"
+            @click="selectStatCard('enrolled', 'ineligible')"
+            :class="[
+              'p-4 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between group',
+              filterClass === 'enrolled' && filterStatus === 'ineligible'
+                ? 'bg-rose-50/90 border-rose-500 ring-2 ring-rose-500/40 shadow-sm'
+                : 'bg-white border-slate-200 shadow-xs hover:border-rose-300 hover:bg-slate-50/80 hover:shadow-xs'
+            ]"
+          >
             <div>
               <p class="text-xs font-medium text-rose-600">지원불가 (요건 미달)</p>
               <p class="text-2xl font-bold text-rose-600 mt-1">{{ grade3IneligibleCount }}명</p>
             </div>
-            <div class="w-10 h-10 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600">
+            <div :class="['w-10 h-10 rounded-lg flex items-center justify-center transition-colors', filterClass === 'enrolled' && filterStatus === 'ineligible' ? 'bg-rose-600 text-white' : 'bg-rose-50 text-rose-600 group-hover:bg-rose-100']">
               <XCircle class="w-5 h-5" />
             </div>
-          </div>
+          </button>
 
-          <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <button
+            type="button"
+            @click="selectStatCard('enrolled', 'manual')"
+            :class="[
+              'p-4 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between group',
+              filterClass === 'enrolled' && filterStatus === 'manual'
+                ? 'bg-amber-50/90 border-amber-500 ring-2 ring-amber-500/40 shadow-sm'
+                : 'bg-white border-slate-200 shadow-xs hover:border-amber-300 hover:bg-slate-50/80 hover:shadow-xs'
+            ]"
+          >
             <div>
               <p class="text-xs font-medium text-amber-600">수동 변경/소명 인정</p>
               <p class="text-2xl font-bold text-amber-600 mt-1">{{ grade3ManualApprovedCount }}명</p>
             </div>
-            <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+            <div :class="['w-10 h-10 rounded-lg flex items-center justify-center transition-colors', filterClass === 'enrolled' && filterStatus === 'manual' ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-600 group-hover:bg-amber-100']">
               <UserCheck class="w-5 h-5" />
             </div>
-          </div>
+          </button>
         </div>
       </div>
 
-    <!-- 졸업생 요약 통계 카운터 -->
+    <!-- 졸업생 요약 통계 카운터 (버튼화 필터) -->
     <div class="space-y-1.5">
       <div class="flex items-center gap-1.5 text-xs font-bold text-amber-900">
         <UserCheck class="w-4 h-4 text-amber-600" />
         <span>졸업생 현황</span>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div class="p-4 rounded-xl border border-amber-200/70 bg-amber-50/10 shadow-xs flex items-center justify-between">
+        <button
+          type="button"
+          @click="selectStatCard('graduated', 'all')"
+          :class="[
+            'p-4 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between group',
+            filterClass === 'graduated' && filterStatus === 'all'
+              ? 'bg-amber-100/90 border-amber-500 ring-2 ring-amber-500/40 shadow-sm'
+              : 'border-amber-200/70 bg-amber-50/20 shadow-xs hover:border-amber-400 hover:bg-amber-50/50 hover:shadow-xs'
+          ]"
+        >
           <div>
-            <p class="text-xs font-medium text-slate-500">졸업생 전체 대상 학생</p>
+            <p class="text-xs font-medium text-slate-500 group-hover:text-amber-700 transition-colors">졸업생 전체 대상 학생</p>
             <p class="text-2xl font-bold text-slate-900 mt-1">{{ gradTotalCount }}명</p>
           </div>
-          <div class="w-10 h-10 rounded-lg bg-amber-100/60 flex items-center justify-center text-amber-700 font-bold text-sm">
+          <div :class="['w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm transition-colors', filterClass === 'graduated' && filterStatus === 'all' ? 'bg-amber-600 text-white' : 'bg-amber-100/70 text-amber-700 group-hover:bg-amber-200/80']">
             🎓
           </div>
-        </div>
+        </button>
 
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <button
+          type="button"
+          @click="selectStatCard('graduated', 'eligible')"
+          :class="[
+            'p-4 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between group',
+            filterClass === 'graduated' && filterStatus === 'eligible'
+              ? 'bg-emerald-50/90 border-emerald-500 ring-2 ring-emerald-500/40 shadow-sm'
+              : 'bg-white border-slate-200 shadow-xs hover:border-emerald-300 hover:bg-slate-50/80 hover:shadow-xs'
+          ]"
+        >
           <div>
             <p class="text-xs font-medium text-emerald-600">지원가능 (자동 적격)</p>
             <p class="text-2xl font-bold text-emerald-600 mt-1">{{ gradEligibleCount }}명</p>
           </div>
-          <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+          <div :class="['w-10 h-10 rounded-lg flex items-center justify-center transition-colors', filterClass === 'graduated' && filterStatus === 'eligible' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100']">
             <CheckCircle2 class="w-5 h-5" />
           </div>
-        </div>
+        </button>
 
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <button
+          type="button"
+          @click="selectStatCard('graduated', 'ineligible')"
+          :class="[
+            'p-4 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between group',
+            filterClass === 'graduated' && filterStatus === 'ineligible'
+              ? 'bg-rose-50/90 border-rose-500 ring-2 ring-rose-500/40 shadow-sm'
+              : 'bg-white border-slate-200 shadow-xs hover:border-rose-300 hover:bg-slate-50/80 hover:shadow-xs'
+          ]"
+        >
           <div>
             <p class="text-xs font-medium text-rose-600">지원불가 (요건 미달)</p>
             <p class="text-2xl font-bold text-rose-600 mt-1">{{ gradIneligibleCount }}명</p>
           </div>
-          <div class="w-10 h-10 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600">
+          <div :class="['w-10 h-10 rounded-lg flex items-center justify-center transition-colors', filterClass === 'graduated' && filterStatus === 'ineligible' ? 'bg-rose-600 text-white' : 'bg-rose-50 text-rose-600 group-hover:bg-rose-100']">
             <XCircle class="w-5 h-5" />
           </div>
-        </div>
+        </button>
 
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <button
+          type="button"
+          @click="selectStatCard('graduated', 'manual')"
+          :class="[
+            'p-4 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between group',
+            filterClass === 'graduated' && filterStatus === 'manual'
+              ? 'bg-amber-50/90 border-amber-500 ring-2 ring-amber-500/40 shadow-sm'
+              : 'bg-white border-slate-200 shadow-xs hover:border-amber-300 hover:bg-slate-50/80 hover:shadow-xs'
+          ]"
+        >
           <div>
             <p class="text-xs font-medium text-amber-600">수동 변경/소명 인정</p>
             <p class="text-2xl font-bold text-amber-600 mt-1">{{ gradManualApprovedCount }}명</p>
           </div>
-          <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+          <div :class="['w-10 h-10 rounded-lg flex items-center justify-center transition-colors', filterClass === 'graduated' && filterStatus === 'manual' ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-600 group-hover:bg-amber-100']">
             <UserCheck class="w-5 h-5" />
           </div>
-        </div>
+        </button>
       </div>
     </div>
 
     <!-- 데이터 테이블 및 검색/필터 바 -->
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50">
-        <div class="flex items-center gap-2 w-full sm:w-auto">
+        <div class="flex items-center gap-2 w-full sm:w-auto flex-wrap">
           <!-- 반 선택 필터 -->
           <select
             v-model="filterClass"
             class="px-3 py-1.5 pr-7 text-xs bg-white border border-slate-300 rounded-lg font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-48"
           >
             <option value="all">전체 학급 (1~11반 + 졸업생)</option>
+            <option value="enrolled">3학년 재학생 전체 (1~11반)</option>
             <option v-for="c in 11" :key="c" :value="c">{{ c }}반</option>
             <option value="graduated">🎓 졸업생</option>
           </select>
@@ -171,17 +244,33 @@
             <option value="ineligible">지원불가 (미달)</option>
             <option value="manual">수동 인정/변경자</option>
           </select>
+
+          <!-- 필터 리셋 버튼 -->
+          <button
+            v-if="filterClass !== 'all' || filterStatus !== 'all' || searchQuery"
+            @click="resetFilters"
+            class="px-2.5 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-800 bg-white border border-slate-300 hover:bg-slate-100 rounded-lg cursor-pointer transition-all flex items-center gap-1 shadow-2xs"
+            title="필터 전체 초기화"
+          >
+            <span>🔄 전체보기</span>
+          </button>
         </div>
 
-        <!-- 학생 이름/학번 검색 -->
-        <div class="relative w-full sm:w-64">
-          <Search class="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="학생 이름 또는 학번 검색..."
-            class="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+        <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+          <span class="text-xs font-bold text-slate-500 shrink-0">
+            조회: <strong class="text-blue-600 font-extrabold">{{ filteredList.length }}</strong>명
+          </span>
+
+          <!-- 학생 이름/학번 검색 -->
+          <div class="relative w-full sm:w-64">
+            <Search class="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="학생 이름 또는 학번 검색..."
+              class="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
       </div>
 
@@ -584,14 +673,35 @@ const gradEligibleCount = computed(() => gradList.value.filter(s => s.eligibilit
 const gradIneligibleCount = computed(() => gradList.value.filter(s => !s.eligibility?.is_eligible && !s.eligibility?.is_type1_eligible && !s.eligibility?.is_type2_eligible && !s.eligibility?.is_manual_approved).length);
 const gradManualApprovedCount = computed(() => gradList.value.filter(s => s.eligibility?.is_manual_approved || s.eligibility?.is_type2_eligible).length);
 
+function selectStatCard(scope, status) {
+  if (filterClass.value === scope && filterStatus.value === status) {
+    filterClass.value = 'all';
+    filterStatus.value = 'all';
+  } else {
+    filterClass.value = scope;
+    filterStatus.value = status;
+  }
+}
+
+function resetFilters() {
+  filterClass.value = 'all';
+  filterStatus.value = 'all';
+  searchQuery.value = '';
+}
+
 const filteredList = computed(() => {
   const result = studentList.value.filter(item => {
     // 반 필터
     if (filterClass.value === 'graduated') {
-      if (!isGrad(item)) return false;
+      if (!isGrad(item) || item.apply_rural === false) return false;
+    } else if (filterClass.value === 'enrolled') {
+      if (isGrad(item)) return false;
     } else if (filterClass.value !== 'all') {
       if (isGrad(item)) return false;
       if (item.class_no !== Number(filterClass.value)) return false;
+    } else {
+      // 'all' 전체 보기일 때도 농어촌 미지원 졸업생은 통계 기준과 동일하게 제외
+      if (isGrad(item) && item.apply_rural === false) return false;
     }
     // 상태 필터
     const isEligible = item.eligibility?.is_eligible || item.eligibility?.is_type1_eligible || item.eligibility?.is_type2_eligible || item.eligibility?.is_manual_approved;
