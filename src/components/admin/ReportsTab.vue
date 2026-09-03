@@ -1169,6 +1169,7 @@ async function loadData() {
         const trackName = ap.universities?.track_name || tInfo.track_name || ap.track_name || ''
         const isGrad = s.is_graduated || (!s.grade && !!s.grad_year)
         const reason = reqMeta.abandon_reason || ap.abandon_reason || ap.excluded_reason || '개인 사유로 인한 추천 포기'
+        const reqDate = reqMeta.requested_at || ap.abandoned_at || ap.updated_at || ap.created_at
         let dateStr = '-'
         if (reqDate) {
           const d = new Date(reqDate)
