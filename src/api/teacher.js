@@ -815,6 +815,11 @@ track_rank: finalRank,
 recommended: ap.is_recommended,
 abandoned: ap.is_abandoned,
 scanned_doc_url: ap.scanned_doc_url,
+student_signature_url: ap.student_signature_url,
+parent_signature_url: ap.parent_signature_url,
+abandon_reason: ap.abandon_reason,
+abandoned_doc_url: ap.abandoned_doc_url,
+abandoned_at: ap.abandoned_at,
 parent_name: ap.parent_name || st.parent_name || '',
 excluded: ap.is_excluded,
 excluded_reason: ap.excluded_reason,
@@ -826,7 +831,9 @@ seq_no: st.seq_no || null,
 is_enrolled: st.is_enrolled !== false,
 univ_name: u.univ_name || ap.univ_name || '',
 track_name: u.track_name || ap.track_name || '',
-department_name: ap.department_name
+department_name: ap.department_name,
+universities: u,
+raw_app: ap
 })
 })
 

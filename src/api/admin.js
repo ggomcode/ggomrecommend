@@ -2026,6 +2026,11 @@ export const getResults = async (roundId, trackId) => {
         recommended: ap.is_recommended,
         abandoned: ap.is_abandoned,
         scanned_doc_url: ap.scanned_doc_url,
+        student_signature_url: ap.student_signature_url,
+        parent_signature_url: ap.parent_signature_url,
+        abandon_reason: ap.abandon_reason,
+        abandoned_doc_url: ap.abandoned_doc_url,
+        abandoned_at: ap.abandoned_at,
         parent_name: ap.parent_name || ap.stInfo.parent_name || '',
         excluded: ap.is_excluded,
         excluded_reason: ap.excluded_reason,
@@ -2039,7 +2044,9 @@ export const getResults = async (roundId, trackId) => {
         track_name: ap.universities?.track_name || '',
         department_name: ap.department_name,
         grad_allowed: ap.universities?.grad_allowed,
-        quota_limit: ap.universities?.quota_limit
+        quota_limit: ap.universities?.quota_limit,
+        universities: ap.universities,
+        raw_app: ap
       })
     }
   }

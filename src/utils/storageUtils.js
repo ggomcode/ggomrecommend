@@ -42,6 +42,8 @@ export async function deleteApplicationStorageFiles(app) {
       try {
         const parsed = JSON.parse(app.scanned_doc_url)
         if (parsed.doc_url) extractPath(parsed.doc_url, 'documents')
+        if (parsed.student_signature_url) extractPath(parsed.student_signature_url, 'signatures')
+        if (parsed.parent_signature_url) extractPath(parsed.parent_signature_url, 'signatures')
       } catch (e) {}
     } else {
       extractPath(app.scanned_doc_url, 'documents')
@@ -52,9 +54,12 @@ export async function deleteApplicationStorageFiles(app) {
   const sid = app.student_id
   const rid = app.round || app.round_id
   const uid = app.univ_id || app.track_id
+  const appId = app.id
   if (sid && rid && uid) {
     pathsByBucket.signatures.push(`student_${sid}_r${rid}_u_${uid}_student.png`)
     pathsByBucket.signatures.push(`student_${sid}_r${rid}_u_${uid}_parent.png`)
+    pathsByBucket.signatures.push(`abandon_student_${sid}_r${rid}_u_${uid}.png`)
+    pathsByBucket.signatures.push(`abandon_parent_${sid}_r${rid}_u_${uid}.png`)
     pathsByBucket.documents.push(`abandoned_${sid}_r${rid}_u_${uid}.pdf`)
   }
 

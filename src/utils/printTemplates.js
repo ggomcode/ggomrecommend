@@ -1258,8 +1258,20 @@ export function printAbandonmentForm(app, studentInfo = {}) {
   const parentName = app.parent_name || studentInfo.parent_name || '학부모'
   const abandonReason = req.abandon_reason || app.abandon_reason || app.excluded_reason || '개인 사유로 인한 지원 포기'
 
-  const studentSigUrl = req.student_signature_url || app.student_signature_url || studentInfo.student_signature_url
-  const parentSigUrl = req.parent_signature_url || app.parent_signature_url || studentInfo.parent_signature_url
+  // 포기원 서명 URL 안전 검증 (과거 버그로 인해 _undefined_ 공유 파일명이 저장된 경우 지원서 원본 서명으로 자동 대체)
+  const isValidSig = (url) => url && typeof url === 'string' && !url.includes('_undefined_')
+
+  const studentSigUrl = (isValidSig(req.student_signature_url) ? req.student_signature_url : null)
+    || (isValidSig(app.student_signature_url) ? app.student_signature_url : null)
+    || (isValidSig(studentInfo.student_signature_url) ? studentInfo.student_signature_url : null)
+    || (isValidSig(app.signatures?.student) ? app.signatures.student : null)
+    || (!app.student_signature_url && !studentInfo.student_signature_url ? req.student_signature_url : (app.student_signature_url || studentInfo.student_signature_url))
+
+  const parentSigUrl = (isValidSig(req.parent_signature_url) ? req.parent_signature_url : null)
+    || (isValidSig(app.parent_signature_url) ? app.parent_signature_url : null)
+    || (isValidSig(studentInfo.parent_signature_url) ? studentInfo.parent_signature_url : null)
+    || (isValidSig(app.signatures?.parent) ? app.signatures.parent : null)
+    || (!app.parent_signature_url && !studentInfo.parent_signature_url ? req.parent_signature_url : (app.parent_signature_url || studentInfo.parent_signature_url))
 
   const studentSigHtml = studentSigUrl
     ? `<img class="sig-img" src="${studentSigUrl}" />`

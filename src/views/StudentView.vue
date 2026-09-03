@@ -1941,9 +1941,11 @@ async function submitAbandonRequest() {
 
   abandonSubmitLoading.value = true
   try {
-    const studentId = auth.id
-    const roundId = abandonTargetApp.value.round
-    const univId = abandonTargetApp.value.univ_id
+    const studentId = abandonTargetApp.value.student_id || auth.userId || (auth.token?.startsWith('student_') ? auth.token.split('_')[1] : 'student')
+    const roundId = abandonTargetApp.value.round || abandonTargetApp.value.round_id || 1
+    const univId = abandonTargetApp.value.univ_id || abandonTargetApp.value.track_id || 1
+    const appId = abandonTargetApp.value.id || 'app'
+    const timestamp = Date.now()
 
     const studentCanvas = abandonStudentCanvasRef.value
     const parentCanvas = abandonParentCanvasRef.value
@@ -1951,8 +1953,8 @@ async function submitAbandonRequest() {
     const studentSigBlob = await new Promise(resolve => studentCanvas.toBlob(resolve, 'image/png'))
     const parentSigBlob = await new Promise(resolve => parentCanvas.toBlob(resolve, 'image/png'))
 
-    const stPath = `abandon_student_${studentId}_r${roundId}_u_${univId}.png`
-    const paPath = `abandon_parent_${studentId}_r${roundId}_u_${univId}.png`
+    const stPath = `abandon_student_${studentId}_app_${appId}_${timestamp}.png`
+    const paPath = `abandon_parent_${studentId}_app_${appId}_${timestamp}.png`
 
     await Promise.all([
       supabase.storage.from('signatures').upload(stPath, studentSigBlob, { contentType: 'image/png', upsert: true }),
@@ -2215,12 +2217,20 @@ function printAbandonForm(ap) {
             
             <div class="signature-area">
               <div class="sig-box">
-                <div>학생 본인: ${auth.studentName} (서명/날인)</div>
-                <img class="sig-img" src="${req.student_signature_url}" />
+                <div>학생 본인: ${auth.studentName || ''} (서명/날인)</div>
+                ${(() => {
+                  const isValid = url => url && typeof url === 'string' && !url.includes('_undefined_')
+                  const finalUrl = (isValid(req.student_signature_url) ? req.student_signature_url : null) || ap.student_signature_url || req.student_signature_url
+                  return finalUrl ? `<img class="sig-img" src="${finalUrl}" />` : `<div style="height: 60px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px;">(서명/날인)</div>`
+                })()}
               </div>
               <div class="sig-box">
-                <div>보호자(학부모): ${ap.parent_name} (서명/날인)</div>
-                <img class="sig-img" src="${req.parent_signature_url}" />
+                <div>보호자(학부모): ${ap.parent_name || '학부모'} (서명/날인)</div>
+                ${(() => {
+                  const isValid = url => url && typeof url === 'string' && !url.includes('_undefined_')
+                  const finalUrl = (isValid(req.parent_signature_url) ? req.parent_signature_url : null) || ap.parent_signature_url || req.parent_signature_url
+                  return finalUrl ? `<img class="sig-img" src="${finalUrl}" />` : `<div style="height: 60px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px;">(서명/날인)</div>`
+                })()}
               </div>
             </div>
             
