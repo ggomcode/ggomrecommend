@@ -664,7 +664,7 @@
 
 <script setup>
 import { ref, onMounted, computed, nextTick } from 'vue'
-import { getQuotaStats, exportQuotaStats, exportAbandonedExcel, getDisclosureCount } from '../../api/admin.js'
+import { getQuotaStats, exportQuotaStats, exportAbandonedExcel, getDisclosureCount, repairCorruptedAbandonSignatures } from '../../api/admin.js'
 import { printAbandonmentForm } from '../../utils/printTemplates.js'
 import { schoolName } from '../../utils/schoolConfig.js'
 import { dialog } from '../common/dialog.js'
@@ -1084,6 +1084,11 @@ const currentDate = computed(() => {
 async function loadData() {
   loading.value = true
   try {
+    try {
+      await repairCorruptedAbandonSignatures()
+    } catch (err) {
+      console.warn('포기원 서명 자동 복구 예외:', err)
+    }
     stats.value = await getQuotaStats()
     if (supabase) {
       // 1. 지원서, 학생 마스터, 수도권/지역 추천 전형(졸업조건), 라운드 목록, 라운드 일정 로드

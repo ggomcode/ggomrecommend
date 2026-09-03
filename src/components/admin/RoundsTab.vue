@@ -796,6 +796,7 @@ import {
   blobErrMsg,
   getRoundConfirmationStatus,
   promoteNextEligibleStudent,
+  repairCorruptedAbandonSignatures,
 } from '../../api/admin.js'
 import HelpBox from '../common/HelpBox.vue'
 import { dialog } from '../common/dialog.js'
@@ -1983,6 +1984,9 @@ watch(showAbandonOnly, async () => {
 })
 
 onMounted(async () => {
+  try {
+    repairCorruptedAbandonSignatures().catch(() => {})
+  } catch (e) {}
   await loadSchedules()
   await loadTotalRounds()
   await loadRounds()

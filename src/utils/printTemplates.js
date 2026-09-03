@@ -1,4 +1,5 @@
 import { schoolName, formatSchoolPrincipalTitle } from './schoolConfig.js'
+import { supabase } from './supabaseClient.js'
 
 function getFormattedSchoolName(rawInput) {
   const unwrapped = rawInput && typeof rawInput === 'object' && 'value' in rawInput ? rawInput.value : rawInput
@@ -1235,7 +1236,7 @@ export function printAllClassesApplicationsReport({
  * @param {Object} app 지원 및 포기 정보 객체
  * @param {Object} [studentInfo] 학생 추가 정보 (선택사항)
  */
-export function printAbandonmentForm(app, studentInfo = {}) {
+export async function printAbandonmentForm(app, studentInfo = {}) {
   const printWindow = window.open('', '_blank')
   if (!printWindow) {
     alert('팝업 창이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.')
@@ -1258,21 +1259,56 @@ export function printAbandonmentForm(app, studentInfo = {}) {
   const parentName = app.parent_name || studentInfo.parent_name || '학부모'
   const abandonReason = req.abandon_reason || app.abandon_reason || app.excluded_reason || '개인 사유로 인한 지원 포기'
 
-  // 포기원 서명 URL 안전 검증 (과거 버그로 인해 _undefined_ 공유 파일명이 저장된 경우 지원서 원본 서명으로 자동 대체)
-  const isValidSig = (url) => url && typeof url === 'string' && !url.includes('_undefined_')
+  // 학생 ID 확인
+  const sid = app.student_id || studentInfo.id || app.raw_app?.student_id || app.raw_student?.id
 
-  const studentSigUrl = (isValidSig(req.student_signature_url) ? req.student_signature_url : null)
+  // 포기원 서명 URL 엄격 검증:
+  // - null/빈값 배제
+  // - 과거 버그로 생성된 '_undefined_' 포함 파일 배제
+  // - 다른 학생의 ID가 파일명에 명시된 경우(student_{otherId}_ / abandon_student_{otherId}_) 배제
+  const isValidSig = (url) => {
+    if (!url || typeof url !== 'string') return false
+    if (url.includes('_undefined_')) return false
+    if (sid && url.includes('student_') && !url.includes(`_${sid}_`) && !url.includes(`student_${sid}.`)) {
+      return false
+    }
+    return true
+  }
+
+  let studentSigUrl = (isValidSig(req.student_signature_url) ? req.student_signature_url : null)
     || (isValidSig(app.student_signature_url) ? app.student_signature_url : null)
     || (isValidSig(studentInfo.student_signature_url) ? studentInfo.student_signature_url : null)
     || (isValidSig(app.signatures?.student) ? app.signatures.student : null)
-    || (!app.student_signature_url && !studentInfo.student_signature_url ? req.student_signature_url : (app.student_signature_url || studentInfo.student_signature_url))
 
-  const parentSigUrl = (isValidSig(req.parent_signature_url) ? req.parent_signature_url : null)
+  let parentSigUrl = (isValidSig(req.parent_signature_url) ? req.parent_signature_url : null)
     || (isValidSig(app.parent_signature_url) ? app.parent_signature_url : null)
     || (isValidSig(studentInfo.parent_signature_url) ? studentInfo.parent_signature_url : null)
     || (isValidSig(app.signatures?.parent) ? app.signatures.parent : null)
-    || (!app.parent_signature_url && !studentInfo.parent_signature_url ? req.parent_signature_url : (app.parent_signature_url || studentInfo.parent_signature_url))
 
+  // 서명이 누락되거나 오염된 경우, Supabase DB에서 해당 학생 본인의 유효한 서명을 직접 조회하여 자동 복구
+  if (supabase && sid && (!studentSigUrl || !parentSigUrl)) {
+    try {
+      const { data: studentApps } = await supabase
+        .from('applications')
+        .select('student_signature_url, parent_signature_url')
+        .eq('student_id', sid)
+        .not('student_signature_url', 'is', null)
+
+      for (const va of (studentApps || [])) {
+        if (!studentSigUrl && isValidSig(va.student_signature_url)) {
+          studentSigUrl = va.student_signature_url
+        }
+        if (!parentSigUrl && isValidSig(va.parent_signature_url)) {
+          parentSigUrl = va.parent_signature_url
+        }
+        if (studentSigUrl && parentSigUrl) break
+      }
+    } catch (e) {
+      console.warn('포기원 학생 본인 서명 DB 복구 조회 실패:', e)
+    }
+  }
+
+  // 절대 다른 사람 서명으로 오염된 URL로 폴백하지 않고, 서명이 없는 경우 단정하게 (서명/날인) 공란 표시
   const studentSigHtml = studentSigUrl
     ? `<img class="sig-img" src="${studentSigUrl}" />`
     : `<div style="height: 60px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 12px;">(서명/날인)</div>`

@@ -4406,7 +4406,81 @@ export const promoteNextEligibleStudent = async (univId, roundId) => {
     name: decryptedName,
     student_code: stInfo.student_code || '',
     univ_name: univ.univ_name,
-    track_name: univ.track_name,
     department_name: nextStudent.department_name
   }
+}
+
+/**
+ * 31. 과거 버그로 오염된 포기원 서명 데이터(DB scanned_doc_url)를 학생 본인의 원래 서명으로 일괄 복구
+ */
+export async function repairCorruptedAbandonSignatures() {
+  if (!supabase) return { repaired: 0 }
+  let repairedCount = 0
+
+  try {
+    const { data: apps, error } = await supabase
+      .from('applications')
+      .select('id, student_id, scanned_doc_url, student_signature_url, parent_signature_url')
+      .not('scanned_doc_url', 'is', null)
+
+    if (error || !apps) return { repaired: 0 }
+
+    for (const ap of apps) {
+      if (!ap.scanned_doc_url) continue
+      try {
+        const parsed = typeof ap.scanned_doc_url === 'string' ? JSON.parse(ap.scanned_doc_url) : ap.scanned_doc_url
+        if (!parsed) continue
+
+        const sid = ap.student_id
+        const isStCorrupted = parsed.student_signature_url && (
+          parsed.student_signature_url.includes('_undefined_') ||
+          (sid && parsed.student_signature_url.includes('student_') && !parsed.student_signature_url.includes(`_${sid}_`) && !parsed.student_signature_url.includes(`student_${sid}.`))
+        )
+        const isPaCorrupted = parsed.parent_signature_url && (
+          parsed.parent_signature_url.includes('_undefined_') ||
+          (sid && parsed.parent_signature_url.includes('student_') && !parsed.parent_signature_url.includes(`_${sid}_`) && !parsed.parent_signature_url.includes(`student_${sid}.`))
+        )
+
+        if (isStCorrupted || isPaCorrupted) {
+          // 해당 학생의 정상 서명 조회
+          let realStSig = ap.student_signature_url && !ap.student_signature_url.includes('_undefined_') ? ap.student_signature_url : null
+          let realPaSig = ap.parent_signature_url && !ap.parent_signature_url.includes('_undefined_') ? ap.parent_signature_url : null
+
+          if (!realStSig || !realPaSig) {
+            const { data: siblingApps } = await supabase
+              .from('applications')
+              .select('student_signature_url, parent_signature_url')
+              .eq('student_id', sid)
+              .not('student_signature_url', 'is', null)
+
+            for (const sib of (siblingApps || [])) {
+              if (!realStSig && sib.student_signature_url && !sib.student_signature_url.includes('_undefined_')) {
+                realStSig = sib.student_signature_url
+              }
+              if (!realPaSig && sib.parent_signature_url && !sib.parent_signature_url.includes('_undefined_')) {
+                realPaSig = sib.parent_signature_url
+              }
+              if (realStSig && realPaSig) break
+            }
+          }
+
+          if (isStCorrupted) parsed.student_signature_url = realStSig
+          if (isPaCorrupted) parsed.parent_signature_url = realPaSig
+
+          await supabase
+            .from('applications')
+            .update({ scanned_doc_url: JSON.stringify(parsed) })
+            .eq('id', ap.id)
+
+          repairedCount++
+        }
+      } catch (e) {
+        console.warn('Individual app signature parse/repair failed:', e)
+      }
+    }
+  } catch (err) {
+    console.warn('repairCorruptedAbandonSignatures batch failed:', err)
+  }
+
+  return { repaired: repairedCount }
 }
