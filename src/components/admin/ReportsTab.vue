@@ -6,9 +6,6 @@
       <div class="flex items-center justify-between shrink-0 mb-5">
         <div>
           <h1 class="text-2xl font-bold text-slate-900" style="margin: 0;">결과 보고서 및 프린트</h1>
-          <p class="text-xs text-slate-500 mt-1" style="margin: 4px 0 0;">
-            학업성적관리위원회 및 교내 보관용 학교장추천전형 대학별·학과별 추천 확정/대기 학생 명단 및 정원 현황 보고서입니다. (접수 진행 중에도 실시간 현황 반영)
-          </p>
         </div>
 
         <!-- 우측 액션 버튼들 -->
@@ -368,7 +365,7 @@
                   <th style="width: 80px;">학번</th>
                   <th style="width: 75px;">성명</th>
                   <th style="width: 55px;">구분</th>
-                  <th style="width: 90px;">포기일자</th>
+                  <th style="width: 85px; white-space: nowrap;">포기일자</th>
                   <th>포기 사유</th>
                 </tr>
               </thead>
@@ -385,8 +382,8 @@
                   <td class="text-center font-mono text-slate-700">{{ ab.student_code }}</td>
                   <td class="text-center font-black text-slate-900">{{ ab.name }}</td>
                   <td class="text-center font-medium">{{ ab.grade_type }}</td>
-                  <td class="text-center text-xs text-slate-600">{{ ab.date }}</td>
-                  <td class="text-left text-xs text-rose-900 leading-snug">{{ ab.reason }}</td>
+                  <td class="text-center text-slate-700" style="white-space: nowrap;">{{ ab.date }}</td>
+                  <td class="text-left text-slate-800 leading-snug">{{ ab.reason }}</td>
                 </tr>
               </tbody>
             </table>
@@ -1172,8 +1169,16 @@ async function loadData() {
         const trackName = ap.universities?.track_name || tInfo.track_name || ap.track_name || ''
         const isGrad = s.is_graduated || (!s.grade && !!s.grad_year)
         const reason = reqMeta.abandon_reason || ap.abandon_reason || ap.excluded_reason || '개인 사유로 인한 추천 포기'
-        const reqDate = reqMeta.requested_at || ap.abandoned_at || ap.updated_at
-        const dateStr = reqDate ? new Date(reqDate).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'
+        let dateStr = '-'
+        if (reqDate) {
+          const d = new Date(reqDate)
+          if (!isNaN(d.getTime())) {
+            const y = d.getFullYear()
+            const m = String(d.getMonth() + 1).padStart(2, '0')
+            const day = String(d.getDate()).padStart(2, '0')
+            dateStr = `${y}-${m}-${day}`
+          }
+        }
 
         abList.push({
           id: ap.id,
