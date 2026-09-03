@@ -79,14 +79,14 @@
               </div>
               <span
                 :class="[
-                  'px-3 py-1.5 rounded-full text-xs font-bold shadow-xs whitespace-nowrap shrink-0',
+                  '-mr-6 sm:-mr-7 pl-3.5 pr-5 sm:pr-6 py-1.5 rounded-l-full rounded-r-none text-xs font-bold shadow-xs whitespace-nowrap shrink-0 border-y border-l border-r-0',
                   principalPeriodState === 'OPEN'
-                    ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                    ? 'bg-blue-100 text-blue-800 border-blue-200'
                     : (principalPeriodState === 'DRAFT'
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
                         : (principalPeriodState === 'CLOSED'
-                            ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                            : 'bg-slate-100 text-slate-700 border border-slate-200'))
+                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                            : 'bg-slate-100 text-slate-700 border-slate-200'))
                 ]"
               >
                 {{ principalStatusText }}
@@ -144,12 +144,12 @@
               </div>
               <span
                 :class="[
-                  'px-3 py-1.5 rounded-full text-xs font-bold shadow-xs whitespace-nowrap shrink-0',
+                  '-mr-6 sm:-mr-7 pl-3.5 pr-5 sm:pr-6 py-1.5 rounded-l-full rounded-r-none text-xs font-bold shadow-xs whitespace-nowrap shrink-0 border-y border-l border-r-0',
                   (!auth.isStudent || isRuralEligible)
                     ? (isRuralSystemOpen
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                        : (ruralPeriodState === 'before' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-700 border border-slate-200'))
-                    : 'bg-amber-100 text-amber-900 border border-amber-300 font-extrabold'
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                        : (ruralPeriodState === 'before' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-700 border-slate-200'))
+                    : 'bg-amber-100 text-amber-900 border-amber-300 font-extrabold'
                 ]"
               >
                 <template v-if="auth.isStudent && !isRuralEligible">🔒 농어촌 자격 미달</template>
@@ -204,7 +204,7 @@
                   <path d="M6 9.01V9"/>
                 </svg>
               </div>
-              <span class="px-3 py-1.5 rounded-full text-xs font-bold shadow-xs whitespace-nowrap shrink-0 bg-violet-100 text-violet-800 border border-violet-200">
+              <span class="-mr-6 sm:-mr-7 pl-3.5 pr-5 sm:pr-6 py-1.5 rounded-l-full rounded-r-none text-xs font-bold shadow-xs whitespace-nowrap shrink-0 bg-violet-100 text-violet-800 border-y border-l border-r-0 border-violet-200">
                 재학생 전수 조사
               </span>
             </div>
@@ -246,7 +246,7 @@
                   <circle cx="12" cy="12" r="3"/>
                 </svg>
               </div>
-              <span class="px-3 py-1.5 rounded-full text-xs font-bold shadow-xs whitespace-nowrap shrink-0 bg-slate-100 text-slate-800 border border-slate-200">
+              <span class="-mr-6 sm:-mr-7 pl-3.5 pr-5 sm:pr-6 py-1.5 rounded-l-full rounded-r-none text-xs font-bold shadow-xs whitespace-nowrap shrink-0 bg-slate-100 text-slate-800 border-y border-l border-r-0 border-slate-200">
                 관리자 전용
               </span>
             </div>
