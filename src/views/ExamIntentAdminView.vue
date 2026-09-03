@@ -180,7 +180,7 @@
                 <th class="px-3 py-3 text-center font-bold text-slate-600">(전문대)수시</th>
                 <th class="px-3 py-3 text-center font-bold text-slate-600">(전문대)정시</th>
                 <th class="px-3 py-3 text-center font-bold text-slate-600">수정이력</th>
-                <th class="px-2 py-3 text-center font-bold text-slate-600">확인서</th>
+                <th class="px-2 py-3 text-center font-bold text-slate-600 min-w-[85px] whitespace-nowrap">확인서</th>
                 <th class="px-3 py-3 text-center font-bold text-slate-600">개별인쇄</th>
               </tr>
             </thead>

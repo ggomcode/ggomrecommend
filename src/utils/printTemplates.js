@@ -2224,7 +2224,7 @@ export function printSummaryRoster(records, options = {}) {
         if ((r.susi_general_intent || r.susi_intent) === 'NO_APPLY' || (r.jungsi_general_intent || r.jungsi_intent) === 'NO_APPLY' || r.susi_college_intent === 'NO_APPLY' || r.jungsi_college_intent === 'NO_APPLY') {
           forms.push(r.is_susi_form_submitted ? '<span class="badge-yes">원서:제출</span>' : '<span class="badge-no">원서:미제출</span>')
         }
-        formSub = forms.length > 0 ? forms.join('<br>') : '-'
+        formSub = forms.length > 0 ? forms.join('<div style="margin-top:2px;"></div>') : '-'
       }
 
       let remarks = []
@@ -2275,18 +2275,18 @@ export function printSummaryRoster(records, options = {}) {
         <table class="roster-table">
           <thead>
             <tr>
-              <th style="width: 30px;">No</th>
-              <th style="width: 55px;">학번</th>
-              <th style="width: 65px;">성명</th>
-              <th style="width: 65px;">반/번호</th>
-              <th style="width: 62px;">수능(대장)</th>
-              <th style="width: 58px;">수능(셀프)</th>
-              <th style="width: 52px;">매칭</th>
-              <th style="width: 62px;">(일반대)수시</th>
-              <th style="width: 62px;">(일반대)정시</th>
-              <th style="width: 62px;">(전문대)수시</th>
-              <th style="width: 62px;">(전문대)정시</th>
-              <th style="width: 65px;">확인서</th>
+              <th style="width: 28px;">No</th>
+              <th style="width: 52px;">학번</th>
+              <th style="width: 58px;">성명</th>
+              <th style="width: 58px;">반/번호</th>
+              <th style="width: 58px;">수능(대장)</th>
+              <th style="width: 56px;">수능(셀프)</th>
+              <th style="width: 46px;">매칭</th>
+              <th style="width: 58px;">(일반대)수시</th>
+              <th style="width: 58px;">(일반대)정시</th>
+              <th style="width: 58px;">(전문대)수시</th>
+              <th style="width: 58px;">(전문대)정시</th>
+              <th style="width: 82px;">확인서</th>
               <th>비고 (미응시·미접수 사유 및 특이사항)</th>
             </tr>
           </thead>
@@ -2363,10 +2363,10 @@ export function printSummaryRoster(records, options = {}) {
     th, td { border: 1px solid #64748b; padding: 4.5px 4px; text-align: center; font-size: 10px; line-height: 1.3; }
     th { background: #f1f5f9 !important; font-weight: 700; color: #0f172a; }
     .text-left { text-align: left !important; }
-    .badge-yes { color: #166534; font-weight: 700; }
-    .badge-no { color: #991b1b; font-weight: 700; background: #fee2e2; padding: 1px 4px; border-radius: 3px; border: 1px solid #fca5a5; display: inline-block; }
-    .badge-mismatch { color: #b91c1c; font-weight: 800; background: #fecaca; padding: 1px 4px; border-radius: 3px; border: 1px solid #f87171; display: inline-block; }
-    .badge-none { color: #94a3b8; }
+    .badge-yes { color: #166534; font-weight: 700; white-space: nowrap; display: inline-block; }
+    .badge-no { color: #991b1b; font-weight: 700; background: #fee2e2; padding: 1px 4px; border-radius: 3px; border: 1px solid #fca5a5; display: inline-block; white-space: nowrap; }
+    .badge-mismatch { color: #b91c1c; font-weight: 800; background: #fecaca; padding: 1px 4px; border-radius: 3px; border: 1px solid #f87171; display: inline-block; white-space: nowrap; }
+    .badge-none { color: #94a3b8; white-space: nowrap; }
     .cell-warn { color: #c2410c; font-weight: 700; background: #fff7ed !important; }
     .cell-danger { color: #b91c1c; font-weight: 800; background: #fee2e2 !important; }
     .cell-muted { color: #94a3b8; }
