@@ -2076,31 +2076,27 @@ export function printSummaryRoster(records, options = {}) {
       <td class="${grandStats.formNotSub > 0 ? 'cell-danger' : ''}">${grandStats.formNotSub}</td>
     </tr>`
 
-    // 탐구 세부 과목 정렬 및 출력 (분모: 총 선택과목수)
-    const inquiryRows = Object.entries(subStats.inquiry.counts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, count]) => {
-        const pct = subStats.inquiry.totalPicks > 0 ? ((count / subStats.inquiry.totalPicks) * 100).toFixed(1) : 0
-        return `<span style="display:inline-block; margin:2px 6px; font-size:10px; background:#fff; border:1px solid #cbd5e1; padding:2px 6px; border-radius:4px;"><strong>${name}</strong>: ${count}건 (${pct}%)</span>`
-      }).join('') || '<span class="cell-muted">선택 내역 없음</span>'
-
-    // 국어/수학/외국어/탐구조합 요약 텍스트
+    // ----------------------------------------------------------------
+    // 선택과목 통계 시각화 그래프 데이터 산출
+    // ----------------------------------------------------------------
+    const regTot = subStats.totalRegistered || 1
     const korHwawon = subStats.korean.map['화법과 작문'] || 0
     const korEonmae = subStats.korean.map['언어와 매체'] || 0
     const korNone = subStats.korean.map['미선택'] || 0
-    const korHwawonPct = subStats.totalRegistered > 0 ? ((korHwawon / subStats.totalRegistered) * 100).toFixed(1) : 0
-    const korEonmaePct = subStats.totalRegistered > 0 ? ((korEonmae / subStats.totalRegistered) * 100).toFixed(1) : 0
+    const korHwawonPct = ((korHwawon / regTot) * 100).toFixed(1)
+    const korEonmaePct = ((korEonmae / regTot) * 100).toFixed(1)
+    const korNonePct = ((korNone / regTot) * 100).toFixed(1)
 
     const mathHwatong = subStats.math.map['확률과 통계'] || 0
     const mathMijeok = subStats.math.map['미적분'] || 0
     const mathGiha = subStats.math.map['기하'] || 0
     const mathNone = subStats.math.map['미선택'] || 0
-    const mathHwatongPct = subStats.totalRegistered > 0 ? ((mathHwatong / subStats.totalRegistered) * 100).toFixed(1) : 0
-    const mathMijeokPct = subStats.totalRegistered > 0 ? ((mathMijeok / subStats.totalRegistered) * 100).toFixed(1) : 0
-    const mathGihaPct = subStats.totalRegistered > 0 ? ((mathGiha / subStats.totalRegistered) * 100).toFixed(1) : 0
+    const mathHwatongPct = ((mathHwatong / regTot) * 100).toFixed(1)
+    const mathMijeokPct = ((mathMijeok / regTot) * 100).toFixed(1)
+    const mathGihaPct = ((mathGiha / regTot) * 100).toFixed(1)
+    const mathNonePct = ((mathNone / regTot) * 100).toFixed(1)
 
     const cb = subStats.inquiry.combo
-    const regTot = subStats.totalRegistered || 1
     const s2Pct = ((cb.social2 / regTot) * 100).toFixed(1)
     const s1Pct = ((cb.social1 / regTot) * 100).toFixed(1)
     const s1c1Pct = ((cb.social1_science1 / regTot) * 100).toFixed(1)
@@ -2109,11 +2105,101 @@ export function printSummaryRoster(records, options = {}) {
     const vocPct = ((cb.vocational / regTot) * 100).toFixed(1)
     const inqNonePct = ((cb.none / regTot) * 100).toFixed(1)
 
-    const foreignEntries = Object.entries(subStats.foreign.map)
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, count]) => `${name}: ${count}명`)
-      .join(', ') || '없음'
+    const foreignTakerPct = ((subStats.foreign.takers / regTot) * 100).toFixed(1)
+    const foreignNonePct = ((subStats.foreign.none / regTot) * 100).toFixed(1)
+    const foreignSorted = Object.entries(subStats.foreign.map).sort((a, b) => b[1] - a[1])
+    const maxForeignCount = foreignSorted.length > 0 ? Math.max(...foreignSorted.map(f => f[1])) : 1
+    const foreignEntriesHtml = foreignSorted.length > 0 ? foreignSorted.map(([name, count]) => {
+      const w = Math.max((count / maxForeignCount) * 100, 4).toFixed(1)
+      return `
+      <div style="display: flex; align-items: center; gap: 6px; font-size: 9.5px; margin-bottom: 2.5px;">
+        <span style="width: 65px; font-weight: 600; color: #334155; white-space: nowrap;">${name}</span>
+        <div style="flex: 1; height: 8px; background: #f1f5f9; border-radius: 3px; overflow: hidden; border: 1px solid #e2e8f0;">
+          <div style="width: ${w}%; height: 100%; background: #059669; border-radius: 2px;"></div>
+        </div>
+        <span style="width: 32px; text-align: right; font-weight: 700; color: #059669;">${count}명</span>
+      </div>`
+    }).join('') : `<div style="font-size: 9.5px; color: #94a3b8; text-align: center; padding: 10px 0;">응시 과목 없음</div>`
 
+    // 탐구 17개 세부 과목 정규화 및 정렬
+    const all17Subjects = [
+      { name: '생활과 윤리', isSocial: true },
+      { name: '윤리와 사상', isSocial: true },
+      { name: '한국지리', isSocial: true },
+      { name: '세계지리', isSocial: true },
+      { name: '동아시아사', isSocial: true },
+      { name: '세계사', isSocial: true },
+      { name: '경제', isSocial: true },
+      { name: '정치와 법', isSocial: true },
+      { name: '사회·문화', isSocial: true },
+      { name: '물리학Ⅰ', isSocial: false },
+      { name: '화학Ⅰ', isSocial: false },
+      { name: '생명과학Ⅰ', isSocial: false },
+      { name: '지구과학Ⅰ', isSocial: false },
+      { name: '물리학Ⅱ', isSocial: false },
+      { name: '화학Ⅱ', isSocial: false },
+      { name: '생명과학Ⅱ', isSocial: false },
+      { name: '지구과학Ⅱ', isSocial: false }
+    ]
+
+    const sortedInquiryList = all17Subjects.map(sub => {
+      let count = 0
+      const cleanTarget = sub.name.replace(/[\s·./]/g, '').replace(/Ⅰ/g, 'I').replace(/Ⅱ/g, 'II')
+      for (const [k, v] of Object.entries(subStats.inquiry.counts)) {
+        const cleanK = k.replace(/[\s·./]/g, '').replace(/Ⅰ/g, 'I').replace(/Ⅱ/g, 'II')
+        if (cleanK === cleanTarget) {
+          count += v
+        }
+      }
+      const pct = subStats.inquiry.totalPicks > 0 ? ((count / subStats.inquiry.totalPicks) * 100).toFixed(1) : '0.0'
+      return { ...sub, count, pct }
+    }).sort((a, b) => b.count - a.count)
+
+    const maxInquiryPct = Math.max(...sortedInquiryList.map(s => Number(s.pct)), 1)
+    const inquiryCol1 = sortedInquiryList.slice(0, 9)
+    const inquiryCol2 = sortedInquiryList.slice(9)
+
+    function renderInquiryRow(sub, rank) {
+      const barWidth = Math.max((Number(sub.pct) / maxInquiryPct) * 100, sub.count > 0 ? 3 : 0).toFixed(1)
+      const barColor = sub.isSocial ? '#ea580c' : '#0891b2'
+      const tagBg = sub.isSocial ? '#ffedd5' : '#cffafe'
+      const tagColor = sub.isSocial ? '#c2410c' : '#0e7490'
+      const tagText = sub.isSocial ? '사탐' : '과탐'
+
+      return `
+      <div style="display: flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 9.5px; border-bottom: 1px dashed #f1f5f9;">
+        <span style="width: 24px; text-align: center; font-weight: 800; color: ${rank <= 3 ? '#4338ca' : '#64748b'}; font-size: ${rank <= 3 ? '10.5px' : '9.5px'};">${rank}위</span>
+        <span style="width: 68px; font-weight: 700; color: #1e293b; text-align: left; white-space: nowrap;">${sub.name}</span>
+        <span style="font-size: 8px; padding: 1px 3px; border-radius: 3px; background: ${tagBg}; color: ${tagColor}; font-weight: 700; white-space: nowrap;">${tagText}</span>
+        <div style="flex: 1; height: 10px; background: #f8fafc; border-radius: 3px; overflow: hidden; margin: 0 4px; border: 1px solid #e2e8f0;">
+          <div style="width: ${barWidth}%; height: 100%; background: ${barColor}; border-radius: 2px;"></div>
+        </div>
+        <span style="width: 82px; text-align: right; font-weight: 700; color: #0f172a; white-space: nowrap;">
+          <strong>${sub.count}건</strong> <span style="font-size: 9px; font-weight: 600; color: ${barColor};">(${sub.pct}%)</span>
+        </span>
+      </div>`
+    }
+
+    const inquiryCol1Html = inquiryCol1.map((sub, idx) => renderInquiryRow(sub, idx + 1)).join('')
+    const inquiryCol2Html = inquiryCol2.map((sub, idx) => renderInquiryRow(sub, idx + 10)).join('')
+
+    function renderMiniBar(label, count, pct, color, maxP = 100) {
+      const w = Math.max((Number(pct) / maxP) * 100, count > 0 ? 2 : 0).toFixed(1)
+      return `
+      <div style="margin-bottom: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; margin-bottom: 1.5px;">
+          <span style="font-weight: 600; color: #334155; white-space: nowrap;">${label}</span>
+          <span style="font-weight: 700; color: #0f172a; white-space: nowrap;">${count}명 <span style="font-size: 9px; font-weight: 700; color: ${color};">(${pct}%)</span></span>
+        </div>
+        <div style="height: 8.5px; background: #f1f5f9; border-radius: 3px; overflow: hidden; border: 1px solid #e2e8f0;">
+          <div style="width: ${w}%; height: 100%; background: ${color}; border-radius: 2px;"></div>
+        </div>
+      </div>`
+    }
+
+    // ================================================================
+    // 1페이지: 전체 학급 총괄 오버뷰 현황표
+    // ================================================================
     pagesHtml += `
     <div class="page-container">
       <div>
@@ -2132,7 +2218,7 @@ export function printSummaryRoster(records, options = {}) {
           </div>
         </div>
 
-        <!-- 1. 학급별 총괄 매트릭스 표 -->
+        <!-- 학급별 총괄 매트릭스 표 -->
         <table class="roster-table overview-table">
           <thead>
             <tr>
@@ -2166,45 +2252,111 @@ export function printSummaryRoster(records, options = {}) {
             ${grandTotalRow}
           </tbody>
         </table>
+      </div>
 
-        <!-- 2. 수능 선택과목 통계 현황표 (국어, 수학, 탐구 조합, 제2외국어) -->
-        <div style="margin-top: 10px; border: 1.5px solid #4338ca; border-radius: 6px; padding: 8px; background: #faf5ff;">
-          <div style="font-size: 11.5px; font-weight: 800; color: #3730a3; margin-bottom: 6px;">
-            📊 2027학년도 수능 접수대장 선택과목 통계 요약 (총 접수인원: ${subStats.totalRegistered}명 기준)
-          </div>
-          
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 10px;">
-            <!-- 국어/수학 -->
-            <div style="background:#fff; border:1px solid #c7d2fe; border-radius:4px; padding:6px;">
-              <div style="font-weight:700; color:#1e1b4b; border-bottom:1px solid #e0e7ff; padding-bottom:3px; margin-bottom:4px;">📖 국어 / 수학 선택과목</div>
-              <div>• <strong>국어</strong>: 화법과 작문 <strong>${korHwawon}명</strong> (${korHwawonPct}%) / 언어와 매체 <strong>${korEonmae}명</strong> (${korEonmaePct}%) / 미선택 ${korNone}명</div>
-              <div style="margin-top:3px;">• <strong>수학</strong>: 확통 <strong>${mathHwatong}명</strong> (${mathHwatongPct}%) / 미적분 <strong>${mathMijeok}명</strong> (${mathMijeokPct}%) / 기하 <strong>${mathGiha}명</strong> (${mathGihaPct}%) / 미선택 ${mathNone}명</div>
+      <div class="footer-sign">
+        <span>작성자(진학담당) : _________________ (인)</span>
+        <span style="margin-left: 30px;">부장 : _________________ (인)</span>
+        <span style="margin-left: 30px;">교감 : _________________ (인)</span>
+        <span style="margin-left: 30px;">교장 : _________________ (인)</span>
+      </div>
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- 2페이지: 수능 접수대장 선택과목 통계 분석 보고서 (그래프 시각화) -->
+    <!-- ================================================================ -->
+    <div class="page-container">
+      <div>
+        <div class="header-box">
+          <h1 class="header-title">${fullSchoolName} 2027학년도 수능 접수대장 선택과목 통계 분석 보고서</h1>
+          <div class="info-bar">
+            <div>
+              <span>학교명: <strong>${fullSchoolName}</strong></span>
+              <span>총 수능 원서 접수인원: <strong>${regTot}명</strong></span>
+              <span>탐구 총 선택 과목수: <strong style="color: #4f46e5;">${subStats.inquiry.totalPicks}과목</strong> (분모)</span>
             </div>
-
-            <!-- 탐구 조합 유형 -->
-            <div style="background:#fff; border:1px solid #c7d2fe; border-radius:4px; padding:6px;">
-              <div style="font-weight:700; color:#1e1b4b; border-bottom:1px solid #e0e7ff; padding-bottom:3px; margin-bottom:4px;">🔬 탐구 조합 유형별 인원 및 비율</div>
-              <div>• 사탐 2과목: <strong>${cb.social2}명</strong> (${s2Pct}%) / 사탐 1과목: <strong>${cb.social1}명</strong> (${s1Pct}%)</div>
-              <div style="margin-top:2px;">• 사탐1+과탐1: <strong>${cb.social1_science1}명</strong> (${s1c1Pct}%)</div>
-              <div style="margin-top:2px;">• 과탐 2과목: <strong>${cb.science2}명</strong> (${c2Pct}%) / 과탐 1과목: <strong>${cb.science1}명</strong> (${c1Pct}%)</div>
-              <div style="margin-top:2px;">• 직업탐구: <strong>${cb.vocational}명</strong> (${vocPct}%) / 미선택: <strong>${cb.none}명</strong> (${inqNonePct}%)</div>
-            </div>
-
-            <!-- 제2외국어/한문 -->
-            <div style="background:#fff; border:1px solid #c7d2fe; border-radius:4px; padding:6px;">
-              <div style="font-weight:700; color:#1e1b4b; border-bottom:1px solid #e0e7ff; padding-bottom:3px; margin-bottom:4px;">🌐 제2외국어 / 한문 영역</div>
-              <div>• 응시자: <strong>${subStats.foreign.takers}명</strong> (${((subStats.foreign.takers / regTot) * 100).toFixed(1)}%) / 미응시: <strong>${subStats.foreign.none}명</strong></div>
-              <div style="margin-top:3px; color:#475569; font-size:9.5px; line-height:1.3;">• 과목: ${foreignEntries}</div>
+            <div>
+              <span>출력 대상: <strong>${classInfo}</strong></span>
+              <span>출력일시: ${printDateStr}</span>
             </div>
           </div>
+        </div>
 
-          <!-- 3. 탐구 영역 세부 과목별 선택 통계 (분모: 총 선택과목수) -->
-          <div style="margin-top: 6px; background: #fff; border: 1px solid #c7d2fe; border-radius: 4px; padding: 6px;">
-            <div style="font-size: 10px; font-weight: 700; color: #1e1b4b; margin-bottom: 3px;">
-              🧪 탐구 영역 세부 과목별 선택 비율 (총 선택 과목수 분모: <strong>${subStats.inquiry.totalPicks}과목</strong> 기준)
+        <!-- 상단 3개 카드 영역: 국어/수학, 탐구조합, 제2외국어 -->
+        <div style="display: grid; grid-template-columns: 1.15fr 1.05fr 0.8fr; gap: 10px; margin-top: 10px;">
+          <!-- 카드 1: 국어 / 수학 영역 -->
+          <div style="background: #fff; border: 1.5px solid #c7d2fe; border-radius: 6px; padding: 10px;">
+            <div style="font-size: 11.5px; font-weight: 800; color: #312e81; border-bottom: 1.5px solid #e0e7ff; padding-bottom: 5px; margin-bottom: 8px; display: flex; justify-content: space-between;">
+              <span>📖 국어 / 수학 영역 선택 비율</span>
+              <span style="font-size: 10px; font-weight: 600; color: #6366f1;">총 접수 ${regTot}명 기준</span>
             </div>
-            <div style="line-height: 1.6;">
-              ${inquiryRows}
+            
+            <div style="margin-bottom: 8px;">
+              <div style="font-size: 10.5px; font-weight: 700; color: #4338ca; margin-bottom: 4px;">• 국어 영역 (응시 ${subStats.korean.takers}명)</div>
+              ${renderMiniBar('화법과 작문', korHwawon, korHwawonPct, '#4338ca')}
+              ${renderMiniBar('언어와 매체', korEonmae, korEonmaePct, '#3b82f6')}
+              ${renderMiniBar('미선택', korNone, korNonePct, '#94a3b8')}
+            </div>
+
+            <div style="border-top: 1px dashed #e2e8f0; padding-top: 6px;">
+              <div style="font-size: 10.5px; font-weight: 700; color: #0284c7; margin-bottom: 4px;">• 수학 영역 (응시 ${subStats.math.takers}명)</div>
+              ${renderMiniBar('확률과 통계', mathHwatong, mathHwatongPct, '#0284c7')}
+              ${renderMiniBar('미적분', mathMijeok, mathMijeokPct, '#0ea5e9')}
+              ${renderMiniBar('기하', mathGiha, mathGihaPct, '#38bdf8')}
+              ${renderMiniBar('미선택', mathNone, mathNonePct, '#94a3b8')}
+            </div>
+          </div>
+
+          <!-- 카드 2: 탐구 조합 유형별 현황 -->
+          <div style="background: #fff; border: 1.5px solid #c7d2fe; border-radius: 6px; padding: 10px;">
+            <div style="font-size: 11.5px; font-weight: 800; color: #312e81; border-bottom: 1.5px solid #e0e7ff; padding-bottom: 5px; margin-bottom: 8px; display: flex; justify-content: space-between;">
+              <span>🔬 탐구 조합 유형별 인원 및 비율</span>
+              <span style="font-size: 10px; font-weight: 600; color: #6366f1;">응시 ${subStats.inquiry.takers}명</span>
+            </div>
+            ${renderMiniBar('사탐 2과목', cb.social2, s2Pct, '#ea580c')}
+            ${renderMiniBar('사탐1 + 과탐1 (혼합)', cb.social1_science1, s1c1Pct, '#8b5cf6')}
+            ${renderMiniBar('과탐 2과목', cb.science2, c2Pct, '#059669')}
+            ${renderMiniBar('사탐 1과목', cb.social1, s1Pct, '#f59e0b')}
+            ${renderMiniBar('과탐 1과목', cb.science1, c1Pct, '#10b981')}
+            ${renderMiniBar('직업탐구', cb.vocational, vocPct, '#6b7280')}
+            ${renderMiniBar('미선택', cb.none, inqNonePct, '#94a3b8')}
+          </div>
+
+          <!-- 카드 3: 제2외국어 / 한문 영역 -->
+          <div style="background: #fff; border: 1.5px solid #c7d2fe; border-radius: 6px; padding: 10px;">
+            <div style="font-size: 11.5px; font-weight: 800; color: #312e81; border-bottom: 1.5px solid #e0e7ff; padding-bottom: 5px; margin-bottom: 8px; display: flex; justify-content: space-between;">
+              <span>🌐 제2외국어 / 한문 영역</span>
+              <span style="font-size: 10px; font-weight: 600; color: #059669;">응시 ${subStats.foreign.takers}명 (${foreignTakerPct}%)</span>
+            </div>
+            <div style="margin-bottom: 8px;">
+              ${renderMiniBar('응시자', subStats.foreign.takers, foreignTakerPct, '#059669')}
+              ${renderMiniBar('미응시자', subStats.foreign.none, foreignNonePct, '#94a3b8')}
+            </div>
+            <div style="border-top: 1px dashed #e2e8f0; padding-top: 6px;">
+              <div style="font-size: 10px; font-weight: 700; color: #334155; margin-bottom: 4px;">• 선택 과목 순위</div>
+              ${foreignEntriesHtml}
+            </div>
+          </div>
+        </div>
+
+        <!-- 하단 대형 메인 섹션: 탐구 영역 17개 세부 과목 선택 순위 랭킹 바 차트 -->
+        <div style="margin-top: 10px; border: 1.5px solid #4338ca; border-radius: 8px; padding: 10px 14px; background: #faf5ff;">
+          <div style="font-size: 12px; font-weight: 800; color: #3730a3; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+            <span>🧪 탐구 영역 17개 세부 과목 선택 순위 및 비율 통계 그래프 (총 선택 과목수 분모: <strong style="color: #4f46e5;">${subStats.inquiry.totalPicks}과목</strong> 기준)</span>
+            <div style="display: flex; gap: 8px; font-size: 10px; font-weight: 700;">
+              <span style="display: inline-flex; align-items: center; gap: 3px;"><span style="width: 10px; height: 10px; background: #ea580c; border-radius: 2px;"></span> 사회탐구(9과목)</span>
+              <span style="display: inline-flex; align-items: center; gap: 3px;"><span style="width: 10px; height: 10px; background: #0891b2; border-radius: 2px;"></span> 과학탐구(8과목)</span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; background: #fff; border: 1px solid #c7d2fe; border-radius: 6px; padding: 8px 12px;">
+            <div>
+              <div style="font-size: 10px; font-weight: 700; color: #4338ca; border-bottom: 1px solid #e0e7ff; padding-bottom: 3px; margin-bottom: 4px;">[ 상위 선택 과목 (1위 ~ 9위) ]</div>
+              ${inquiryCol1Html}
+            </div>
+            <div>
+              <div style="font-size: 10px; font-weight: 700; color: #64748b; border-bottom: 1px solid #e0e7ff; padding-bottom: 3px; margin-bottom: 4px;">[ 차순위 선택 과목 (10위 ~ 17위) ]</div>
+              ${inquiryCol2Html}
             </div>
           </div>
         </div>
@@ -2387,6 +2539,7 @@ export function printSummaryRoster(records, options = {}) {
     tr { page-break-inside: avoid; }
     th, td { border: 1px solid #64748b; padding: 4.5px 4px; text-align: center; font-size: 10px; line-height: 1.3; }
     th { background: #f1f5f9 !important; font-weight: 700; color: #0f172a; }
+    table.overview-table th, table.overview-table td { padding: 6px 4px; font-size: 10.5px; }
     .text-left { text-align: left !important; }
     .badge-yes { color: #166534; font-weight: 700; white-space: nowrap; display: inline-block; }
     .badge-no { color: #991b1b; font-weight: 700; background: #fee2e2; padding: 1px 4px; border-radius: 3px; border: 1px solid #fca5a5; display: inline-block; white-space: nowrap; }
