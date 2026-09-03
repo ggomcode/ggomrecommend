@@ -2854,6 +2854,32 @@ export const exportQuotaStats = async (param = null) => {
   return blob
 }
 
+export const exportAbandonedExcel = (list, roundStr = '전체') => {
+  const headers = ['No', '대학명', '모집단위(전형명)', '지원학과', '차수', '학번', '성명', '구분', '포기일자', '포기 사유']
+  const rows = list.map((ab, idx) => [
+    idx + 1,
+    ab.univ_name || '-',
+    ab.track_name || '-',
+    ab.department_name || '-',
+    `${ab.abandoned_round || ab.round}차`,
+    ab.student_code || '-',
+    ab.name || '-',
+    ab.grade_type || '-',
+    ab.date || '-',
+    ab.reason || '-'
+  ])
+
+  const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows])
+  const workbook = XLSX.utils.book_new()
+  const sheetName = roundStr === '전체' ? '추천포기자명단' : `추천포기자_${roundStr}`
+  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
+
+  const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+  const blob = new Blob([wbout], { type: 'application/octet-stream' })
+  blob.data = blob
+  return blob
+}
+
 export const getTrackRecommendedList = async (trackId) => {
   if (!supabase) return []
   const { data: appsData, error } = await supabase

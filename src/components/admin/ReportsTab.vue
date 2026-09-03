@@ -51,6 +51,13 @@
           >
             <span>🖨️ 보고서 인쇄 (PDF, 추천 대학만)</span>
           </button>
+          <button
+            class="h-[38px] px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors border-none box-border"
+            title="학교장추천전형 추천 포기자 결과 보고서 인쇄"
+            @click="printAbandonedReport"
+          >
+            <span>🖨️ 포기자 보고서 인쇄 (PDF)</span>
+          </button>
         </div>
       </div>
 
@@ -60,27 +67,46 @@
         <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50/50 shrink-0">
           <div>
             <span class="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">{{ schoolName }}</span>
-            <h2 class="text-xl font-black text-slate-900" style="margin: 0;">
-              학교장추천전형 추천 명단 및 현황
-              <span class="text-blue-600 text-lg ml-1 font-bold">{{ roundLabelText }}</span>
-            </h2>
+            <div class="flex items-center gap-4 flex-wrap">
+              <h2 class="text-xl font-black text-slate-900" style="margin: 0;">
+                {{ activeViewMode === 'recommend' ? '학교장추천전형 추천 명단 및 현황' : '학교장추천전형 추천 포기자 명단' }}
+                <span class="text-blue-600 text-lg ml-1 font-bold">{{ roundLabelText }}</span>
+              </h2>
+              <!-- 탭 전환 버튼 -->
+              <div class="flex items-center bg-slate-200/90 p-1 rounded-xl shadow-inner">
+                <button
+                  :class="['px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer border-none', activeViewMode === 'recommend' ? 'bg-white text-blue-700 shadow-sm' : 'bg-transparent text-slate-600 hover:text-slate-900']"
+                  @click="activeViewMode = 'recommend'"
+                >
+                  📋 추천 명단 ({{ totalRecommendedStats.totalCases }}건)
+                </button>
+                <button
+                  :class="['px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer border-none', activeViewMode === 'abandoned' ? 'bg-amber-600 text-white shadow-sm' : 'bg-transparent text-slate-600 hover:text-slate-900']"
+                  @click="activeViewMode = 'abandoned'"
+                >
+                  🚫 포기자 명단 ({{ filteredAbandonedList.length }}건)
+                </button>
+              </div>
+            </div>
           </div>
           <div class="text-xs text-slate-500 font-medium">
             기준일시: {{ currentDate }}
           </div>
         </div>
 
-        <!-- 로딩 / 데이터 테이블 -->
+        <!-- 로딩 -->
         <div v-if="loading" class="flex-1 flex items-center justify-center p-12 text-slate-400 font-medium">
           보고서 데이터를 불러오는 중입니다…
         </div>
 
-        <div v-else-if="!flatStats || flatStats.length === 0" class="flex-1 flex flex-col items-center justify-center p-12 text-slate-400">
-          <p class="text-base font-bold text-slate-600 mb-1">등록된 정원 현황 및 추천 학생 데이터가 없습니다.</p>
-          <p class="text-xs">대학 정원 설정 및 학생 지원을 진행한 후 다시 확인해 주세요.</p>
-        </div>
+        <!-- 1. 추천 명단 화면용 테이블 (activeViewMode === 'recommend') -->
+        <template v-else-if="activeViewMode === 'recommend'">
+          <div v-if="!flatStats || flatStats.length === 0" class="flex-1 flex flex-col items-center justify-center p-12 text-slate-400">
+            <p class="text-base font-bold text-slate-600 mb-1">등록된 정원 현황 및 추천 학생 데이터가 없습니다.</p>
+            <p class="text-xs">대학 정원 설정 및 학생 지원을 진행한 후 다시 확인해 주세요.</p>
+          </div>
 
-        <div v-else class="flex-1 min-h-0 overflow-y-auto p-6">
+          <div v-else class="flex-1 min-h-0 overflow-y-auto p-6">
           <table class="w-full text-left border-collapse text-xs">
             <thead>
               <tr class="bg-slate-100 text-slate-700 border-b-2 border-slate-300">
@@ -190,13 +216,193 @@
             </div>
           </div>
         </div>
+      </template>
+
+        <!-- 2. 추천 포기자 명단 화면용 테이블 (activeViewMode === 'abandoned') -->
+        <template v-else-if="activeViewMode === 'abandoned'">
+          <div v-if="!filteredAbandonedList || filteredAbandonedList.length === 0" class="flex-1 flex flex-col items-center justify-center p-12 text-slate-400">
+            <p class="text-base font-bold text-slate-600 mb-1">등록된 추천 포기 학생 데이터가 없습니다.</p>
+            <p class="text-xs">학생이 추천 포기원을 제출하고 승인된 내역이 이곳에 표시됩니다.</p>
+          </div>
+
+          <div v-else class="flex-1 min-h-0 overflow-y-auto p-6">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-amber-50 text-amber-950 border-b-2 border-amber-300">
+                  <th class="p-3 font-bold w-10 text-center">No</th>
+                  <th class="p-3 font-bold whitespace-nowrap w-32">대학명</th>
+                  <th class="p-3 font-bold whitespace-nowrap">모집단위(전형명)</th>
+                  <th class="p-3 font-bold whitespace-nowrap w-32">지원학과</th>
+                  <th class="p-3 font-bold text-center w-20 whitespace-nowrap">선발차수</th>
+                  <th class="p-3 font-bold whitespace-nowrap w-24 text-center">학번</th>
+                  <th class="p-3 font-bold whitespace-nowrap w-24 text-center">성명</th>
+                  <th class="p-3 font-bold text-center w-20 whitespace-nowrap">구분</th>
+                  <th class="p-3 font-bold text-center w-28 whitespace-nowrap">포기일자</th>
+                  <th class="p-3 font-bold">포기 사유</th>
+                  <th class="p-3 font-bold text-center w-20 whitespace-nowrap">포기원</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                <tr v-for="(ab, idx) in filteredAbandonedList" :key="ab.id || idx" class="hover:bg-amber-50/40 transition-colors">
+                  <td class="p-3 text-center font-medium text-slate-500">{{ idx + 1 }}</td>
+                  <td class="p-3 font-extrabold text-blue-950 whitespace-nowrap">{{ ab.univ_name }}</td>
+                  <td class="p-3 font-bold text-slate-800 whitespace-nowrap">{{ ab.track_name }}</td>
+                  <td class="p-3 text-slate-700 whitespace-nowrap">{{ ab.department_name }}</td>
+                  <td class="p-3 text-center font-bold text-indigo-700 whitespace-nowrap">{{ ab.abandoned_round || ab.round }}차</td>
+                  <td class="p-3 text-center font-mono text-slate-700 whitespace-nowrap">{{ ab.student_code }}</td>
+                  <td class="p-3 text-center font-black text-slate-900 whitespace-nowrap">{{ ab.name }}</td>
+                  <td class="p-3 text-center whitespace-nowrap">{{ ab.grade_type }}</td>
+                  <td class="p-3 text-center text-slate-600 whitespace-nowrap">{{ ab.date }}</td>
+                  <td class="p-3 text-rose-900 font-medium">{{ ab.reason }}</td>
+                  <td class="p-3 text-center whitespace-nowrap">
+                    <button
+                      class="text-[11px] font-bold text-amber-700 hover:bg-amber-100 bg-amber-50 border border-amber-300 px-2 py-1 rounded cursor-pointer transition-colors"
+                      title="학생 및 학부모 서명 포기원 서류 개별 출력"
+                      @click="printAbandonmentForm(ab.raw_app, ab.raw_student)"
+                    >
+                      📄출력
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- 하단 포기 인원 통계 요약 바 (화면용) -->
+            <div class="mt-6 border border-amber-200 rounded-xl bg-amber-50/50 p-4 text-xs font-semibold text-slate-700 flex justify-between items-center">
+              <div class="flex items-center gap-1">
+                <span class="text-xs font-bold text-amber-900">📊 추천 포기 인원 통계 (현 상황 기준)</span>
+              </div>
+              <div class="flex gap-6 items-center">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-slate-500">총 추천 포기:</span>
+                  <span class="text-sm font-extrabold text-rose-600">{{ abandonedStats.students }}명 ({{ abandonedStats.cases }}건)</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-slate-500">재학생:</span>
+                  <span class="font-bold text-slate-800">{{ abandonedStats.enrolled }}명 ({{ abandonedStats.enrolledCases }}건)</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-slate-500">졸업생:</span>
+                  <span class="font-bold text-slate-800">{{ abandonedStats.grad }}명 ({{ abandonedStats.gradCases }}건)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
       </div>
     </div>
 
     <!-- ── 인쇄 전용 영역 (Print Only Pages) ─────────────────── -->
     <div class="print-only-container" id="report-print-area">
-      <!-- 0. [첫 페이지] 전체 통계 및 총괄 종합 현황 페이지 (우측 상단 결재란 포함) -->
-      <div class="print-page print-summary-page">
+      <!-- 1. 추천 포기자 보고서 (printMode === 'abandoned' 일 때 단독 출력) -->
+      <template v-if="printMode === 'abandoned'">
+        <div class="print-page print-abandoned-page">
+          <!-- 1. 상단 헤더 & 결재란 -->
+          <div class="print-header-row">
+            <div class="print-title-box">
+              <div class="print-school-label">{{ schoolName }}</div>
+              <h1 class="print-main-title">학교장추천전형 추천 포기자 결과 보고서 {{ roundLabelText }}</h1>
+              <div class="print-sub-desc">대입 학교장추천전형 추천 포기원 접수 및 처리 결과 종합 대장</div>
+            </div>
+
+            <!-- 결재란: 계 - 부장 - 교감 - 교장 -->
+            <div class="print-approval-box">
+              <table class="approval-table">
+                <tbody>
+                  <tr>
+                    <th rowspan="2" class="approval-th-title">결<br>재</th>
+                    <td class="approval-cell-header">계</td>
+                    <td class="approval-cell-header">부장</td>
+                    <td class="approval-cell-header">교감</td>
+                    <td class="approval-cell-header">교장</td>
+                  </tr>
+                  <tr>
+                    <td class="approval-cell-sign"></td>
+                    <td class="approval-cell-sign"></td>
+                    <td class="approval-cell-sign"></td>
+                    <td class="approval-cell-sign"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 2. 종합 요약 통계 박스 -->
+          <div class="print-summary-stat-box">
+            <div class="summary-stat-item">
+              <span class="stat-label">총 추천 포기 인원</span>
+              <span class="stat-val text-rose-700">{{ abandonedStats.students }}명 ({{ abandonedStats.cases }}건)</span>
+            </div>
+            <div class="summary-stat-item">
+              <span class="stat-label">재학생 포기</span>
+              <span class="stat-val text-slate-800">{{ abandonedStats.enrolled }}명 ({{ abandonedStats.enrolledCases }}건)</span>
+            </div>
+            <div class="summary-stat-item">
+              <span class="stat-label">졸업생 포기</span>
+              <span class="stat-val text-slate-800">{{ abandonedStats.grad }}명 ({{ abandonedStats.gradCases }}건)</span>
+            </div>
+            <div class="summary-stat-item">
+              <span class="stat-label">선발 차수</span>
+              <span class="stat-val text-blue-900">{{ roundLabelText }}</span>
+            </div>
+            <div class="summary-stat-item">
+              <span class="stat-label">기준일시</span>
+              <span class="stat-val text-slate-600">{{ currentDate }}</span>
+            </div>
+          </div>
+
+          <!-- 3. 추천 포기자 명단 종합 테이블 -->
+          <div class="print-summary-table-section">
+            <div class="print-section-header">
+              <span class="print-section-title">■ 추천 포기 학생 명단 (총 {{ filteredAbandonedList.length }}건)</span>
+            </div>
+
+            <table class="print-summary-table">
+              <thead>
+                <tr>
+                  <th style="width: 32px;">No</th>
+                  <th style="width: 110px;">대학명</th>
+                  <th style="width: 150px;">모집단위 (전형명)</th>
+                  <th style="width: 110px;">지원학과</th>
+                  <th style="width: 50px;">차수</th>
+                  <th style="width: 80px;">학번</th>
+                  <th style="width: 75px;">성명</th>
+                  <th style="width: 55px;">구분</th>
+                  <th style="width: 90px;">포기일자</th>
+                  <th>포기 사유</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="!filteredAbandonedList || filteredAbandonedList.length === 0">
+                  <td colspan="10" class="print-empty-cell">해당 조건에 등록된 추천 포기자 내역이 없습니다.</td>
+                </tr>
+                <tr v-for="(ab, idx) in filteredAbandonedList" :key="ab.id || idx">
+                  <td class="text-center font-medium text-slate-500">{{ idx + 1 }}</td>
+                  <td class="font-extrabold text-blue-950">{{ ab.univ_name }}</td>
+                  <td class="font-bold text-slate-800">{{ ab.track_name }}</td>
+                  <td class="text-slate-700">{{ ab.department_name }}</td>
+                  <td class="text-center font-bold text-indigo-700">{{ ab.abandoned_round || ab.round }}차</td>
+                  <td class="text-center font-mono text-slate-700">{{ ab.student_code }}</td>
+                  <td class="text-center font-black text-slate-900">{{ ab.name }}</td>
+                  <td class="text-center font-medium">{{ ab.grade_type }}</td>
+                  <td class="text-center text-xs text-slate-600">{{ ab.date }}</td>
+                  <td class="text-left text-xs text-rose-900 leading-snug">{{ ab.reason }}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div style="margin-top: 14px; font-size: 11px; color: #475569; line-height: 1.6;">
+              ※ 본 보고서는 2027학년도 대입 학교장추천전형에서 추천 대상자로 선발(또는 지원)된 후 정당한 사유로 포기원을 제출하여 공식 포기 처리된 학생 명단입니다.<br />
+              ※ 포기 처리된 정원은 전형 지침 및 학업성적관리위원회 규정에 따라 차순위 대기 학생에게 승계되거나 다음 차수 잔여 정원으로 이월 처리되었습니다.
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- 2. 일반 추천 명단 보고서 (printMode !== 'abandoned' 일 때 기존대로 출력) -->
+      <template v-else>
+        <!-- 0. [첫 페이지] 전체 통계 및 총괄 종합 현황 페이지 (우측 상단 결재란 포함) -->
+        <div class="print-page print-summary-page">
         <!-- 1. 상단 헤더 & 결재란 (총괄 페이지에만 결재란 배치) -->
         <div class="print-header-row">
           <div class="print-title-box">
@@ -454,13 +660,15 @@
           <div class="print-footer-right">전형 순번: {{ item.no }} / {{ displayedStats.length }}</div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
+</div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed, nextTick } from 'vue'
-import { getQuotaStats, exportQuotaStats, getDisclosureCount } from '../../api/admin.js'
+import { getQuotaStats, exportQuotaStats, exportAbandonedExcel, getDisclosureCount } from '../../api/admin.js'
+import { printAbandonmentForm } from '../../utils/printTemplates.js'
 import { schoolName } from '../../utils/schoolConfig.js'
 import { dialog } from '../common/dialog.js'
 import { supabase } from '../../utils/supabaseClient.js'
@@ -480,6 +688,46 @@ const gradConditionMap = ref({})
 const selectedRoundFilter = ref('all')
 const roundsList = ref([])
 const schedulesMap = ref({})
+
+// 화면 및 인쇄 모드 상태
+const activeViewMode = ref('recommend') // 'recommend' | 'abandoned'
+const printMode = ref('recommend') // 'recommend' | 'recommend_only' | 'abandoned'
+const abandonedList = ref([])
+
+const filteredAbandonedList = computed(() => {
+  const curRound = selectedRoundFilter.value === 'all' ? null : Number(selectedRoundFilter.value)
+  if (!curRound) return abandonedList.value
+  return abandonedList.value.filter(item => (item.abandoned_round || item.round) === curRound)
+})
+
+const abandonedStats = computed(() => {
+  const list = filteredAbandonedList.value
+  const studentSet = new Set()
+  let enrolledCases = 0
+  const enrolledStudentSet = new Set()
+  let gradCases = 0
+  const gradStudentSet = new Set()
+
+  for (const ab of list) {
+    if (ab.student_id) studentSet.add(ab.student_id)
+    if (ab.grade_type === '졸업생') {
+      gradCases++
+      if (ab.student_id) gradStudentSet.add(ab.student_id)
+    } else {
+      enrolledCases++
+      if (ab.student_id) enrolledStudentSet.add(ab.student_id)
+    }
+  }
+
+  return {
+    students: studentSet.size,
+    cases: list.length,
+    enrolled: enrolledStudentSet.size,
+    enrolledCases,
+    grad: gradStudentSet.size,
+    gradCases
+  }
+})
 
 /**
  * 학생별 지원/선발 배지 상태 반환
@@ -842,8 +1090,8 @@ async function loadData() {
     stats.value = await getQuotaStats()
     if (supabase) {
       // 1. 지원서, 학생 마스터, 수도권/지역 추천 전형(졸업조건), 라운드 목록, 라운드 일정 로드
-      const [{ data: allApps }, { data: students }, { data: regRecs }, { data: roundsData }, sMap] = await Promise.all([
-        supabase.from('applications').select('*').eq('is_abandoned', false),
+      const [{ data: allAppsRaw }, { data: students }, { data: regRecs }, { data: roundsData }, sMap] = await Promise.all([
+        supabase.from('applications').select('*, universities:univ_id(*)'),
         supabase.from('enrolled_students').select('id, name, student_code, gpa_overall, grad_year, grade, is_enrolled'),
         supabase.from('regional_recommendations').select('univ_name, track_name, grad_condition'),
         supabase.from('rounds').select('*').order('id'),
@@ -883,11 +1131,76 @@ async function loadData() {
 
       // 2. 대학/트랙 정원 매핑 테이블 구성
       const trackQuotaMap = {}
+      const trackInfoMap = {}
       for (const u of (stats.value || [])) {
         for (const t of (u.tracks || [])) {
           trackQuotaMap[t.track_id] = t.unit_quota
+          trackInfoMap[t.track_id] = {
+            univ_name: u.univ_name,
+            track_name: t.track_name,
+            track_type: t.track_type,
+            unit_quota: t.unit_quota
+          }
         }
       }
+
+      // 지원서 분리: 유효 추천 지원서 vs 포기된 지원서
+      const allApps = (allAppsRaw || []).filter(ap => !ap.is_abandoned)
+      const rawAbandonedApps = (allAppsRaw || []).filter(ap => {
+        if (ap.is_abandoned) return true
+        if (ap.scanned_doc_url) {
+          try {
+            const parsed = typeof ap.scanned_doc_url === 'string' ? JSON.parse(ap.scanned_doc_url) : ap.scanned_doc_url
+            if (parsed?.abandon_requested === true) return true
+          } catch {}
+        }
+        return false
+      })
+
+      // 추천 포기자 목록 가공
+      const abList = []
+      for (const ap of rawAbandonedApps) {
+        const s = studentMapLocal[ap.student_id] || {}
+        let reqMeta = {}
+        if (ap.scanned_doc_url) {
+          try {
+            reqMeta = typeof ap.scanned_doc_url === 'string' ? JSON.parse(ap.scanned_doc_url) : ap.scanned_doc_url
+          } catch {}
+        }
+        const tInfo = trackInfoMap[ap.univ_id] || {}
+        const univName = ap.universities?.univ_name || tInfo.univ_name || ap.univ_name || ''
+        const trackName = ap.universities?.track_name || tInfo.track_name || ap.track_name || ''
+        const isGrad = s.is_graduated || (!s.grade && !!s.grad_year)
+        const reason = reqMeta.abandon_reason || ap.abandon_reason || ap.excluded_reason || '개인 사유로 인한 추천 포기'
+        const reqDate = reqMeta.requested_at || ap.abandoned_at || ap.updated_at
+        const dateStr = reqDate ? new Date(reqDate).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'
+
+        abList.push({
+          id: ap.id,
+          student_id: ap.student_id,
+          student_code: s.student_code || '',
+          name: s.name || ap.name || '',
+          grade_type: isGrad ? '졸업생' : '재학생',
+          univ_name: univName,
+          track_name: trackName,
+          department_name: ap.department_name || '-',
+          round: ap.round || 1,
+          abandoned_round: ap.abandoned_round || ap.round || 1,
+          reason,
+          date: dateStr,
+          raw_app: ap,
+          raw_student: s
+        })
+      }
+
+      abList.sort((a, b) => {
+        const uCmp = (a.univ_name || '').localeCompare(b.univ_name || '', 'ko')
+        if (uCmp !== 0) return uCmp
+        const tCmp = (a.track_name || '').localeCompare(b.track_name || '', 'ko')
+        if (tCmp !== 0) return tCmp
+        return (a.student_code || '').localeCompare(b.student_code || '')
+      })
+      abandonedList.value = abList
 
       // 3. 대학(univ_id=track_id)별로 지원서를 그룹화하여 석차(순위) 계산
       const groupedByTrack = {}
@@ -976,12 +1289,23 @@ async function loadData() {
 async function downloadExcel() {
   downloading.value = true
   try {
+    const roundStr = selectedRoundFilter.value === 'all' ? '전체' : `${selectedRoundFilter.value}차`
+    if (activeViewMode.value === 'abandoned') {
+      const blob = exportAbandonedExcel(filteredAbandonedList.value, roundStr)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `학교장추천전형_${roundStr}_추천포기자_명단_${new Date().toISOString().slice(0, 10)}.xlsx`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      return
+    }
+
     const roundParam = selectedRoundFilter.value === 'all' ? null : Number(selectedRoundFilter.value)
     const blob = await exportQuotaStats(roundParam)
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    const roundStr = selectedRoundFilter.value === 'all' ? '전체' : `${selectedRoundFilter.value}차`
     a.download = `학교장추천전형_${roundStr}_추천명단_및_정원현황_${new Date().toISOString().slice(0, 10)}.xlsx`
     a.click()
     window.URL.revokeObjectURL(url)
@@ -993,12 +1317,29 @@ async function downloadExcel() {
 }
 
 function printReport() {
+  printMode.value = 'recommend'
   printOnlyWithRecommendations.value = false
   window.print()
 }
 
 async function printReportRecommendOnly() {
+  printMode.value = 'recommend_only'
   printOnlyWithRecommendations.value = true
+  await nextTick()
+  window.print()
+}
+
+async function printAbandonedReport() {
+  if (filteredAbandonedList.value.length === 0) {
+    await dialog.alert({
+      title: '포기자 없음',
+      message: selectedRoundFilter.value === 'all'
+        ? '현재 등록된 추천 포기자 내역이 없습니다.'
+        : `${selectedRoundFilter.value}차 선발에 등록된 추천 포기자 내역이 없습니다.`
+    })
+    return
+  }
+  printMode.value = 'abandoned'
   await nextTick()
   window.print()
 }
@@ -1019,6 +1360,7 @@ onMounted(async () => {
   loadData()
   window.addEventListener('afterprint', () => {
     printOnlyWithRecommendations.value = false
+    printMode.value = 'recommend'
   })
 })
 </script>
