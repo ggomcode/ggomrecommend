@@ -2253,13 +2253,6 @@ export function printSummaryRoster(records, options = {}) {
           </tbody>
         </table>
       </div>
-
-      <div class="footer-sign">
-        <span>작성자(진학담당) : _________________ (인)</span>
-        <span style="margin-left: 30px;">부장 : _________________ (인)</span>
-        <span style="margin-left: 30px;">교감 : _________________ (인)</span>
-        <span style="margin-left: 30px;">교장 : _________________ (인)</span>
-      </div>
     </div>
 
     <!-- ================================================================ -->
@@ -2272,12 +2265,9 @@ export function printSummaryRoster(records, options = {}) {
           <div class="info-bar">
             <div>
               <span>학교명: <strong>${fullSchoolName}</strong></span>
+              <span>대상: <strong>${classInfo}</strong></span>
               <span>총 수능 원서 접수인원: <strong>${regTot}명</strong></span>
-              <span>탐구 총 선택 과목수: <strong style="color: #4f46e5;">${subStats.inquiry.totalPicks}과목</strong> (분모)</span>
-            </div>
-            <div>
-              <span>출력 대상: <strong>${classInfo}</strong></span>
-              <span>출력일시: ${printDateStr}</span>
+              <span>탐구 총 선택 과목수: <strong style="color: #4f46e5;">${subStats.inquiry.totalPicks}과목</strong></span>
             </div>
           </div>
         </div>
@@ -2342,7 +2332,7 @@ export function printSummaryRoster(records, options = {}) {
         <!-- 하단 대형 메인 섹션: 탐구 영역 17개 세부 과목 선택 순위 랭킹 바 차트 -->
         <div style="margin-top: 10px; border: 1.5px solid #4338ca; border-radius: 8px; padding: 10px 14px; background: #faf5ff;">
           <div style="font-size: 12px; font-weight: 800; color: #3730a3; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-            <span>🧪 탐구 영역 17개 세부 과목 선택 순위 및 비율 통계 그래프 (총 선택 과목수 분모: <strong style="color: #4f46e5;">${subStats.inquiry.totalPicks}과목</strong> 기준)</span>
+            <span>🧪 탐구 영역 17개 세부 과목 선택 순위 및 비율 통계 그래프 (총 선택 과목수: <strong style="color: #4f46e5;">${subStats.inquiry.totalPicks}과목</strong> 기준)</span>
             <div style="display: flex; gap: 8px; font-size: 10px; font-weight: 700;">
               <span style="display: inline-flex; align-items: center; gap: 3px;"><span style="width: 10px; height: 10px; background: #ea580c; border-radius: 2px;"></span> 사회탐구(9과목)</span>
               <span style="display: inline-flex; align-items: center; gap: 3px;"><span style="width: 10px; height: 10px; background: #0891b2; border-radius: 2px;"></span> 과학탐구(8과목)</span>
@@ -2360,13 +2350,6 @@ export function printSummaryRoster(records, options = {}) {
             </div>
           </div>
         </div>
-      </div>
-
-      <div class="footer-sign">
-        <span>작성자(진학담당) : _________________ (인)</span>
-        <span style="margin-left: 30px;">부장 : _________________ (인)</span>
-        <span style="margin-left: 30px;">교감 : _________________ (인)</span>
-        <span style="margin-left: 30px;">교장 : _________________ (인)</span>
       </div>
     </div>`
   }
@@ -2539,7 +2522,9 @@ export function printSummaryRoster(records, options = {}) {
     tr { page-break-inside: avoid; }
     th, td { border: 1px solid #64748b; padding: 4.5px 4px; text-align: center; font-size: 10px; line-height: 1.3; }
     th { background: #f1f5f9 !important; font-weight: 700; color: #0f172a; }
-    table.overview-table th, table.overview-table td { padding: 6px 4px; font-size: 10.5px; }
+    table.overview-table { margin-top: 10px; }
+    table.overview-table th, table.overview-table td { padding: 7.5px 5px; font-size: 11px; line-height: 1.35; }
+    table.overview-table thead th { padding: 8.5px 4px; font-size: 11px; }
     .text-left { text-align: left !important; }
     .badge-yes { color: #166534; font-weight: 700; white-space: nowrap; display: inline-block; }
     .badge-no { color: #991b1b; font-weight: 700; background: #fee2e2; padding: 1px 4px; border-radius: 3px; border: 1px solid #fca5a5; display: inline-block; white-space: nowrap; }
