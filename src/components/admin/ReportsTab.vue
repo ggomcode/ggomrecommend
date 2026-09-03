@@ -1096,7 +1096,7 @@ async function loadData() {
         supabase.from('applications').select('*, universities:univ_id(*)'),
         supabase.from('enrolled_students').select('id, name, student_code, gpa_overall, grad_year, grade, is_enrolled'),
         supabase.from('regional_recommendations').select('univ_name, track_name, grad_condition'),
-        supabase.from('rounds').select('*').order('id'),
+        supabase.from('timeline_rounds').select('*').order('id'),
         fetchRoundSchedulesMap()
       ])
 
