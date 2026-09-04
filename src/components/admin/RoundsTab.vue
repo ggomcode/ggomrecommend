@@ -645,7 +645,7 @@
                               @click="handleApproveAbandon(r)"
                             >포기 승인</button>
                             <button
-                              v-else-if="r.recommended && !r.abandoned && selected.status === 'FINALIZED'"
+                              v-else-if="r.recommended && !r.abandoned"
                               class="text-base rounded-lg whitespace-nowrap"
                               style="padding: 5px 12px; border: 1px solid #fca5a5; background: white; color: #ef4444; cursor: pointer;"
                               @click="handleAbandon(r)"
@@ -855,7 +855,7 @@
 
           <div class="space-y-1">
             <div class="flex items-center justify-between mb-1">
-              <label class="block text-[10px] font-bold text-slate-500">포기원 PDF 서류 선택 (필수)</label>
+              <label class="block text-[10px] font-bold text-slate-500">포기원 PDF 서류 선택 (선택 사항)</label>
               <a
                 :href="`${baseUrl}data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%99%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%A7%80%EC%9B%90%20%ED%8F%AC%EA%B8%B0%EC%9B%90_%EC%96%91%EC%8B%9D.hwp`"
                 download
@@ -895,9 +895,9 @@
           <button
             class="text-base font-semibold rounded-lg whitespace-nowrap disabled:opacity-40"
             style="padding: 9px 18px; border: none; background: #e11d48; color: white; cursor: pointer;"
-            :disabled="!abandonFile || resultActing || abandonOcrLoading"
+            :disabled="resultActing || abandonOcrLoading"
             @click="confirmAbandon"
-          >{{ resultActing ? '처리 중...' : '포기원 제출 및 확정' }}</button>
+          >{{ resultActing ? '처리 중...' : (abandonFile ? '포기원 제출 및 확정' : '포기 확정') }}</button>
         </div>
       </div>
     </div>
@@ -1876,10 +1876,12 @@ async function runAdminAbandonOcr(selectedFile) {
 
 async function confirmAbandon() {
   if (resultActing.value) return
-  if (!abandonFile.value || !abandonTarget.value) return
+  if (!abandonTarget.value) return
 
-  let confirmMsg = '정말로 이 지원자의 학교장추천 선정을 포기 처리하시겠습니까? 제출된 포기원 서류가 보관되고 정원 공석은 즉시 반환됩니다.'
-  if (abandonOcrWarning.value) {
+  let confirmMsg = '정말로 이 지원자의 학교장추천 선정을 포기 처리하시겠습니까? 정원 공석은 즉시 반환됩니다.'
+  if (!abandonFile.value) {
+    confirmMsg = '⚠️ 포기원 PDF 서류 파일이 등록되지 않았습니다.\n(서류 파일 없이 직권으로 포기 처리를 진행합니다.)\n\n정말로 이 지원자의 학교장추천 선정을 포기 처리하시겠습니까?'
+  } else if (abandonOcrWarning.value) {
     confirmMsg = `⚠️ AI 판독 경고가 존재합니다:\n${abandonOcrWarning.value}\n\n정말로 이 파일로 포기 처리를 강행하시겠습니까?`
   }
   
@@ -1896,14 +1898,16 @@ async function confirmAbandon() {
     const trackId = abandonTarget.value.track_id
     const roundId = abandonTarget.value.round_id
 
-    const path = `abandoned_${studentId}_r${roundId}_u_${trackId}.pdf`
-    const { error: uploadErr } = await supabase.storage
-      .from('documents')
-      .upload(path, abandonFile.value, { contentType: 'application/pdf', upsert: true })
+    let publicUrl = null
+    if (abandonFile.value) {
+      const path = `abandoned_${studentId}_r${roundId}_u_${trackId}.pdf`
+      const { error: uploadErr } = await supabase.storage
+        .from('documents')
+        .upload(path, abandonFile.value, { contentType: 'application/pdf', upsert: true })
 
-    if (uploadErr) throw new Error('포기원 PDF 업로드에 실패했습니다: ' + uploadErr.message)
-
-    const publicUrl = supabase.storage.from('documents').getPublicUrl(path).data.publicUrl
+      if (uploadErr) throw new Error('포기원 PDF 업로드에 실패했습니다: ' + uploadErr.message)
+      publicUrl = supabase.storage.from('documents').getPublicUrl(path).data.publicUrl
+    }
 
     await abandonApplication(studentId, trackId, roundId, publicUrl)
 

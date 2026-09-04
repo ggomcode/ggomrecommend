@@ -185,7 +185,7 @@
                           @click="handleApproveAbandon(r)"
                         >포기 승인</button>
                         <button
-                          v-else-if="round.status === 'FINALIZED' && r.recommended"
+                          v-else-if="r.recommended && !r.abandoned"
                           class="text-base whitespace-nowrap"
                           style="padding: 6px 12px; border: 1px solid #fca5a5; border-radius: 6px; background: white; color: #ef4444; cursor: pointer;"
                           @click="handleAbandon(r)"
