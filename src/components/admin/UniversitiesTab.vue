@@ -6,9 +6,6 @@
       <div>
         <p class="text-base mb-0.5" style="color: #94a3b8;">관리자</p>
         <h1 class="text-2xl font-semibold" style="color: #1e293b; margin: 0;">대학 설정</h1>
-        <p class="text-xs mt-0.5" style="color: #64748b;">
-          구글 스프레드시트 동기화를 진행하시면 우리 고등학교 추천 대상 대학과 학과별 모집정원이 백그라운드에서 자동으로 등록·연동됩니다.
-        </p>
       </div>
     </div>
 

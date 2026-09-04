@@ -671,7 +671,7 @@ import { dialog } from '../common/dialog.js'
 import { supabase } from '../../utils/supabaseClient.js'
 import { decryptText } from '../../utils/cryptoUtils.js'
 import { formatScore } from '../../utils/scorePreviewShared.js'
-import { fetchRoundSchedulesMap, DEFAULT_SCHEDULES } from '../../utils/roundSchedule.js'
+import { fetchRoundSchedulesMap, DEFAULT_SCHEDULES, parseKstDate } from '../../utils/roundSchedule.js'
 
 const loading = ref(false)
 const downloading = ref(false)
@@ -749,16 +749,18 @@ function getStudentRoundBadge(std) {
     }
   }
 
-  // 2. 일정이 있는 경우: 접수 시작부터 선정 협의일(eval_date)까지는 '진행중(N차 지원)'
-  if (sched && sched.eval_date) {
-    if (todayStr <= sched.eval_date) {
+  // 2. 일정이 있는 경우: 접수 시작부터 선정 협의/심사 종료(eval_end 또는 eval_date)까지는 '진행중(N차 지원)'
+  const evalTarget = sched?.eval_end || sched?.eval_date
+  if (evalTarget) {
+    const evalLimit = parseKstDate(evalTarget, true)
+    if (evalLimit && now <= evalLimit) {
       return {
         type: 'applied',
         text: `${roundNum}차 지원`,
         class: 'text-indigo-600 font-medium text-xs'
       }
-    } else {
-      // 선정 협의일(eval_date)이 지난 후 -> 선발 확정
+    } else if (evalLimit) {
+      // 선정 협의/심사 종료 이후 -> 선발 확정
       return {
         type: 'selected',
         text: `${roundNum}차 선발`,

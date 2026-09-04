@@ -214,6 +214,7 @@ import { printRoundsReport, printAbandonmentForm } from '../../utils/printTempla
 import { dialog } from '../common/dialog.js'
 import HelpBox from '../common/HelpBox.vue'
 import { formatScore } from '../../utils/scorePreviewShared.js'
+import { formatKoreanDateTimePeriod } from '../../utils/roundSchedule.js'
 
 const auth = useAuthStore()
 
@@ -222,28 +223,9 @@ const results   = ref([])
 const loading   = ref(false)
 const loadError = ref('')
 
-function formatKoreanDate(dateStr) {
-  if (!dateStr) return ''
-  try {
-    const d = new Date(dateStr)
-    if (isNaN(d.getTime())) return dateStr
-    const days = ['일', '월', '화', '수', '목', '금', '토']
-    const year = d.getFullYear()
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const date = String(d.getDate()).padStart(2, '0')
-    const day = days[d.getDay()]
-    return `${year}.${month}.${date}.(${day})`
-  } catch {
-    return dateStr
-  }
-}
-
 function formatPeriod(sched) {
   if (!sched || (!sched.apply_start && !sched.apply_end)) return '접수 기간 미선택'
-  const startFmt = formatKoreanDate(sched.apply_start)
-  const endFmt = formatKoreanDate(sched.apply_end)
-  if (startFmt && endFmt) return `${startFmt} ~ ${endFmt}`
-  return startFmt || endFmt
+  return formatKoreanDateTimePeriod(sched.apply_start, sched.apply_end)
 }
 
 function isAbandonRequested(r) {

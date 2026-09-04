@@ -65,13 +65,25 @@
         <!-- 카드 1: 학교장 추천자 선발 시스템 -->
         <div
           @click="enterPrincipalSystem"
-          class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-blue-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
+          :class="[
+            'group relative bg-white rounded-3xl p-6 sm:p-7 border shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden',
+            isStudentPrincipalLocked
+              ? 'border-slate-300/80 bg-slate-50/90 opacity-60 grayscale-[35%] cursor-not-allowed hover:shadow-sm'
+              : 'border-slate-200/80 hover:shadow-xl hover:border-blue-500 cursor-pointer'
+          ]"
         >
-          <div class="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
+          <div v-if="!isStudentPrincipalLocked" class="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
 
           <div>
             <div class="flex items-center justify-between gap-3 mb-6">
-              <div class="w-13 h-13 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-xs border border-blue-100">
+              <div
+                :class="[
+                  'w-13 h-13 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 shadow-xs border',
+                  isStudentPrincipalLocked
+                    ? 'bg-slate-100 text-slate-400 border-slate-200'
+                    : 'bg-blue-50 text-blue-600 border-blue-100 group-hover:bg-blue-600 group-hover:text-white'
+                ]"
+              >
                 <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
                   <path d="M6 12v5c3 3 9 3 12 0v-5"/>
@@ -80,16 +92,18 @@
               <span
                 :class="[
                   '-mr-6 sm:-mr-7 pl-3.5 pr-5 sm:pr-6 py-1.5 rounded-l-full rounded-r-none text-xs font-bold shadow-xs whitespace-nowrap shrink-0 border-y border-l border-r-0',
-                  principalPeriodState === 'OPEN'
-                    ? 'bg-blue-100 text-blue-800 border-blue-200'
-                    : (principalPeriodState === 'DRAFT'
-                        ? 'bg-blue-50 text-blue-700 border-blue-200'
-                        : (principalPeriodState === 'CLOSED'
-                            ? 'bg-amber-50 text-amber-800 border-amber-200'
-                            : 'bg-slate-100 text-slate-700 border-slate-200'))
+                  isStudentPrincipalLocked || principalPeriodState === 'ALL_ENDED'
+                    ? 'bg-rose-100 text-rose-800 border-rose-300 font-extrabold'
+                    : (principalPeriodState === 'OPEN'
+                        ? 'bg-blue-100 text-blue-800 border-blue-200'
+                        : (principalPeriodState === 'DRAFT'
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : (principalPeriodState === 'CLOSED'
+                                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                : 'bg-slate-100 text-slate-700 border-slate-200')))
                 ]"
               >
-                {{ principalStatusText }}
+                {{ isStudentPrincipalLocked ? '🔒 모든 선발일정 종료' : principalStatusText }}
               </span>
             </div>
 
@@ -97,17 +111,43 @@
               전국 대입
             </div>
 
-            <h3 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors mb-3">
+            <h3
+              :class="[
+                'text-xl sm:text-2xl font-bold transition-colors mb-3',
+                isStudentPrincipalLocked ? 'text-slate-600' : 'text-slate-900 group-hover:text-blue-600'
+              ]"
+            >
               학교장 추천자 선발 시스템
             </h3>
             
             <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
               주요 대학 학교장추천전형(지역균형) 신청서 제출, 대학별 정원 관리, 교내 석차 심의 및 최종 추천 확정을 관리합니다.
             </p>
+
+            <!-- 학생 대상: 대문에 모든 선발일정 종료 안내 배너 명확히 표시 -->
+            <div
+              v-if="isStudentPrincipalLocked"
+              class="mt-4 p-3.5 rounded-2xl bg-rose-50/90 border border-rose-200/90 text-rose-800 text-xs font-semibold flex items-start gap-2.5 shadow-xs"
+            >
+              <span class="text-base shrink-0 leading-none">🔒</span>
+              <div class="space-y-0.5">
+                <p class="font-bold text-rose-900 m-0 text-xs leading-tight">모든 학교장 추천 선발일정이 종료되었습니다.</p>
+                <p class="text-[11px] text-rose-700 m-0 font-normal leading-normal">
+                  최종 차수의 선정 결과 공지 기간이 만료되어 학생의 추천 신청 및 시스템 접근이 제한됩니다.
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-blue-600">
-            <span>시스템 바로가기</span>
+          <div
+            :class="[
+              'mt-8 pt-6 border-t flex items-center justify-between text-sm font-bold',
+              isStudentPrincipalLocked
+                ? 'border-slate-200 text-slate-400'
+                : 'border-slate-100 text-blue-600'
+            ]"
+          >
+            <span>{{ isStudentPrincipalLocked ? '접근 불가 (선발 종료)' : '시스템 바로가기' }}</span>
             <svg class="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
@@ -290,7 +330,7 @@ import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { checkRuralSystemOpenStatus, getRuralEligibilityList } from '../api/ruralApi'
 import { checkExamIntentSystemEnabled } from '../api/examIntentApi'
 import { supabase } from '../utils/supabaseClient'
-import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../utils/roundSchedule'
+import { fetchRoundSchedulesMap, computeRoundDisplayStatus, parseKstDate } from '../utils/roundSchedule'
 import { dialog } from '../components/common/dialog'
 
 const router = useRouter()
@@ -298,6 +338,11 @@ const auth = useAuthStore()
 
 const principalPeriodState = ref('OPEN')
 const principalStatusText = ref('🟢 접수 진행 중')
+const isPrincipalAllEnded = ref(false)
+
+const isStudentPrincipalLocked = computed(() => {
+  return auth.isStudent && isPrincipalAllEnded.value
+})
 
 const isRuralSystemOpen = ref(true)
 const isRuralSystemEnabled = ref(false)
@@ -364,7 +409,15 @@ const portalGridClass = computed(() => {
   return 'grid-cols-1 max-w-xl'
 })
 
-function enterPrincipalSystem() {
+async function enterPrincipalSystem() {
+  if (isStudentPrincipalLocked.value) {
+    await dialog.alert({
+      title: '선발일정 종료 안내',
+      message: '모든 학교장 추천 선발일정(최종 선정결과 공지 기간)이 종료되어 학생은 더 이상 시스템에 접근하실 수 없습니다.',
+      level: 'warn'
+    })
+    return
+  }
   if (auth.isAdmin) router.push('/admin')
   else if (auth.isTeacher) router.push('/teacher')
   else if (auth.isStudent) router.push('/student')
@@ -447,6 +500,22 @@ async function loadPrincipalStatus() {
         computedStatus: dispStatus
       }
     })
+
+    // 0. 마지막 선발 차수의 선정 결과 공지일 기간이 종료되었는지 점검 (KST 기준)
+    const lastRoundId = totalRounds
+    const lastSched = schedulesMap[lastRoundId]
+    const now = new Date()
+    if (lastSched) {
+      const announceTarget = lastSched.announce_end || lastSched.announce_date
+      const announceEndDt = parseKstDate(announceTarget, true)
+      if (announceEndDt && now > announceEndDt) {
+        isPrincipalAllEnded.value = true
+        principalPeriodState.value = 'ALL_ENDED'
+        principalStatusText.value = '🔒 모든 선발일정 종료'
+        return
+      }
+    }
+    isPrincipalAllEnded.value = false
 
     // 1. 접수 진행 중인 라운드
     const openRound = processedRounds.find(r => r.computedStatus === 'OPEN')

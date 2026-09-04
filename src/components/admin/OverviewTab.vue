@@ -24,9 +24,6 @@
       <!-- ① 앱 정보 -->
       <div class="rounded-xl flex flex-wrap items-center justify-between gap-4" style="padding: 20px 24px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
         <div>
-          <p class="text-base font-semibold" style="color: #94a3b8; text-transform: uppercase; letter-spacing: 0.07em; margin: 0 0 4px;">
-            Teacher Utility Kit
-          </p>
           <p class="text-xl font-bold" style="color: #0f172a; margin: 0;">학교장추천전형 시스템</p>
         </div>
         <div class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-50/70 border border-blue-100 text-xs text-slate-600 font-semibold">

@@ -26,9 +26,6 @@
             <h2 class="text-xl font-bold text-slate-800 m-0 flex items-center gap-2">
               <span>📅</span> 차수별 선발일정 전체 관리
             </h2>
-            <p class="text-xs text-slate-500 mt-1 m-0">
-              학교장 추천전형 차수별(1차, 2차, 3차...) 접수기간, 심사일정, 결과 공지일을 등록 및 수정할 수 있으며, <strong>Supabase DB (config 테이블)</strong>에 안전하게 동기화됩니다.
-            </p>
           </div>
           <div class="flex items-center gap-3 flex-wrap">
             <!-- 총 선발 회수 설정 -->
@@ -86,52 +83,117 @@
                 </button>
               </div>
 
-              <!-- 달력(Datepicker) 입력 구역 -->
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <!-- 세부 일정(접수 / 협의 / 공지 기간) 입력 구역 -->
+              <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-1">
                 <!-- 📅 희망자 접수 기간 -->
-                <div class="space-y-1">
-                  <label class="block text-xs font-bold text-slate-700">📅 희망자 접수 기간</label>
-                  <div class="flex items-center gap-1.5">
-                    <input
-                      type="date"
-                      v-model="getSchedule(r.id).apply_start"
-                      class="w-full text-xs font-semibold border border-slate-200 rounded-xl px-2.5 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 text-slate-800"
-                    />
-                    <span class="text-slate-400 font-bold text-xs">~</span>
-                    <input
-                      type="date"
-                      v-model="getSchedule(r.id).apply_end"
-                      class="w-full text-xs font-semibold border border-slate-200 rounded-xl px-2.5 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 text-slate-800"
-                    />
+                <div class="space-y-1.5 bg-slate-50/80 p-3 rounded-xl border border-slate-200/80">
+                  <div class="flex items-center justify-between">
+                    <label class="block text-xs font-bold text-slate-700">📅 희망자 접수 기간</label>
+                    <button
+                      type="button"
+                      @click="setWorkingHours(getSchedule(r.id), 'apply')"
+                      class="text-[10px] text-blue-600 hover:text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 font-semibold"
+                      title="시작 09:00, 마감 18:00으로 자동 맞춤"
+                    >
+                      🕒 09~18시 설정
+                    </button>
                   </div>
-                  <p class="text-[11px] font-bold text-blue-600 m-0 pt-1">
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-[11px] font-bold text-slate-400 w-8 shrink-0">시작</span>
+                      <input
+                        type="datetime-local"
+                        v-model="getSchedule(r.id).apply_start"
+                        class="w-full text-xs font-semibold border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white text-slate-800"
+                      />
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-[11px] font-bold text-slate-400 w-8 shrink-0">마감</span>
+                      <input
+                        type="datetime-local"
+                        v-model="getSchedule(r.id).apply_end"
+                        class="w-full text-xs font-semibold border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white text-slate-800"
+                      />
+                    </div>
+                  </div>
+                  <p class="text-[11px] font-bold text-blue-600 m-0 pt-0.5 break-all">
                     📌 {{ formatKoreanPeriod(getSchedule(r.id).apply_start, getSchedule(r.id).apply_end) }}
                   </p>
                 </div>
 
-                <!-- 🤝 대상자 선정 협의일 -->
-                <div class="space-y-1">
-                  <label class="block text-xs font-bold text-slate-700">🤝 대상자 선정 협의일</label>
-                  <input
-                    type="date"
-                    v-model="getSchedule(r.id).eval_date"
-                    class="w-full text-xs font-semibold border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 text-slate-800"
-                  />
-                  <p class="text-[11px] font-bold text-blue-600 m-0 pt-1">
-                    📌 {{ formatKoreanDate(getSchedule(r.id).eval_date) }}
+                <!-- 🤝 대상자 선정 협의 기간 -->
+                <div class="space-y-1.5 bg-slate-50/80 p-3 rounded-xl border border-slate-200/80">
+                  <div class="flex items-center justify-between">
+                    <label class="block text-xs font-bold text-slate-700">🤝 대상자 선정 협의 기간</label>
+                    <button
+                      type="button"
+                      @click="setWorkingHours(getSchedule(r.id), 'eval')"
+                      class="text-[10px] text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 font-semibold"
+                      title="시작 09:00, 종료 18:00으로 자동 맞춤"
+                    >
+                      🕒 09~18시 설정
+                    </button>
+                  </div>
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-[11px] font-bold text-slate-400 w-8 shrink-0">시작</span>
+                      <input
+                        type="datetime-local"
+                        v-model="getSchedule(r.id).eval_start"
+                        @change="syncEvalDate(getSchedule(r.id))"
+                        class="w-full text-xs font-semibold border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white text-slate-800"
+                      />
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-[11px] font-bold text-slate-400 w-8 shrink-0">종료</span>
+                      <input
+                        type="datetime-local"
+                        v-model="getSchedule(r.id).eval_end"
+                        @change="syncEvalDate(getSchedule(r.id))"
+                        class="w-full text-xs font-semibold border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white text-slate-800"
+                      />
+                    </div>
+                  </div>
+                  <p class="text-[11px] font-bold text-indigo-600 m-0 pt-0.5 break-all">
+                    📌 {{ formatKoreanPeriod(getSchedule(r.id).eval_start, getSchedule(r.id).eval_end) }}
                   </p>
                 </div>
 
-                <!-- 📢 선정 결과 공지일 -->
-                <div class="space-y-1">
-                  <label class="block text-xs font-bold text-slate-700">📢 선정 결과 공지일</label>
-                  <input
-                    type="date"
-                    v-model="getSchedule(r.id).announce_date"
-                    class="w-full text-xs font-semibold border border-slate-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 text-slate-800"
-                  />
-                  <p class="text-[11px] font-bold text-blue-600 m-0 pt-1">
-                    📌 {{ formatKoreanDate(getSchedule(r.id).announce_date) }}
+                <!-- 📢 선정 결과 공지 기간 -->
+                <div class="space-y-1.5 bg-slate-50/80 p-3 rounded-xl border border-slate-200/80">
+                  <div class="flex items-center justify-between">
+                    <label class="block text-xs font-bold text-slate-700">📢 선정 결과 공지 기간</label>
+                    <button
+                      type="button"
+                      @click="setWorkingHours(getSchedule(r.id), 'announce')"
+                      class="text-[10px] text-purple-600 hover:text-purple-800 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 font-semibold"
+                      title="시작 09:00, 종료 18:00으로 자동 맞춤"
+                    >
+                      🕒 09~18시 설정
+                    </button>
+                  </div>
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-[11px] font-bold text-slate-400 w-8 shrink-0">시작</span>
+                      <input
+                        type="datetime-local"
+                        v-model="getSchedule(r.id).announce_start"
+                        @change="syncAnnounceDate(getSchedule(r.id))"
+                        class="w-full text-xs font-semibold border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white text-slate-800"
+                      />
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-[11px] font-bold text-slate-400 w-8 shrink-0">종료</span>
+                      <input
+                        type="datetime-local"
+                        v-model="getSchedule(r.id).announce_end"
+                        @change="syncAnnounceDate(getSchedule(r.id))"
+                        class="w-full text-xs font-semibold border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white text-slate-800"
+                      />
+                    </div>
+                  </div>
+                  <p class="text-[11px] font-bold text-purple-600 m-0 pt-0.5 break-all">
+                    📌 {{ formatKoreanPeriod(getSchedule(r.id).announce_start, getSchedule(r.id).announce_end) }}
                   </p>
                 </div>
               </div>
@@ -210,34 +272,98 @@
                     일정 저장
                   </button>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <label class="block text-xs font-medium text-slate-500 mb-1">희망자 접수 기간</label>
-                    <div class="flex items-center gap-1.5">
-                      <input type="date" v-model="curSchedule.apply_start"
-                        class="w-full text-base border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 font-medium text-slate-800" />
-                      <span class="text-slate-400 font-bold text-xs">~</span>
-                      <input type="date" v-model="curSchedule.apply_end"
-                        class="w-full text-base border border-slate-200 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 font-medium text-slate-800" />
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                  <!-- 희망자 접수 기간 -->
+                  <div class="bg-slate-50/80 p-2.5 rounded-lg border border-slate-200/80 space-y-1">
+                    <div class="flex items-center justify-between">
+                      <label class="block text-xs font-bold text-slate-700">희망자 접수 기간</label>
+                      <button
+                        type="button"
+                        @click="setWorkingHours(curSchedule, 'apply')"
+                        class="text-[10px] text-blue-600 hover:text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 font-semibold"
+                        title="시작 09:00, 마감 18:00으로 자동 맞춤"
+                      >
+                        🕒 09~18시
+                      </button>
                     </div>
-                    <p class="text-[10px] font-bold text-blue-600 m-0 pt-1">
+                    <div class="space-y-1">
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-[11px] font-bold text-slate-400 w-8 shrink-0">시작</span>
+                        <input type="datetime-local" v-model="curSchedule.apply_start"
+                          class="w-full text-xs border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white font-medium text-slate-800" />
+                      </div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-[11px] font-bold text-slate-400 w-8 shrink-0">마감</span>
+                        <input type="datetime-local" v-model="curSchedule.apply_end"
+                          class="w-full text-xs border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white font-medium text-slate-800" />
+                      </div>
+                    </div>
+                    <p class="text-[10px] font-bold text-blue-600 m-0 pt-0.5 break-all">
                       📌 {{ formatKoreanPeriod(curSchedule.apply_start, curSchedule.apply_end) }}
                     </p>
                   </div>
-                  <div>
-                    <label class="block text-xs font-medium text-slate-500 mb-1">대상자 선정 협의일</label>
-                    <input type="date" v-model="curSchedule.eval_date"
-                      class="w-full text-base border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 font-medium text-slate-800" />
-                    <p class="text-[10px] font-bold text-blue-600 m-0 pt-1">
-                      📌 {{ formatKoreanDate(curSchedule.eval_date) }}
+
+                  <!-- 대상자 선정 협의 기간 -->
+                  <div class="bg-slate-50/80 p-2.5 rounded-lg border border-slate-200/80 space-y-1">
+                    <div class="flex items-center justify-between">
+                      <label class="block text-xs font-bold text-slate-700">대상자 선정 협의 기간</label>
+                      <button
+                        type="button"
+                        @click="setWorkingHours(curSchedule, 'eval')"
+                        class="text-[10px] text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 font-semibold"
+                        title="시작 09:00, 종료 18:00으로 자동 맞춤"
+                      >
+                        🕒 09~18시
+                      </button>
+                    </div>
+                    <div class="space-y-1">
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-[11px] font-bold text-slate-400 w-8 shrink-0">시작</span>
+                        <input type="datetime-local" v-model="curSchedule.eval_start"
+                          @change="syncEvalDate(curSchedule)"
+                          class="w-full text-xs border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white font-medium text-slate-800" />
+                      </div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-[11px] font-bold text-slate-400 w-8 shrink-0">종료</span>
+                        <input type="datetime-local" v-model="curSchedule.eval_end"
+                          @change="syncEvalDate(curSchedule)"
+                          class="w-full text-xs border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white font-medium text-slate-800" />
+                      </div>
+                    </div>
+                    <p class="text-[10px] font-bold text-indigo-600 m-0 pt-0.5 break-all">
+                      📌 {{ formatKoreanPeriod(curSchedule.eval_start, curSchedule.eval_end) }}
                     </p>
                   </div>
-                  <div>
-                    <label class="block text-xs font-medium text-slate-500 mb-1">선정 결과 공지일</label>
-                    <input type="date" v-model="curSchedule.announce_date"
-                      class="w-full text-base border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-slate-50 font-medium text-slate-800" />
-                    <p class="text-[10px] font-bold text-blue-600 m-0 pt-1">
-                      📌 {{ formatKoreanDate(curSchedule.announce_date) }}
+
+                  <!-- 선정 결과 공지 기간 -->
+                  <div class="bg-slate-50/80 p-2.5 rounded-lg border border-slate-200/80 space-y-1">
+                    <div class="flex items-center justify-between">
+                      <label class="block text-xs font-bold text-slate-700">선정 결과 공지 기간</label>
+                      <button
+                        type="button"
+                        @click="setWorkingHours(curSchedule, 'announce')"
+                        class="text-[10px] text-purple-600 hover:text-purple-800 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 font-semibold"
+                        title="시작 09:00, 종료 18:00으로 자동 맞춤"
+                      >
+                        🕒 09~18시
+                      </button>
+                    </div>
+                    <div class="space-y-1">
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-[11px] font-bold text-slate-400 w-8 shrink-0">시작</span>
+                        <input type="datetime-local" v-model="curSchedule.announce_start"
+                          @change="syncAnnounceDate(curSchedule)"
+                          class="w-full text-xs border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white font-medium text-slate-800" />
+                      </div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-[11px] font-bold text-slate-400 w-8 shrink-0">종료</span>
+                        <input type="datetime-local" v-model="curSchedule.announce_end"
+                          @change="syncAnnounceDate(curSchedule)"
+                          class="w-full text-xs border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-blue-400 focus:outline-none bg-white font-medium text-slate-800" />
+                      </div>
+                    </div>
+                    <p class="text-[10px] font-bold text-purple-600 m-0 pt-0.5 break-all">
+                      📌 {{ formatKoreanPeriod(curSchedule.announce_start, curSchedule.announce_end) }}
                     </p>
                   </div>
                 </div>
@@ -801,7 +927,13 @@ import {
 import HelpBox from '../common/HelpBox.vue'
 import { dialog } from '../common/dialog.js'
 import { roundStatusLabel } from '../../data/roundStatus.js'
-import { computeRoundDisplayStatus } from '../../utils/roundSchedule.js'
+import {
+  computeRoundDisplayStatus,
+  DEFAULT_SCHEDULES,
+  normalizeSchedule,
+  formatKoreanDateTime,
+  formatKoreanDateTimePeriod
+} from '../../utils/roundSchedule.js'
 import { formatScore } from '../../utils/scorePreviewShared.js'
 import { convertPdfToImages, analyzeDocumentWithAI } from '../../utils/ocrParser.js'
 import { printAbandonmentForm } from '../../utils/printTemplates.js'
@@ -834,49 +966,52 @@ const loading   = ref(false)
 const view      = ref('apps')
 const totalRounds = ref(3) // 1~5, default 3
 
-const DEFAULT_SCHEDULES = {
-  1: {
-    apply_start: '2026-08-19',
-    apply_end: '2026-08-20',
-    eval_date: '2026-08-21',
-    announce_date: '2026-08-24'
-  },
-  2: {
-    apply_start: '2026-08-26',
-    apply_end: '2026-08-27',
-    eval_date: '2026-08-28',
-    announce_date: '2026-08-31'
-  },
-  3: {
-    apply_start: '2026-09-02',
-    apply_end: '2026-09-03',
-    eval_date: '2026-09-04',
-    announce_date: '2026-09-04'
-  }
-}
-
 function formatKoreanDate(dateStr) {
-  if (!dateStr) return '날짜 미선택'
-  try {
-    const d = new Date(dateStr)
-    if (isNaN(d.getTime())) return dateStr
-    const days = ['일', '월', '화', '수', '목', '금', '토']
-    const year = d.getFullYear()
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const date = String(d.getDate()).padStart(2, '0')
-    const day = days[d.getDay()]
-    return `${year}.${month}.${date}.(${day})`
-  } catch {
-    return dateStr
-  }
+  if (!dateStr) return '일정 미선택'
+  return formatKoreanDateTime(dateStr, true)
 }
 
 function formatKoreanPeriod(startStr, endStr) {
-  if (!startStr && !endStr) return '접수 기간 미선택'
-  const startFmt = formatKoreanDate(startStr)
-  const endFmt = formatKoreanDate(endStr)
-  if (startStr && endStr) return `${startFmt} ~ ${endFmt}`
-  return startFmt || endFmt
+  return formatKoreanDateTimePeriod(startStr, endStr)
+}
+
+function syncEvalDate(sched) {
+  if (!sched) return
+  if (sched.eval_start) {
+    sched.eval_date = sched.eval_start.slice(0, 10)
+  }
+}
+
+function syncAnnounceDate(sched) {
+  if (!sched) return
+  if (sched.announce_start) {
+    sched.announce_date = sched.announce_start.slice(0, 10)
+  }
+}
+
+function setWorkingHours(sched, type) {
+  if (!sched) return
+  const now = new Date()
+  const todayStr = now.toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
+
+  if (type === 'apply') {
+    const startBase = (sched.apply_start || '').slice(0, 10) || todayStr
+    const endBase = (sched.apply_end || '').slice(0, 10) || startBase
+    sched.apply_start = `${startBase}T09:00`
+    sched.apply_end = `${endBase}T18:00`
+  } else if (type === 'eval') {
+    const startBase = (sched.eval_start || '').slice(0, 10) || (sched.eval_date || '').slice(0, 10) || todayStr
+    const endBase = (sched.eval_end || '').slice(0, 10) || startBase
+    sched.eval_start = `${startBase}T09:00`
+    sched.eval_end = `${endBase}T18:00`
+    syncEvalDate(sched)
+  } else if (type === 'announce') {
+    const startBase = (sched.announce_start || '').slice(0, 10) || (sched.announce_date || '').slice(0, 10) || todayStr
+    const endBase = (sched.announce_end || '').slice(0, 10) || startBase
+    sched.announce_start = `${startBase}T09:00`
+    sched.announce_end = `${endBase}T18:00`
+    syncAnnounceDate(sched)
+  }
 }
 
 function getStatusStyle(status) {
@@ -904,7 +1039,16 @@ async function onRoundStatusChange(r, newStatus) {
 }
 
 const schedulesMap = ref({})
-const curSchedule = ref({ apply_start: '', apply_end: '', eval_date: '', announce_date: '' })
+const curSchedule = ref({
+  apply_start: '',
+  apply_end: '',
+  eval_start: '',
+  eval_end: '',
+  eval_date: '',
+  announce_start: '',
+  announce_end: '',
+  announce_date: ''
+})
 
 async function loadSchedules() {
   let map = {}
@@ -942,7 +1086,12 @@ async function loadSchedules() {
     }
   }
 
-  schedulesMap.value = { ...DEFAULT_SCHEDULES, ...map }
+  const merged = { ...DEFAULT_SCHEDULES, ...map }
+  const normalized = {}
+  for (const [k, v] of Object.entries(merged)) {
+    normalized[k] = normalizeSchedule(v)
+  }
+  schedulesMap.value = normalized
   updateCurSchedule()
 }
 
@@ -979,12 +1128,16 @@ function updateCurSchedule() {
   const id = selected.value.id
   const exist = schedulesMap.value[id] || DEFAULT_SCHEDULES[id]
   if (exist) {
-    curSchedule.value = { ...exist }
+    curSchedule.value = { ...normalizeSchedule(exist) }
   } else {
     curSchedule.value = {
       apply_start: '',
       apply_end: '',
+      eval_start: '',
+      eval_end: '',
       eval_date: '',
+      announce_start: '',
+      announce_end: '',
       announce_date: ''
     }
   }
@@ -999,21 +1152,37 @@ function getSchedule(id) {
     const exist = DEFAULT_SCHEDULES[id] || {
       apply_start: '',
       apply_end: '',
+      eval_start: '',
+      eval_end: '',
       eval_date: '',
+      announce_start: '',
+      announce_end: '',
       announce_date: ''
     }
-    schedulesMap.value[id] = { ...exist }
+    schedulesMap.value[id] = { ...normalizeSchedule(exist) }
   }
   return schedulesMap.value[id]
 }
 
 async function saveAllSchedules() {
-  localStorage.setItem('round_schedules_map', JSON.stringify(schedulesMap.value))
+  // 모든 차수 스케줄 정규화 및 레거시 날짜 필드(eval_date, announce_date) 최신 동기화
+  const toSave = {}
+  for (const [k, v] of Object.entries(schedulesMap.value)) {
+    const norm = normalizeSchedule(v)
+    if (norm) {
+      syncEvalDate(norm)
+      syncAnnounceDate(norm)
+      toSave[k] = norm
+    }
+  }
+  schedulesMap.value = toSave
+
+  localStorage.setItem('round_schedules_map', JSON.stringify(toSave))
   if (supabase) {
     try {
       await supabase.from('config').upsert({
         key: 'round_schedules_map',
-        value: JSON.stringify(schedulesMap.value)
+        value: JSON.stringify(toSave)
       }, { onConflict: 'key' })
     } catch (e) {
       console.error(e)
@@ -1026,13 +1195,15 @@ async function saveAllSchedules() {
     await refreshSidebarRound()
   }
 
-  await dialog.alert({ title: 'DB 저장 완료', message: '모든 선발 차수 일정과 실시간 진행 상태가 DB에 정상 저장 및 동기화되었습니다.', level: 'success' })
+  await dialog.alert({ title: 'DB 저장 완료', message: '모든 선발 차수 일정(시분초 및 공지기간 포함)과 실시간 진행 상태가 DB에 정상 저장 및 동기화되었습니다.', level: 'success' })
 }
 
 async function saveSchedule() {
   if (!selected.value) return
   const id = selected.value.id
-  schedulesMap.value[id] = { ...curSchedule.value }
+  syncEvalDate(curSchedule.value)
+  syncAnnounceDate(curSchedule.value)
+  schedulesMap.value[id] = { ...normalizeSchedule(curSchedule.value) }
   await saveAllSchedules()
 }
 

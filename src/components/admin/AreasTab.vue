@@ -7,7 +7,107 @@
       <h1 class="text-2xl font-semibold" style="color: #1e293b; margin: 0;">추천순위 기준 설정</h1>
     </div>
 
-    <HelpBox class="mb-5" storage-key="areas-main" :title="HELP_MAIN.title" :intro="HELP_MAIN.intro" :items="HELP_MAIN.items" />
+    <HelpBox class="mb-5" storage-key="areas-main" :title="HELP_MAIN.title" :intro="HELP_MAIN.intro">
+      <!-- 가로형 진행 단계 플로우 차트 (박스 및 화살표) -->
+      <div class="mt-3">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 relative">
+          <!-- STEP 1 -->
+          <div class="bg-white rounded-xl p-3.5 border border-blue-100 shadow-xs flex flex-col justify-between relative">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="px-2 py-0.5 rounded text-[11px] font-extrabold bg-blue-100 text-blue-700">STEP 1</span>
+                <span class="text-[11px] text-slate-400 font-bold">항목 생성</span>
+              </div>
+              <h3 class="text-sm font-bold text-slate-800 m-0 mb-1.5 flex items-center gap-1.5">
+                <span>➕</span> 전형요소 추가
+              </h3>
+              <p class="text-xs text-slate-600 m-0 leading-relaxed">
+                좌측 <strong>"+ 전형요소 추가"</strong> 클릭 후 추천 템플릿(교과 내신, 출결, 봉사 등)을 골라 배점을 정합니다.
+              </p>
+            </div>
+            <!-- 우측 화살표 (md 이상) -->
+            <div class="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 rounded-full bg-blue-500 text-white items-center justify-center text-[11px] shadow-sm">
+              ➔
+            </div>
+          </div>
+
+          <!-- STEP 2 -->
+          <div class="bg-white rounded-xl p-3.5 border border-indigo-100 shadow-xs flex flex-col justify-between relative">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="px-2 py-0.5 rounded text-[11px] font-extrabold bg-indigo-100 text-indigo-700">STEP 2</span>
+                <span class="text-[11px] text-indigo-500 font-bold">내신 산출 방식</span>
+              </div>
+              <h3 class="text-sm font-bold text-slate-800 m-0 mb-1.5 flex items-center gap-1.5">
+                <span>📊</span> 방식 선택 & 업로드
+              </h3>
+              <div class="space-y-1 text-xs">
+                <div class="p-1.5 rounded bg-indigo-50/80 border border-indigo-100">
+                  <strong class="text-indigo-900 block font-bold text-[11px]">A. 대교협/유니브 연명부 (추천)</strong>
+                  <span class="text-[10.5px] text-slate-600 block mt-0.5 leading-tight">조회기준 [대학별 환산점수] → 엑셀 1회 일괄 반영</span>
+                </div>
+                <div class="p-1.5 rounded bg-slate-50 border border-slate-200/70">
+                  <strong class="text-slate-800 block font-bold text-[11px]">B. 전교 공통 등급표</strong>
+                  <span class="text-[10.5px] text-slate-500 block mt-0.5 leading-tight">조회기준 [기본 조회] → 점수표 + 학생등급 각각 등록</span>
+                </div>
+              </div>
+            </div>
+            <!-- 우측 화살표 (md 이상) -->
+            <div class="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 rounded-full bg-indigo-500 text-white items-center justify-center text-[11px] shadow-sm">
+              ➔
+            </div>
+          </div>
+
+          <!-- STEP 3 -->
+          <div class="bg-white rounded-xl p-3.5 border border-purple-100 shadow-xs flex flex-col justify-between relative">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="px-2 py-0.5 rounded text-[11px] font-extrabold bg-purple-100 text-purple-700">STEP 3</span>
+                <span class="text-[11px] text-purple-500 font-bold">기준/데이터 입력</span>
+              </div>
+              <h3 class="text-sm font-bold text-slate-800 m-0 mb-1.5 flex items-center gap-1.5">
+                <span>📝</span> 기준 등록 & 시뮬레이션
+              </h3>
+              <p class="text-xs text-slate-600 m-0 leading-relaxed mb-2">
+                요소를 클릭하여 우측 탭에서 <strong>[점수 기준]</strong> 및 <strong>[기초 데이터]</strong>를 등록합니다.
+              </p>
+              <div class="bg-purple-50/80 p-1.5 rounded border border-purple-100 text-[11px] text-purple-800 leading-tight">
+                💡 <strong>점수 계산 테스트</strong>로 실제 산출될 점수를 미리 확인 가능합니다.
+              </div>
+            </div>
+            <!-- 우측 화살표 (md 이상) -->
+            <div class="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-6 h-6 rounded-full bg-purple-500 text-white items-center justify-center text-[11px] shadow-sm">
+              ➔
+            </div>
+          </div>
+
+          <!-- STEP 4 -->
+          <div class="bg-white rounded-xl p-3.5 border border-emerald-100 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="px-2 py-0.5 rounded text-[11px] font-extrabold bg-emerald-100 text-emerald-700">STEP 4</span>
+                <span class="text-[11px] text-emerald-600 font-bold">최종 확인</span>
+              </div>
+              <h3 class="text-sm font-bold text-slate-800 m-0 mb-1.5 flex items-center gap-1.5">
+                <span>✅</span> 총점 일치 확인
+              </h3>
+              <p class="text-xs text-slate-600 m-0 leading-relaxed">
+                좌측 목록 하단의 <strong>배점 총점</strong>이 우리 학교 추천 규정의 총점과 정확히 일치하는지 확인합니다.
+              </p>
+            </div>
+            <div class="mt-2 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-1 rounded border border-emerald-200/60 text-center">
+              준비 완료 후 추천 선발 진행 가능
+            </div>
+          </div>
+        </div>
+
+        <!-- 주의 알림 배너 -->
+        <div class="mt-3 px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center gap-2">
+          <span class="text-base shrink-0">⚠️</span>
+          <span><strong>주의:</strong> 첫 번째 추천 선발(1차)이 시작되거나 종료된 이후에는 전형요소 추가·수정·삭제가 엄격히 차단됩니다. 반드시 1차 라운드 오픈 전에 설정을 완료하세요.</span>
+        </div>
+      </div>
+    </HelpBox>
 
     <HelpBox
       v-if="hasLockedRound"
@@ -805,17 +905,9 @@ import { isKeyMatched, formatScore } from '../../utils/scorePreviewShared.js'
 
 // ── 도움말 문구 ────────────────────────────────────────────────
 const HELP_MAIN = {
-  title: '도움말 — 추천순위 기준 설정',
-  intro: '전형요소는 학생 점수를 이루는 항목(예: 교과 내신, 출결, 봉사 활동)입니다. 여기서 각 항목의 만점과 점수 계산 방식을 정합니다.',
-  items: [
-    '"+ 전형요소 추가"를 누르고 템플릿에서 골라 시작하는 것이 가장 쉽습니다.',
-    '📌 [교과 내신 설정 가이드] 유니브/대교협 엑셀(석차연명부)을 쓰시는 경우: 조회 기준을 "대학별 환산점수 조회"로 설정한 뒤, 오른쪽 [기초 데이터] 탭의 [대교협/유니브 석차연명부 가져오기] 버튼으로 엑셀을 올리시면 전교생의 대학별 환산점수가 한 번에 자동 반영됩니다.',
-    '📌 [교과 내신 설정 가이드] 전교 공통 등급표를 쓰시는 경우: 조회 기준을 "기본 조회"로 설정하고 [점수 기준](1.0등급=100점...)과 [기초 데이터](학생별 등급)를 엑셀로 각각 업로드하시면 됩니다.',
-    '왼쪽 목록에서 전형요소를 클릭하면 오른쪽에서 점수 기준과 기초 데이터를 등록할 수 있습니다.',
-    '목록 아래 총점이 학교 규정의 학교장 추천 전형 총점과 일치하는지 확인하세요.',
-    { text: '라운드 종료 이후에는 전형요소 추가·수정·삭제가 차단됩니다. 반드시 첫 라운드를 열기 전에 추천순위 기준 설정을 끝내세요. 첫 라운드 마감 이후에 전형요소는 수정할 수 없습니다.', warn: true },
-    '점수 기준을 입력한 뒤 \'점수 계산 테스트\'에 값을 넣어 보면 실제 계산될 점수를 미리 확인할 수 있습니다.',
-  ],
+  title: '도움말 — 추천순위 기준 설정 (진행 가이드)',
+  intro: '전형요소(교과 내신, 출결, 봉사 등)의 배점과 산출 방식을 아래 4단계 흐름에 따라 순서대로 설정할 수 있습니다.',
+  items: [],
 }
 
 const HELP_LOCKED = {

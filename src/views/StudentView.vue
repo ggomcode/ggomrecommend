@@ -79,31 +79,59 @@
 
           <!-- 단일 선발(1회)인 경우 1개 안내 카드, 다차 선발인 경우 3개 카드 -->
           <div v-if="totalRounds === 1" class="grid grid-cols-1 gap-2.5 text-xs">
-            <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
-              <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">1️⃣ 추천 희망자 접수 및 최종 선발</p>
-              <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
-                주요 대학 추천 희망자 접수 및 교내 추천 심의 기준에 따라 최종 추천자를 확정합니다.
-              </p>
+            <div class="p-3.5 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50 space-y-2">
+              <div>
+                <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">1️⃣ 추천 희망자 접수 및 최종 선발</p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
+                  주요 대학 추천 희망자 접수 및 교내 추천 심의 기준에 따라 최종 추천자를 확정합니다.
+                </p>
+              </div>
+              <div class="pt-2 border-t border-slate-200/50 dark:border-slate-800 flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
+                <span class="text-blue-600 dark:text-blue-400 font-semibold">📅 접수: {{ getStudentSched(1).applyPeriod }}</span>
+                <span class="text-slate-600 dark:text-slate-400">🤝 협의일: <strong class="text-slate-800 dark:text-slate-200">{{ getStudentSched(1).evalPeriod }}</strong></span>
+                <span class="text-slate-600 dark:text-slate-400">📢 결과 공지: <strong class="text-slate-800 dark:text-slate-200">{{ getStudentSched(1).announcePeriod }}</strong></span>
+              </div>
             </div>
           </div>
           <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">
-            <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
-              <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">1️⃣ 1차 추천 선발 (메인 선발)</p>
-              <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
-                주요 대학 추천 희망자 접수 및 1차 추천자 확정 (합격자 기득권 완전 보장)
-              </p>
+            <div class="p-3.5 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50 space-y-2 flex flex-col justify-between">
+              <div>
+                <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">1️⃣ 1차 추천 선발 (메인 선발)</p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
+                  주요 대학 추천 희망자 접수 및 1차 추천자 확정 (합격자 기득권 완전 보장)
+                </p>
+              </div>
+              <div class="pt-2 border-t border-slate-200/50 dark:border-slate-800 space-y-0.5 text-[11px]">
+                <p class="text-blue-600 dark:text-blue-400 font-semibold m-0">📅 접수: {{ getStudentSched(1).applyPeriod }}</p>
+                <p class="text-slate-600 dark:text-slate-400 m-0">🤝 협의일: <strong class="text-slate-800 dark:text-slate-200">{{ getStudentSched(1).evalPeriod }}</strong></p>
+                <p class="text-slate-600 dark:text-slate-400 m-0">📢 공지일: <strong class="text-slate-800 dark:text-slate-200">{{ getStudentSched(1).announcePeriod }}</strong></p>
+              </div>
             </div>
-            <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
-              <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">2️⃣ 2차 추천 선발 (잔여 정원)</p>
-              <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
-                1차 합격자를 제외한 <strong>남은 정원(잔여 T/O)</strong>에 대해서만 2차 신청자 간 성적순 경쟁
-              </p>
+            <div class="p-3.5 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50 space-y-2 flex flex-col justify-between">
+              <div>
+                <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">2️⃣ 2차 추천 선발 (잔여 정원)</p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
+                  1차 합격자를 제외한 <strong>남은 정원(잔여 T/O)</strong>에 대해서만 2차 신청자 간 성적순 경쟁
+                </p>
+              </div>
+              <div class="pt-2 border-t border-slate-200/50 dark:border-slate-800 space-y-0.5 text-[11px]">
+                <p class="text-blue-600 dark:text-blue-400 font-semibold m-0">📅 접수: {{ getStudentSched(2).applyPeriod }}</p>
+                <p class="text-slate-600 dark:text-slate-400 m-0">🤝 협의일: <strong class="text-slate-800 dark:text-slate-200">{{ getStudentSched(2).evalPeriod }}</strong></p>
+                <p class="text-slate-600 dark:text-slate-400 m-0">📢 공지일: <strong class="text-slate-800 dark:text-slate-200">{{ getStudentSched(2).announcePeriod }}</strong></p>
+              </div>
             </div>
-            <div class="p-3 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50">
-              <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">3️⃣ 3차 추천 선발 (최종 선정)</p>
-              <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
-                추가 모집 및 잔여 모집단위 최종 접수 및 마무리 선발
-              </p>
+            <div class="p-3.5 rounded-xl bg-white/70 dark:bg-slate-900/50 border border-slate-200/60 dark:border-slate-700/50 space-y-2 flex flex-col justify-between">
+              <div>
+                <p class="font-bold text-slate-800 dark:text-slate-200 mb-1">3️⃣ 3차 추천 선발 (최종 선정)</p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed m-0">
+                  추가 모집 및 잔여 모집단위 최종 접수 및 마무리 선발
+                </p>
+              </div>
+              <div class="pt-2 border-t border-slate-200/50 dark:border-slate-800 space-y-0.5 text-[11px]">
+                <p class="text-blue-600 dark:text-blue-400 font-semibold m-0">📅 접수: {{ getStudentSched(3).applyPeriod }}</p>
+                <p class="text-slate-600 dark:text-slate-400 m-0">🤝 협의일: <strong class="text-slate-800 dark:text-slate-200">{{ getStudentSched(3).evalPeriod }}</strong></p>
+                <p class="text-slate-600 dark:text-slate-400 m-0">📢 공지일: <strong class="text-slate-800 dark:text-slate-200">{{ getStudentSched(3).announcePeriod }}</strong></p>
+              </div>
             </div>
           </div>
 
@@ -210,12 +238,12 @@
                 <button
                   v-else
                   @click="openAbandonRequestModal(ap)"
-                  :disabled="!isSusiApplyPeriodActive"
-                  :class="isSusiApplyPeriodActive ? 'text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/10 cursor-pointer' : 'text-slate-400 bg-slate-100 opacity-60 cursor-not-allowed dark:bg-slate-800'"
+                  :disabled="!isAbandonPeriodActive"
+                  :class="isAbandonPeriodActive ? 'text-rose-600 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/10 cursor-pointer' : 'text-slate-400 bg-slate-100 opacity-60 cursor-not-allowed dark:bg-slate-800'"
                   class="text-xs font-bold px-3 py-1.5 rounded-lg border border-rose-100 dark:border-rose-900/30 transition-all"
-                  :title="!isSusiApplyPeriodActive ? `수시 원서 접수 기간(${susiApplyPeriodDisplay})에만 포기원을 신청할 수 있습니다.` : ''"
+                  :title="!isAbandonPeriodActive ? '희망자 접수 기간에만 포기원을 제출할 수 있습니다. (마지막 차수 접수 마감 시 포기 불가)' : ''"
                 >
-                  {{ isSusiApplyPeriodActive ? '🚫 추천 포기 신청' : '🔒 추천 포기 신청 (접수 마감)' }}
+                  {{ isAbandonPeriodActive ? '🚫 추천 포기 신청' : '🔒 추천 포기 불가 (접수 마감)' }}
                 </button>
               </div>
             </div>
@@ -242,26 +270,39 @@
 
           <form v-else @submit.prevent="prepareApply" class="flex flex-col gap-4">
             <div
-              class="p-3 rounded-lg text-xs font-semibold flex justify-between items-center transition-colors"
+              class="p-3 rounded-lg text-xs font-semibold flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1.5 transition-colors"
               :class="{
-                'bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30': currentRoundStatus === 'OPEN',
-                'bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900/30': currentRoundStatus === 'CLOSED',
-                'bg-purple-50 dark:bg-purple-950/20 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-900/30': currentRoundStatus === 'FINALIZED',
-                'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800': currentRoundStatus === 'DRAFT'
+                'bg-rose-50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-900/40': isPrincipalAllEnded,
+                'bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30': !isPrincipalAllEnded && currentRoundStatus === 'OPEN',
+                'bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900/30': !isPrincipalAllEnded && currentRoundStatus === 'CLOSED',
+                'bg-purple-50 dark:bg-purple-950/20 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-900/30': !isPrincipalAllEnded && currentRoundStatus === 'FINALIZED',
+                'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800': !isPrincipalAllEnded && currentRoundStatus === 'DRAFT'
               }"
             >
-              <span v-if="currentRoundStatus === 'OPEN'">
-                🟢 현재 접수 중: {{ totalRounds === 1 ? '학교장 추천' : `${currentRound}차 추천` }} 신청
-              </span>
-              <span v-else-if="currentRoundStatus === 'CLOSED'">
-                🔒 접수 마감: {{ totalRounds === 1 ? '학교장 추천' : `${currentRound}차 추천` }} 신청 접수가 마감되었습니다 (심사 진행 중)
-              </span>
-              <span v-else-if="currentRoundStatus === 'FINALIZED'">
-                🔒 선발 마감: {{ totalRounds === 1 ? '학교장 추천' : `${currentRound}차 추천` }} 선발이 최종 마감되었습니다
-              </span>
-              <span v-else>
-                ⏳ 접수 대기 중: {{ totalRounds === 1 ? '학교장 추천' : `${currentRound}차 추천` }} 신청 시작 전입니다
-              </span>
+              <div class="space-y-0.5">
+                <span v-if="isPrincipalAllEnded" class="font-bold text-rose-900 dark:text-rose-200">
+                  🔒 모든 선발일정 종료: 최종 차수의 선정 결과 공지 기간이 만료되었습니다.
+                </span>
+                <span v-else-if="currentRoundStatus === 'OPEN'" class="font-bold">
+                  🟢 현재 접수 중: {{ totalRounds === 1 ? '학교장 추천' : `${currentRound}차 추천` }} 신청
+                </span>
+                <span v-else-if="currentRoundStatus === 'CLOSED'" class="font-bold">
+                  🔒 접수 마감: {{ totalRounds === 1 ? '학교장 추천' : `${currentRound}차 추천` }} 신청 접수가 마감되었습니다 (심사 진행 중)
+                </span>
+                <span v-else-if="currentRoundStatus === 'FINALIZED'" class="font-bold">
+                  🔒 선발 마감: {{ totalRounds === 1 ? '학교장 추천' : `${currentRound}차 추천` }} 선발이 최종 마감되었습니다
+                </span>
+                <span v-else class="font-bold">
+                  ⏳ 접수 대기 중: {{ totalRounds === 1 ? '학교장 추천' : `${currentRound}차 추천` }} 신청 시작 전입니다
+                </span>
+
+                <!-- 현재 차수의 세부 일정 (협의일, 공지일은 시간 없이 날짜만 노출) -->
+                <div v-if="currentRound && schedulesMap[currentRound]" class="text-[11px] font-normal opacity-90 flex flex-wrap gap-x-3 gap-y-0.5 pt-0.5">
+                  <span v-if="currentRoundStatus === 'OPEN'">📅 접수 마감: <strong>{{ getStudentSched(currentRound).applyPeriod }}</strong></span>
+                  <span>🤝 협의일: <strong>{{ getStudentSched(currentRound).evalPeriod }}</strong></span>
+                  <span>📢 공지일: <strong>{{ getStudentSched(currentRound).announcePeriod }}</strong></span>
+                </div>
+              </div>
 
               <!-- 추천서 HWP 양식 다운로드 링크 (임시 숨김 — 필요 시 v-if="true"로 변경 가능) -->
               <a
@@ -938,7 +979,7 @@ import { supabase } from '../utils/supabaseClient'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { printApplicationForm } from '../utils/printTemplates'
 import { getDisclosureCount } from '../api/admin.js'
-import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../utils/roundSchedule'
+import { fetchRoundSchedulesMap, computeRoundDisplayStatus, formatScheduleForStudent, parseKstDate } from '../utils/roundSchedule'
 import { deleteApplicationStorageFiles } from '../utils/storageUtils'
 import { dialog } from '../components/common/dialog.js'
 import { isUndecidedDepartment } from '../utils/departmentValidation.js'
@@ -951,8 +992,16 @@ const availableUnivs = ref([])
 const totalRounds = ref(3)
 const currentRound = ref(null)
 const currentRoundStatus = ref('CLOSED')
+const schedulesMap = ref({})
+const isPrincipalAllEnded = ref(false)
+
+function getStudentSched(roundId) {
+  const sched = schedulesMap.value[roundId]
+  return formatScheduleForStudent(sched)
+}
 
 const isSubmissionActive = computed(() => {
+  if (isPrincipalAllEnded.value) return false
   return currentRound.value !== null && currentRoundStatus.value === 'OPEN'
 })
 
@@ -999,7 +1048,7 @@ const abandonConfirmChecked = ref(false)
 const abandonStudentCanvasRef = ref(null)
 const abandonParentCanvasRef = ref(null)
 
-// 수시 원서 접수 기간 (포기원 제출 기간)
+// 수시 원서 접수 기간
 const susiApplyStartDate = ref('')
 const susiApplyEndDate = ref('')
 
@@ -1013,6 +1062,27 @@ const susiApplyPeriodDisplay = computed(() => {
   if (!susiApplyEndDate.value) return '상시 가능'
   if (susiApplyStartDate.value) return `${susiApplyStartDate.value} ~ ${susiApplyEndDate.value}`
   return `~ ${susiApplyEndDate.value} (마감)`
+})
+
+// 추천 포기 신청 가능 여부: 희망자 접수 기간 중에만 가능하며, 마지막 차수의 희망자 접수가 마감되면 포기도 전면 마감
+const isAbandonPeriodActive = computed(() => {
+  if (isPrincipalAllEnded.value) return false
+
+  const now = new Date()
+
+  // 1. 마지막 선발 차수의 희망자 접수 마감 일시 확인
+  const lastRoundId = totalRounds.value
+  const lastSched = schedulesMap.value[lastRoundId]
+  if (lastSched) {
+    const applyTarget = lastSched.apply_end || lastSched.apply_end_date
+    const applyEndDt = parseKstDate(applyTarget, true)
+    if (applyEndDt && now > applyEndDt) {
+      return false
+    }
+  }
+
+  // 2. 현재 차수의 희망자 접수가 OPEN 상태여야 포기원 신청 가능
+  return currentRound.value !== null && currentRoundStatus.value === 'OPEN'
 })
 
 let abandonStudentCtx = null
@@ -1309,7 +1379,7 @@ async function checkCurrentRound() {
     if (!supabase) return
 
     // 2. 일정 맵 로드
-    const schedulesMap = await fetchRoundSchedulesMap()
+    schedulesMap.value = await fetchRoundSchedulesMap()
 
     // 3. timeline_rounds 데이터 로드
     const { data: roundsList, error } = await supabase
@@ -1321,13 +1391,29 @@ async function checkCurrentRound() {
 
     if (roundsList && roundsList.length > 0) {
       const processedRounds = roundsList.map(r => {
-        const sched = schedulesMap[r.id]
+        const sched = schedulesMap.value[r.id]
         const dispStatus = computeRoundDisplayStatus(r, sched)
         return {
           ...r,
           computedStatus: dispStatus
         }
       })
+
+      // 0. 마지막 선발 차수의 선정 결과 공지일 기간이 종료되었는지 점검 (KST 기준)
+      const lastRoundId = totalRounds.value
+      const lastSched = schedulesMap.value[lastRoundId]
+      const now = new Date()
+      if (lastSched) {
+        const announceTarget = lastSched.announce_end || lastSched.announce_date
+        const announceEndDt = parseKstDate(announceTarget, true)
+        if (announceEndDt && now > announceEndDt) {
+          isPrincipalAllEnded.value = true
+          currentRound.value = lastRoundId
+          currentRoundStatus.value = 'FINALIZED'
+          return
+        }
+      }
+      isPrincipalAllEnded.value = false
 
       // 실시간 OPEN 상태인 라운드가 있는지 먼저 확인
       const openRound = processedRounds.find(r => r.computedStatus === 'OPEN')
@@ -1787,8 +1873,8 @@ function executeHakchuPrint() {
 }
 
 function openAbandonRequestModal(ap) {
-  if (!isSusiApplyPeriodActive.value) {
-    alert(`수시 원서 접수 마감일이 지나 추천 포기 신청이 마감되었습니다.\n(포기원 제출 가능 마감일: ${susiApplyEndDate.value})`)
+  if (!isAbandonPeriodActive.value) {
+    alert('희망자 접수 기간에만 추천 포기원을 제출할 수 있습니다.\n(현재 희망자 접수 기간이 아니거나, 마지막 차수의 접수가 모두 마감되었습니다.)')
     return
   }
   abandonTargetApp.value = ap
