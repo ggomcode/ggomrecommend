@@ -14,9 +14,42 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
   const info = studentInfo || {};
   const sNameVal = info.studentName || info.name || '학생';
   const rawCodeVal = String(info.studentCode || info.student_code || info.code || '-').trim();
-  const sCodeVal = rawCodeVal.length > 5 ? rawCodeVal.slice(-5) : rawCodeVal;
+
+  // 졸업생 판별 (isEnrolled가 false이거나, 학번이 5자리 초과이거나, gradYear가 지정된 경우)
+  const isGrad = info.isEnrolled === false || info.is_enrolled === false || info.isGraduated || info.is_graduated || (rawCodeVal.length > 5) || (Boolean(info.gradYear) && info.gradYear <= year);
+
+  // 1) 학번: 졸업생의 경우 202630404와 같이 전체 학번이 보존되도록 처리
+  let sCodeVal = rawCodeVal;
+  if (isGrad) {
+    if (rawCodeVal.length === 5 && /^\d+$/.test(rawCodeVal)) {
+      const gYear = info.gradYear || 2026;
+      sCodeVal = `${gYear}${rawCodeVal}`;
+    } else {
+      sCodeVal = rawCodeVal;
+    }
+  } else {
+    sCodeVal = rawCodeVal.length > 5 ? rawCodeVal.slice(-5) : rawCodeVal;
+  }
+
   const classNoVal = info.classNo ?? info.class_no ?? '';
   const seqNoVal = info.seqNo ?? info.seq_no ?? info.studentNo ?? '';
+
+  // 학년 / 반 / 번호 표시 텍스트
+  let gradeClassText = '';
+  if (isGrad) {
+    let cVal = classNoVal;
+    let sVal = seqNoVal;
+    if (!cVal && sCodeVal.length === 9) {
+      cVal = parseInt(sCodeVal.substring(5, 7), 10) || '';
+    }
+    if (!sVal && sCodeVal.length === 9) {
+      sVal = parseInt(sCodeVal.substring(7, 9), 10) || '';
+    }
+    gradeClassText = `졸업생 ${cVal ? `${cVal}반 ` : ''}${sVal ? `${sVal}번` : ''}`.trim();
+  } else {
+    const gVal = info.grade || 3;
+    gradeClassText = `${gVal}학년 ${classNoVal ? `${classNoVal}반 ` : ''}${seqNoVal ? `${seqNoVal}번` : ''}`.trim();
+  }
   
   const choices = applications || info.choices || info.applications || [];
   const sSig = studentSig || info.studentSignature || info.studentSig || null;
@@ -39,27 +72,25 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
     return;
   }
 
-  // 1지망~6지망 6행 규격 표 생성
-  const rows = [];
-  for (let i = 0; i < 6; i++) {
-    const app = choices[i];
+  // 지망 행 HTML 렌더러 함수
+  function renderChoiceRow(app, index) {
     if (app) {
-      rows.push(`
+      return `
         <tr>
-          <td style="text-align: center; font-weight: bold;">${i + 1}지망</td>
+          <td style="text-align: center; font-weight: bold;">${index + 1}지망</td>
           <td style="text-align: center;">${app.term_type || '수시'}</td>
           <td style="text-align: center;">${app.medical_type && app.medical_type !== '없음' ? app.medical_type : '-'}</td>
           <td style="font-weight: bold;">${app.univ_name || '-'}</td>
           <td style="font-weight: bold; color: #1e3a8a;">${app.department || '-'}</td>
           <td>${app.track_type || '-'}</td>
           <td style="font-weight: bold;">${app.track_name || '-'}</td>
-          <td style="font-size: 10.5px;">${app.remarks || app.recruitment_quota ? `모집:${app.recruitment_quota || '-'} ${app.remarks || ''}` : '-'}</td>
+          <td style="font-size: 9.5px;">${app.remarks || app.recruitment_quota ? `모집:${app.recruitment_quota || '-'} ${app.remarks || ''}` : '-'}</td>
         </tr>
-      `);
+      `;
     } else {
-      rows.push(`
+      return `
         <tr>
-          <td style="text-align: center; font-weight: bold; color: #94a3b8;">${i + 1}지망</td>
+          <td style="text-align: center; font-weight: bold; color: #94a3b8;">${index + 1}지망</td>
           <td style="text-align: center; color: #cbd5e1;">-</td>
           <td style="text-align: center; color: #cbd5e1;">-</td>
           <td style="color: #cbd5e1;">-</td>
@@ -68,199 +99,205 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
           <td style="color: #cbd5e1;">-</td>
           <td style="color: #cbd5e1;">-</td>
         </tr>
-      `);
+      `;
     }
   }
-  const choicesHtml = rows.join('');
 
-  const html = `
-    <!DOCTYPE html>
-    <html lang="ko">
-    <head>
-      <meta charset="UTF-8">
-      <title>2027학년도 대입 농어촌 전형 추천 확인서 - ${sNameVal}</title>
-      <style>
-        @page {
-          size: A4 portrait;
-          margin: 20mm;
-        }
-        @page :right {
-          margin: 20mm;
-        }
-        @page :left {
-          margin: 20mm;
-        }
-        * {
-          box-sizing: border-box;
-        }
-        body {
-          font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
-          color: #0f172a;
-          margin: 0;
-          padding: 0;
-          font-size: 11px;
-          line-height: 1.4;
-          background: #fff;
-        }
-        .page {
-          width: 100%;
-          height: 254mm;
-          box-sizing: border-box;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          page-break-after: always;
-          break-after: page;
-          page-break-inside: avoid;
-          break-inside: avoid;
-          overflow: hidden;
-        }
-        .page:last-child {
-          page-break-after: avoid;
-          break-after: avoid;
-        }
-        .page-body {
-          flex: 1;
-        }
-        .duplex-notice {
-          font-size: 9.5px;
-          color: #64748b;
-          text-align: right;
-          margin-bottom: 4px;
-          font-weight: 500;
-        }
-        .header-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 10px;
-        }
-        .header-title {
-          font-size: 19px;
-          font-weight: 800;
-          letter-spacing: -0.5px;
-          text-align: left;
-        }
-        .stamp-box {
-          border: 1px solid #334155;
-          border-collapse: collapse;
-          text-align: center;
-          font-size: 11px;
-          margin-left: auto;
-        }
-        .stamp-box th, .stamp-box td {
-          border: 1px solid #334155;
-          padding: 3px 8px;
-        }
-        .stamp-box th {
-          background-color: #f1f5f9;
-          font-weight: bold;
-        }
-        .stamp-box td {
-          height: 40px;
-          width: 48px;
-          vertical-align: middle;
-        }
-        .info-table, .data-table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 12px;
-        }
-        .info-table th, .info-table td {
-          border: 1px solid #cbd5e1;
-          padding: 5px 7px;
-        }
-        .data-table th, .data-table td {
-          border: 1px solid #cbd5e1;
-          padding: 12px 7px; /* 2배 이상 높이 확장 */
-          height: 35px; /* 최소 높이 보장 */
-        }
-        .info-table th, .data-table th {
-          background-color: #f8fafc;
-          font-weight: bold;
-          text-align: center;
-          color: #1e293b;
-        }
-        .section-title {
-          font-size: 13.5px;
-          font-weight: 800;
-          margin: 14px 0 6px 0;
-          color: #0f172a;
-          border-left: 4px solid #059669;
-          padding-left: 8px;
-        }
-        .footer-sig {
-          margin-top: auto;
-          padding-top: 15px;
-          text-align: center;
-        }
-        .sig-img {
-          height: 32px;
-          vertical-align: middle;
-        }
-        .principal-to {
-          font-size: 16px;
-          font-weight: 900;
-          text-align: left;
-          margin-top: 25px;
-        }
-        .guide-box {
-          border: 1px solid #cbd5e1;
-          background: #fafafa;
-          padding: 10px 12px;
-          border-radius: 6px;
-          margin-bottom: 10px;
-        }
-        .guide-box h4 {
-          margin: 0 0 4px 0;
-          font-size: 12px;
-          color: #047857;
-        }
-        .guide-box ul, .guide-box ol {
-          margin: 0;
-          padding-left: 16px;
-        }
-        .guide-box li {
-          margin-bottom: 3px;
-        }
-      </style>
-    </head>
-    <body>
+  // 6개 초과 여부 확인 (7개 이상이면 2페이지로 지망 분할 및 행정처리는 3페이지로)
+  const hasOver6 = choices.length > 6;
 
-      <!-- PAGE 1: 신청 확인서 및 지망 목록 -->
-      <div class="page">
+  // 1페이지: 1~6지망 6행 규격 표
+  const p1Rows = [];
+  for (let i = 0; i < 6; i++) {
+    p1Rows.push(renderChoiceRow(choices[i], i));
+  }
+  const p1ChoicesHtml = p1Rows.join('');
+
+  // 2페이지 (7개 초과 시): 7지망 이후 행
+  let p2ChoicesHtml = '';
+  if (hasOver6) {
+    const p2Rows = [];
+    for (let i = 6; i < choices.length; i++) {
+      p2Rows.push(renderChoiceRow(choices[i], i));
+    }
+    p2ChoicesHtml = p2Rows.join('');
+  }
+
+  // 학생 기본 정보 및 결재 상단 헤더
+  const studentHeaderHtml = `
+    <table class="header-table">
+      <tr>
+        <td class="header-title">2027학년도 대입 농어촌 전형 추천 확인서</td>
+        <td style="text-align: right;">
+          <table class="stamp-box">
+            <tr>
+              <th rowspan="2" style="width: 20px; background:#f1f5f9;">결<br>재</th>
+              <th>담임</th>
+              <th>부장</th>
+            </tr>
+            <tr>
+              <td></td>
+              <td></td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <table class="info-table">
+      <tr>
+        <th style="width: 100px;">학년 / 반 / 번호</th>
+        <td style="font-weight: bold; width: 140px;">${gradeClassText}</td>
+        <th style="width: 50px;">학번</th>
+        <td style="font-weight: bold; font-family: monospace; width: 120px;">${sCodeVal}</td>
+        <th style="width: 50px;">성명</th>
+        <td style="font-weight: bold; font-size: 12.5px;">${sNameVal}</td>
+      </tr>
+    </table>
+  `;
+
+  // 서약 안내 문구 및 하단 꼬리말 (서명, 연락처, 학교장 귀하)
+  const confirmAndFooterHtml = `
+    <p class="confirm-notice">
+      본인은 2027학년도 대학입학 농어촌 및 기회균형(농어촌) 특별전형 지원 자격을 확인하였으며, 위 기재 사항에 틀림없음을 확인합니다. 제출된 서류는 반납되지 않으며 거짓 기재가 있을 경우 관련 규정에 따라 조치됨을 인지하였습니다.
+    </p>
+
+    <div class="footer-sig">
+      <p class="footer-date">
+        ${year}년 ${month}월 ${day}일
+      </p>
+
+      <table class="sig-table">
+        <tr>
+          <td style="width: 50%; text-align: left; font-size: 12.5px; vertical-align: top;">
+            <div>
+              지원 학생: <strong style="font-size: 13.5px;">${sNameVal}</strong>
+              ${sSig ? `<img src="${sSig}" class="sig-img" alt="서명" />` : '(서명 / 인)'}
+            </div>
+            <div style="font-size: 11px; color: #475569; margin-top: 3px;">(연락처: ${sPhoneFmt})</div>
+          </td>
+          <td style="width: 50%; text-align: right; font-size: 12.5px; vertical-align: top;">
+            <div>
+              학부모(보호자): ${parentName || '____________________'}
+              ${pSig ? `<img src="${pSig}" class="sig-img" alt="서명" />` : '(서명 / 인)'}
+            </div>
+            <div style="font-size: 11px; color: #475569; margin-top: 3px;">(비상연락처: ${pPhoneFmt})</div>
+          </td>
+        </tr>
+      </table>
+
+      <div class="principal-to">
+        ${sName}장 귀하
+      </div>
+    </div>
+  `;
+
+  // 행정처리 안내서 페이지 서식
+  const adminGuidePageHtml = `
+    <div class="page page-back">
+      <div class="page-body">
+        <h2 class="back-title">
+          농어촌 특별전형 지원자격 확인 및 행정처리 안내
+        </h2>
+
+        <div class="guide-box">
+          <h4>1. 지원자격 확인 요건</h4>
+          <ul>
+            <li><strong>유형 Ⅰ (6년 요건)</strong>: 학교 - 읍면지역 소재 중/고등학교 6년 연속 재학 / 주소지 - 읍면지역 6년 연속 거주 (부모 및 본인 모두 읍면 거주)</li>
+            <li><strong>유형 Ⅱ (12년 요건)</strong>: 학교 - 읍면지역 소재 초/중/고등학교 12년 전 교육과정 이수 / 주소지 - 읍면지역 12년 거주 (부모 거주요건 미적용)</li>
+          </ul>
+        </div>
+
+        <div class="guide-box">
+          <h4>2. 제출 서류 안내</h4>
+          <ul>
+            <li><strong>공통 서류</strong>: (대학별) 농어촌학교 재학사실확인서 (우리고등학교 직인 필요), 주민등록초(등)본 (주소변동 이력 전체 포함 필수), 고등학교/중학교 생활기록부</li>
+            <li><strong>추가 서류 (유형 Ⅰ)</strong>: 가족관계증명서 (지원자 기준 상세), 부/모의 주민등록초본 (주소 변동이력 포함)</li>
+            <li><strong>추가 서류 (유형 Ⅱ)</strong>: 초등학교 생활기록부</li>
+          </ul>
+        </div>
+
+        <div class="section-title">■ 행정처리 절차 및 방법</div>
+        <table class="guide-table">
+          <thead>
+            <tr>
+              <th style="width: 35px;">순서</th>
+              <th style="width: 130px;">내용</th>
+              <th style="width: 120px;">장소</th>
+              <th>방법 및 세부 안내</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="text-align:center; font-weight:bold;">1</td>
+              <td>응시원서접수</td>
+              <td>유웨이, 진학어플라이</td>
+              <td>원서 작성 후 출력, 서류봉투 겉지 출력 보관</td>
+            </tr>
+            <tr>
+              <td style="text-align:center; font-weight:bold;">2</td>
+              <td>주민등록초본 및 가족관계증명서 준비</td>
+              <td>행정복지센터 / 인터넷</td>
+              <td>주소 변경이력 전체 포함 필수, 유형Ⅰ의 경우 부/모 초본 및 가족관계증명서 추가</td>
+            </tr>
+            <tr>
+              <td style="text-align:center; font-weight:bold;">3</td>
+              <td>(초),중,고 생활기록부 준비</td>
+              <td>정부24, 무인민원발급기, 행정실</td>
+              <td>학교 발급 시 학교생활기록부 발급 신청서 지참</td>
+            </tr>
+            <tr>
+              <td style="text-align:center; font-weight:bold;">4</td>
+              <td>농어촌전형 추천시스템 등록</td>
+              <td>인터넷 (본 시스템)</td>
+              <td>시스템 등록 후 인쇄 및 결재 (확인서 작성)</td>
+            </tr>
+            <tr>
+              <td style="text-align:center; font-weight:bold;">5</td>
+              <td>농어촌 재학사실확인서 직인</td>
+              <td>행정실</td>
+              <td>추천 확인서, 수시응시원서, 농어촌 재학사실확인서 지참 방문</td>
+            </tr>
+            <tr>
+              <td style="text-align:center; font-weight:bold;">6</td>
+              <td>추천 확인서 반납</td>
+              <td>3학년 교무실</td>
+              <td>담임선생님께 추천 확인서 최종 반납</td>
+            </tr>
+            <tr>
+              <td style="text-align:center; font-weight:bold;">7</td>
+              <td>서류 발송</td>
+              <td>우체국</td>
+              <td>대학별 서류 봉투에 봉인 후 등기 발송 (소인일자 확인 필수)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="guide-box warn-box">
+          <h4>⚠️ 유의 및 주의사항</h4>
+          <ol>
+            <li><strong>대학별 제출 서류 확인</strong>: 대학마다 서류가 다를 수 있으므로 수시 모집요강을 반드시 확인하세요.</li>
+            <li><strong>주민등록 이전 금지</strong>: 농어촌 전형 지원자는 정해진 일자(고교 졸업일 또는 입학 전)까지 주민등록을 옮기지 마세요.</li>
+            <li><strong>서류 제출 일시 준수</strong>: 마감 시간 이전에 서류 발송 및 등기 우체국 접수를 완료하세요.</li>
+            <li><strong>온라인 서류 제출 확인</strong>: 일부 대학은 온라인 서류 업로드 방식을 사용하므로 입학처 공지를 확인하세요.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // 페이지 레이아웃 본문 생성 (<=6: 총 2페이지 / >6: 총 3페이지)
+  let pagesHtml = '';
+  if (!hasOver6) {
+    // 6지망 이하: 1페이지(확인서+꼬리말) + 2페이지(행정처리 안내)
+    pagesHtml = `
+      <!-- PAGE 1: 신청 확인서 및 지망 목록 (1~6지망) -->
+      <div class="page page-front">
         <div class="page-body">
-          <table class="header-table">
-            <tr>
-              <td class="header-title">2027학년도 대입 농어촌 전형 추천 확인서</td>
-              <td style="text-align: right;">
-                <table class="stamp-box">
-                  <tr>
-                    <th rowspan="2" style="width: 20px; background:#f1f5f9;">결<br>재</th>
-                    <th>담임</th>
-                    <th>부장</th>
-                  </tr>
-                  <tr>
-                    <td></td>
-                    <td></td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
+          ${studentHeaderHtml}
 
-          <table class="info-table">
-            <tr>
-              <th>학년 / 반 / 번호</th>
-              <td style="font-weight: bold;">3학년 ${classNoVal ? `${classNoVal}반 ` : ''}${seqNoVal ? `${seqNoVal}번` : ''}</td>
-              <th>학번</th>
-              <td style="font-weight: bold; font-family: monospace;">${sCodeVal}</td>
-              <th>성명</th>
-              <td style="font-weight: bold; font-size: 13px;">${sNameVal}</td>
-            </tr>
-          </table>
-
-          <div class="section-title">■ 지원 희망 대학 및 전형 내역 (최대 6개)</div>
-          <table class="data-table">
+          <div class="section-title">■ 지원 희망 대학 및 전형 내역</div>
+          <table class="choice-table">
             <thead>
               <tr>
                 <th style="width: 45px;">지망</th>
@@ -274,137 +311,333 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
               </tr>
             </thead>
             <tbody>
-              ${choicesHtml}
+              ${p1ChoicesHtml}
             </tbody>
           </table>
 
-          <p style="font-size: 13.5px; font-weight: bold; color: #334155; margin-top: 15px; line-height: 1.6; word-break: keep-all;">
-            본인은 2027학년도 대학입학 농어촌 및 기회균형(농어촌) 특별전형 지원 자격을 확인하였으며, 위 기재 사항에 틀림없음을 확인합니다. 제출된 서류는 반납되지 않으며 거짓 기재가 있을 경우 관련 규정에 따라 조치됨을 인지하였습니다.
-          </p>
-        </div>
-
-        <!-- 하단 서명 및 수신자 고정 정렬 -->
-        <div class="footer-sig">
-          <p style="font-size: 14px; font-weight: bold; margin-bottom: 20px;">
-            ${year}년 ${month}월 ${day}일
-          </p>
-
-          <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-            <tr>
-              <td style="width: 50%; text-align: left; font-size: 13px; vertical-align: top;">
-                <div>
-                  지원 학생: <strong style="font-size: 14px;">${sNameVal}</strong>
-                  ${sSig ? `<img src="${sSig}" class="sig-img" alt="서명" />` : '(서명 / 인)'}
-                </div>
-                <div style="font-size: 11.5px; color: #475569; margin-top: 4px;">(연락처: ${sPhoneFmt})</div>
-              </td>
-              <td style="width: 50%; text-align: right; font-size: 13px; vertical-align: top;">
-                <div>
-                  학부모(보호자): ${parentName || '____________________'}
-                  ${pSig ? `<img src="${pSig}" class="sig-img" alt="서명" />` : '(서명 / 인)'}
-                </div>
-                <div style="font-size: 11.5px; color: #475569; margin-top: 4px;">(비상연락처: ${pPhoneFmt})</div>
-              </td>
-            </tr>
-          </table>
-
-          <div class="principal-to">
-            ${sName}장 귀하
-          </div>
+          ${confirmAndFooterHtml}
         </div>
       </div>
 
       <!-- PAGE 2: 지원자격 확인 및 행정처리 안내서 -->
-      <div class="page">
+      ${adminGuidePageHtml}
+    `;
+  } else {
+    // 7지망 이상: 1페이지(1~6지망 및 뒷면에 계속) + 2페이지(7지망 이후 및 꼬리말) + 3페이지(행정처리 안내)
+    pagesHtml = `
+      <!-- PAGE 1: 신청 확인서 및 1~6지망 목록 -->
+      <div class="page page-front">
         <div class="page-body">
-          <h2 style="font-size: 17px; font-weight: 800; border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 12px; margin-top: 0;">
-            농어촌 특별전형 지원자격 확인 및 행정처리 안내
-          </h2>
+          ${studentHeaderHtml}
 
-          <div class="guide-box">
-            <h4>1. 지원자격 확인 요건</h4>
-            <ul>
-              <li><strong>유형 Ⅰ (6년 요건)</strong>: 학교 - 읍면지역 소재 중/고등학교 6년 연속 재학 / 주소지 - 읍면지역 6년 연속 거주 (부모 및 본인 모두 읍면 거주)</li>
-              <li><strong>유형 Ⅱ (12년 요건)</strong>: 학교 - 읍면지역 소재 초/중/고등학교 12년 전 교육과정 이수 / 주소지 - 읍면지역 12년 거주 (부모 거주요건 미적용)</li>
-            </ul>
-          </div>
-
-          <div class="guide-box">
-            <h4>2. 제출 서류 안내</h4>
-            <ul>
-              <li><strong>공통 서류</strong>: (대학별) 농어촌학교 재학사실확인서 (우리고등학교 직인 필요), 주민등록초(등)본 (주소변동 이력 전체 포함 필수), 고등학교/중학교 생활기록부</li>
-              <li><strong>추가 서류 (유형 Ⅰ)</strong>: 가족관계증명서 (지원자 기준 상세), 부/모의 주민등록초본 (주소 변동이력 포함)</li>
-              <li><strong>추가 서류 (유형 Ⅱ)</strong>: 초등학교 생활기록부</li>
-            </ul>
-          </div>
-
-          <div class="section-title">■ 행정처리 절차 및 방법</div>
-          <table class="data-table" style="font-size: 10.5px;">
+          <div class="section-title">■ 지원 희망 대학 및 전형 내역</div>
+          <table class="choice-table">
             <thead>
               <tr>
-                <th style="width: 35px;">순서</th>
-                <th style="width: 130px;">내용</th>
-                <th style="width: 120px;">장소</th>
-                <th>방법 및 세부 안내</th>
+                <th style="width: 45px;">지망</th>
+                <th style="width: 45px;">구분</th>
+                <th style="width: 60px;">메디컬</th>
+                <th>대학명</th>
+                <th>학과(부)</th>
+                <th>전형유형</th>
+                <th>전형명</th>
+                <th>비고 및 모집인원</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td style="text-align:center; font-weight:bold;">1</td>
-                <td>응시원서접수</td>
-                <td>유웨이, 진학어플라이</td>
-                <td>원서 작성 후 출력, 서류봉투 겉지 출력 보관</td>
-              </tr>
-              <tr>
-                <td style="text-align:center; font-weight:bold;">2</td>
-                <td>주민등록초본 및 가족관계증명서 준비</td>
-                <td>행정복지센터 / 인터넷</td>
-                <td>주소 변경이력 전체 포함 필수, 유형Ⅰ의 경우 부/모 초본 및 가족관계증명서 추가</td>
-              </tr>
-              <tr>
-                <td style="text-align:center; font-weight:bold;">3</td>
-                <td>(초),중,고 생활기록부 준비</td>
-                <td>정부24, 무인민원발급기, 행정실</td>
-                <td>학교 발급 시 학교생활기록부 발급 신청서 지참</td>
-              </tr>
-              <tr>
-                <td style="text-align:center; font-weight:bold;">4</td>
-                <td>농어촌전형 추천시스템 등록</td>
-                <td>인터넷 (본 시스템)</td>
-                <td>시스템 등록 후 인쇄 및 결재 (확인서 작성)</td>
-              </tr>
-              <tr>
-                <td style="text-align:center; font-weight:bold;">5</td>
-                <td>농어촌 재학사실확인서 직인</td>
-                <td>행정실</td>
-                <td>추천 확인서, 수시응시원서, 농어촌 재학사실확인서 지참 방문</td>
-              </tr>
-              <tr>
-                <td style="text-align:center; font-weight:bold;">6</td>
-                <td>추천 확인서 반납</td>
-                <td>3학년 교무실</td>
-                <td>담임선생님께 추천 확인서 최종 반납</td>
-              </tr>
-              <tr>
-                <td style="text-align:center; font-weight:bold;">7</td>
-                <td>서류 발송</td>
-                <td>우체국</td>
-                <td>대학별 서류 봉투에 봉인 후 등기 발송 (소인일자 확인 필수)</td>
-              </tr>
+              ${p1ChoicesHtml}
             </tbody>
           </table>
 
-          <div class="guide-box" style="margin-top: 12px; background: #fff1f2; border-color: #fecdd3;">
-            <h4 style="color: #be123c;">⚠️ 유의 및 주의사항</h4>
-            <ol style="color: #881337;">
-              <li><strong>대학별 제출 서류 확인</strong>: 대학마다 서류가 다를 수 있으므로 수시 모집요강을 반드시 확인하세요.</li>
-              <li><strong>주민등록 이전 금지</strong>: 농어촌 전형 지원자는 정해진 일자(고교 졸업일 또는 입학 전)까지 주민등록을 옮기지 마세요.</li>
-              <li><strong>서류 제출 일시 준수</strong>: 마감 시간 이전에 서류 발송 및 등기 우체국 접수를 완료하세요.</li>
-              <li><strong>온라인 서류 제출 확인</strong>: 일부 대학은 온라인 서류 업로드 방식을 사용하므로 입학처 공지를 확인하세요.</li>
-            </ol>
+          <div style="text-align: right; font-weight: bold; color: #475569; margin-top: 14px; font-size: 11.5px; padding-right: 6px;">
+            (뒷면에 계속)
           </div>
         </div>
       </div>
+
+      <!-- PAGE 2: 7지망 이후 지망 목록 및 서약/서명 꼬리말 -->
+      <div class="page page-front">
+        <div class="page-body">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 5px; margin-bottom: 10px;">
+            <span style="font-size: 15px; font-weight: 800; color: #0f172a;">2027학년도 대입 농어촌 전형 추천 확인서 (계속)</span>
+            <span style="font-size: 11px; color: #475569; font-weight: 600;">
+              지원 학생: <strong style="color: #0f172a;">${sNameVal}</strong> (${gradeClassText}, 학번: <span style="font-family: monospace;">${sCodeVal}</span>)
+            </span>
+          </div>
+
+          <div class="section-title">■ 지원 희망 대학 및 전형 내역 (7지망 이후)</div>
+          <table class="choice-table">
+            <thead>
+              <tr>
+                <th style="width: 45px;">지망</th>
+                <th style="width: 45px;">구분</th>
+                <th style="width: 60px;">메디컬</th>
+                <th>대학명</th>
+                <th>학과(부)</th>
+                <th>전형유형</th>
+                <th>전형명</th>
+                <th>비고 및 모집인원</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${p2ChoicesHtml}
+            </tbody>
+          </table>
+
+          ${confirmAndFooterHtml}
+        </div>
+      </div>
+
+      <!-- PAGE 3: 지원자격 확인 및 행정처리 안내서 -->
+      ${adminGuidePageHtml}
+    `;
+  }
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+      <meta charset="UTF-8">
+      <title>2027학년도 대입 농어촌 전형 추천 확인서 - ${sNameVal}</title>
+      <style>
+        @page {
+          size: A4 portrait;
+          margin: 12mm 15mm;
+        }
+        * {
+          box-sizing: border-box;
+        }
+        body {
+          font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
+          color: #0f172a;
+          margin: 0;
+          padding: 0;
+          font-size: 10.5px;
+          line-height: 1.4;
+          background: #fff;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .page {
+          width: 100%;
+          box-sizing: border-box;
+        }
+        .page-front {
+          height: 270mm;
+          max-height: 270mm;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          page-break-after: always;
+          break-after: page;
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        .page-back {
+          page-break-before: always;
+          break-before: page;
+          page-break-after: avoid;
+          break-after: avoid;
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        .page-body {
+          width: 100%;
+        }
+        .header-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 8px;
+        }
+        .header-title {
+          font-size: 18px;
+          font-weight: 800;
+          letter-spacing: -0.5px;
+          text-align: left;
+        }
+        .stamp-box {
+          border: 1px solid #334155;
+          border-collapse: collapse;
+          text-align: center;
+          font-size: 10px;
+          margin-left: auto;
+        }
+        .stamp-box th, .stamp-box td {
+          border: 1px solid #334155;
+          padding: 2px 6px;
+        }
+        .stamp-box th {
+          background-color: #f1f5f9;
+          font-weight: bold;
+        }
+        .stamp-box td {
+          height: 32px;
+          width: 44px;
+          vertical-align: middle;
+        }
+        .info-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 8px;
+        }
+        .info-table th, .info-table td {
+          border: 1px solid #cbd5e1;
+          padding: 4.5px 6px;
+        }
+        .info-table th {
+          background-color: #f8fafc;
+          font-weight: bold;
+          text-align: center;
+          color: #1e293b;
+        }
+        .choice-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 8px;
+        }
+        .choice-table th, .choice-table td {
+          border: 1px solid #cbd5e1;
+          padding: 6px 5px;
+          height: 27px;
+        }
+        .choice-table th {
+          background-color: #f8fafc;
+          font-weight: bold;
+          text-align: center;
+          color: #1e293b;
+        }
+        .section-title {
+          font-size: 12px;
+          font-weight: 800;
+          margin: 9px 0 5px 0;
+          color: #0f172a;
+          border-left: 4px solid #059669;
+          padding-left: 6px;
+        }
+        .confirm-notice {
+          font-size: 11px;
+          font-weight: 600;
+          color: #334155;
+          margin-top: 8px;
+          margin-bottom: 0;
+          line-height: 1.5;
+          word-break: keep-all;
+          text-align: justify;
+        }
+        .footer-sig {
+          margin-top: auto;
+          padding-top: 10px;
+          text-align: center;
+        }
+        .footer-date {
+          font-size: 13px;
+          font-weight: bold;
+          margin: 6px 0 10px 0;
+        }
+        .sig-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 4px;
+        }
+        .sig-img {
+          height: 28px;
+          vertical-align: middle;
+        }
+        .principal-to {
+          font-size: 15px;
+          font-weight: 900;
+          text-align: left;
+          margin-top: 14px;
+        }
+        .back-title {
+          font-size: 15.5px;
+          font-weight: 800;
+          border-bottom: 2px solid #0f172a;
+          padding-bottom: 4px;
+          margin-bottom: 8px;
+          margin-top: 0;
+        }
+        .guide-box {
+          border: 1px solid #cbd5e1;
+          background: #fafafa;
+          padding: 6px 10px;
+          border-radius: 5px;
+          margin-bottom: 6px;
+          font-size: 10px;
+          line-height: 1.35;
+        }
+        .guide-box h4 {
+          margin: 0 0 3px 0;
+          font-size: 11px;
+          color: #047857;
+        }
+        .guide-box ul, .guide-box ol {
+          margin: 0;
+          padding-left: 15px;
+        }
+        .guide-box li {
+          margin-bottom: 2px;
+        }
+        .guide-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 7px;
+          font-size: 9.5px;
+          line-height: 1.3;
+        }
+        .guide-table th, .guide-table td {
+          border: 1px solid #cbd5e1;
+          padding: 3.5px 5px;
+        }
+        .guide-table th {
+          background-color: #f8fafc;
+          font-weight: bold;
+          text-align: center;
+          color: #1e293b;
+          padding: 4px 5px;
+        }
+        .warn-box {
+          margin-top: 6px;
+          margin-bottom: 0;
+          background: #fff1f2;
+          border-color: #fecdd3;
+          padding: 6px 10px;
+          font-size: 9.5px;
+          line-height: 1.35;
+        }
+        .warn-box h4 {
+          color: #be123c;
+          font-size: 10.5px;
+          margin: 0 0 3px 0;
+        }
+        .warn-box ol {
+          color: #881337;
+          margin: 0;
+          padding-left: 15px;
+        }
+        .warn-box li {
+          margin-bottom: 2px;
+        }
+        @media print {
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .page-front {
+            page-break-after: always;
+            break-after: page;
+          }
+          .page-back {
+            page-break-before: always;
+            break-before: page;
+            page-break-after: avoid;
+            break-after: avoid;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      ${pagesHtml}
 
       <script>
         window.onload = function() {

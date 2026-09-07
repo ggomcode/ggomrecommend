@@ -14,16 +14,23 @@
 
       <div class="flex items-center gap-2">
         <button
-          @click="openPrintModal"
-          class="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors cursor-pointer border-none"
+          @click="openStudentSelectPrintModal"
+          class="flex items-center gap-1.5 px-3.5 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs transition-colors cursor-pointer border-none"
         >
           <Printer class="w-4 h-4" />
-          2027 농어촌 전형 추천 대장 인쇄
+          학생 추천 확인서 인쇄
+        </button>
+        <button
+          @click="openPrintModal"
+          class="flex items-center gap-1.5 px-3.5 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors cursor-pointer border-none"
+        >
+          <Printer class="w-4 h-4" />
+          추천 대장 인쇄
         </button>
         <button
           @click="loadData"
           :disabled="loading"
-          class="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 cursor-pointer"
+          class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 cursor-pointer"
         >
           <RefreshCw :class="{ 'animate-spin': loading }" class="w-4 h-4 text-slate-500" />
           새로고침
@@ -133,7 +140,7 @@
               <th class="py-3 px-3.5 whitespace-nowrap bg-slate-50" style="width: 180px; min-width: 180px;">학과(부)</th>
               <th class="py-3 px-3.5 whitespace-nowrap bg-slate-50" style="width: 110px; min-width: 110px;">전형유형</th>
               <th class="py-3 px-3.5 whitespace-nowrap bg-slate-50" style="width: 200px; min-width: 200px;">전형명</th>
-              <th class="py-3 px-3.5 text-center whitespace-nowrap bg-slate-50" style="width: 130px; min-width: 130px;">수정/삭제</th>
+              <th class="py-3 px-3.5 text-center whitespace-nowrap bg-slate-50" style="width: 170px; min-width: 170px;">확인서/수정/삭제</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
@@ -152,7 +159,13 @@
                 {{ app.student_class ? `3-${app.student_class}반` : '졸업생' }}
               </td>
               <td class="py-3 px-3.5 font-mono text-slate-600 whitespace-nowrap">{{ app.student_code || '-' }}</td>
-              <td class="py-3 px-3.5 font-bold text-slate-900 whitespace-nowrap">{{ app.student_name }}</td>
+              <td
+                class="py-3 px-3.5 font-bold text-slate-900 whitespace-nowrap cursor-pointer hover:text-emerald-600 hover:underline"
+                @click="printIndividualConfirmation(app)"
+                title="클릭 시 이 학생의 농어촌 전형 추천 확인서 인쇄"
+              >
+                {{ app.student_name }}
+              </td>
 
               <!-- 자격 상태 배지 (경고 빨간색/주황색) -->
               <td class="py-3 px-3.5 text-center whitespace-nowrap">
@@ -188,9 +201,17 @@
                 </span>
               </td>
 
-              <!-- 교사 수정/삭제 버튼 -->
+              <!-- 교사 확인서인쇄/수정/삭제 버튼 -->
               <td class="py-3 px-3 text-center whitespace-nowrap">
                 <div class="flex items-center justify-center gap-1.5">
+                  <button
+                    @click="printIndividualConfirmation(app)"
+                    class="px-2 py-1 text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded border border-emerald-200 transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1 shadow-2xs"
+                    title="이 학생의 농어촌 전형 추천 확인서 인쇄"
+                  >
+                    <Printer class="w-3 h-3" />
+                    확인서
+                  </button>
                   <button
                     @click="openEditModal(app)"
                     class="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded border border-slate-300 transition-colors cursor-pointer whitespace-nowrap"
@@ -362,14 +383,91 @@
         </div>
       </div>
     </div>
+
+    <!-- 🖨️ 개별 학생 농어촌 전형 추천 확인서 인쇄 모달 -->
+    <div v-if="showStudentPrintModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-slate-200">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2 m-0">
+            <Printer class="w-5 h-5 text-emerald-600" />
+            학생별 농어촌 전형 추천 확인서 인쇄
+          </h3>
+          <button @click="showStudentPrintModal = false" class="text-slate-400 hover:text-slate-600 font-bold text-lg bg-transparent border-none cursor-pointer">✕</button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">1. 인쇄 대상 학생 선택</label>
+            <select
+              v-model="selectedPrintStudentId"
+              class="w-full p-2.5 border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white text-slate-800"
+            >
+              <option value="" disabled>-- 학생을 선택하세요 (총 {{ uniqueAppliedStudents.length }}명) --</option>
+              <option v-for="st in uniqueAppliedStudents" :key="st.id" :value="st.id">
+                {{ st.label }}
+              </option>
+            </select>
+          </div>
+
+          <!-- 선택된 학생 지망 내역 미리보기 -->
+          <div v-if="selectedStudentPreview" class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-1.5">
+              <span class="font-bold text-slate-800 text-sm">
+                {{ selectedStudentPreview.student.name }}
+                <span class="text-xs font-mono text-slate-500 font-normal ml-1">({{ selectedStudentPreview.student.student_code }})</span>
+              </span>
+              <span class="text-xs px-2 py-0.5 rounded font-bold" :class="selectedStudentPreview.student.isGrad ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'">
+                {{ selectedStudentPreview.student.isGrad ? '졸업생' : `3학년 ${selectedStudentPreview.student.classNo ? `${selectedStudentPreview.student.classNo}반` : ''}` }}
+              </span>
+            </div>
+
+            <div class="space-y-1 max-h-48 overflow-y-auto pr-1">
+              <div
+                v-for="app in selectedStudentPreview.apps"
+                :key="app.id"
+                class="flex items-center justify-between bg-white p-2 rounded border border-slate-200 text-xs"
+              >
+                <div class="flex items-center gap-2">
+                  <span class="font-extrabold text-blue-600">{{ app.choice_number }}지망</span>
+                  <span class="font-bold text-slate-900">{{ app.univ_name }}</span>
+                  <span class="text-indigo-700 font-semibold">{{ app.department }}</span>
+                </div>
+                <span class="text-[11px] text-slate-500">{{ app.track_name || app.track_type }}</span>
+              </div>
+            </div>
+          </div>
+
+          <p class="text-[11px] text-slate-500 leading-normal m-0 pt-1">
+            * 학생이 직접 신청서 탭에서 인쇄하는 것과 동일한 <strong>2027학년도 대입 농어촌 전형 추천 확인서 (양면 서식)</strong>로 즉시 인쇄 창이 열립니다.
+          </p>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+          <button
+            @click="showStudentPrintModal = false"
+            class="px-4 py-2 text-xs font-semibold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 cursor-pointer border-none"
+          >
+            취소
+          </button>
+          <button
+            @click="executeSelectedStudentPrint"
+            :disabled="!selectedPrintStudentId"
+            class="px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs cursor-pointer border-none disabled:opacity-40 flex items-center gap-1.5"
+          >
+            <Printer class="w-3.5 h-3.5" />
+            추천 확인서 인쇄하기
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { Users, FileSpreadsheet, AlertTriangle, Printer, RefreshCw, Search, Edit3 } from 'lucide-vue-next';
-import { getAllRuralApplications, getRuralEligibilityList, updateRuralApplicationByTeacher, deleteRuralApplicationByTeacher } from '../../api/ruralApi';
-import { printRuralClassRoster } from '../../utils/ruralPrintHelper';
+import { getAllRuralApplications, getRuralEligibilityList, updateRuralApplicationByTeacher, deleteRuralApplicationByTeacher, getRuralSignatures } from '../../api/ruralApi';
+import { printRuralClassRoster, printRuralConfirmationDocument } from '../../utils/ruralPrintHelper';
 import { dialog } from '../common/dialog';
 
 const loading = ref(false);
@@ -611,6 +709,155 @@ function executePrint() {
 
   printRuralClassRoster(titleStr, printTargetApplications.value);
   showPrintModal.value = false;
+}
+
+// 🖨️ 개별 학생 추천 확인서 인쇄 로직
+const showStudentPrintModal = ref(false);
+const selectedPrintStudentId = ref('');
+
+function openStudentSelectPrintModal(studentId = null) {
+  if (studentId) {
+    selectedPrintStudentId.value = studentId;
+  } else if (!selectedPrintStudentId.value && uniqueAppliedStudents.value.length > 0) {
+    selectedPrintStudentId.value = uniqueAppliedStudents.value[0].id;
+  }
+  showStudentPrintModal.value = true;
+}
+
+const uniqueAppliedStudents = computed(() => {
+  const studentMap = new Map();
+  studentList.value.forEach(s => {
+    studentMap.set(s.id, s);
+    if (s.user_id) studentMap.set(s.user_id, s);
+  });
+
+  const ids = Array.from(new Set(rawApps.value.map(a => a.student_id)));
+  return ids.map(id => {
+    const st = studentMap.get(id);
+    const apps = rawApps.value.filter(a => a.student_id === id);
+    const rawCode = String(st?.student_code || apps[0]?.student_code || '').trim();
+    const isGrad = st?.is_enrolled === false || Boolean(st?.grad_year) || rawCode.length > 5;
+    const classNo = st?.class_no || apps[0]?.student_class;
+    const seqNo = st?.seq_no || st?.student_no;
+    const name = st?.name || apps[0]?.student_name || '학생';
+
+    let label = '';
+    if (isGrad) {
+      label = `[졸업생] ${name} (${rawCode || '-'}) - ${apps.length}건`;
+    } else {
+      label = `[3학년 ${classNo ? `${classNo}반 ` : ''}${seqNo ? `${seqNo}번` : ''}] ${name} (${rawCode || '-'}) - ${apps.length}건`;
+    }
+
+    return {
+      id,
+      name,
+      student_code: rawCode,
+      isGrad,
+      classNo,
+      seqNo,
+      appCount: apps.length,
+      label
+    };
+  }).sort((a, b) => {
+    if (a.isGrad !== b.isGrad) return a.isGrad ? 1 : -1;
+    const cA = Number(a.classNo) || 999;
+    const cB = Number(b.classNo) || 999;
+    if (cA !== cB) return cA - cB;
+    const sA = Number(a.seqNo) || 999;
+    const sB = Number(b.seqNo) || 999;
+    if (sA !== sB) return sA - sB;
+    return a.name.localeCompare(b.name, 'ko');
+  });
+});
+
+const selectedStudentPreview = computed(() => {
+  if (!selectedPrintStudentId.value) return null;
+  const st = uniqueAppliedStudents.value.find(s => s.id === selectedPrintStudentId.value);
+  if (!st) return null;
+  const apps = rawApps.value
+    .filter(a => a.student_id === selectedPrintStudentId.value)
+    .sort((a, b) => (Number(a.choice_number) || 0) - (Number(b.choice_number) || 0));
+  return {
+    student: st,
+    apps
+  };
+});
+
+async function executeSelectedStudentPrint() {
+  if (!selectedPrintStudentId.value) return;
+  const studentId = selectedPrintStudentId.value;
+  showStudentPrintModal.value = false;
+  await printIndividualConfirmation(studentId);
+}
+
+async function printIndividualConfirmation(appOrStudentId) {
+  let targetStudentId = typeof appOrStudentId === 'object' ? appOrStudentId.student_id : appOrStudentId;
+  if (!targetStudentId && typeof appOrStudentId === 'object') {
+    targetStudentId = appOrStudentId.id;
+  }
+  if (!targetStudentId) return;
+
+  // 1. 학생 정보 조회
+  const st = studentList.value.find(s => s.id === targetStudentId || s.user_id === targetStudentId);
+  const studentName = st?.name || (typeof appOrStudentId === 'object' ? appOrStudentId.student_name : '학생');
+  const studentCode = st?.student_code || (typeof appOrStudentId === 'object' ? appOrStudentId.student_code : '');
+  const isEnrolled = st?.is_enrolled !== false;
+  const grade = st?.grade || 3;
+  const classNo = st?.class_no ?? (typeof appOrStudentId === 'object' ? appOrStudentId.student_class : '');
+  const seqNo = st?.seq_no ?? st?.student_no ?? '';
+
+  // 2. 해당 학생의 모든 신청 지망 목록 (1지망~6지망 정렬)
+  const studentApps = rawApps.value
+    .filter(a => a.student_id === targetStudentId)
+    .sort((a, b) => (Number(a.choice_number) || 0) - (Number(b.choice_number) || 0));
+
+  if (studentApps.length === 0) {
+    await dialog.alert({
+      title: '신청 내역 없음',
+      message: `${studentName} 학생의 등록된 농어촌 전형 신청 지망 내역이 없습니다.`
+    });
+    return;
+  }
+
+  // 3. 서명 및 연락처 정보 로드
+  let sigData = null;
+  try {
+    sigData = await getRuralSignatures(targetStudentId);
+  } catch (e) {
+    console.warn('Failed to load signatures:', e);
+  }
+
+  const sSig = sigData?.student_signature || null;
+  const pSig = sigData?.parent_signature || null;
+  const parentName = sigData?.parent_name || '';
+
+  // 연락처: 신청서 데이터나 서명 데이터에서 추출
+  const sPhone = studentApps[0]?.student_phone || sigData?.student_phone || st?.phone || '';
+  const pPhone = studentApps[0]?.parent_phone || sigData?.parent_phone || st?.parent_phone || '';
+
+  const ruralType = st?.rural_type || (studentApps[0]?.rural_type === 'TYPE_2' ? 'TYPE_2' : 'TYPE_1');
+  const isWarningAcknowledged = Boolean(st?.eligibility?.is_eligible || st?.eligibility?.is_manual_approved);
+
+  // 4. 학생이 인쇄하는 것과 동일한 서식으로 인쇄 실행
+  printRuralConfirmationDocument(
+    {
+      studentName,
+      studentCode,
+      isEnrolled,
+      grade,
+      classNo,
+      seqNo,
+      studentPhone: sPhone,
+      parentPhone: pPhone,
+      gradYear: st?.grad_year || 2026,
+      ruralType,
+      isWarningAcknowledged
+    },
+    studentApps,
+    sSig,
+    pSig,
+    parentName
+  );
 }
 </script>
 

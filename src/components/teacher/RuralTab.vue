@@ -424,7 +424,7 @@
                     </span>
                   </div>
 
-                  <div v-if="item.academicRecords && item.academicRecords.length > 0" class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                  <div v-if="item.academicRecords && item.academicRecords.length > 0" class="space-y-1.5">
                     <div
                       v-for="(rec, idx) in item.academicRecords"
                       :key="idx"

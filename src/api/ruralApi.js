@@ -636,13 +636,13 @@ export async function evaluateAllRuralEligibility(targetStudents = null) {
     let highSchoolYears = 0.0;
     let isMiddleValid = false;
     let isHighValid = false;
+    const invalidSchoolReasons = [];
 
     if (hasAcademic) {
       let ruralMiddleFound = false;
       let ruralHighFound = false;
       let hasNonRuralMiddle = false;
       let hasNonRuralHigh = false;
-      const invalidSchoolReasons = [];
 
       for (const rec of academicRecs) {
         const cache = rec.rural_school_cache;
