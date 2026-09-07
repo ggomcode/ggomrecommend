@@ -429,7 +429,11 @@ export async function saveAndEvaluateRuralData(parsedAddressData, parsedAcademic
 
         for (const rec of st.records) {
           const schoolName = rec.extractedSchools[0] || null;
-          const schoolCache = schoolName ? schoolCacheMap.get(schoolName.trim()) : null;
+          // 학교명이 없는 단순 학적 변동(전출, 휴학, 유예 등)은 학적 사항에서 제외
+          if (!schoolName || !schoolName.trim()) {
+            continue;
+          }
+          const schoolCache = schoolCacheMap.get(schoolName.trim()) || null;
           const encRecordText = await encryptText(rec.rawRecordText);
 
           if (schoolCache && schoolCache.has_multiple_matches) {
@@ -626,6 +630,8 @@ export async function evaluateAllRuralEligibility(targetStudents = null) {
     for (const cid of candidateIds) {
       if (acadMap.has(cid)) { academicRecs = acadMap.get(cid); break; }
     }
+    // 학교명이 없는 단순 학적 변동(전출 등)은 학적 판단에서 제외
+    academicRecs = academicRecs.filter(rec => rec.school_name && rec.school_name.trim() !== '');
 
     const hasAddress = !!addressRec;
     const hasAcademic = academicRecs && academicRecs.length > 0;
@@ -730,8 +736,8 @@ export async function evaluateAllRuralEligibility(targetStudents = null) {
         : ((existingElig.is_type2_eligible || false) || (existingElig.is_manual_approved || false));
     }
 
-    // manual_reason (미달 사유 / 수동 승인 사유) 자동 작성
-    let autoReason = existingElig ? existingElig.manual_reason : null;
+    // manual_reason (미달 사유 / 수동 승인 사유) 자동 작성 (수동 승인 건이 아닌 경우 최신 적격 여부에 따라 재계산)
+    let autoReason = (existingElig && existingElig.is_manual_approved) ? existingElig.manual_reason : null;
     if (!autoReason) {
       if (!isFinal) {
         const reasonParts = [];
@@ -836,11 +842,14 @@ export async function evaluateStudentRuralEligibility(studentId, profileId = nul
     .maybeSingle();
 
   // 학적 이력 조회 (학교 캐시 join)
-  const { data: academicRecs } = await supabase
+  const { data: rawAcademicRecs } = await supabase
     .from('student_academic_records')
     .select('*, rural_school_cache(*)')
     .in('student_id', candidateIds)
     .order('seq_order', { ascending: true });
+
+  // 학교명이 없는 단순 학적 변동(전출 등)은 학적 판단에서 제외
+  const academicRecs = (rawAcademicRecs || []).filter(rec => rec.school_name && rec.school_name.trim() !== '');
 
   const hasAddress = !!addressRec;
   const hasAcademic = academicRecs && academicRecs.length > 0;
@@ -1093,6 +1102,8 @@ export async function getRuralEligibilityList() {
     }
     const decryptedAcademic = [];
     for (const ar of (rawAcad || [])) {
+      // 학교명이 없는 단순 학적 변동(전출 등)은 학적 사항 및 판정에서 제외
+      if (!ar.school_name || !ar.school_name.trim()) continue;
       decryptedAcademic.push({
         ...ar,
         student_name: await decryptText(ar.student_name),

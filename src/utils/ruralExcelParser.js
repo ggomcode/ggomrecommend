@@ -285,6 +285,9 @@ export function parseAcademicExcel(workbook, fallbackClassNo) {
       // 무시 조건: 헤더행 ('날짜', '학적변동사항' 등)
       if (dateText === '날짜' || recordText === '학적변동사항') continue;
 
+      // 학교명이 없는 단순 학적 변동(전출, 유예, 휴학 등)은 학적 사항에서 제외
+      if (!extractedSchools || extractedSchools.length === 0) continue;
+
       currentStudent.records.push({
         seqOrder: currentStudent.records.length + 1,
         recordDate: dateText,

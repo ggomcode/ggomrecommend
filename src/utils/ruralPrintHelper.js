@@ -177,18 +177,23 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
           text-align: center;
           font-size: 10px;
           margin-left: auto;
+          table-layout: fixed;
         }
         .stamp-box th, .stamp-box td {
           border: 1px solid #334155;
           padding: 2px 6px;
+          box-sizing: border-box;
         }
         .stamp-box th {
           background-color: #f1f5f9;
           font-weight: bold;
+          height: 20px;
         }
         .stamp-box td {
-          height: 48px;
+          height: 66px;
           width: 66px;
+          min-width: 66px;
+          max-width: 66px;
           vertical-align: middle;
         }
         .info-table {
@@ -362,14 +367,19 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
               <td class="header-title">2027학년도 대입 농어촌 전형 추천 확인서</td>
               <td style="text-align: right;">
                 <table class="stamp-box">
+                  <colgroup>
+                    <col style="width: 22px;">
+                    <col style="width: 66px;">
+                    <col style="width: 66px;">
+                  </colgroup>
                   <tr>
-                    <th rowspan="2" style="width: 20px; background:#f1f5f9;">결<br>재</th>
-                    <th>담임</th>
-                    <th>부장</th>
+                    <th rowspan="2" style="width: 22px; background:#f1f5f9;">결<br>재</th>
+                    <th style="width: 66px;">담임</th>
+                    <th style="width: 66px;">부장</th>
                   </tr>
                   <tr>
-                    <td></td>
-                    <td></td>
+                    <td style="width: 66px; height: 66px;"></td>
+                    <td style="width: 66px; height: 66px;"></td>
                   </tr>
                 </table>
               </td>
