@@ -574,8 +574,13 @@ export async function saveRuralSignatures(studentId, studentSignature, parentSig
 /**
  * 3학년 전체 학생에 대해 일괄(Batch) 자격 평가 수행 및 enrolled_students 동기화
  */
-export async function evaluateAllRuralEligibility(grade3Students) {
-  if (!grade3Students || grade3Students.length === 0) return;
+export async function evaluateAllRuralEligibility(targetStudents = null) {
+  let grade3Students = targetStudents;
+  if (!grade3Students || grade3Students.length === 0) {
+    const allStudents = await getGrade3Students();
+    grade3Students = allStudents.filter(s => !s.is_separate_applicant && !s.is_graduated);
+  }
+  if (!grade3Students || grade3Students.length === 0) return { success: false, message: '평가 대상 학생이 없습니다.' };
 
   const [addrRes, acadRes, eligRes, profRes] = await Promise.all([
     supabase.from('student_rural_addresses').select('*'),
@@ -635,23 +640,49 @@ export async function evaluateAllRuralEligibility(grade3Students) {
     if (hasAcademic) {
       let ruralMiddleFound = false;
       let ruralHighFound = false;
+      let hasNonRuralMiddle = false;
+      let hasNonRuralHigh = false;
+      const invalidSchoolReasons = [];
 
       for (const rec of academicRecs) {
         const cache = rec.rural_school_cache;
         const isRural = cache ? cache.is_rural : checkIsRuralAddress(rec.school_name);
         const schoolKind = cache ? cache.school_kind : (rec.school_name?.includes('고등학교') || rec.school_name?.includes('고교') || rec.school_name?.includes('고') ? '04' : '03');
+        const sName = rec.school_name || '미확인 학교';
 
-        if (schoolKind === '03' && isRural) {
-          ruralMiddleFound = true;
-          middleSchoolYears = 3.0;
-        } else if (schoolKind === '04' && isRural) {
-          ruralHighFound = true;
-          highSchoolYears = currentHighSchoolAccYears;
+        if (schoolKind === '03') {
+          if (isRural) {
+            ruralMiddleFound = true;
+          } else {
+            hasNonRuralMiddle = true;
+            invalidSchoolReasons.push(`중학교(${sName}) 동지역 소재`);
+          }
+        } else if (schoolKind === '04') {
+          if (isRural) {
+            ruralHighFound = true;
+          } else {
+            hasNonRuralHigh = true;
+            invalidSchoolReasons.push(`고등학교(${sName}) 동지역 소재`);
+          }
         }
       }
 
-      isMiddleValid = ruralMiddleFound || middleSchoolYears >= 3.0;
-      isHighValid = ruralHighFound || highSchoolYears >= 2.0;
+      // 동지역 학교 이력이 단 하나라도 있으면 즉시 미달 (0년) 처리
+      if (hasNonRuralMiddle) {
+        isMiddleValid = false;
+        middleSchoolYears = 0.0;
+      } else {
+        isMiddleValid = ruralMiddleFound;
+        middleSchoolYears = ruralMiddleFound ? 3.0 : 0.0;
+      }
+
+      if (hasNonRuralHigh) {
+        isHighValid = false;
+        highSchoolYears = 0.0;
+      } else {
+        isHighValid = ruralHighFound;
+        highSchoolYears = ruralHighFound ? currentHighSchoolAccYears : 0.0;
+      }
     }
 
     const totalRuralYears = middleSchoolYears + highSchoolYears;
@@ -666,7 +697,13 @@ export async function evaluateAllRuralEligibility(grade3Students) {
     }
 
     if (hasAcademic) {
-      notes.push(academicRuralValid ? `학적사항(학교): 중·고교 읍/면 재학 요건 충족 (적격, 중학교 ${middleSchoolYears}년/고교 ${highSchoolYears}년)` : '학적사항(학교): 읍/면 재학 요건 미달');
+      if (academicRuralValid) {
+        notes.push(`학적사항(학교): 중·고교 읍/면 재학 요건 충족 (적격, 중학교 ${middleSchoolYears}년/고교 ${highSchoolYears}년)`);
+      } else if (invalidSchoolReasons.length > 0) {
+        notes.push(`학적사항(학교): ${invalidSchoolReasons.join(', ')} (미달)`);
+      } else {
+        notes.push('학적사항(학교): 읍/면 재학 요건 미달');
+      }
     } else {
       notes.push('학적사항(학교): 미등록 (학적 엑셀 업로드 필요)');
     }
@@ -699,7 +736,13 @@ export async function evaluateAllRuralEligibility(grade3Students) {
       if (!isFinal) {
         const reasonParts = [];
         if (hasAddress && !addressRuralValid) reasonParts.push('동지역 주소 거주 (인적 요건 미달)');
-        if (hasAcademic && !academicRuralValid) reasonParts.push('중·고교 읍면 재학 기간 미달');
+        if (hasAcademic && !academicRuralValid) {
+          if (invalidSchoolReasons.length > 0) {
+            reasonParts.push(`${invalidSchoolReasons.join(', ')} (학적 요건 미달)`);
+          } else {
+            reasonParts.push('중·고교 읍면 재학 기간 미달');
+          }
+        }
         if (!hasAddress) reasonParts.push('인적사항(주소) 엑셀 미등록');
         if (!hasAcademic) reasonParts.push('학적사항(학교) 엑셀 미등록');
         autoReason = reasonParts.join(' / ');
@@ -759,6 +802,8 @@ export async function evaluateAllRuralEligibility(grade3Students) {
       console.warn('Batch enrolledUpdates error:', e);
     }
   }
+
+  return { success: true, count: finalEligUpserts.length };
 }
 
 /**
@@ -832,21 +877,22 @@ export async function evaluateStudentRuralEligibility(studentId, profileId = nul
   if (hasAcademic) {
     let ruralMiddleFound = false;
     let ruralHighFound = false;
+    let hasNonRuralMiddle = false;
     let hasNonRuralHighTransfer = false;
 
     for (const rec of academicRecs) {
       const cache = rec.rural_school_cache;
       const isRural = cache ? cache.is_rural : checkIsRuralAddress(rec.school_name || '');
       const recText = (await decryptText(rec.raw_record_text)) || '';
+      const sName = rec.school_name || '미확인 학교';
 
       // 중학교 판정
       if (recText.includes('중학교') || (rec.school_name && rec.school_name.includes('중'))) {
         if (isRural) {
           ruralMiddleFound = true;
-          middleSchoolYears = 3.0;
-          isMiddleValid = true;
         } else {
-          notes.push(`중학교(${rec.school_name || '미확인'}) 동지역 소재 (미달)`);
+          hasNonRuralMiddle = true;
+          notes.push(`중학교(${sName}) 동지역 소재 (미달)`);
         }
       }
 
@@ -856,14 +902,22 @@ export async function evaluateStudentRuralEligibility(studentId, profileId = nul
           ruralHighFound = true;
         } else {
           hasNonRuralHighTransfer = true;
-          notes.push(`고등학교(${rec.school_name || '미확인'}) 동지역 소재 (미달)`);
+          notes.push(`고등학교(${sName}) 동지역 소재 (미달)`);
         }
       }
     }
 
-    if (ruralMiddleFound) {
+    if (ruralMiddleFound && !hasNonRuralMiddle) {
+      isMiddleValid = true;
+      middleSchoolYears = 3.0;
       notes.push('중학교 3년 읍면 소재 충족');
-    } else if (middleSchoolYears === 0) {
+    } else if (hasNonRuralMiddle) {
+      isMiddleValid = false;
+      middleSchoolYears = 0.0;
+      notes.push('동지역 중학교 재학 이력 확인 (중학교 요건 미달)');
+    } else {
+      isMiddleValid = false;
+      middleSchoolYears = 0.0;
       notes.push('읍면 중학교 재학 기록 없음 (미달)');
     }
 
@@ -871,7 +925,13 @@ export async function evaluateStudentRuralEligibility(studentId, profileId = nul
       isHighValid = true;
       highSchoolYears = currentHighSchoolAccYears;
       notes.push(`고등학교 읍면 소재 (적격)`);
-    } else if (!ruralHighFound) {
+    } else if (hasNonRuralHighTransfer) {
+      isHighValid = false;
+      highSchoolYears = 0.0;
+      notes.push('동지역 고등학교 재학/전학 이력 확인 (고교 요건 미달)');
+    } else {
+      isHighValid = false;
+      highSchoolYears = 0.0;
       notes.push('읍면 고등학교 재학 기록 없음 (미달)');
     }
   } else {
@@ -1064,6 +1124,8 @@ export async function getRuralEligibilityList() {
     let highSchoolYears = 0.0;
     let ruralMiddleFound = false;
     let ruralHighFound = false;
+    let hasNonRuralMiddle = false;
+    let hasNonRuralHigh = false;
 
     if (decryptedAcademic && decryptedAcademic.length > 0) {
       for (const rec of decryptedAcademic) {
@@ -1071,15 +1133,27 @@ export async function getRuralEligibilityList() {
         const isRural = cache ? cache.is_rural : checkIsRuralAddress(rec.school_name || '');
         const schoolKind = cache ? cache.school_kind : (rec.school_name?.includes('고등학교') || rec.school_name?.includes('고교') || rec.school_name?.includes('고') ? '04' : '03');
 
-        if (schoolKind === '03' && isRural) {
-          ruralMiddleFound = true;
-          middleSchoolYears = 3.0;
-        } else if (schoolKind === '04' && isRural) {
-          ruralHighFound = true;
-          highSchoolYears = 2.5;
+        if (schoolKind === '03') {
+          if (isRural) {
+            ruralMiddleFound = true;
+          } else {
+            hasNonRuralMiddle = true;
+          }
+        } else if (schoolKind === '04') {
+          if (isRural) {
+            ruralHighFound = true;
+          } else {
+            hasNonRuralHigh = true;
+          }
         }
       }
+
+      middleSchoolYears = (!hasNonRuralMiddle && ruralMiddleFound) ? 3.0 : 0.0;
+      highSchoolYears = (!hasNonRuralHigh && ruralHighFound) ? 2.5 : 0.0;
     }
+
+    const hasAcademicRecords = decryptedAcademic && decryptedAcademic.length > 0;
+    const isAcademicDisqualified = hasNonRuralMiddle || hasNonRuralHigh;
 
     const isGradStudent = s.is_separate_applicant || s.is_graduated || s.is_enrolled === false;
     const isSelfChecked = s.apply_rural !== false && (s.rural_self_check === true || isGradStudent);
@@ -1089,7 +1163,11 @@ export async function getRuralEligibilityList() {
     if (rawElig) {
       const midYears = Number(rawElig.middle_school_years || 0);
       const highYears = Number(rawElig.high_school_years || 0);
-      const acadValid = midYears >= 3.0 && highYears >= 2.0;
+      // DB에 이전에 적격으로 저장되어 있었더라도 실제 학적에 동지역 학교가 있거나 인정연수가 0이면 즉시 미달 판정
+      let acadValid = midYears >= 3.0 && highYears >= 2.0;
+      if (hasAcademicRecords && isAcademicDisqualified) {
+        acadValid = false;
+      }
       const addrValid = rawElig.address_rural_valid === true;
       const type1Valid = acadValid && addrValid;
 

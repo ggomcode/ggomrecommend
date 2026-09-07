@@ -13,8 +13,17 @@
       </div>
       <div class="flex items-center gap-2">
         <button
+          @click="handleReevaluateAll"
+          :disabled="loading || reevaluating"
+          class="flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+          title="현재 등록된 학생들의 주소 및 학적 데이터를 바탕으로 동지역 학교 포함 여부 등 자격을 일괄 재검증하여 DB를 갱신합니다."
+        >
+          <RefreshCw :class="{ 'animate-spin': reevaluating }" class="w-4 h-4 text-emerald-600" />
+          <span>{{ reevaluating ? '재검증 중...' : '자격 일괄 재검증' }}</span>
+        </button>
+        <button
           @click="loadData"
-          :disabled="loading"
+          :disabled="loading || reevaluating"
           class="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 cursor-pointer"
         >
           <RefreshCw :class="{ 'animate-spin': loading }" class="w-4 h-4 text-slate-500" />
@@ -625,9 +634,11 @@ import {
   Search
 } from 'lucide-vue-next';
 
-import { getRuralEligibilityList, updateRuralManualApproval } from '../../api/ruralApi';
+import { getRuralEligibilityList, updateRuralManualApproval, evaluateAllRuralEligibility } from '../../api/ruralApi';
+import { dialog } from '../common/dialog';
 
 const loading = ref(false);
+const reevaluating = ref(false);
 const studentList = ref([]);
 const filterClass = ref('all');
 const filterStatus = ref('all');
@@ -654,6 +665,34 @@ async function loadData() {
     console.error('Failed to load rural eligibility list:', e);
   } finally {
     loading.value = false;
+  }
+}
+
+async function handleReevaluateAll() {
+  const confirmed = await dialog.confirm({
+    title: '농어촌 자격 일괄 재검증',
+    message: '현재 DB에 등록된 학적 및 주소 데이터를 바탕으로 전교생 자격을 다시 판정하시겠습니까?\n\n※ 동지역 소재 학교를 졸업 또는 재학한 이력이 있는 학생은 즉시 "자격 미달"로 갱신됩니다. (수동 소명/승인된 사유는 보존됩니다)',
+    confirmText: '일괄 재검증 시작'
+  });
+
+  if (!confirmed) return;
+
+  reevaluating.value = true;
+  try {
+    const res = await evaluateAllRuralEligibility();
+    await loadData();
+    await dialog.alert({
+      title: '일괄 재검증 완료',
+      message: `총 ${res?.count || 0}명의 학생 자격 평가가 새로운 엄격 기준(동지역 학교 제외)으로 DB에 최신화되었습니다.`
+    });
+  } catch (e) {
+    console.error('Failed to reevaluate all rural eligibilities:', e);
+    await dialog.alert({
+      title: '재검증 실패',
+      message: e.message || '자격 일괄 재검증 중 오류가 발생했습니다.'
+    });
+  } finally {
+    reevaluating.value = false;
   }
 }
 
