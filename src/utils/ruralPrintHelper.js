@@ -84,7 +84,6 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
           <td style="font-weight: bold; color: #1e3a8a;">${app.department || '-'}</td>
           <td>${app.track_type || '-'}</td>
           <td style="font-weight: bold;">${app.track_name || '-'}</td>
-          <td style="font-size: 9.5px;">${app.remarks || app.recruitment_quota ? `모집:${app.recruitment_quota || '-'} ${app.remarks || ''}` : '-'}</td>
         </tr>
       `;
     } else {
@@ -93,7 +92,6 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
           <td style="text-align: center; font-weight: bold; color: #94a3b8;">${index + 1}지망</td>
           <td style="text-align: center; color: #cbd5e1;">-</td>
           <td style="text-align: center; color: #cbd5e1;">-</td>
-          <td style="color: #cbd5e1;">-</td>
           <td style="color: #cbd5e1;">-</td>
           <td style="color: #cbd5e1;">-</td>
           <td style="color: #cbd5e1;">-</td>
@@ -189,8 +187,8 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
           font-weight: bold;
         }
         .stamp-box td {
-          height: 32px;
-          width: 44px;
+          height: 48px;
+          width: 66px;
           vertical-align: middle;
         }
         .info-table {
@@ -400,7 +398,6 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
                 <th>학과(부)</th>
                 <th>전형유형</th>
                 <th>전형명</th>
-                <th>비고 및 모집인원</th>
               </tr>
             </thead>
             <tbody>
