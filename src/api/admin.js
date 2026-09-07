@@ -1512,7 +1512,8 @@ export const getUniversities = async () => {
       total_quota: meta.total_quota !== undefined ? meta.total_quota : u.quota_limit,
       unit_quota: u.quota_limit,
       raw_quota_limit: meta.raw_quota_limit ?? null,  // 원본 % 텍스트 ("3%" 등)
-      prioritize_enrolled: !!meta.prioritize_enrolled
+      prioritize_enrolled: !!meta.prioritize_enrolled,
+      remarks_tag: meta.remarks_tag ?? null
     }
   })
 }
@@ -1524,6 +1525,7 @@ export const createUniversity = async (body) => {
     total_quota: body.total_quota !== undefined ? body.total_quota : (body.quota_limit || null),
     prioritize_enrolled: !!body.prioritize_enrolled,
     raw_quota_limit: body.raw_quota_limit ?? null,  // 원본 % 텍스트 보존
+    remarks_tag: body.remarks_tag ?? null
   }
   const quota_limit = body.unit_quota !== undefined ? body.unit_quota : (body.total_quota !== undefined ? body.total_quota : body.quota_limit)
 
@@ -1571,6 +1573,7 @@ export const updateUniversity = async (id, body) => {
   if (body.total_quota !== undefined) meta.total_quota = body.total_quota
   if (body.prioritize_enrolled !== undefined) meta.prioritize_enrolled = body.prioritize_enrolled
   if (body.raw_quota_limit !== undefined) meta.raw_quota_limit = body.raw_quota_limit
+  if (body.remarks_tag !== undefined) meta.remarks_tag = body.remarks_tag
 
   const quota_limit = body.unit_quota !== undefined ? body.unit_quota : (body.total_quota !== undefined ? body.total_quota : existing.quota_limit)
 
@@ -1831,8 +1834,8 @@ export const getResults = async (roundId, trackId) => {
     .from('applications')
     .select('*, universities:univ_id(*)')
 
-  if (roundId) {
-    query = query.eq('round', roundId)
+  if (roundId !== null && roundId !== undefined && roundId !== '') {
+    query = query.eq('round', Number(roundId))
   }
 
   if (trackId) {
@@ -2699,16 +2702,16 @@ export const exportQuotaStats = async (param = null) => {
 
   for (const ap of allRecApps) {
     const tId = ap.univ_id
-    const r = ap.recommended_round || ap.round || 1
+    const r = ap.recommended_round ?? ap.round ?? 1
     const isGrad = stMap[ap.student_id]?.is_enrolled === false || (!stMap[ap.student_id]?.grade && stMap[ap.student_id]?.grad_year)
 
-    if (selectedRound && selectedRound >= 2) {
+    if (selectedRound != null && selectedRound >= 2) {
       if (r < selectedRound) {
         priorUsedMap[tId] = (priorUsedMap[tId] || 0) + 1
       }
     }
 
-    if (!selectedRound || r === selectedRound) {
+    if (selectedRound == null || r === selectedRound) {
       currentUsedMap[tId] = (currentUsedMap[tId] || 0) + 1
       if (isGrad) {
         currentGradUsedMap[tId] = (currentGradUsedMap[tId] || 0) + 1
@@ -2842,14 +2845,14 @@ export const exportQuotaStats = async (param = null) => {
         s.name || ap.name || '-',
         isGrad ? '졸업생' : '재학생',
         scoreText,
-        `${ap.round || 1}차 지원`,
-        `${ap.recommended_round || ap.round || 1}차 선발`,
+        ap.round === 0 ? '사전 접수' : `${ap.round || 1}차 지원`,
+        (ap.recommended_round === 0 || ap.round === 0) ? '사전 선발' : `${ap.recommended_round || ap.round || 1}차 선발`,
         '추천 확정'
       ])
     }
 
     const studentWorksheet = XLSX.utils.aoa_to_sheet([studentHeaders, ...studentRows])
-    const sheet2Name = selectedRound ? `추천학생명단_${selectedRound}차` : '추천대상학생명단'
+    const sheet2Name = selectedRound != null ? (selectedRound === 0 ? '추천학생명단_사전' : `추천학생명단_${selectedRound}차`) : '추천대상학생명단'
     XLSX.utils.book_append_sheet(workbook, studentWorksheet, sheet2Name)
   } catch (err) {
     console.warn('추천학생명단 시트 생성 중 오류 발생:', err)
@@ -3754,32 +3757,11 @@ export const syncRegionalToUniversities = async (customRows = null) => {
     const remarks = String(r.remarks || '').trim()
     const gradCond = String(r.grad_condition || '').trim()
 
-    // 본교지원가능여부가 '×', 'X', 'x', '✕', '✖', '불가' 이거나 사전마감여부에 '마감'이 포함되어 있는지 확인
+    // 본교지원가능여부 및 사전마감 태그 정보 보존 (사관학교 등 사전마감 학교도 universities에 유지)
     const isTargetX = /[×Xx✕✖]|불가/.test(target)
-    const isClosed = remarks.includes('마감')
-    const isBlocked = isTargetX || isClosed
+    const remarksTag = remarks || (isTargetX ? '지원불가' : null)
 
     const existing = existingMap.get(matchKey)
-
-    // 지원 불가 또는 사전 마감 항목인 경우
-    if (isBlocked) {
-      if (existing) {
-        // 이미 등록된 전형 중 지원자가 없는 경우 universities 테이블에서 삭제
-        const { count: appCount } = await supabase
-          .from('applications')
-          .select('*', { count: 'exact', head: true })
-          .eq('univ_id', existing.id)
-
-        if (!appCount || appCount === 0) {
-          try {
-            await deleteUniversity(existing.id)
-            existingMap.delete(matchKey)
-          } catch (_) { }
-        }
-      }
-      // 신규 등록하지 않고 건너뜀
-      continue
-    }
 
     // 1단계 요강 인원제한 파싱
     let quotaLimit = null
@@ -3859,6 +3841,10 @@ export const syncRegionalToUniversities = async (customRows = null) => {
       if (existing.prioritize_enrolled !== prioritizeEnrolled) {
         updates.prioritize_enrolled = prioritizeEnrolled
       }
+      // 6) 비고/사전마감 태그 (remarks_tag)
+      if (existing.remarks_tag !== remarksTag) {
+        updates.remarks_tag = remarksTag
+      }
 
       if (Object.keys(updates).length > 0) {
         await updateUniversity(existing.id, updates)
@@ -3878,6 +3864,7 @@ export const syncRegionalToUniversities = async (customRows = null) => {
       prioritize_enrolled: prioritizeEnrolled,
       csat_min: r.csat_min || 'X',
       grad_allowed: !gradCond.includes('지원불가'),
+      remarks_tag: remarksTag
     })
 
     existingMap.set(matchKey, { quota_limit: quotaLimit, track_type: determinedTrackType })

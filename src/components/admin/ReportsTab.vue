@@ -18,6 +18,7 @@
               class="bg-transparent border-none text-xs font-black text-blue-700 focus:outline-none cursor-pointer pr-3 py-0 leading-tight min-w-[76px]"
             >
               <option value="all">전체</option>
+              <option :value="0">사전 선발</option>
               <option v-for="r in roundOptions" :key="r" :value="r">{{ r }}차 선발</option>
             </select>
           </div>
@@ -693,8 +694,8 @@ const abandonedList = ref([])
 
 const filteredAbandonedList = computed(() => {
   const curRound = selectedRoundFilter.value === 'all' ? null : Number(selectedRoundFilter.value)
-  if (!curRound) return abandonedList.value
-  return abandonedList.value.filter(item => (item.abandoned_round || item.round) === curRound)
+  if (curRound === null || isNaN(curRound)) return abandonedList.value
+  return abandonedList.value.filter(item => (item.abandoned_round != null ? item.abandoned_round : item.round) === curRound)
 })
 
 const abandonedStats = computed(() => {
@@ -732,7 +733,14 @@ const abandonedStats = computed(() => {
  * - 선발 진행 중인 경우(해당 차수 접수 시작부터 선정 협의일까지): 'N차 지원' (인디고 계열)
  */
 function getStudentRoundBadge(std) {
-  const roundNum = std.round || 1
+  const roundNum = std.round ?? 1
+  if (roundNum === 0) {
+    return {
+      type: 'selected',
+      text: '사전 선발',
+      class: 'text-emerald-700 font-bold text-xs'
+    }
+  }
   const sched = schedulesMap.value[roundNum] || DEFAULT_SCHEDULES[roundNum]
   const roundObj = roundsList.value.find(r => r.id === roundNum)
 
@@ -796,6 +804,7 @@ const roundOptions = computed(() => {
 
 const roundLabelText = computed(() => {
   if (selectedRoundFilter.value === 'all') return '(전체)'
+  if (Number(selectedRoundFilter.value) === 0) return '(사전 선발)'
   return `(${selectedRoundFilter.value}차 선발)`
 })
 
@@ -858,9 +867,9 @@ const flatStats = computed(() => {
 
       // 이전 차수(1차 등)에서 선발된 인원 계산
       let prevUsedCount = 0
-      if (curRound && curRound >= 2) {
+      if (curRound != null && curRound >= 2) {
         prevUsedCount = allTrackRecs.filter(ap => {
-          const r = ap.recommended_round || ap.round || 1
+          const r = ap.recommended_round ?? ap.round ?? 1
           return r < curRound
         }).length
       }
@@ -869,11 +878,11 @@ const flatStats = computed(() => {
 
       // 현재 선택된 차수 기준 추천 대상 학생들
       let trackApps = []
-      if (!curRound) {
+      if (curRound === null || isNaN(curRound)) {
         trackApps = allTrackRecs
       } else {
         trackApps = allTrackRecs.filter(ap => {
-          const r = ap.recommended_round || ap.round || 1
+          const r = ap.recommended_round ?? ap.round ?? 1
           return r === curRound
         })
       }
@@ -905,8 +914,8 @@ const flatStats = computed(() => {
         if (isGrad && stInfo.grad_year) {
           displayCode = `${code5}(${stInfo.grad_year})`
         }
-        const appRound = ap.round || 1
-        const recRound = ap.recommended_round || ap.round || 1
+        const appRound = ap.round != null ? ap.round : 1
+        const recRound = ap.recommended_round != null ? ap.recommended_round : (ap.round != null ? ap.round : 1)
         return {
           id: ap.id,
           student_id: ap.student_id,
@@ -927,8 +936,8 @@ const flatStats = computed(() => {
 
       // 전체 지원자 통계 (재학생/졸업생 지원수, 차수 필터 적용)
       let relevantAppliedApps = allTrackApps
-      if (curRound) {
-        relevantAppliedApps = allTrackApps.filter(ap => (ap.round || 1) === curRound)
+      if (curRound !== null && !isNaN(curRound)) {
+        relevantAppliedApps = allTrackApps.filter(ap => (ap.round != null ? ap.round : 1) === curRound)
       }
 
       let totalApplied = relevantAppliedApps.length
@@ -1013,7 +1022,7 @@ const totalAppliedStats = computed(() => {
   for (const trackId in (allApplicantsMap.value || {})) {
     const list = allApplicantsMap.value[trackId] || []
     for (const ap of list) {
-      if (curRound && (ap.round || 1) !== curRound) continue
+      if (curRound !== null && !isNaN(curRound) && (ap.round != null ? ap.round : 1) !== curRound) continue
       if (ap.student_id) studentSet.add(ap.student_id)
       cases++
     }
@@ -1064,12 +1073,12 @@ function getRoundGroups(students) {
   if (!students || students.length === 0) return []
   const map = new Map()
   for (const std of students) {
-    const r = std.recommended_round || std.round || 1
-    const roundKey = Number(r) || 1
+    const r = std.recommended_round ?? std.round ?? 1
+    const roundKey = (r !== null && r !== undefined && !isNaN(Number(r))) ? Number(r) : 1
     if (!map.has(roundKey)) {
       map.set(roundKey, {
         roundKey,
-        roundText: `${roundKey}차`,
+        roundText: roundKey === 0 ? '사전' : `${roundKey}차`,
         students: []
       })
     }
@@ -1197,8 +1206,8 @@ async function loadData() {
           univ_name: univName,
           track_name: trackName,
           department_name: ap.department_name || '-',
-          round: ap.round || 1,
-          abandoned_round: ap.abandoned_round || ap.round || 1,
+          round: ap.round != null ? ap.round : 1,
+          abandoned_round: ap.abandoned_round != null ? ap.abandoned_round : (ap.round != null ? ap.round : 1),
           reason,
           date: dateStr,
           raw_app: ap,
@@ -1279,7 +1288,8 @@ async function loadData() {
               id: ap.id,
               student_id: ap.student_id,
               univ_id: ap.univ_id,
-              round: ap.round,
+              round: ap.round != null ? ap.round : 1,
+              recommended_round: ap.recommended_round != null ? ap.recommended_round : (ap.round != null ? ap.round : 1),
               is_recommended: !!ap.is_recommended,
               student_code: s.student_code || '',
               name: s.name || '',
@@ -1302,7 +1312,8 @@ async function loadData() {
 async function downloadExcel() {
   downloading.value = true
   try {
-    const roundStr = selectedRoundFilter.value === 'all' ? '전체' : `${selectedRoundFilter.value}차`
+    const isPreRound = selectedRoundFilter.value !== 'all' && Number(selectedRoundFilter.value) === 0
+    const roundStr = selectedRoundFilter.value === 'all' ? '전체' : (isPreRound ? '사전' : `${selectedRoundFilter.value}차`)
     if (activeViewMode.value === 'abandoned') {
       const blob = exportAbandonedExcel(filteredAbandonedList.value, roundStr)
       const url = window.URL.createObjectURL(blob)

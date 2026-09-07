@@ -188,7 +188,7 @@
               <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
                 <div>
                   <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mr-2">
-                    {{ ap.round }}차 접수
+                    {{ ap.round === 0 ? '사전 접수' : `${ap.round}차 접수` }}
                   </span>
                   <strong class="text-base text-slate-800 dark:text-white">{{ ap.universities.univ_name }}</strong>
                   <span class="text-sm text-slate-400 dark:text-slate-500 ml-2">[{{ ap.universities.track_name }}] {{ ap.department_name }}</span>
@@ -196,10 +196,10 @@
                 
                 <!-- 추천 상태 배지 -->
                 <div class="flex items-center gap-1.5">
-                  <span v-if="ap.is_abandoned" class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-500 dark:bg-rose-950/20 dark:text-rose-400">{{ ap.abandoned_round || ap.round }}차 포기 완료</span>
-                  <span v-else-if="getAbandonRequest(ap)" class="px-2.5 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400">⚠️ {{ ap.round }}차 포기 신청 접수중</span>
-                  <span v-else-if="ap.is_excluded" class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400" :title="'부적합 사유: ' + ap.excluded_reason">{{ ap.round }}차 미선발 (원 {{ ap.original_rank }}위)</span>
-                  <span v-else-if="ap.is_recommended" class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-500 dark:bg-emerald-950/20 dark:text-emerald-400">{{ ap.recommended_round || ap.round }}차 추천 확정</span>
+                  <span v-if="ap.is_abandoned" class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-500 dark:bg-rose-950/20 dark:text-rose-400">{{ (ap.abandoned_round === 0 || ap.round === 0) ? '사전 포기 완료' : `${ap.abandoned_round || ap.round}차 포기 완료` }}</span>
+                  <span v-else-if="getAbandonRequest(ap)" class="px-2.5 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-600 dark:bg-orange-950/20 dark:text-orange-400">⚠️ {{ ap.round === 0 ? '사전 포기 신청 접수중' : `${ap.round}차 포기 신청 접수중` }}</span>
+                  <span v-else-if="ap.is_excluded" class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400" :title="'부적합 사유: ' + ap.excluded_reason">{{ ap.round === 0 ? '사전 미선발' : `${ap.round}차 미선발` }} (원 {{ ap.original_rank }}위)</span>
+                  <span v-else-if="ap.is_recommended" class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-500 dark:bg-emerald-950/20 dark:text-emerald-400">{{ (ap.recommended_round === 0 || ap.round === 0) ? '사전 추천 확정' : `${ap.recommended_round || ap.round}차 추천 확정` }}</span>
                   <span v-else class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-500 dark:bg-amber-950/20 dark:text-amber-400">심의 대기</span>
                 </div>
               </div>

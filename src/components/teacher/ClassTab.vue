@@ -105,10 +105,10 @@
                     지원 {{ idx + 1 }}
                   </span>
                   <span
-                    v-if="app.round_id || app.round"
+                    v-if="app.round_id !== undefined && app.round_id !== null"
                     class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 whitespace-nowrap"
                   >
-                    {{ app.round_id || app.round }}차 지원
+                    {{ app.round_id === 0 ? '사전 접수' : `${app.round_id}차 지원` }}
                   </span>
                   <span
                     class="font-medium"
@@ -122,9 +122,9 @@
                     v-if="app.univ_calc_score != null"
                     class="text-xs font-semibold px-2 py-0.5 rounded border border-violet-200 bg-violet-50 text-violet-700 whitespace-nowrap"
                   >환산 {{ app.univ_calc_score }}점</span>
-                  <span v-if="app.abandoned" class="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200">({{ app.abandoned_round || app.round_id || app.round }}차 포기됨)</span>
-                  <span v-else-if="app.recommended && app.round_status === 'FINALIZED'" class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">{{ app.recommended_round || app.round_id || app.round }}차 추천 확정</span>
-                  <span v-else-if="!app.recommended && app.round_status === 'FINALIZED'" class="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">{{ app.round_id || app.round }}차 미선발</span>
+                  <span v-if="app.abandoned" class="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200">({{ (app.abandoned_round === 0 || app.round_id === 0) ? '사전 포기됨' : `${app.abandoned_round || app.round_id || app.round}차 포기됨` }})</span>
+                  <span v-else-if="app.recommended && app.round_status === 'FINALIZED'" class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">{{ (app.recommended_round === 0 || app.round_id === 0) ? '사전 추천 확정' : `${app.recommended_round || app.round_id || app.round}차 추천 확정` }}</span>
+                  <span v-else-if="!app.recommended && app.round_status === 'FINALIZED'" class="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">{{ (app.round_id === 0 || app.round === 0) ? '사전 미선발' : `${app.round_id || app.round}차 미선발` }}</span>
                   <!-- 수정 버튼 -->
                   <button
                     v-if="currentRound && app.round_id === currentRound.id && !app.abandoned"
