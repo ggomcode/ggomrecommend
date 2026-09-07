@@ -161,7 +161,7 @@
               <td class="py-3 px-3.5 font-mono text-slate-600 whitespace-nowrap">{{ app.student_code || '-' }}</td>
               <td
                 class="py-3 px-3.5 font-bold text-slate-900 whitespace-nowrap cursor-pointer hover:text-emerald-600 hover:underline"
-                @click="printIndividualConfirmation(app)"
+                @click="openStudentSelectPrintModal(app.student_id)"
                 title="클릭 시 이 학생의 농어촌 전형 추천 확인서 인쇄"
               >
                 {{ app.student_name }}
@@ -205,7 +205,7 @@
               <td class="py-3 px-3 text-center whitespace-nowrap">
                 <div class="flex items-center justify-center gap-1.5">
                   <button
-                    @click="printIndividualConfirmation(app)"
+                    @click="openStudentSelectPrintModal(app.student_id)"
                     class="px-2 py-1 text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded border border-emerald-200 transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1 shadow-2xs"
                     title="이 학생의 농어촌 전형 추천 확인서 인쇄"
                   >
@@ -437,6 +437,38 @@
             </div>
           </div>
 
+          <!-- 2. 연락처 입력 및 확인 (학생 인쇄와 동일, 모를 경우 빈칸 가능) -->
+          <div v-if="selectedPrintStudentId" class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-left space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="font-extrabold text-slate-800 flex items-center gap-1.5 text-xs">
+                📞 인쇄용 연락처 입력 / 확인 (서명란 아래에 출력)
+              </span>
+              <span class="text-[11px] text-slate-500 font-medium">
+                * 모를 경우 빈칸 가능 (수기 작성란 출력)
+              </span>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1 text-[11px]">학생 연락처</label>
+                <input
+                  v-model="printStudentPhone"
+                  type="text"
+                  placeholder="예: 010-1234-5678 (빈칸 가능)"
+                  class="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs text-slate-800"
+                />
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1 text-[11px]">학부모(보호자) 비상연락처</label>
+                <input
+                  v-model="printParentPhone"
+                  type="text"
+                  placeholder="예: 010-9876-5432 (빈칸 가능)"
+                  class="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs text-slate-800"
+                />
+              </div>
+            </div>
+          </div>
+
           <p class="text-[11px] text-slate-500 leading-normal m-0 pt-1">
             * 학생이 직접 신청서 탭에서 인쇄하는 것과 동일한 <strong>2027학년도 대입 농어촌 전형 추천 확인서 (양면 서식)</strong>로 즉시 인쇄 창이 열립니다.
           </p>
@@ -464,7 +496,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { Users, FileSpreadsheet, AlertTriangle, Printer, RefreshCw, Search, Edit3 } from 'lucide-vue-next';
 import { getAllRuralApplications, getRuralEligibilityList, updateRuralApplicationByTeacher, deleteRuralApplicationByTeacher, getRuralSignatures } from '../../api/ruralApi';
 import { printRuralClassRoster, printRuralConfirmationDocument } from '../../utils/ruralPrintHelper';
@@ -714,12 +746,50 @@ function executePrint() {
 // 🖨️ 개별 학생 추천 확인서 인쇄 로직
 const showStudentPrintModal = ref(false);
 const selectedPrintStudentId = ref('');
+const printStudentPhone = ref('');
+const printParentPhone = ref('');
+const printParentName = ref('');
 
-function openStudentSelectPrintModal(studentId = null) {
-  if (studentId) {
-    selectedPrintStudentId.value = studentId;
-  } else if (!selectedPrintStudentId.value && uniqueAppliedStudents.value.length > 0) {
-    selectedPrintStudentId.value = uniqueAppliedStudents.value[0].id;
+async function loadStudentContacts(studentId) {
+  if (!studentId) {
+    printStudentPhone.value = '';
+    printParentPhone.value = '';
+    printParentName.value = '';
+    return;
+  }
+  const st = studentList.value.find(s => s.id === studentId || s.user_id === studentId);
+  const studentApps = rawApps.value.filter(a => a.student_id === studentId);
+
+  let sigData = null;
+  try {
+    sigData = await getRuralSignatures(studentId);
+  } catch (e) {
+    console.warn('Failed to load signatures for contacts:', e);
+  }
+
+  printStudentPhone.value = studentApps[0]?.student_phone || sigData?.student_phone || st?.phone || '';
+  printParentPhone.value = studentApps[0]?.parent_phone || sigData?.parent_phone || st?.parent_phone || '';
+  printParentName.value = sigData?.parent_name || '';
+}
+
+watch(selectedPrintStudentId, async (newId) => {
+  if (newId) {
+    await loadStudentContacts(newId);
+  } else {
+    printStudentPhone.value = '';
+    printParentPhone.value = '';
+    printParentName.value = '';
+  }
+});
+
+async function openStudentSelectPrintModal(studentId = null) {
+  let targetId = studentId;
+  if (!targetId && !selectedPrintStudentId.value && uniqueAppliedStudents.value.length > 0) {
+    targetId = uniqueAppliedStudents.value[0].id;
+  }
+  if (targetId) {
+    selectedPrintStudentId.value = targetId;
+    await loadStudentContacts(targetId);
   }
   showStudentPrintModal.value = true;
 }
@@ -787,15 +857,25 @@ async function executeSelectedStudentPrint() {
   if (!selectedPrintStudentId.value) return;
   const studentId = selectedPrintStudentId.value;
   showStudentPrintModal.value = false;
-  await printIndividualConfirmation(studentId);
+  await printIndividualConfirmation(studentId, {
+    studentPhone: printStudentPhone.value,
+    parentPhone: printParentPhone.value,
+    parentName: printParentName.value
+  });
 }
 
-async function printIndividualConfirmation(appOrStudentId) {
+async function printIndividualConfirmation(appOrStudentId, customOptions = null) {
   let targetStudentId = typeof appOrStudentId === 'object' ? appOrStudentId.student_id : appOrStudentId;
   if (!targetStudentId && typeof appOrStudentId === 'object') {
     targetStudentId = appOrStudentId.id;
   }
   if (!targetStudentId) return;
+
+  // 커스텀 옵션이 제공되지 않은 경우, 모달을 열어 교사/관리자가 연락처를 확인/입력/빈칸 처리할 수 있도록 유도
+  if (!customOptions) {
+    await openStudentSelectPrintModal(targetStudentId);
+    return;
+  }
 
   // 1. 학생 정보 조회
   const st = studentList.value.find(s => s.id === targetStudentId || s.user_id === targetStudentId);
@@ -806,7 +886,7 @@ async function printIndividualConfirmation(appOrStudentId) {
   const classNo = st?.class_no ?? (typeof appOrStudentId === 'object' ? appOrStudentId.student_class : '');
   const seqNo = st?.seq_no ?? st?.student_no ?? '';
 
-  // 2. 해당 학생의 모든 신청 지망 목록 (1지망~6지망 정렬)
+  // 2. 해당 학생의 모든 신청 지망 목록 (1지망~ 정렬)
   const studentApps = rawApps.value
     .filter(a => a.student_id === targetStudentId)
     .sort((a, b) => (Number(a.choice_number) || 0) - (Number(b.choice_number) || 0));
@@ -829,11 +909,15 @@ async function printIndividualConfirmation(appOrStudentId) {
 
   const sSig = sigData?.student_signature || null;
   const pSig = sigData?.parent_signature || null;
-  const parentName = sigData?.parent_name || '';
+  const parentName = customOptions.parentName !== undefined ? customOptions.parentName : (sigData?.parent_name || '');
 
-  // 연락처: 신청서 데이터나 서명 데이터에서 추출
-  const sPhone = studentApps[0]?.student_phone || sigData?.student_phone || st?.phone || '';
-  const pPhone = studentApps[0]?.parent_phone || sigData?.parent_phone || st?.parent_phone || '';
+  // 연락처: 커스텀 입력값 우선 (모르면 빈칸 가능, 빈칸 시 서식에 수기 작성란 형식으로 출력)
+  const sPhone = customOptions.studentPhone !== undefined
+    ? customOptions.studentPhone
+    : (studentApps[0]?.student_phone || sigData?.student_phone || st?.phone || '');
+  const pPhone = customOptions.parentPhone !== undefined
+    ? customOptions.parentPhone
+    : (studentApps[0]?.parent_phone || sigData?.parent_phone || st?.parent_phone || '');
 
   const ruralType = st?.rural_type || (studentApps[0]?.rural_type === 'TYPE_2' ? 'TYPE_2' : 'TYPE_1');
   const isWarningAcknowledged = Boolean(st?.eligibility?.is_eligible || st?.eligibility?.is_manual_approved);

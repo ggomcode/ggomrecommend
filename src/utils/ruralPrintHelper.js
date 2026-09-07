@@ -103,295 +103,13 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
     }
   }
 
-  // 6개 초과 여부 확인 (7개 이상이면 2페이지로 지망 분할 및 행정처리는 3페이지로)
-  const hasOver6 = choices.length > 6;
-
-  // 1페이지: 1~6지망 6행 규격 표
-  const p1Rows = [];
-  for (let i = 0; i < 6; i++) {
-    p1Rows.push(renderChoiceRow(choices[i], i));
+  // 기본 최소 6행 유지, 7개 이상 지망도 1페이지 내에 전체 출력
+  const totalRows = Math.max(6, choices.length);
+  const rows = [];
+  for (let i = 0; i < totalRows; i++) {
+    rows.push(renderChoiceRow(choices[i], i));
   }
-  const p1ChoicesHtml = p1Rows.join('');
-
-  // 2페이지 (7개 초과 시): 7지망 이후 행
-  let p2ChoicesHtml = '';
-  if (hasOver6) {
-    const p2Rows = [];
-    for (let i = 6; i < choices.length; i++) {
-      p2Rows.push(renderChoiceRow(choices[i], i));
-    }
-    p2ChoicesHtml = p2Rows.join('');
-  }
-
-  // 학생 기본 정보 및 결재 상단 헤더
-  const studentHeaderHtml = `
-    <table class="header-table">
-      <tr>
-        <td class="header-title">2027학년도 대입 농어촌 전형 추천 확인서</td>
-        <td style="text-align: right;">
-          <table class="stamp-box">
-            <tr>
-              <th rowspan="2" style="width: 20px; background:#f1f5f9;">결<br>재</th>
-              <th>담임</th>
-              <th>부장</th>
-            </tr>
-            <tr>
-              <td></td>
-              <td></td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-
-    <table class="info-table">
-      <tr>
-        <th style="width: 100px;">학년 / 반 / 번호</th>
-        <td style="font-weight: bold; width: 140px;">${gradeClassText}</td>
-        <th style="width: 50px;">학번</th>
-        <td style="font-weight: bold; font-family: monospace; width: 120px;">${sCodeVal}</td>
-        <th style="width: 50px;">성명</th>
-        <td style="font-weight: bold; font-size: 12.5px;">${sNameVal}</td>
-      </tr>
-    </table>
-  `;
-
-  // 서약 안내 문구 및 하단 꼬리말 (서명, 연락처, 학교장 귀하)
-  const confirmAndFooterHtml = `
-    <p class="confirm-notice">
-      본인은 2027학년도 대학입학 농어촌 및 기회균형(농어촌) 특별전형 지원 자격을 확인하였으며, 위 기재 사항에 틀림없음을 확인합니다. 제출된 서류는 반납되지 않으며 거짓 기재가 있을 경우 관련 규정에 따라 조치됨을 인지하였습니다.
-    </p>
-
-    <div class="footer-sig">
-      <p class="footer-date">
-        ${year}년 ${month}월 ${day}일
-      </p>
-
-      <table class="sig-table">
-        <tr>
-          <td style="width: 50%; text-align: left; font-size: 12.5px; vertical-align: top;">
-            <div>
-              지원 학생: <strong style="font-size: 13.5px;">${sNameVal}</strong>
-              ${sSig ? `<img src="${sSig}" class="sig-img" alt="서명" />` : '(서명 / 인)'}
-            </div>
-            <div style="font-size: 11px; color: #475569; margin-top: 3px;">(연락처: ${sPhoneFmt})</div>
-          </td>
-          <td style="width: 50%; text-align: right; font-size: 12.5px; vertical-align: top;">
-            <div>
-              학부모(보호자): ${parentName || '____________________'}
-              ${pSig ? `<img src="${pSig}" class="sig-img" alt="서명" />` : '(서명 / 인)'}
-            </div>
-            <div style="font-size: 11px; color: #475569; margin-top: 3px;">(비상연락처: ${pPhoneFmt})</div>
-          </td>
-        </tr>
-      </table>
-
-      <div class="principal-to">
-        ${sName}장 귀하
-      </div>
-    </div>
-  `;
-
-  // 행정처리 안내서 페이지 서식
-  const adminGuidePageHtml = `
-    <div class="page page-back">
-      <div class="page-body">
-        <h2 class="back-title">
-          농어촌 특별전형 지원자격 확인 및 행정처리 안내
-        </h2>
-
-        <div class="guide-box">
-          <h4>1. 지원자격 확인 요건</h4>
-          <ul>
-            <li><strong>유형 Ⅰ (6년 요건)</strong>: 학교 - 읍면지역 소재 중/고등학교 6년 연속 재학 / 주소지 - 읍면지역 6년 연속 거주 (부모 및 본인 모두 읍면 거주)</li>
-            <li><strong>유형 Ⅱ (12년 요건)</strong>: 학교 - 읍면지역 소재 초/중/고등학교 12년 전 교육과정 이수 / 주소지 - 읍면지역 12년 거주 (부모 거주요건 미적용)</li>
-          </ul>
-        </div>
-
-        <div class="guide-box">
-          <h4>2. 제출 서류 안내</h4>
-          <ul>
-            <li><strong>공통 서류</strong>: (대학별) 농어촌학교 재학사실확인서 (우리고등학교 직인 필요), 주민등록초(등)본 (주소변동 이력 전체 포함 필수), 고등학교/중학교 생활기록부</li>
-            <li><strong>추가 서류 (유형 Ⅰ)</strong>: 가족관계증명서 (지원자 기준 상세), 부/모의 주민등록초본 (주소 변동이력 포함)</li>
-            <li><strong>추가 서류 (유형 Ⅱ)</strong>: 초등학교 생활기록부</li>
-          </ul>
-        </div>
-
-        <div class="section-title">■ 행정처리 절차 및 방법</div>
-        <table class="guide-table">
-          <thead>
-            <tr>
-              <th style="width: 35px;">순서</th>
-              <th style="width: 130px;">내용</th>
-              <th style="width: 120px;">장소</th>
-              <th>방법 및 세부 안내</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style="text-align:center; font-weight:bold;">1</td>
-              <td>응시원서접수</td>
-              <td>유웨이, 진학어플라이</td>
-              <td>원서 작성 후 출력, 서류봉투 겉지 출력 보관</td>
-            </tr>
-            <tr>
-              <td style="text-align:center; font-weight:bold;">2</td>
-              <td>주민등록초본 및 가족관계증명서 준비</td>
-              <td>행정복지센터 / 인터넷</td>
-              <td>주소 변경이력 전체 포함 필수, 유형Ⅰ의 경우 부/모 초본 및 가족관계증명서 추가</td>
-            </tr>
-            <tr>
-              <td style="text-align:center; font-weight:bold;">3</td>
-              <td>(초),중,고 생활기록부 준비</td>
-              <td>정부24, 무인민원발급기, 행정실</td>
-              <td>학교 발급 시 학교생활기록부 발급 신청서 지참</td>
-            </tr>
-            <tr>
-              <td style="text-align:center; font-weight:bold;">4</td>
-              <td>농어촌전형 추천시스템 등록</td>
-              <td>인터넷 (본 시스템)</td>
-              <td>시스템 등록 후 인쇄 및 결재 (확인서 작성)</td>
-            </tr>
-            <tr>
-              <td style="text-align:center; font-weight:bold;">5</td>
-              <td>농어촌 재학사실확인서 직인</td>
-              <td>행정실</td>
-              <td>추천 확인서, 수시응시원서, 농어촌 재학사실확인서 지참 방문</td>
-            </tr>
-            <tr>
-              <td style="text-align:center; font-weight:bold;">6</td>
-              <td>추천 확인서 반납</td>
-              <td>3학년 교무실</td>
-              <td>담임선생님께 추천 확인서 최종 반납</td>
-            </tr>
-            <tr>
-              <td style="text-align:center; font-weight:bold;">7</td>
-              <td>서류 발송</td>
-              <td>우체국</td>
-              <td>대학별 서류 봉투에 봉인 후 등기 발송 (소인일자 확인 필수)</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="guide-box warn-box">
-          <h4>⚠️ 유의 및 주의사항</h4>
-          <ol>
-            <li><strong>대학별 제출 서류 확인</strong>: 대학마다 서류가 다를 수 있으므로 수시 모집요강을 반드시 확인하세요.</li>
-            <li><strong>주민등록 이전 금지</strong>: 농어촌 전형 지원자는 정해진 일자(고교 졸업일 또는 입학 전)까지 주민등록을 옮기지 마세요.</li>
-            <li><strong>서류 제출 일시 준수</strong>: 마감 시간 이전에 서류 발송 및 등기 우체국 접수를 완료하세요.</li>
-            <li><strong>온라인 서류 제출 확인</strong>: 일부 대학은 온라인 서류 업로드 방식을 사용하므로 입학처 공지를 확인하세요.</li>
-          </ol>
-        </div>
-      </div>
-    </div>
-  `;
-
-  // 페이지 레이아웃 본문 생성 (<=6: 총 2페이지 / >6: 총 3페이지)
-  let pagesHtml = '';
-  if (!hasOver6) {
-    // 6지망 이하: 1페이지(확인서+꼬리말) + 2페이지(행정처리 안내)
-    pagesHtml = `
-      <!-- PAGE 1: 신청 확인서 및 지망 목록 (1~6지망) -->
-      <div class="page page-front">
-        <div class="page-body">
-          ${studentHeaderHtml}
-
-          <div class="section-title">■ 지원 희망 대학 및 전형 내역</div>
-          <table class="choice-table">
-            <thead>
-              <tr>
-                <th style="width: 45px;">지망</th>
-                <th style="width: 45px;">구분</th>
-                <th style="width: 60px;">메디컬</th>
-                <th>대학명</th>
-                <th>학과(부)</th>
-                <th>전형유형</th>
-                <th>전형명</th>
-                <th>비고 및 모집인원</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${p1ChoicesHtml}
-            </tbody>
-          </table>
-
-          ${confirmAndFooterHtml}
-        </div>
-      </div>
-
-      <!-- PAGE 2: 지원자격 확인 및 행정처리 안내서 -->
-      ${adminGuidePageHtml}
-    `;
-  } else {
-    // 7지망 이상: 1페이지(1~6지망 및 뒷면에 계속) + 2페이지(7지망 이후 및 꼬리말) + 3페이지(행정처리 안내)
-    pagesHtml = `
-      <!-- PAGE 1: 신청 확인서 및 1~6지망 목록 -->
-      <div class="page page-front">
-        <div class="page-body">
-          ${studentHeaderHtml}
-
-          <div class="section-title">■ 지원 희망 대학 및 전형 내역</div>
-          <table class="choice-table">
-            <thead>
-              <tr>
-                <th style="width: 45px;">지망</th>
-                <th style="width: 45px;">구분</th>
-                <th style="width: 60px;">메디컬</th>
-                <th>대학명</th>
-                <th>학과(부)</th>
-                <th>전형유형</th>
-                <th>전형명</th>
-                <th>비고 및 모집인원</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${p1ChoicesHtml}
-            </tbody>
-          </table>
-
-          <div style="text-align: right; font-weight: bold; color: #475569; margin-top: 14px; font-size: 11.5px; padding-right: 6px;">
-            (뒷면에 계속)
-          </div>
-        </div>
-      </div>
-
-      <!-- PAGE 2: 7지망 이후 지망 목록 및 서약/서명 꼬리말 -->
-      <div class="page page-front">
-        <div class="page-body">
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 5px; margin-bottom: 10px;">
-            <span style="font-size: 15px; font-weight: 800; color: #0f172a;">2027학년도 대입 농어촌 전형 추천 확인서 (계속)</span>
-            <span style="font-size: 11px; color: #475569; font-weight: 600;">
-              지원 학생: <strong style="color: #0f172a;">${sNameVal}</strong> (${gradeClassText}, 학번: <span style="font-family: monospace;">${sCodeVal}</span>)
-            </span>
-          </div>
-
-          <div class="section-title">■ 지원 희망 대학 및 전형 내역 (7지망 이후)</div>
-          <table class="choice-table">
-            <thead>
-              <tr>
-                <th style="width: 45px;">지망</th>
-                <th style="width: 45px;">구분</th>
-                <th style="width: 60px;">메디컬</th>
-                <th>대학명</th>
-                <th>학과(부)</th>
-                <th>전형유형</th>
-                <th>전형명</th>
-                <th>비고 및 모집인원</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${p2ChoicesHtml}
-            </tbody>
-          </table>
-
-          ${confirmAndFooterHtml}
-        </div>
-      </div>
-
-      <!-- PAGE 3: 지원자격 확인 및 행정처리 안내서 -->
-      ${adminGuidePageHtml}
-    `;
-  }
+  const choicesHtml = rows.join('');
 
   const html = `
     <!DOCTYPE html>
@@ -497,8 +215,8 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
         }
         .choice-table th, .choice-table td {
           border: 1px solid #cbd5e1;
-          padding: 6px 5px;
-          height: 27px;
+          padding: 5.5px 5px;
+          height: 26px;
         }
         .choice-table th {
           background-color: #f8fafc;
@@ -526,7 +244,7 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
         }
         .footer-sig {
           margin-top: auto;
-          padding-top: 10px;
+          padding-top: 15px;
           text-align: center;
         }
         .footer-date {
@@ -544,10 +262,10 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
           vertical-align: middle;
         }
         .principal-to {
-          font-size: 15px;
+          font-size: 15.5px;
           font-weight: 900;
           text-align: left;
-          margin-top: 14px;
+          margin-top: 16px;
         }
         .back-title {
           font-size: 15.5px;
@@ -637,7 +355,186 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
       </style>
     </head>
     <body>
-      ${pagesHtml}
+
+      <!-- PAGE 1: 신청 확인서 및 전체 지망 목록 -->
+      <div class="page page-front">
+        <div class="page-body">
+          <table class="header-table">
+            <tr>
+              <td class="header-title">2027학년도 대입 농어촌 전형 추천 확인서</td>
+              <td style="text-align: right;">
+                <table class="stamp-box">
+                  <tr>
+                    <th rowspan="2" style="width: 20px; background:#f1f5f9;">결<br>재</th>
+                    <th>담임</th>
+                    <th>부장</th>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+
+          <table class="info-table">
+            <tr>
+              <th style="width: 100px;">학년 / 반 / 번호</th>
+              <td style="font-weight: bold; width: 140px;">${gradeClassText}</td>
+              <th style="width: 50px;">학번</th>
+              <td style="font-weight: bold; font-family: monospace; width: 120px;">${sCodeVal}</td>
+              <th style="width: 50px;">성명</th>
+              <td style="font-weight: bold; font-size: 12.5px;">${sNameVal}</td>
+            </tr>
+          </table>
+
+          <div class="section-title">■ 지원 희망 대학 및 전형 내역</div>
+          <table class="choice-table">
+            <thead>
+              <tr>
+                <th style="width: 45px;">지망</th>
+                <th style="width: 45px;">구분</th>
+                <th style="width: 60px;">메디컬</th>
+                <th>대학명</th>
+                <th>학과(부)</th>
+                <th>전형유형</th>
+                <th>전형명</th>
+                <th>비고 및 모집인원</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${choicesHtml}
+            </tbody>
+          </table>
+
+          <p class="confirm-notice">
+            본인은 2027학년도 대학입학 농어촌 및 기회균형(농어촌) 특별전형 지원 자격을 확인하였으며, 위 기재 사항에 틀림없음을 확인합니다. 제출된 서류는 반납되지 않으며 거짓 기재가 있을 경우 관련 규정에 따라 조치됨을 인지하였습니다.
+          </p>
+        </div>
+
+        <!-- 하단 서명 및 수신자 고정 정렬 (진짜 꼬리말처럼 최하단 배치) -->
+        <div class="footer-sig">
+          <p class="footer-date">
+            ${year}년 ${month}월 ${day}일
+          </p>
+
+          <table class="sig-table">
+            <tr>
+              <td style="width: 50%; text-align: left; font-size: 12.5px; vertical-align: top;">
+                <div>
+                  지원 학생: <strong style="font-size: 13.5px;">${sNameVal}</strong>
+                  ${sSig ? `<img src="${sSig}" class="sig-img" alt="서명" />` : '(서명 / 인)'}
+                </div>
+                <div style="font-size: 11px; color: #475569; margin-top: 3px;">(연락처: ${sPhoneFmt})</div>
+              </td>
+              <td style="width: 50%; text-align: right; font-size: 12.5px; vertical-align: top;">
+                <div>
+                  학부모(보호자): ${parentName || '____________________'}
+                  ${pSig ? `<img src="${pSig}" class="sig-img" alt="서명" />` : '(서명 / 인)'}
+                </div>
+                <div style="font-size: 11px; color: #475569; margin-top: 3px;">(비상연락처: ${pPhoneFmt})</div>
+              </td>
+            </tr>
+          </table>
+
+          <div class="principal-to">
+            ${sName}장 귀하
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE 2: 지원자격 확인 및 행정처리 안내서 -->
+      <div class="page page-back">
+        <div class="page-body">
+          <h2 class="back-title">
+            농어촌 특별전형 지원자격 확인 및 행정처리 안내
+          </h2>
+
+          <div class="guide-box">
+            <h4>1. 지원자격 확인 요건</h4>
+            <ul>
+              <li><strong>유형 Ⅰ (6년 요건)</strong>: 학교 - 읍면지역 소재 중/고등학교 6년 연속 재학 / 주소지 - 읍면지역 6년 연속 거주 (부모 및 본인 모두 읍면 거주)</li>
+              <li><strong>유형 Ⅱ (12년 요건)</strong>: 학교 - 읍면지역 소재 초/중/고등학교 12년 전 교육과정 이수 / 주소지 - 읍면지역 12년 거주 (부모 거주요건 미적용)</li>
+            </ul>
+          </div>
+
+          <div class="guide-box">
+            <h4>2. 제출 서류 안내</h4>
+            <ul>
+              <li><strong>공통 서류</strong>: (대학별) 농어촌학교 재학사실확인서 (우리고등학교 직인 필요), 주민등록초(등)본 (주소변동 이력 전체 포함 필수), 고등학교/중학교 생활기록부</li>
+              <li><strong>추가 서류 (유형 Ⅰ)</strong>: 가족관계증명서 (지원자 기준 상세), 부/모의 주민등록초본 (주소 변동이력 포함)</li>
+              <li><strong>추가 서류 (유형 Ⅱ)</strong>: 초등학교 생활기록부</li>
+            </ul>
+          </div>
+
+          <div class="section-title">■ 행정처리 절차 및 방법</div>
+          <table class="guide-table">
+            <thead>
+              <tr>
+                <th style="width: 35px;">순서</th>
+                <th style="width: 130px;">내용</th>
+                <th style="width: 120px;">장소</th>
+                <th>방법 및 세부 안내</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="text-align:center; font-weight:bold;">1</td>
+                <td>응시원서접수</td>
+                <td>유웨이, 진학어플라이</td>
+                <td>원서 작성 후 출력, 서류봉투 겉지 출력 보관</td>
+              </tr>
+              <tr>
+                <td style="text-align:center; font-weight:bold;">2</td>
+                <td>주민등록초본 및 가족관계증명서 준비</td>
+                <td>행정복지센터 / 인터넷</td>
+                <td>주소 변경이력 전체 포함 필수, 유형Ⅰ의 경우 부/모 초본 및 가족관계증명서 추가</td>
+              </tr>
+              <tr>
+                <td style="text-align:center; font-weight:bold;">3</td>
+                <td>(초),중,고 생활기록부 준비</td>
+                <td>정부24, 무인민원발급기, 행정실</td>
+                <td>학교 발급 시 학교생활기록부 발급 신청서 지참</td>
+              </tr>
+              <tr>
+                <td style="text-align:center; font-weight:bold;">4</td>
+                <td>농어촌전형 추천시스템 등록</td>
+                <td>인터넷 (본 시스템)</td>
+                <td>시스템 등록 후 인쇄 및 결재 (확인서 작성)</td>
+              </tr>
+              <tr>
+                <td style="text-align:center; font-weight:bold;">5</td>
+                <td>농어촌 재학사실확인서 직인</td>
+                <td>행정실</td>
+                <td>추천 확인서, 수시응시원서, 농어촌 재학사실확인서 지참 방문</td>
+              </tr>
+              <tr>
+                <td style="text-align:center; font-weight:bold;">6</td>
+                <td>추천 확인서 반납</td>
+                <td>3학년 교무실</td>
+                <td>담임선생님께 추천 확인서 최종 반납</td>
+              </tr>
+              <tr>
+                <td style="text-align:center; font-weight:bold;">7</td>
+                <td>서류 발송</td>
+                <td>우체국</td>
+                <td>대학별 서류 봉투에 봉인 후 등기 발송 (소인일자 확인 필수)</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="guide-box warn-box">
+            <h4>⚠️ 유의 및 주의사항</h4>
+            <ol>
+              <li><strong>대학별 제출 서류 확인</strong>: 대학마다 서류가 다를 수 있으므로 수시 모집요강을 반드시 확인하세요.</li>
+              <li><strong>주민등록 이전 금지</strong>: 농어촌 전형 지원자는 정해진 일자(고교 졸업일 또는 입학 전)까지 주민등록을 옮기지 마세요.</li>
+              <li><strong>서류 제출 일시 준수</strong>: 마감 시간 이전에 서류 발송 및 등기 우체국 접수를 완료하세요.</li>
+              <li><strong>온라인 서류 제출 확인</strong>: 일부 대학은 온라인 서류 업로드 방식을 사용하므로 입학처 공지를 확인하세요.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
 
       <script>
         window.onload = function() {
