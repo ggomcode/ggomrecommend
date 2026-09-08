@@ -14,11 +14,27 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
   const info = studentInfo || {};
   const sNameVal = info.studentName || info.name || '학생';
   const rawCodeVal = String(info.studentCode || info.student_code || info.code || '-').trim();
+  const classNoVal = info.classNo ?? info.class_no ?? '';
+  const seqNoVal = info.seqNo ?? info.seq_no ?? info.studentNo ?? '';
 
-  // 졸업생 판별 (isEnrolled가 false이거나, 학번이 5자리 초과이거나, gradYear가 지정된 경우)
-  const isGrad = info.isEnrolled === false || info.is_enrolled === false || info.isGraduated || info.is_graduated || (rawCodeVal.length > 5) || (Boolean(info.gradYear) && info.gradYear <= year);
+  // 졸업생 판별
+  // 1) isEnrolled가 명시적으로 false이거나 isGraduated가 true인 경우 -> 졸업생
+  // 2) isEnrolled가 명시적으로 true인 경우 -> 무조건 재학생
+  // 3) 지정되지 않은 경우 -> 학번이 5자리 초과(예: 202530101 등 과거 연도 포함)이거나 과거 졸업연도인 경우
+  let isGrad = false;
+  if (info.isEnrolled === false || info.is_enrolled === false || info.isGraduated === true || info.is_graduated === true || info.is_separate_applicant === true) {
+    isGrad = true;
+  } else if (info.isEnrolled === true || info.is_enrolled === true) {
+    isGrad = false;
+  } else {
+    if (rawCodeVal.length > 5 && !rawCodeVal.startsWith('3')) {
+      isGrad = true;
+    } else if (info.gradYear && Number(info.gradYear) < year) {
+      isGrad = true;
+    }
+  }
 
-  // 1) 학번: 졸업생의 경우 202630404와 같이 전체 학번이 보존되도록 처리
+  // 1) 학번: 재학생은 5자리(예: 30518), 졸업생은 전체 학번(예: 202630518) 표시
   let sCodeVal = rawCodeVal;
   if (isGrad) {
     if (rawCodeVal.length === 5 && /^\d+$/.test(rawCodeVal)) {
@@ -28,11 +44,17 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
       sCodeVal = rawCodeVal;
     }
   } else {
-    sCodeVal = rawCodeVal.length > 5 ? rawCodeVal.slice(-5) : rawCodeVal;
+    if (rawCodeVal.length > 5) {
+      sCodeVal = rawCodeVal.slice(-5);
+    } else if ((!rawCodeVal || rawCodeVal === '-') && classNoVal && seqNoVal) {
+      const g = String(info.grade || 3);
+      const c = String(classNoVal).padStart(2, '0');
+      const s = String(seqNoVal).padStart(2, '0');
+      sCodeVal = `${g}${c}${s}`;
+    } else {
+      sCodeVal = rawCodeVal;
+    }
   }
-
-  const classNoVal = info.classNo ?? info.class_no ?? '';
-  const seqNoVal = info.seqNo ?? info.seq_no ?? info.studentNo ?? '';
 
   // 학년 / 반 / 번호 표시 텍스트
   let gradeClassText = '';

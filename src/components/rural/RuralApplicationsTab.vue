@@ -933,7 +933,7 @@ async function printIndividualConfirmation(appOrStudentId, customOptions = null)
       seqNo,
       studentPhone: sPhone,
       parentPhone: pPhone,
-      gradYear: st?.grad_year || 2026,
+      gradYear: isEnrolled ? null : (st?.grad_year || 2026),
       ruralType,
       isWarningAcknowledged
     },

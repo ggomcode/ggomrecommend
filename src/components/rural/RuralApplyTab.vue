@@ -1127,7 +1127,7 @@ async function executePrintFromModal() {
         seqNo,
         studentPhone: printStudentPhone.value,
         parentPhone: printParentPhone.value,
-        gradYear: auth.gradYear || 2026,
+        gradYear: isEnrolled ? null : (auth.gradYear || 2026),
         ruralType: prefRuralType.value === '유형II' ? 'TYPE_2' : 'TYPE_1',
         isWarningAcknowledged: warningAcknowledged.value || prefRuralSelfCheck.value
       },
