@@ -327,10 +327,19 @@
                 @change="onUnivChange"
               >
                 <option value="">대학 선택</option>
-                <option v-for="u in availableUnivs" :key="u.id" :value="u.id" :disabled="u.is_exhausted">
-                  {{ u.univ_name }} ({{ u.track_name }}) {{ u.grad_allowed ? '' : '[재학생 전용]' }}{{ u.is_exhausted ? ' [⚠️ 추천정원 마감 - 지원 불가]' : '' }}
+                <option v-for="u in availableUnivs" :key="u.id" :value="u.id" :disabled="u.is_exhausted || !!getUnivDuplicateInfo(u.id)">
+                  {{ u.univ_name }} ({{ u.track_name }}) {{ u.grad_allowed ? '' : '[재학생 전용]' }}{{ u.is_exhausted ? ' [⚠️ 추천정원 마감 - 지원 불가]' : '' }}{{ getUnivDuplicateLabel(u.id) }}
                 </option>
               </select>
+
+              <!-- 중복 지원 경고 배너 -->
+              <div v-if="selectedUnivDuplicateInfo" class="mt-2.5 p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 rounded-xl text-rose-800 dark:text-rose-300 text-xs flex items-start gap-2">
+                <span class="text-base leading-none">⚠️</span>
+                <div>
+                  <strong class="font-bold block mb-0.5">중복 추천 접수 불가</strong>
+                  <span class="whitespace-pre-line">{{ selectedUnivDuplicateInfo.message }}</span>
+                </div>
+              </div>
 
               <!-- 전체 요강 보기 버튼 -->
               <div class="mt-1.5 text-right">
@@ -507,18 +516,18 @@
 
             <button
               type="submit"
-              :disabled="submitLoading || !isSubmissionActive"
+              :disabled="submitLoading || !isSubmissionActive || !!selectedUnivDuplicateInfo"
               class="w-full text-sm font-bold transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               :style="{
                 padding: '12px',
                 border: 'none',
                 borderRadius: '8px',
-                background: isSubmissionActive ? '#2563eb' : '#94a3b8',
+                background: (isSubmissionActive && !selectedUnivDuplicateInfo) ? '#2563eb' : '#94a3b8',
                 color: 'white',
                 marginTop: '4px'
               }"
             >
-              {{ submitLoading ? '신청 제출 중…' : (isSubmissionActive ? '신청서 제출하기' : '🔒 현재는 추천 희망서 제출 기간이 아닙니다') }}
+              {{ submitLoading ? '신청 제출 중…' : (!isSubmissionActive ? '🔒 현재는 추천 희망서 제출 기간이 아닙니다' : (selectedUnivDuplicateInfo ? '⚠️ 동일 대학 중복 지원 불가 (제출 불가)' : '신청서 제출하기')) }}
             </button>
           </form>
 
@@ -1444,8 +1453,82 @@ async function checkCurrentRound() {
   }
 }
 
-function onUnivChange() {
+// 동일 대학교 중복 지원 검사 헬퍼 함수
+function checkDuplicateApplication(targetUnivId, targetRound) {
+  if (!targetUnivId) return null
+  const selectedUniv = availableUnivs.value.find(u => u.id === targetUnivId)
+  if (!selectedUniv) return null
+
+  const targetUnivName = String(selectedUniv.univ_name || '').trim()
+  const targetRoundNum = Number(targetRound)
+
+  for (const ap of myApplications.value) {
+    if (ap.is_abandoned) continue
+
+    const apUniv = ap.universities || availableUnivs.value.find(u => u.id === ap.univ_id) || {}
+    const apUnivName = String(apUniv.univ_name || ap.univ_name || '').trim()
+
+    // 동일 대학 검사 (대학명이 일치하거나 univ_id가 같은 경우)
+    const isSameUniv = (targetUnivName && apUnivName === targetUnivName) || ap.univ_id === targetUnivId
+    if (!isSameUniv) continue
+
+    // Case 1: 동일 차수에 이미 접수된 신청서가 존재하는 경우
+    if (Number(ap.round) === targetRoundNum) {
+      return {
+        type: 'SAME_ROUND',
+        message: `이미 ${targetRoundNum}차에 [${targetUnivName}]에 접수된 신청서가 존재합니다.\n학교장추천전형은 동일 대학교에 중복으로 지원할 수 없습니다.`,
+        univName: targetUnivName,
+        round: targetRoundNum
+      }
+    }
+
+    // Case 2: 이전/다른 차수에서 이미 추천 확정(is_recommended)된 경우
+    if (ap.is_recommended) {
+      const recRound = ap.recommended_round ?? ap.round
+      const roundLabel = (recRound === 0) ? '사전' : `${recRound}차`
+      return {
+        type: 'ALREADY_RECOMMENDED',
+        message: `이미 ${roundLabel}에서 [${targetUnivName}]에 추천 확정되었습니다.\n학교장추천전형은 동일 대학교에 중복으로 추천 지원할 수 없습니다.`,
+        univName: targetUnivName,
+        round: recRound
+      }
+    }
+  }
+
+  return null
+}
+
+function getUnivDuplicateInfo(univId) {
+  if (!univId || !currentRound.value) return null
+  return checkDuplicateApplication(univId, currentRound.value)
+}
+
+function getUnivDuplicateLabel(univId) {
+  const dup = getUnivDuplicateInfo(univId)
+  if (!dup) return ''
+  if (dup.type === 'SAME_ROUND') return ' [⚠️ 이미 접수된 대학 - 중복 불가]'
+  if (dup.type === 'ALREADY_RECOMMENDED') return ' [⚠️ 추천 확정 대학 - 중복 불가]'
+  return ' [⚠️ 중복 지원 불가]'
+}
+
+const selectedUnivDuplicateInfo = computed(() => {
+  if (!selectedUnivId.value || !currentRound.value) return null
+  return getUnivDuplicateInfo(selectedUnivId.value)
+})
+
+async function onUnivChange() {
   formError.value = null
+  if (selectedUnivId.value) {
+    const dup = getUnivDuplicateInfo(selectedUnivId.value)
+    if (dup) {
+      formError.value = dup.message
+      await dialog.alert({
+        title: '중복 추천 접수 불가',
+        message: dup.message,
+        level: 'warn'
+      })
+    }
+  }
 }
 
 // 서명 그리기 로직 (학생)
@@ -1581,7 +1664,7 @@ function isCanvasBlank(canvas) {
 }
 
 // 희망원 등록 사전 검증 및 서약 모달 오픈
-function prepareApply() {
+async function prepareApply() {
   formError.value = null
   formSuccess.value = null
 
@@ -1607,12 +1690,15 @@ function prepareApply() {
     return
   }
 
-  // 중복 신청 체크
-  const isDuplicate = myApplications.value.some(
-    ap => ap.univ_id === selectedUnivId.value && ap.round === currentRound.value && !ap.is_abandoned
-  )
-  if (isDuplicate) {
-    formError.value = '해당 대학/전형에는 이미 접수된 신청서가 존재합니다.'
+  // 중복 신청 체크 (동일 대학 1개 제한 원칙)
+  const dupInfo = getUnivDuplicateInfo(selectedUnivId.value)
+  if (dupInfo) {
+    formError.value = dupInfo.message
+    await dialog.alert({
+      title: '중복 추천 접수 불가',
+      message: dupInfo.message,
+      level: 'error'
+    })
     return
   }
 
@@ -1648,12 +1734,15 @@ async function executeApply() {
     return
   }
 
-  // 중복 신청 체크
-  const isDuplicate = myApplications.value.some(
-    ap => ap.univ_id === selectedUnivId.value && ap.round === currentRound.value && !ap.is_abandoned
-  )
-  if (isDuplicate) {
-    formError.value = '해당 대학/전형에는 이미 접수된 신청서가 존재합니다.'
+  // 중복 신청 체크 (동일 대학 1개 제한 원칙)
+  const dupInfo = getUnivDuplicateInfo(selectedUnivId.value)
+  if (dupInfo) {
+    formError.value = dupInfo.message
+    await dialog.alert({
+      title: '중복 추천 접수 불가',
+      message: dupInfo.message,
+      level: 'error'
+    })
     return
   }
 
@@ -1679,6 +1768,42 @@ async function executeApply() {
   try {
     const { data: userData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }))
     const userId = userData?.user?.id || (auth.token?.startsWith('student_') ? auth.token.split('_')[1] : 'guest')
+
+    // 0. 실시간 DB 중복 확인 (동시 제출 또는 다중 탭 방지)
+    try {
+      const { data: dbExistingApps } = await supabase
+        .from('applications')
+        .select('id, univ_id, round, is_recommended, is_abandoned, universities(univ_name)')
+        .eq('student_id', userId)
+        .eq('is_abandoned', false)
+
+      if (dbExistingApps && dbExistingApps.length > 0) {
+        const targetUnivName = String(selectedUniv?.univ_name || '').trim()
+
+        for (const ap of dbExistingApps) {
+          const apUnivName = String(ap.universities?.univ_name || '').trim()
+          const isSameUniv = (targetUnivName && apUnivName === targetUnivName) || ap.univ_id === selectedUnivId.value
+          if (!isSameUniv) continue
+
+          if (Number(ap.round) === Number(currentRound.value)) {
+            const msg = `이미 ${currentRound.value}차에 [${targetUnivName}] 지원서가 접수되어 있습니다.\n학교장추천전형은 동일 대학교에 중복으로 지원할 수 없습니다.`
+            formError.value = msg
+            await dialog.alert({ title: '중복 추천 접수 불가', message: msg, level: 'error' })
+            return
+          }
+          if (ap.is_recommended) {
+            const recRound = ap.round
+            const roundLabel = (recRound === 0) ? '사전' : `${recRound}차`
+            const msg = `이미 ${roundLabel}에서 [${targetUnivName}]에 추천 확정되었습니다.\n학교장추천전형은 동일 대학교에 중복으로 추천 지원할 수 없습니다.`
+            formError.value = msg
+            await dialog.alert({ title: '중복 추천 접수 불가', message: msg, level: 'error' })
+            return
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('실시간 중복 검증 중 오류:', e)
+    }
 
     // 1. 서명 파일 Storage 업로드 시도 (스토리지 버킷 미생성/권한 오류 시 Base64 DataURL 자동 폴백)
     const studentSigDataUrl = studentCanvasRef.value.toDataURL('image/png')

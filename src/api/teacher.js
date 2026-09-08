@@ -419,18 +419,44 @@ if (!supabase) return
 // profiles FK는 enrolled_students 기반 학생에게 불필요 - auth.users가 없으면 FK 위반 발생
 // 지원서 등록 시 별도 profiles upsert 없이 진행
 
-const payload = {
-student_id: body.student_id,
-univ_id: body.track_id,
-round: body.round_id,
-department_name: body.department_name,
-manual_score: body.manual_score || null,
-univ_calc_score: body.univ_calc_score || body.manual_score || null,
-parent_name: body.parent_name || '미입력',
-parent_phone: body.parent_phone || '000-0000-0000',
-student_signature_url: body.student_signature_url || null,
-parent_signature_url: body.parent_signature_url || body.student_signature_url || null
-}
+  // 0. 대상 대학 및 학생의 기존 지원 내역 중복 검증 (동일 대학 1개 제한)
+  const { data: targetUniv } = await supabase.from('universities').select('univ_name').eq('id', body.track_id).maybeSingle()
+  const targetUnivName = targetUniv?.univ_name?.trim()
+
+  const { data: existingApps } = await supabase
+    .from('applications')
+    .select('id, univ_id, round, is_recommended, is_abandoned, universities(univ_name)')
+    .eq('student_id', body.student_id)
+    .eq('is_abandoned', false)
+
+  if (existingApps && existingApps.length > 0) {
+    for (const ap of existingApps) {
+      const apUnivName = ap.universities?.univ_name?.trim()
+      const isSameUniv = (targetUnivName && apUnivName === targetUnivName) || ap.univ_id === body.track_id
+      if (!isSameUniv) continue
+
+      if (Number(ap.round) === Number(body.round_id)) {
+        throw new Error(`해당 학생은 이미 ${body.round_id}차에 [${targetUnivName || '해당 대학'}] 지원서가 접수되어 있습니다. 동일 대학에는 중복 지원할 수 없습니다.`)
+      }
+      if (ap.is_recommended) {
+        const roundLabel = (ap.round === 0) ? '사전' : `${ap.round}차`
+        throw new Error(`해당 학생은 이미 ${roundLabel}에서 [${targetUnivName || '해당 대학'}]에 추천 확정된 내역이 있습니다. 동일 대학에는 중복 지원할 수 없습니다.`)
+      }
+    }
+  }
+
+  const payload = {
+    student_id: body.student_id,
+    univ_id: body.track_id,
+    round: body.round_id,
+    department_name: body.department_name,
+    manual_score: body.manual_score || null,
+    univ_calc_score: body.univ_calc_score || body.manual_score || null,
+    parent_name: body.parent_name || '미입력',
+    parent_phone: body.parent_phone || '000-0000-0000',
+    student_signature_url: body.student_signature_url || null,
+    parent_signature_url: body.parent_signature_url || body.student_signature_url || null
+  }
 
 let { data, error } = await supabase.from('applications').insert(payload)
 if (error && (error.message?.includes('parent_signature_url') || error.message?.includes('univ_calc_score'))) {
@@ -503,7 +529,37 @@ export const teacherDeleteApplication = async (sid, tid, rid) => {
 export const teacherUpdateApplication = async (appId, updates) => {
   if (!supabase) return
   const payload = {}
-  if (updates.univ_id      != null) payload.univ_id        = updates.univ_id
+  if (updates.univ_id != null) {
+    const { data: currentApp } = await supabase.from('applications').select('student_id, round, univ_id').eq('id', appId).maybeSingle()
+    if (currentApp && currentApp.univ_id !== updates.univ_id) {
+      const { data: targetUniv } = await supabase.from('universities').select('univ_name').eq('id', updates.univ_id).maybeSingle()
+      const targetUnivName = targetUniv?.univ_name?.trim()
+
+      const { data: otherApps } = await supabase
+        .from('applications')
+        .select('id, univ_id, round, is_recommended, is_abandoned, universities(univ_name)')
+        .eq('student_id', currentApp.student_id)
+        .neq('id', appId)
+        .eq('is_abandoned', false)
+
+      if (otherApps && otherApps.length > 0) {
+        for (const ap of otherApps) {
+          const apUnivName = ap.universities?.univ_name?.trim()
+          const isSameUniv = (targetUnivName && apUnivName === targetUnivName) || ap.univ_id === updates.univ_id
+          if (!isSameUniv) continue
+
+          if (Number(ap.round) === Number(currentApp.round)) {
+            throw new Error(`해당 학생은 이미 ${currentApp.round}차에 [${targetUnivName || '해당 대학'}] 지원서가 접수되어 있습니다. 동일 대학에는 중복 지원할 수 없습니다.`)
+          }
+          if (ap.is_recommended) {
+            const roundLabel = (ap.round === 0) ? '사전' : `${ap.round}차`
+            throw new Error(`해당 학생은 이미 ${roundLabel}에서 [${targetUnivName || '해당 대학'}]에 추천 확정된 내역이 있습니다. 동일 대학에는 중복 지원할 수 없습니다.`)
+          }
+        }
+      }
+    }
+    payload.univ_id = updates.univ_id
+  }
   if (updates.department_name != null) payload.department_name = updates.department_name
   if (updates.univ_calc_score != null) payload.univ_calc_score = updates.univ_calc_score
   else if (updates.univ_calc_score === '') payload.univ_calc_score = null
