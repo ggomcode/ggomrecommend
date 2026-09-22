@@ -270,7 +270,49 @@
           </div>
         </div>
 
-        <!-- 카드 4: 설정 (관리자 전용) -->
+        <!-- 카드 4: 전문대학 학교장 추천 시스템 -->
+        <div
+          v-if="isJuniorCollegeSystemEnabled"
+          @click="enterJuniorCollegeSystem"
+          class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-indigo-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
+        >
+          <div class="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
+
+          <div>
+            <div class="flex items-center justify-between gap-3 mb-6">
+              <div class="w-13 h-13 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-xs border border-indigo-100">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                  <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                </svg>
+              </div>
+              <span class="-mr-6 sm:-mr-7 pl-3.5 pr-5 sm:pr-6 py-1.5 rounded-l-full rounded-r-none text-xs font-bold shadow-xs whitespace-nowrap shrink-0 bg-indigo-100 text-indigo-800 border-y border-l border-r-0 border-indigo-200">
+                직인 날인 즉시 발급
+              </span>
+            </div>
+
+            <div class="inline-block px-2.5 py-1 rounded-md text-xs font-extrabold bg-indigo-100 text-indigo-700 mb-3">
+              전문대학 전형
+            </div>
+
+            <h3 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors mb-3">
+              전문대학 학교장 추천
+            </h3>
+            
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              별도 교내 심의 없이 대학·학과·전형 수동 직접 입력 및 행정실 학교장 직인 날인용 추천서를 즉시 발급·출력합니다.
+            </p>
+          </div>
+
+          <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-indigo-600">
+            <span>시스템 바로가기</span>
+            <svg class="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- 카드 5: 설정 (관리자 전용) -->
         <div
           v-if="auth.isAdmin"
           @click="enterSystemSettings"
@@ -329,6 +371,7 @@ import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { checkRuralSystemOpenStatus, getRuralEligibilityList } from '../api/ruralApi'
 import { checkExamIntentSystemEnabled } from '../api/examIntentApi'
+import { checkJuniorCollegeSystemEnabled } from '../api/juniorCollegeApi'
 import { supabase } from '../utils/supabaseClient'
 import { fetchRoundSchedulesMap, computeRoundDisplayStatus, parseKstDate } from '../utils/roundSchedule'
 import { dialog } from '../components/common/dialog'
@@ -347,6 +390,7 @@ const isStudentPrincipalLocked = computed(() => {
 const isRuralSystemOpen = ref(true)
 const isRuralSystemEnabled = ref(false)
 const isExamIntentSystemEnabled = ref(localStorage.getItem('pcm_enable_exam_intent_system') !== 'false')
+const isJuniorCollegeSystemEnabled = ref(localStorage.getItem('pcm_enable_junior_college_system') !== 'false')
 const activeRuralTerm = ref('수시')
 const ruralClosedReason = ref('')
 const ruralPeriodState = ref('open')
@@ -401,9 +445,11 @@ const portalGridClass = computed(() => {
   let cardCount = 1
   if (isRuralSystemEnabled.value) cardCount++
   if (showExamIntentCard.value) cardCount++
+  if (isJuniorCollegeSystemEnabled.value) cardCount++
   if (auth.isAdmin) cardCount++
 
-  if (cardCount >= 4) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 max-w-7xl'
+  if (cardCount >= 5) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 max-w-7xl'
+  if (cardCount === 4) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 max-w-7xl'
   if (cardCount === 3) return 'grid-cols-1 md:grid-cols-3 max-w-6xl'
   if (cardCount === 2) return 'grid-cols-1 md:grid-cols-2 max-w-4xl'
   return 'grid-cols-1 max-w-xl'
@@ -426,6 +472,15 @@ async function enterPrincipalSystem() {
 
 function enterSystemSettings() {
   router.push('/system-settings')
+}
+
+async function enterJuniorCollegeSystem() {
+  if (isPortalLoading.value) return
+  if (!isJuniorCollegeSystemEnabled.value) {
+    await dialog.alert({ title: '시스템 이용 제한', message: '전문대학 학교장 추천 시스템이 현재 비활성화되어 있습니다.' })
+    return
+  }
+  router.push('/junior-college')
 }
 
 async function enterExamIntentSystem() {
@@ -564,6 +619,9 @@ onMounted(async () => {
   try {
     await Promise.all([
       loadPrincipalStatus(),
+      (async () => {
+        isJuniorCollegeSystemEnabled.value = await checkJuniorCollegeSystemEnabled()
+      })(),
       (async () => {
         isExamIntentSystemEnabled.value = await checkExamIntentSystemEnabled()
       })(),

@@ -1228,9 +1228,41 @@ CREATE TABLE IF NOT EXISTS public.student_intent_history (
 
 CREATE INDEX IF NOT EXISTS idx_intent_history_code ON public.student_intent_history(student_code);
 
-ALTER TABLE public.student_intent_history ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Enable all access to student_intent_history" ON public.student_intent_history;
-CREATE POLICY "Enable all access to student_intent_history" ON public.student_intent_history FOR ALL TO public USING (true) WITH CHECK (true);
-GRANT ALL ON TABLE public.student_intent_history TO anon, authenticated, service_role;
+-- ================================================================
+-- 25. JUNIOR_COLLEGE_RECOMMENDATIONS (전문대학 학교장 추천 관리 테이블)
+-- ================================================================
+CREATE TABLE IF NOT EXISTS public.junior_college_recommendations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID,                                              -- enrolled_students 또는 profiles ID (재학생/졸업생)
+    student_name TEXT NOT NULL,                                   -- 학생 성명
+    student_code TEXT NOT NULL,                                   -- 학번 (5자리 또는 졸업생 번호)
+    grade INTEGER DEFAULT 3,                                      -- 학년 (기본 3)
+    class_no INTEGER,                                             -- 반
+    seq_no INTEGER,                                               -- 번호
+    is_enrolled BOOLEAN NOT NULL DEFAULT TRUE,                    -- 재학생 여부 (false: 졸업생)
+    grad_year INTEGER,                                            -- 졸업년도
+    student_phone TEXT,                                           -- 학생 연락처
+    parent_phone TEXT,                                            -- 보호자 연락처
+    parent_name TEXT,                                             -- 보호자 성명
+    univ_name TEXT NOT NULL,                                      -- 지원 전문대학명 (직접 입력)
+    department_name TEXT NOT NULL,                                -- 지원 학과/전공명 (직접 입력)
+    track_name TEXT NOT NULL,                                     -- 지원 전형명 (직접 입력)
+    admission_term TEXT NOT NULL DEFAULT '수시 1차',              -- 모집시기 ('수시 1차', '수시 2차', '정시', '기타')
+    recommendation_reason TEXT,                                   -- 추천 의견/사유 (기본 문구 또는 직접 편집)
+    status TEXT NOT NULL DEFAULT 'submitted',                     -- 'submitted'(신청완료), 'issued'(추천서출력/직인날인), 'completed'(접수완료)
+    notes TEXT,                                                   -- 교사/관리자 비고 메모
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_jc_recommendations_student_code ON public.junior_college_recommendations(student_code);
+CREATE INDEX IF NOT EXISTS idx_jc_recommendations_class ON public.junior_college_recommendations(grade, class_no);
+CREATE INDEX IF NOT EXISTS idx_jc_recommendations_univ ON public.junior_college_recommendations(univ_name);
+
+ALTER TABLE public.junior_college_recommendations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable all access to junior_college_recommendations" ON public.junior_college_recommendations;
+CREATE POLICY "Enable all access to junior_college_recommendations" ON public.junior_college_recommendations FOR ALL TO public USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.junior_college_recommendations TO anon, authenticated, service_role;
+
 
 

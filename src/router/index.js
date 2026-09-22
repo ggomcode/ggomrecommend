@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
 import { checkExamIntentSystemEnabled } from '../api/examIntentApi.js'
+import { checkJuniorCollegeSystemEnabled } from '../api/juniorCollegeApi.js'
 
 const routes = [
   { path: '/', redirect: '/login' },
@@ -62,6 +63,11 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/junior-college',
+    component: () => import('../views/JuniorCollegeView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/login',
   },
@@ -90,6 +96,11 @@ router.beforeEach(async to => {
   if (to.path === '/rural') {
     const status = await checkRuralSystemOpenStatus()
     if (status.isEnabled !== true) return '/select-system'
+  }
+
+  if (to.path === '/junior-college') {
+    const isEnabled = await checkJuniorCollegeSystemEnabled()
+    if (!isEnabled) return '/select-system'
   }
 
   if (to.path === '/exam-intent' || to.path === '/exam-intent-manage') {

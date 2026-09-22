@@ -437,6 +437,33 @@
         </div>
       </div>
 
+      <!-- 4-4. 전문대학 학교장 추천 시스템 활성화 -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-800 dark:text-white mb-1 flex items-center gap-2">
+              <span class="w-1 h-3 bg-indigo-600 rounded-full"></span>
+              전문대학 학교장 추천 시스템 활성화
+            </h2>
+            <p class="text-xs text-slate-400">
+              전문대학 학교장 추천전형 지원을 위한 대학/학과/전형 직접 입력 및 학교장 직인 날인용 추천서 발급 메뉴를 활성화합니다.
+            </p>
+          </div>
+          <button
+            type="button"
+            @click="toggleEnableJuniorCollegeSystem"
+            :disabled="juniorCollegeSystemLoading"
+            class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+            :class="enableJuniorCollegeSystem ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'"
+          >
+            <span
+              class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+              :class="enableJuniorCollegeSystem ? 'translate-x-5' : 'translate-x-0'"
+            />
+          </button>
+        </div>
+      </div>
+
       <!-- 5. 데이터 초기화 설정 -->
       <div class="bg-white dark:bg-slate-800 border border-red-200 dark:border-red-950/40 rounded-xl p-6 shadow-sm">
         <h2 class="text-base font-bold text-rose-600 dark:text-rose-400 mb-2 flex items-center gap-2">
@@ -555,6 +582,9 @@ const ruralSystemLoading = ref(false)
 const enableExamIntentSystem = ref(localStorage.getItem('pcm_enable_exam_intent_system') !== 'false')
 const examIntentSystemLoading = ref(false)
 
+const enableJuniorCollegeSystem = ref(localStorage.getItem('pcm_enable_junior_college_system') !== 'false')
+const juniorCollegeSystemLoading = ref(false)
+
 const susiApplyStartDate = ref('')
 const susiApplyEndDate = ref('')
 const susiPeriodLoading = ref(false)
@@ -653,6 +683,14 @@ async function loadConfig() {
     } else {
       enableExamIntentSystem.value = true
       localStorage.setItem('pcm_enable_exam_intent_system', 'true')
+    }
+
+    if (configMap['enable_junior_college_system'] !== undefined) {
+      enableJuniorCollegeSystem.value = configMap['enable_junior_college_system'] !== 'false'
+      localStorage.setItem('pcm_enable_junior_college_system', String(enableJuniorCollegeSystem.value))
+    } else {
+      enableJuniorCollegeSystem.value = true
+      localStorage.setItem('pcm_enable_junior_college_system', 'true')
     }
 
     susiApplyStartDate.value = configMap['susi_apply_start_date'] || ''
@@ -872,6 +910,28 @@ async function toggleEnableExamIntentSystem() {
     }
   } else {
     examIntentSystemLoading.value = false
+  }
+}
+
+async function toggleEnableJuniorCollegeSystem() {
+  enableJuniorCollegeSystem.value = !enableJuniorCollegeSystem.value
+  juniorCollegeSystemLoading.value = true
+  localStorage.setItem('pcm_enable_junior_college_system', String(enableJuniorCollegeSystem.value))
+  if (supabase) {
+    try {
+      const { error } = await supabase
+        .from('config')
+        .upsert({ key: 'enable_junior_college_system', value: String(enableJuniorCollegeSystem.value) }, { onConflict: 'key' })
+      if (error) throw error
+      alert(`전문대학 학교장 추천 시스템이 ${enableJuniorCollegeSystem.value ? '활성화' : '비활성화'}되었습니다.`)
+    } catch (e) {
+      console.error(e)
+      alert('설정 저장 중 오류가 발생했습니다.')
+    } finally {
+      juniorCollegeSystemLoading.value = false
+    }
+  } else {
+    juniorCollegeSystemLoading.value = false
   }
 }
 
