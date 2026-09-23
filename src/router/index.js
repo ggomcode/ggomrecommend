@@ -40,7 +40,12 @@ const routes = [
   {
     path: '/teacher',
     component: () => import('../views/TeacherView.vue'),
-    meta: { requiresTeacher: true },
+    meta: { requiresAdmin: true },
+  },
+  {
+    path: '/rollbook',
+    component: () => import('../views/RollbookView.vue'),
+    meta: { requiresTeacherOrAdmin: true },
   },
   {
     path: '/student',
@@ -93,6 +98,11 @@ router.beforeEach(async to => {
     return '/login'
   }
 
+  // Teacher 권한 격리: teacher는 출석관리(/rollbook) 및 포털(/select-system)만 접근 가능
+  if (auth.isTeacher && to.path !== '/rollbook' && to.path !== '/select-system' && to.path !== '/login') {
+    return '/select-system'
+  }
+
   if (to.path === '/rural') {
     const status = await checkRuralSystemOpenStatus()
     if (status.isEnabled !== true) return '/select-system'
@@ -112,6 +122,7 @@ router.beforeEach(async to => {
     }
   }
 
+  if (to.meta.requiresTeacherOrAdmin && !auth.isAdmin && !auth.isTeacher) return '/login'
   if (to.meta.requiresAuth && !auth.isAdmin && !auth.isTeacher && !auth.isStudent) return '/login'
   if (to.meta.requiresAdmin && !auth.isAdmin) return '/login'
   if (to.meta.requiresTeacher && !auth.isTeacher) return '/login'

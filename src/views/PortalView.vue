@@ -49,21 +49,22 @@
     <main v-else class="max-w-5xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center items-center">
       <div class="text-center max-w-2xl mb-12">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-bold mb-3 border border-blue-200">
-          <span>{{ isRuralSystemEnabled ? '통합 추천자 관리 시스템' : '학교장 추천자 선발 시스템' }}</span>
+          <span>{{ auth.isTeacher ? '선택교과 출석관리' : (isRuralSystemEnabled ? '통합 추천자 관리 시스템' : '학교장 추천자 선발 시스템') }}</span>
         </div>
         <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-3">
-          {{ schoolName }} 추천 시스템 포털
+          {{ schoolName }} {{ auth.isTeacher ? '출석관리 포털' : '추천 시스템 포털' }}
         </h2>
         <p class="text-base text-slate-600 leading-relaxed">
-          이용하실 추천 시스템을 아래에서 선택해 주세요.
+          {{ auth.isTeacher ? '선택교과 이동수업 및 원적학급 출석관리 시스템을 이용해 주세요.' : '이용하실 추천 시스템을 아래에서 선택해 주세요.' }}
         </p>
       </div>
 
       <!-- 시스템 선택 카드 뷰 -->
       <div :class="['grid gap-6 sm:gap-7 w-full max-w-7xl', portalGridClass]">
         
-        <!-- 카드 1: 학교장 추천자 선발 시스템 -->
+        <!-- 카드 1: 학교장 추천자 선발 시스템 (교사는 미노출) -->
         <div
+          v-if="!auth.isTeacher"
           @click="enterPrincipalSystem"
           :class="[
             'group relative bg-white rounded-3xl p-6 sm:p-7 border shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden',
@@ -154,9 +155,9 @@
           </div>
         </div>
 
-        <!-- 카드 2: 농어촌 전형 추천자 관리 시스템 -->
+        <!-- 카드 2: 농어촌 전형 추천자 관리 시스템 (교사는 미노출) -->
         <div
-          v-if="isRuralSystemEnabled"
+          v-if="isRuralSystemEnabled && !auth.isTeacher"
           @click="enterRuralSystem"
           :class="[
             'group relative bg-white rounded-3xl p-6 sm:p-7 border shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer',
@@ -228,9 +229,9 @@
           </div>
         </div>
 
-        <!-- 카드 3: 수능 미응시 및 수시 미접수 등록 시스템 (재학생/교사/관리자만 표시, 졸업생 미노출) -->
+        <!-- 카드 3: 수능 미응시 및 수시 미접수 등록 시스템 (재학생/관리자만 표시, 교사/졸업생 미노출) -->
         <div
-          v-if="showExamIntentCard"
+          v-if="showExamIntentCard && !auth.isTeacher"
           @click="enterExamIntentSystem"
           class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-violet-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
         >
@@ -270,9 +271,9 @@
           </div>
         </div>
 
-        <!-- 카드 4: 전문대학 학교장 추천 시스템 -->
+        <!-- 카드 4: 전문대학 학교장 추천 시스템 (교사는 미노출) -->
         <div
-          v-if="isJuniorCollegeSystemEnabled"
+          v-if="isJuniorCollegeSystemEnabled && !auth.isTeacher"
           @click="enterJuniorCollegeSystem"
           class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-indigo-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
         >
@@ -348,6 +349,48 @@
 
           <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-slate-700">
             <span>설정 바로가기</span>
+            <svg class="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- 카드 6: 선택교과 출석관리 시스템 (교사, 관리자 전용) -->
+        <div
+          v-if="auth.isAdmin || auth.isTeacher"
+          @click="enterRollbookSystem"
+          class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-teal-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
+        >
+          <div class="absolute -top-20 -right-20 w-40 h-40 bg-teal-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
+
+          <div>
+            <div class="flex items-center justify-between gap-3 mb-6">
+              <div class="w-13 h-13 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0 group-hover:bg-teal-600 group-hover:text-white transition-all duration-300 shadow-xs border border-teal-100">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                </svg>
+              </div>
+              <span class="-mr-6 sm:-mr-7 pl-3.5 pr-5 sm:pr-6 py-1.5 rounded-l-full rounded-r-none text-xs font-bold shadow-xs whitespace-nowrap shrink-0 bg-teal-100 text-teal-800 border-y border-l border-r-0 border-teal-200">
+                고3 이동수업 · 원적학급
+              </span>
+            </div>
+
+            <div class="inline-block px-2.5 py-1 rounded-md text-xs font-extrabold bg-teal-100 text-teal-700 mb-3">
+              출석 관리
+            </div>
+
+            <h3 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-teal-600 transition-colors mb-3">
+              선택교과 출석관리
+            </h3>
+            
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              고등학교 3학년 선택교육과정 이동수업(1~12반) 및 원적학급(1~11반) 출석부 생성·인쇄, 결석계 대장 조회/인쇄, 급식 인원 캘린더, 학생 검색 시스템을 이용합니다.
+            </p>
+          </div>
+
+          <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-teal-600">
+            <span>시스템 바로가기</span>
             <svg class="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
@@ -442,18 +485,26 @@ const showExamIntentCard = computed(() => {
 
 // 그리드 레이아웃 클래스 (카드 수에 따라 동적 조정)
 const portalGridClass = computed(() => {
+  if (auth.isTeacher) {
+    return 'grid-cols-1 max-w-xl'
+  }
   let cardCount = 1
   if (isRuralSystemEnabled.value) cardCount++
   if (showExamIntentCard.value) cardCount++
   if (isJuniorCollegeSystemEnabled.value) cardCount++
-  if (auth.isAdmin) cardCount++
+  if (auth.isAdmin) cardCount += 2 // Settings + Rollbook
 
-  if (cardCount >= 5) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 max-w-7xl'
+  if (cardCount >= 6) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-7xl'
+  if (cardCount === 5) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 max-w-7xl'
   if (cardCount === 4) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 max-w-7xl'
   if (cardCount === 3) return 'grid-cols-1 md:grid-cols-3 max-w-6xl'
   if (cardCount === 2) return 'grid-cols-1 md:grid-cols-2 max-w-4xl'
   return 'grid-cols-1 max-w-xl'
 })
+
+function enterRollbookSystem() {
+  router.push('/rollbook')
+}
 
 async function enterPrincipalSystem() {
   if (isStudentPrincipalLocked.value) {
