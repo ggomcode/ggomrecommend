@@ -142,13 +142,6 @@ export function printJuniorCollegeRecommendationLetter(recordOrList, studentInfo
       vertical-align: middle;
       text-align: left;
     }
-    .sub-title {
-      font-size: 11.5px;
-      font-weight: 700;
-      color: #4338ca;
-      letter-spacing: 0.5px;
-      margin-bottom: 3px;
-    }
     .main-title {
       font-size: 20px;
       font-weight: 900;
@@ -212,6 +205,7 @@ export function printJuniorCollegeRecommendationLetter(recordOrList, studentInfo
       font-weight: 700;
       color: #1e293b;
       text-align: center;
+      white-space: nowrap;
     }
     .info-table td {
       color: #0f172a;
@@ -258,25 +252,17 @@ export function printJuniorCollegeRecommendationLetter(recordOrList, studentInfo
       color: #0f172a;
     }
 
-    /* 하단 서명 및 수신자 영역 */
+    /* 하단 날짜 및 수신자 영역 */
     .footer-sig {
       margin-top: auto;
-      padding-top: 20px;
+      padding-top: 24px;
       text-align: center;
     }
     .footer-date {
-      font-size: 13.5px;
+      font-size: 14px;
       font-weight: 700;
-      margin-bottom: 18px;
-      letter-spacing: 1px;
-    }
-    .sig-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 24px;
-    }
-    .sig-table td {
-      padding: 0 10px;
+      margin-bottom: 28px;
+      letter-spacing: 1.5px;
     }
     .principal-to {
       font-size: 17px;
@@ -302,7 +288,6 @@ export function printJuniorCollegeRecommendationLetter(recordOrList, studentInfo
       <table class="header-table">
         <tr>
           <td class="header-title-cell">
-            <p class="sub-title">${sSchoolName} 진학지도부</p>
             <h1 class="main-title">2027학년도 대입 전문대학 학교장 추천 신청 확인서</h1>
           </td>
           <td style="text-align: right; width: 150px;">
@@ -329,19 +314,23 @@ export function printJuniorCollegeRecommendationLetter(recordOrList, studentInfo
       <!-- 1. 지원자 인적사항 -->
       <div class="section-title">■ 지원자 인적사항</div>
       <table class="info-table">
+        <colgroup>
+          <col style="width: 90px;">
+          <col style="width: 40%;">
+          <col style="width: 80px;">
+          <col>
+        </colgroup>
         <tr>
-          <th style="width: 90px;">구분 / 학급</th>
-          <td style="font-weight: bold; width: 170px;">${gradeClassText}</td>
-          <th style="width: 65px;">학번</th>
-          <td style="font-weight: bold; font-family: monospace; width: 100px;">${sCode || '-'}</td>
-          <th style="width: 65px;">성명</th>
-          <td style="font-weight: bold; font-size: 12.5px;">${sName}</td>
+          <th>구분 / 학급</th>
+          <td style="font-weight: bold;">${gradeClassText}</td>
+          <th>출신고교</th>
+          <td style="font-weight: 600;">${sSchoolName}</td>
         </tr>
         <tr>
-          <th>출신고교</th>
-          <td>${sSchoolName}</td>
-          <th>학생 연락처</th>
-          <td colspan="3" style="font-weight: 600;">${sPhone}</td>
+          <th>학번</th>
+          <td style="font-weight: bold; font-family: monospace;">${sCode || '-'}</td>
+          <th>성명</th>
+          <td style="font-weight: bold; font-size: 12.5px;">${sName}</td>
         </tr>
       </table>
 
@@ -377,30 +366,11 @@ export function printJuniorCollegeRecommendationLetter(recordOrList, studentInfo
       </div>
     </div>
 
-    <!-- 하단 서명 및 수신자 -->
+    <!-- 하단 날짜 및 수신자 -->
     <div class="footer-sig">
       <p class="footer-date">
         ${year}년 &nbsp;&nbsp;&nbsp;${month}월 &nbsp;&nbsp;&nbsp;${day}일
       </p>
-
-      <table class="sig-table">
-        <tr>
-          <td style="width: 50%; text-align: left; font-size: 12px; vertical-align: top;">
-            <div>
-              지원 학생: <strong style="font-size: 13.5px; margin-left: 4px;">${sName}</strong>
-              <span style="color: #94a3b8; font-size: 11px; margin-left: 6px;">(서명 또는 인)</span>
-            </div>
-            <div style="font-size: 10.5px; color: #64748b; margin-top: 4px;">연락처: ${sPhone}</div>
-          </td>
-          <td style="width: 50%; text-align: right; font-size: 12px; vertical-align: top;">
-            <div>
-              학부모(보호자): <strong style="font-size: 13.5px; margin-left: 4px;">${parentName || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</strong>
-              <span style="color: #94a3b8; font-size: 11px; margin-left: 6px;">(서명 또는 인)</span>
-            </div>
-            <div style="font-size: 10.5px; color: #64748b; margin-top: 4px;">비상연락처: ${pPhone}</div>
-          </td>
-        </tr>
-      </table>
 
       <div class="principal-to">
         ${sSchoolName}장 귀하
