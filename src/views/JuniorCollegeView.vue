@@ -576,9 +576,12 @@
                 v-model="modalSelectedStudentId"
                 @change="onStudentSelectChanged"
                 required
-                class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-900"
+                :disabled="modalLoadingStudents"
+                class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-900 disabled:bg-slate-100 disabled:text-slate-400"
               >
-                <option value="" disabled>-- 학생 선택 --</option>
+                <option value="" disabled>
+                  {{ modalLoadingStudents ? '-- 학생 목록 불러오는 중… --' : (availableStudents.length === 0 ? '-- 학생 없음 --' : '-- 학생 선택 --') }}
+                </option>
                 <option
                   v-for="st in availableStudents"
                   :key="st.id || st.student_code"
@@ -780,6 +783,7 @@ const modalRecordId = ref(null)
 const modalSelectedClass = ref('all')
 const modalSelectedStudentId = ref('')
 const availableStudents = ref([])
+const modalLoadingStudents = ref(false)
 
 const adminForm = reactive({
   student_id: null,
@@ -1024,7 +1028,16 @@ function handlePrintRoster() {
 
 // ── 교사/관리자 대리 등록 모달 ───────────────────────────
 async function loadStudentsForModal() {
-  availableStudents.value = await fetchEnrolledStudentsForJC(modalSelectedClass.value)
+  modalLoadingStudents.value = true
+  modalSelectedStudentId.value = ''
+  try {
+    availableStudents.value = await fetchEnrolledStudentsForJC(modalSelectedClass.value)
+  } catch (e) {
+    console.error('Error in loadStudentsForModal:', e)
+    availableStudents.value = []
+  } finally {
+    modalLoadingStudents.value = false
+  }
 }
 
 function onStudentSelectChanged() {
@@ -1038,8 +1051,21 @@ function onStudentSelectChanged() {
     adminForm.seq_no = st.seq_no || null
     adminForm.is_enrolled = st.is_enrolled !== false
     adminForm.grad_year = st.grad_year || null
-    adminForm.student_phone = st.phone || ''
-    adminForm.parent_phone = st.emergency_phone || ''
+
+    // 기존 신청 내역이 있으면 연락처/학부모명 자동 프리필
+    const prevRec = allRecords.value.find(r => 
+      (st.id && r.student_id === st.id) || 
+      (st.student_code && String(r.student_code).trim() === String(st.student_code).trim())
+    )
+    if (prevRec) {
+      adminForm.student_phone = prevRec.student_phone || ''
+      adminForm.parent_phone = prevRec.parent_phone || ''
+      adminForm.parent_name = prevRec.parent_name || ''
+    } else {
+      adminForm.student_phone = ''
+      adminForm.parent_phone = ''
+      adminForm.parent_name = ''
+    }
   }
 }
 
@@ -1050,16 +1076,34 @@ function applyAdminDefaultReason() {
 async function openCreateModal() {
   modalRecordId.value = null
   modalSelectedStudentId.value = ''
+  adminForm.student_id = null
+  adminForm.student_name = ''
+  adminForm.student_code = ''
+  adminForm.grade = 3
+  adminForm.class_no = null
+  adminForm.seq_no = null
+  adminForm.is_enrolled = true
+  adminForm.grad_year = null
   adminForm.univ_name = ''
   adminForm.department_name = ''
   adminForm.track_name = ''
   adminForm.admission_term = '수시 1차'
   adminForm.student_phone = ''
   adminForm.parent_phone = ''
+  adminForm.parent_name = ''
   applyAdminDefaultReason()
 
-  await loadStudentsForModal()
+  // 교사라면 본인 담당 반으로 기본 선택, 관리자라면 현재 목록 필터 기준
+  if (auth.isTeacher && auth.teacherClass) {
+    modalSelectedClass.value = Number(auth.teacherClass)
+  } else if (filterClass.value && filterClass.value !== 'all') {
+    modalSelectedClass.value = filterClass.value === 'grad' ? 'grad' : Number(filterClass.value)
+  } else {
+    modalSelectedClass.value = 'all'
+  }
+
   showAdminModal.value = true
+  await loadStudentsForModal()
 }
 
 function openEditModal(rec) {

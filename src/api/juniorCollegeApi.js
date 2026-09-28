@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../utils/supabaseClient'
+import { decryptText } from '../utils/cryptoUtils'
 
 const LOCAL_STORAGE_KEY = 'pcm_junior_college_recommendations'
 const CONFIG_KEY = 'enable_junior_college_system'
@@ -343,11 +344,11 @@ export async function fetchEnrolledStudentsForJC(classNo = null) {
   try {
     let query = supabase
       .from('enrolled_students')
-      .select('id, name, student_code, grade, class_no, seq_no, is_enrolled, grad_year, phone, emergency_phone')
+      .select('id, name, student_code, grade, class_no, student_no, seq_no, is_enrolled, grad_year')
       .order('is_enrolled', { ascending: false })
       .order('grade', { ascending: true })
       .order('class_no', { ascending: true })
-      .order('seq_no', { ascending: true })
+      .order('student_no', { ascending: true })
 
     if (classNo != null && classNo !== 'all') {
       if (classNo === 'grad') {
@@ -358,8 +359,25 @@ export async function fetchEnrolledStudentsForJC(classNo = null) {
     }
 
     const { data, error } = await query
-    if (!error && Array.isArray(data)) {
-      return data
+    if (error) {
+      console.warn('Supabase fetchEnrolledStudentsForJC error:', error)
+      return []
+    }
+    if (Array.isArray(data)) {
+      const decryptedList = await Promise.all(data.map(async s => {
+        let decName = s.name
+        try {
+          decName = await decryptText(s.name)
+        } catch {
+          decName = s.name || '학생'
+        }
+        return {
+          ...s,
+          name: decName,
+          seq_no: s.student_no || s.seq_no || 0
+        }
+      }))
+      return decryptedList
     }
   } catch (e) {
     console.warn('Failed to fetch enrolled students for JC:', e)
