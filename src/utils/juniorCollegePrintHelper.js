@@ -436,9 +436,7 @@ export function printJuniorCollegeRoster(list, options = {}) {
   const month = today.getMonth() + 1
   const day = today.getDate()
 
-  const filterText = options.filterText || '전체'
-  const termText = options.termText || '전체'
-  const title = options.title || `${year}학년도 전문대학 학교장 추천자 명단 (내부결재용)`
+  const title = options.title || `${year}학년도 전문대학 학교장 추천자 명단`
 
   const win = window.open('', '_blank')
   if (!win) {
@@ -446,37 +444,27 @@ export function printJuniorCollegeRoster(list, options = {}) {
     return
   }
 
-  // 테이블 행 구성
+  // 테이블 행 구성 (학급·번호, 연락처, 상태 제외 8개 컬럼)
   const rowsHtml = records.map((r, idx) => {
-    const isEnrolled = r.is_enrolled !== false
-    const classText = isEnrolled
-      ? `${r.grade || 3}-${r.class_no || '-'}-${r.seq_no || '-'}`
-      : `졸업(${r.grad_year || '-'})`
-
-    const statusBadge = r.status === 'issued' ? '직인발급' : (r.status === 'completed' ? '접수완료' : '신청완료')
-    const sPhone = fmtPhone(r.student_phone) || '-'
     const createdDate = r.created_at ? r.created_at.substring(0, 10) : `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
     return `
       <tr>
         <td style="text-align: center;">${idx + 1}</td>
-        <td style="text-align: center; font-weight: 700;">${classText}</td>
-        <td style="text-align: center;">${r.student_code || '-'}</td>
+        <td style="text-align: center; font-family: monospace;">${r.student_code || '-'}</td>
         <td style="text-align: center; font-weight: 800;">${r.student_name || '-'}</td>
         <td style="font-weight: 700; color: #1e3a8a;">${r.univ_name || '-'}</td>
         <td style="font-weight: 700;">${r.department_name || '-'}</td>
         <td>${r.track_name || '-'}</td>
         <td style="text-align: center;">${r.admission_term || '수시'}</td>
-        <td style="text-align: center; font-size: 10px;">${sPhone}</td>
         <td style="text-align: center; font-size: 10.5px;">${createdDate}</td>
-        <td style="text-align: center; font-size: 10.5px;">${statusBadge}</td>
       </tr>
     `
   }).join('')
 
   const emptyHtml = records.length === 0 ? `
     <tr>
-      <td colspan="11" style="text-align: center; padding: 40px; color: #64748b;">
+      <td colspan="8" style="text-align: center; padding: 40px; color: #64748b;">
         등록된 전문대학 학교장 추천 신청 내역이 없습니다.
       </td>
     </tr>
@@ -489,8 +477,8 @@ export function printJuniorCollegeRoster(list, options = {}) {
   <title>${title} - ${sSchoolName}</title>
   <style>
     @page {
-      size: A4 landscape;
-      margin: 12mm 15mm;
+      size: A4 portrait;
+      margin: 15mm 10mm;
     }
     * {
       box-sizing: border-box;
@@ -509,73 +497,32 @@ export function printJuniorCollegeRoster(list, options = {}) {
       width: 100%;
     }
     
-    /* 상단 영역: 제목 및 4단 결재란 */
+    /* 상단 영역: 제목 중앙 정렬 */
     .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12px;
-      border-bottom: 2px solid #0f172a;
+      text-align: center;
+      margin-bottom: 14px;
       padding-bottom: 10px;
-    }
-    .title-group {
-      flex: 1;
-    }
-    .sub-head {
-      font-size: 11px;
-      font-weight: 700;
-      color: #475569;
-      letter-spacing: 1px;
+      border-bottom: 2px solid #0f172a;
     }
     .main-head {
-      font-size: 21px;
+      font-size: 20px;
       font-weight: 900;
       color: #0f172a;
-      margin-top: 3px;
       letter-spacing: 1px;
     }
-    .meta-info {
-      font-size: 11px;
-      color: #334155;
-      margin-top: 6px;
-      font-weight: 600;
-    }
 
-    /* 4단 결재란 */
-    .approval-table {
-      border-collapse: collapse;
-      border: 1.5px solid #0f172a;
-      font-size: 11px;
-      text-align: center;
-      width: 260px;
-    }
-    .approval-table th, .approval-table td {
-      border: 1px solid #475569;
-    }
-    .approval-table th {
-      background: #f1f5f9;
-      font-weight: 700;
-      padding: 3px 6px;
-      color: #1e293b;
-    }
-    .approval-table td.sign-cell {
-      height: 48px;
-      vertical-align: middle;
-      color: #94a3b8;
-      font-size: 10px;
-    }
-
-    /* 메인 목록 테이블 */
+    /* 메인 목록 테이블 (세로 A4 최적화) */
     table.roster-table {
       width: 100%;
       border-collapse: collapse;
       border: 1.5px solid #334155;
-      font-size: 11px;
-      margin-top: 8px;
+      font-size: 10.5px;
+      margin-top: 6px;
     }
     table.roster-table th, table.roster-table td {
       border: 1px solid #64748b;
-      padding: 6px 7px;
+      padding: 5px 4px;
+      word-break: keep-all;
     }
     table.roster-table th {
       background: #f1f5f9;
@@ -583,16 +530,6 @@ export function printJuniorCollegeRoster(list, options = {}) {
       font-weight: 800;
       text-align: center;
       white-space: nowrap;
-    }
-
-    .bottom-statement {
-      margin-top: 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      font-weight: 700;
-      color: #334155;
     }
 
     @media print {
@@ -604,30 +541,7 @@ export function printJuniorCollegeRoster(list, options = {}) {
 <body>
   <div class="sheet">
     <div class="top-bar">
-      <div class="title-group">
-        <p class="sub-head">${sSchoolName} 진학지도부</p>
-        <h1 class="main-head">${title}</h1>
-        <p class="meta-info">
-          ■ 조회 기준: ${filterText} &nbsp;|&nbsp; 모집 시기: ${termText} &nbsp;|&nbsp; 총 추천 인원: <strong>${records.length}명</strong>
-        </p>
-      </div>
-
-      <!-- 4단 결재란 -->
-      <table class="approval-table">
-        <tr>
-          <th rowspan="2" style="width: 22px; background: #e2e8f0; writing-mode: vertical-rl; padding: 2px;">결재</th>
-          <th style="width: 58px;">기안·담당</th>
-          <th style="width: 58px;">부 장</th>
-          <th style="width: 58px;">교 감</th>
-          <th style="width: 58px;">교 장</th>
-        </tr>
-        <tr>
-          <td class="sign-cell"></td>
-          <td class="sign-cell"></td>
-          <td class="sign-cell"></td>
-          <td class="sign-cell"></td>
-        </tr>
-      </table>
+      <h1 class="main-head">${title}</h1>
     </div>
 
     <!-- 대장 테이블 -->
@@ -635,16 +549,13 @@ export function printJuniorCollegeRoster(list, options = {}) {
       <thead>
         <tr>
           <th style="width: 35px;">연번</th>
-          <th style="width: 75px;">학급·번호</th>
-          <th style="width: 60px;">학번</th>
+          <th style="width: 55px;">학번</th>
           <th style="width: 65px;">성명</th>
-          <th style="width: 140px;">지원 대학</th>
-          <th style="width: 150px;">지원 학과(부)</th>
+          <th style="width: 125px;">지원 대학</th>
+          <th style="width: 135px;">지원 학과(부)</th>
           <th>지원 전형명</th>
           <th style="width: 65px;">모집시기</th>
-          <th style="width: 105px;">연락처</th>
           <th style="width: 75px;">신청일자</th>
-          <th style="width: 65px;">상태</th>
         </tr>
       </thead>
       <tbody>
@@ -652,15 +563,6 @@ export function printJuniorCollegeRoster(list, options = {}) {
         ${emptyHtml}
       </tbody>
     </table>
-
-    <div class="bottom-statement">
-      <div>
-        ※ 본 대장은 전문대학 학교장 추천전형 지원자 취합 및 교내 내부결재 근거 자료로 활용됩니다.
-      </div>
-      <div>
-        작성일시: ${year}년 ${month}월 ${day}일 &nbsp;&nbsp;|&nbsp;&nbsp; 작성기관: ${sSchoolName}
-      </div>
-    </div>
   </div>
 
   <script>
