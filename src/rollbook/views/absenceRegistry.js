@@ -40,11 +40,40 @@ export const AbsenceRegistryView = {
       lines.push(row);
     }
 
-    if (lines.length <= 1) return [];
+    if (lines.length === 0) return [];
 
-    // Header row is index 0
+    const normalizeDateStr = (dateRaw) => {
+      if (!dateRaw) return '';
+      const str = String(dateRaw).trim();
+      const dateMatch = str.match(/Date\((\d{4}),\s*(\d+),\s*(\d+)/i);
+      if (dateMatch) {
+        const y = dateMatch[1];
+        const m = String(parseInt(dateMatch[2], 10) + 1).padStart(2, '0');
+        const d = String(parseInt(dateMatch[3], 10)).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+      const cleaned = str.replace(/[^\d.-/]/g, '').replace(/[\/.]/g, '-');
+      const parts = cleaned.split('-').filter(Boolean);
+      if (parts.length === 3) {
+        const y = parts[0];
+        const m = parts[1].padStart(2, '0');
+        const d = parts[2].padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+      return str;
+    };
+
+    const cleanInt = (v, def = '') => {
+      if (v === null || v === undefined || v === '') return def;
+      const n = parseInt(v, 10);
+      return isNaN(n) ? def : String(n);
+    };
+
+    const isHeaderRow = lines[0] && (lines[0][0] === '순번' || lines[0][4] === '이름' || isNaN(parseFloat(lines[0][0])));
+    const startIdx = isHeaderRow ? 1 : 0;
+
     const records = [];
-    for (let r = 1; r < lines.length; r++) {
+    for (let r = startIdx; r < lines.length; r++) {
       const line = lines[r];
       if (!line[0] && !line[4]) continue;
 
@@ -59,20 +88,20 @@ export const AbsenceRegistryView = {
                    line[12] === 'TRUE' || line[12] === 'true' || line[12] === '기타' ? '기타' : (line[9] || '-');
 
       records.push({
-        no: line[0] || String(r),
-        grade: line[1] || '3',
-        ban: line[2] || '',
-        num: line[3] || '',
-        name: line[4] || '',
+        no: cleanInt(line[0], String(r + 1)),
+        grade: cleanInt(line[1], '3'),
+        ban: cleanInt(line[2], ''),
+        num: cleanInt(line[3], ''),
+        name: (line[4] || '').trim(),
         cat,
         type,
-        startDate: line[13] || '',
-        startPeriod: line[14] || '',
-        endDate: line[15] || '',
-        endPeriod: line[16] || '',
+        startDate: normalizeDateStr(line[13]),
+        startPeriod: cleanInt(line[14], ''),
+        endDate: normalizeDateStr(line[15]),
+        endPeriod: cleanInt(line[16], ''),
         totalDays: line[17] || '1일간',
         reason: line[18] || '',
-        writeDate: line[19] || '',
+        writeDate: normalizeDateStr(line[19]),
         parentName: line[20] || '',
         studentSigUrl: line[33] || '',
         parentSigUrl: line[34] || '',
@@ -98,33 +127,32 @@ export const AbsenceRegistryView = {
       if (num && String(r.num) !== String(num)) return false;
       if (name && !r.name.toLowerCase().includes(name.toLowerCase())) return false;
       if (month && (!r.startDate.startsWith(month) && !r.endDate.startsWith(month))) return false;
-      if (printStatus === 'printed' && !r.printedAt) return false;
       if (printStatus === 'unprinted' && r.printedAt) return false;
+      if (printStatus === 'printed' && !r.printedAt) return false;
       return true;
     });
 
-    // Month select options (2026-03 to 2027-02)
-    const months = [
-      '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08',
-      '2026-09', '2026-10', '2026-11', '2026-12', '2027-01', '2027-02'
-    ];
+    const months = ['03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '01', '02'];
     const monthOpts = months.map(m => {
-      const [y, mm] = m.split('-');
-      const sel = (month === m) ? 'selected' : '';
-      return `<option value="${m}" ${sel}>${y}년 ${parseInt(mm, 10)}월</option>`;
+      const year = (m === '01' || m === '02') ? '2027' : '2026';
+      const val = `${year}-${m}`;
+      return `<option value="${val}" ${month === val ? 'selected' : ''}>${val}월</option>`;
     }).join('');
 
     return `
-      <div class="absence-registry-view no-print">
-        <div class="view-header-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+      <div class="absence-registry-container">
+        <!-- 뷰 헤더 바 -->
+        <div class="registry-header-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
           <div>
-            <h2 style="font-size: 20px; color: var(--text-dark, #212529); margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
-              <span>📋</span> 결석계 접수 대장 및 인쇄 관리
+            <h2 style="margin: 0; font-size: 20px; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+              <span>📑</span> 공식 결석계 접수 대장
             </h2>
-            <p style="font-size: 13px; color: #6c757d;">구글 시트 '대장'과 실시간 직통 연동되어 브라우저에서 즉시 검색 및 A4 고속 인쇄가 가능합니다.</p>
+            <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b;">
+              구글 시트 '대장'에 접수된 결석계를 조회하고, 공식 결석계를 원클릭으로 A4 출력합니다.
+            </p>
           </div>
-          <div style="display: flex; gap: 10px;">
-            <button type="button" class="btn btn-primary" id="btnBulkPrintAbsence" style="background: #20c997; border-color: #20c997;">
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-primary" id="btnPrintSelectedAbsence">
               🖨️ 선택 일괄 인쇄
             </button>
             <button type="button" class="btn btn-secondary" id="btnRefreshAbsenceRegistry">

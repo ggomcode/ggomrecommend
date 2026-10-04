@@ -472,6 +472,8 @@ export const RollbookModel = {
   },
 
   /**
+   * Get full status info from registry record
+   */
   getRegistryFullStatus(r) {
     if (!r) return { rawStatus: '', fullStatus: '', category: 'present' };
 
@@ -517,7 +519,15 @@ export const RollbookModel = {
 
     const normalizeDateStr = (dateRaw) => {
       if (!dateRaw) return '';
-      const cleaned = String(dateRaw).trim().replace(/[^\d.-/]/g, '').replace(/[\/.]/g, '-');
+      const str = String(dateRaw).trim();
+      const dateMatch = str.match(/Date\((\d{4}),\s*(\d+),\s*(\d+)/i);
+      if (dateMatch) {
+        const y = dateMatch[1];
+        const m = String(parseInt(dateMatch[2], 10) + 1).padStart(2, '0');
+        const d = String(parseInt(dateMatch[3], 10)).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+      const cleaned = str.replace(/[^\d.-/]/g, '').replace(/[\/.]/g, '-');
       const parts = cleaned.split('-').filter(Boolean);
       if (parts.length === 3) {
         const y = parts[0];
@@ -552,10 +562,12 @@ export const RollbookModel = {
     const allPeriodsOrder = ['조', 1, 2, 3, 4, 5, 6, 7, '종'];
 
     records.forEach(r => {
-      const ban = String(r.ban || '').trim();
-      const num = String(r.num || '').trim();
+      const bNum = parseInt(r.ban, 10);
+      const nNum = parseInt(r.num, 10);
+      const ban = isNaN(bNum) ? String(r.ban || '').trim() : String(bNum);
+      const num = isNaN(nNum) ? String(r.num || '').trim() : String(nNum);
       const name = String(r.name || '').trim();
-      const grade = String(r.grade || '3').trim();
+      const grade = String(parseInt(r.grade, 10) || 3);
 
       let studentId = '';
       if (studentLookup.has(`${ban}_${num}`)) {
@@ -1199,6 +1211,8 @@ export const RollbookModel = {
   },
 
   /**
+   * Get effective display remark
+   */
   getEffectiveDisplayRemark(pRemark, studentId, dateOrDays, overridesMap = null, showSpecialStudent = false, student = null, registryMap = null) {
     const base = this.getDisplayRemark(pRemark, dateOrDays, showSpecialStudent);
     if (!studentId || !dateOrDays) return base;
