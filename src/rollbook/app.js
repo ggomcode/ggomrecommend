@@ -1260,11 +1260,11 @@ class App {
             parentSigUrl: ''
           };
 
-                      closeModal();
-            this.printAbsenceRecords([finalRecord]);
-          }
-        };
-      }
+          closeModal();
+          this.printAbsenceRecords([finalRecord]);
+        }
+      };
+    }
 
     modal.style.display = 'flex';
   }
@@ -1308,7 +1308,7 @@ class App {
   applyAttendanceChange(cellEl, nextStatus) {
     if (cellEl.dataset.isRegistry === '1') {
       const cur = cellEl.dataset.currentStatus || '';
-      const msg = `[?덈궡: ???怨듭떇 寃곗꽍怨??뱀씤 嫄?\n\n???숈깮? 寃곗꽍怨???μ뿉 [${cur}] ?곹깭濡?怨듭떇 ?뱀씤?섏뼱 ?덉뒿?덈떎.\n\n?꾩옣 異쒓껐湲곕줉??[${nextStatus || '異쒖꽍'}] (??濡?蹂寃쏀븯?쒓쿋?듬땲源?\n\n(?????怨듭떇 ?뱀씤??理쒖슦???곸슜?섎?濡? ?꾩옣 湲곕줉 蹂寃???'?곸땐(?좑툘)'?쇰줈 ?쒖떆?⑸땲??)`;
+      const msg = `[안내: 대장 공식 결석계 승인 건]\n\n이 학생은 결석계 대장에 [${cur}] 상태로 공식 승인되어 있습니다.\n\n현장 출결기록을 [${nextStatus || '출석'}](으)로 변경하시겠습니까?\n\n(※ 대장 공식 승인이 최우선 적용되므로, 현장 기록 변경 시 '상충(⚡)'으로 표시됩니다)`;
       if (!confirm(msg)) {
         return;
       }
@@ -1627,8 +1627,7 @@ class App {
         dates,
         this.state.attendanceOverrides,
         this.state.showSpecialStudents,
-        student,
-        this.state.registryMap
+        student
       );
       cell.textContent = newRemark;
     });
@@ -2211,14 +2210,12 @@ class App {
 
       html = MovingRollbookView.render(allStudents, holidaysMap, selectedRooms, targetDays, {
         showSpecialStudents,
-        overridesMap: this.state.attendanceOverrides,
-        registryMap: this.state.registryMap
+        overridesMap: this.state.attendanceOverrides
       });
     } else if (view === 'homeroom') {
       html = HomeroomRollbookView.render(allStudents, holidaysMap, selectedBans, weekObj, {
         showSpecialStudents,
-        overridesMap: this.state.attendanceOverrides,
-        registryMap: this.state.registryMap
+        overridesMap: this.state.attendanceOverrides
       });
     } else if (view === 'lunch') {
       html = LunchCalendarView.render(allStudents, holidaysMap, selectedLunchYear, selectedLunchMonth);
@@ -2360,21 +2357,19 @@ class App {
       });
     }
 
-          const btnBulk = document.getElementById('btnBulkPrintAbsence');
-      if (btnBulk) {
-        btnBulk.addEventListener('click', () => {
-          const checkedBoxes = Array.from(document.querySelectorAll('.chk-absence-row:checked'));
-          if (checkedBoxes.length === 0) {
-            alert('인쇄할 결석계 항목을 1건 이상 체크해 주세요.');
-            return;
-          }
-          const selectedNos = checkedBoxes.map(c => c.dataset.no);
-          const selectedRecords = (this.state.absenceRegistryRecords || []).filter(r => selectedNos.includes(String(r.no)));
-          this.printAbsenceRecords(selectedRecords);
-        });
-      }
-
-      
+    const btnBulk = document.getElementById('btnBulkPrintAbsence');
+    if (btnBulk) {
+      btnBulk.addEventListener('click', () => {
+        const checkedBoxes = Array.from(document.querySelectorAll('.chk-absence-row:checked'));
+        if (checkedBoxes.length === 0) {
+          alert('인쇄할 결석계 항목을 1건 이상 체크해 주세요.');
+          return;
+        }
+        const selectedNos = checkedBoxes.map(c => c.dataset.no);
+        const selectedRecords = (this.state.absenceRegistryRecords || []).filter(r => selectedNos.includes(String(r.no)));
+        this.printAbsenceRecords(selectedRecords);
+      });
+    }
 
     document.querySelectorAll('.btn-print-single').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -2394,6 +2389,9 @@ class App {
       this.state.absenceRegistryRecords = AbsenceRegistryView.parseRegistryCsv(csv);
       this.state.registryMap = RollbookModel.parseRegistryData(this.state.absenceRegistryRecords, this.state.allStudents);
       if (this.state.view === 'absence' || this.state.view === 'homeroom' || this.state.view === 'moving') {
+        this.renderContent();
+      }
+      if (this.state.view === 'absence') {
         this.renderContent();
       }
     } catch (e) {
@@ -2628,7 +2626,7 @@ class App {
     setTimeout(() => {
       document.body.classList.remove('printing-absence');
       printSection.innerHTML = '';
-      if (this.state.view === 'absence' || this.state.view === 'homeroom' || this.state.view === 'moving') {
+      if (this.state.view === 'absence') {
         this.renderContent();
       }
     }, 1000);

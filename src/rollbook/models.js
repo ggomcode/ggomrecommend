@@ -203,13 +203,10 @@ export const RollbookModel = {
    */
   parseAttendanceRecords(csvRows) {
     const overridesMap = new Map();
-    if (!csvRows || csvRows.length === 0) return overridesMap;
+    if (!csvRows || csvRows.length < 2) return overridesMap;
 
-    // Check if row 0 is header or actual data
-    const firstVal = (csvRows[0] && csvRows[0][0]) ? String(csvRows[0][0]).trim() : '';
-    const isHeader = !firstVal.match(/^\d{4}-\d{2}-\d{2}/);
-    const startIdx = isHeader ? 1 : 0;
-    for (let r = startIdx; r < csvRows.length; r++) {
+    // Row 0: Headers (고유키, 날짜, 교시, 반, 번호, 이름, 이동반교실, 출결내용, 수정일시)
+    for (let r = 1; r < csvRows.length; r++) {
       const row = csvRows[r];
       if (!row || row.length < 3) continue;
 
@@ -475,34 +472,28 @@ export const RollbookModel = {
   },
 
   /**
-   * Get effective status taking overridesMap into account
-   */
-  /**
-   * Determine fullStatus and rawStatus from registry record
-   * Returns: { rawStatus, fullStatus, category }
-   */
   getRegistryFullStatus(r) {
     if (!r) return { rawStatus: '', fullStatus: '', category: 'present' };
 
-    const cat = (r.cat || '寃곗꽍').trim();
-    const type = (r.type || '吏덈퀝').trim();
+    const cat = (r.cat || '결석').trim();
+    const type = (r.type || '질병').trim();
     const reason = (r.reason || '').trim();
     const subType = (r.subType || '').trim();
 
-    let rawStatus = '蹂?;
-    if (type.includes('?앸━') || reason.includes('?앸━')) {
-      rawStatus = '???앸━)';
-    } else if (type.includes('?몄젙') || type.includes('異쒖꽍?몄젙')) {
-      if (reason.includes('泥댄뿕') || subType.includes('泥댄뿕')) rawStatus = '??泥댄뿕)';
-      else if (reason.includes('寃쎌“') || subType.includes('寃쎌“')) rawStatus = '??寃쎌“??';
-      else if (reason.includes('?꾩뿼') || reason.includes('肄붾줈??) || reason.includes('?낃컧')) rawStatus = '???꾩뿼蹂?';
-      else rawStatus = '??泥댄뿕)';
-    } else if (type.includes('誘몄씤??) || type.includes('臾대떒')) {
-      rawStatus = '誘?;
-    } else if (type.includes('湲고?')) {
-      rawStatus = '湲?;
-    } else if (type.includes('吏덈퀝') || reason.includes('媛먭린') || reason.includes('蹂묒썝') || reason.includes('吏꾨즺')) {
-      rawStatus = '蹂?;
+    let rawStatus = '병';
+    if (type.includes('생리') || reason.includes('생리')) {
+      rawStatus = '인(생리)';
+    } else if (type.includes('인정') || type.includes('출석인정')) {
+      if (reason.includes('체험') || subType.includes('체험')) rawStatus = '인(체험)';
+      else if (reason.includes('경조') || subType.includes('경조')) rawStatus = '인(경조사)';
+      else if (reason.includes('전염') || reason.includes('코로나') || reason.includes('독감')) rawStatus = '인(전염병)';
+      else rawStatus = '인(체험)';
+    } else if (type.includes('미인정') || type.includes('무단')) {
+      rawStatus = '미';
+    } else if (type.includes('기타')) {
+      rawStatus = '기';
+    } else if (type.includes('질병') || reason.includes('감기') || reason.includes('병원') || reason.includes('진료')) {
+      rawStatus = '병';
     }
 
     const fullStatus = `${type}${cat}`;
@@ -511,15 +502,10 @@ export const RollbookModel = {
     return { rawStatus, fullStatus, category };
   },
 
-  /**
-   * Parse absence registry records into date_period_studentId lookup map
-   * Map key: `${dateStr}_${period}_${studentId}`
-   */
   parseRegistryData(records, allStudents = null) {
     const map = new Map();
     if (!records || !Array.isArray(records)) return map;
 
-    // Student lookup helper
     const studentLookup = new Map();
     if (allStudents && Array.isArray(allStudents)) {
       allStudents.forEach(st => {
@@ -563,7 +549,7 @@ export const RollbookModel = {
       return dates;
     };
 
-    const allPeriodsOrder = ['議?, 1, 2, 3, 4, 5, 6, 7, '醫?];
+    const allPeriodsOrder = ['조', 1, 2, 3, 4, 5, 6, 7, '종'];
 
     records.forEach(r => {
       const ban = String(r.ban || '').trim();
@@ -583,23 +569,22 @@ export const RollbookModel = {
       const statusInfo = this.getRegistryFullStatus(r);
       const dates = getDateRange(r.startDate, r.endDate);
 
-      // Determine periods to apply
       let targetPeriods = [];
       const cat = (r.cat || '').trim();
       const startP = r.startPeriod ? (parseInt(r.startPeriod, 10) || r.startPeriod) : '';
       const endP = r.endPeriod ? (parseInt(r.endPeriod, 10) || r.endPeriod) : '';
 
-      if (cat === '寃곗꽍') {
-        targetPeriods = ['議?, 1, 2, 3, 4, 5, 6, 7, '醫?];
-      } else if (cat === '吏媛?) {
+      if (cat === '결석') {
+        targetPeriods = ['조', 1, 2, 3, 4, 5, 6, 7, '종'];
+      } else if (cat === '지각') {
         const limitP = endP || startP || 1;
         const idx = allPeriodsOrder.indexOf(limitP);
-        targetPeriods = (idx >= 0) ? allPeriodsOrder.slice(0, idx + 1) : ['議?, 1];
-      } else if (cat === '議고눜') {
+        targetPeriods = (idx >= 0) ? allPeriodsOrder.slice(0, idx + 1) : ['조', 1];
+      } else if (cat === '조퇴') {
         const fromP = startP || endP || 5;
         const idx = allPeriodsOrder.indexOf(fromP);
-        targetPeriods = (idx >= 0) ? allPeriodsOrder.slice(idx) : [5, 6, 7, '醫?];
-      } else if (cat === '寃곌낵') {
+        targetPeriods = (idx >= 0) ? allPeriodsOrder.slice(idx) : [5, 6, 7, '종'];
+      } else if (cat === '결과') {
         if (startP && endP) {
           const sIdx = allPeriodsOrder.indexOf(startP);
           const eIdx = allPeriodsOrder.indexOf(endP);
@@ -616,7 +601,7 @@ export const RollbookModel = {
           targetPeriods = [1];
         }
       } else {
-        targetPeriods = ['議?, 1, 2, 3, 4, 5, 6, 7, '醫?];
+        targetPeriods = ['조', 1, 2, 3, 4, 5, 6, 7, '종'];
       }
 
       dates.forEach(dStr => {
@@ -638,18 +623,11 @@ export const RollbookModel = {
     return map;
   },
 
-  /**
-   * Get effective status taking overridesMap into account
-   * Priority:
-   * 1. Registry Map ('??? 怨듭떇 ?뱀씤蹂?- 理쒖슦???뺤젙)
-   * 2. Attendance Overrides ('異쒓껐湲곕줉' ?ㅼ떆媛??꾩옣 ?낅젰)
-   * 3. Default Timetable Status
-   */
   getEffectiveStudentPeriodStatus(student, dayOfWeek, periodNum, dateStr = null, showSpecialStudent = false, overridesMap = null, registryMap = null) {
     const def = this.getStudentPeriodStatus(student, dayOfWeek, periodNum, dateStr, showSpecialStudent);
     const key = `${dateStr}_${periodNum}_${student?.studentId || ''}`;
 
-    // 1?쒖쐞: [????곗꽑 ?먯튃] '??? ?쒗듃???묒닔쨌寃곗옱??怨듭떇 寃곗꽍怨꾧? ?덈뒗 寃쎌슦 (理쒖슦???뺤젙)
+    // 1순위: [대장 우선 원칙] '대장' 시트에 접수·결재된 공식 결석계가 있는 경우 (최우선 확정)
     if (registryMap && student && registryMap.has(key)) {
       const regRec = registryMap.get(key);
       const rawStatus = regRec.rawStatus || this.getRegistryFullStatus(regRec.record).rawStatus;
@@ -658,13 +636,13 @@ export const RollbookModel = {
       const remarkText = this.getStatusRemarkText(rawStatus);
       const cat = regRec.category || this.getCategoryFromRawStatus(rawStatus);
 
-      // ?곸땐(Conflict) 媛먯?: ?꾩옣 ?섏뾽 '異쒓껐湲곕줉' ?쒗듃???ㅻⅨ ?곹깭媛 ?곹? ?덈뒗媛?
+      // 상충(Conflict) 감지: 현장 수업 '출결기록' 시트에 다른 상태가 입력되어 있는가?
       let hasConflict = false;
       let conflictOverrideStatus = '';
       if (overridesMap && overridesMap.has(key)) {
         const ovRec = overridesMap.get(key);
         const ovStatus = (ovRec.status || '').trim();
-        if (ovStatus && !this.isStatusEquivalent(ovStatus, rawStatus) && ovStatus !== '異쒖꽍') {
+        if (ovStatus && !this.isStatusEquivalent(ovStatus, rawStatus) && ovStatus !== '출석') {
           hasConflict = true;
           conflictOverrideStatus = ovStatus;
         }
@@ -680,23 +658,24 @@ export const RollbookModel = {
         isPresent: false,
         category: cat,
         isOverridden: true,
-        isRegistryPriority: true,      // ????곗꽑 ?뱀씤 ?뚮옒洹?        hasConflict,                  // ?꾩옣 湲곕줉怨??곸땐 諛쒖깮 ?щ?
-        conflictOverrideStatus,       // 援먭낵援먯궗媛 泥댄겕?덈뜕 ?꾩옣 湲곕줉
-        registryRecord: regRec.record, // ???怨듭떇 寃곗꽍怨?媛앹껜
-        docSubmitted: true            // 利앸튃?쒕쪟 ?뺤씤 ?꾨즺
+        isRegistryPriority: true,      // 대장 우선 승인 플래그
+        hasConflict,                  // 현장 기록과의 상충 발생 여부
+        conflictOverrideStatus,       // 교과교사가 체크했던 현장 기록
+        registryRecord: regRec.record, // 대장 공식 결석계 객체
+        docSubmitted: true            // 증빙서류 확인 완료
       };
     }
 
-    // 2?쒖쐞: '異쒓껐湲곕줉' ?쒗듃???꾩옣 ?ㅼ떆媛??ㅻ쾭?쇱씠??    if (overridesMap && student && overridesMap.has(key)) {
+    // 2순위: '출결기록' 시트의 현장 실시간 오버라이드
+    if (overridesMap && student && overridesMap.has(key)) {
       const rec = overridesMap.get(key);
       const rawStatus = (rec.status || '').trim();
 
-      // If override value matches the student's original status, it is not an override
       if (this.isStatusEquivalent(rawStatus, def.text)) {
         return { ...def, rawStatus: def.text, remarkText: '', isOverridden: false, isRegistryPriority: false, hasConflict: false, docSubmitted: false };
       }
 
-      if (!rawStatus || rawStatus === '異쒖꽍') {
+      if (!rawStatus || rawStatus === '출석') {
         return { text: '', rawStatus: '', remarkText: '', isShaded: false, is50Dark: false, isPresent: true, category: 'present', isOverridden: true, isRegistryPriority: false, hasConflict: false };
       }
       const displayText = this.getStatusDisplayText(rawStatus);
@@ -718,17 +697,10 @@ export const RollbookModel = {
       };
     }
 
-    // 3?쒖쐞: 湲곕낯 ?먯쿇 ?쒓컙???곹깭
+    // 3순위: 기본 원천 시간표 상태
     return { ...def, rawStatus: def.text, remarkText: '', isOverridden: false, isRegistryPriority: false, hasConflict: false, docSubmitted: false };
-  },/**
-   * Analyze student daily attendance across whole day:
-   * Sessions: ['조', 1, 2, ..., maxPeriod, '종']
-   * Classifies into:
-   * - 결석: 조례, 1~최종교시, 종례까지 모두 출석이 아닌 경우
-   * - 지각: 앞부분 불참 후 출석
-   * - 조퇴: 출석 후 뒷부분~종례 불참
-   * - 결과: 앞뒤 출석 중 중간 교시 불참
-   */
+  },
+
   analyzeDailyAttendance(student, dayOfWeek, dateStr, overridesMap = null, showSpecialStudent = false, registryMap = null) {
     const maxPeriod = AcademicConfig.periodsPerDay[dayOfWeek] || 6;
     const periods = ['조'];
@@ -744,7 +716,6 @@ export const RollbookModel = {
         category: st.category || 'present'
       };
     });
-
     const absentSessions = sessionResults.filter(s => !s.isPresent);
     const totalCount = sessionResults.length;
 
@@ -1228,8 +1199,6 @@ export const RollbookModel = {
   },
 
   /**
-   * Get effective display remark combining base remark and attendance reasons (same simple format as moving rollbook)
-   */
   getEffectiveDisplayRemark(pRemark, studentId, dateOrDays, overridesMap = null, showSpecialStudent = false, student = null, registryMap = null) {
     const base = this.getDisplayRemark(pRemark, dateOrDays, showSpecialStudent);
     if (!studentId || !dateOrDays) return base;
@@ -1258,9 +1227,9 @@ export const RollbookModel = {
         });
       }
 
-            // Check registryMap for official approved absence remarks
+      // Check registryMap for official approved absence remarks
       if (registryMap) {
-        const checkPeriods = ['議?, 1, 2, 3, 4, 5, 6, 7, '醫?];
+        const checkPeriods = ['조', 1, 2, 3, 4, 5, 6, 7, '종'];
         checkPeriods.forEach(p => {
           const key = `${dStr}_${p}_${studentId}`;
           if (registryMap.has(key)) {
@@ -1289,7 +1258,6 @@ export const RollbookModel = {
 
     return base;
   },
-
   /**
    * Check if a student is eligible for lunch on a specific day
    */

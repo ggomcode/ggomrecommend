@@ -1,8 +1,9 @@
 /**
+ * Google Sheets API & CSV Loader Service for ggomrollbook
+ * Supports live Google Sheets fetch via gviz/tq (JSONP / CSV) with offline fallback.
+ * 
  * ─────────────────────────────────────────────────────────────────────────────
- * [통합 환경 설정] 선택교과 출석관리 및 결석계 관리 시스템
- * 구글 스크립트 속성에 일일이 들어갈 필요 없이, 모든 시트 ID, GID, GAS 웹앱 URL,
- * 드라이브 폴더 ID를 이 파일 상단에서 모두 일괄 관리합니다.
+ * [통합 설정 허브] 학교 맞춤 구글 스프레드시트 및 드라이브 폴더 일괄 관리
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -21,9 +22,9 @@ export const ROLLBOOK_CONFIG = {
 
   // 3. 구글 드라이브 폴더 ID (필요 시 지정)
   DRIVE_FOLDERS: {
-    FOLDER_ID: '11gsPw9c_6SYtu4z-6sFFyJ6ZFXW0lvxq',          // 寃곗꽍怨?PDF ????대뜑
-    PARENT_FOLDER_ID: '1SkhLY-CuzamZNTXkHwHKZ0d_ijWu2_n-',   // ?숇?紐??쒕챸 ?대?吏 ????대뜑
-    STUDENT_FOLDER_ID: '1WDh936rDpZZKOva1zPLA7gza5nTWNDXe',  // ?숈깮 ?쒕챸 ?대?吏 ????대뜑
+    FOLDER_ID: '11gsPw9c_6SYtu4z-6sFFyJ6ZFXW0lvxq',          // 결석계 PDF 저장 폴더
+    PARENT_FOLDER_ID: '1SkhLY-CuzamZNTXkHwHKZ0d_ijWu2_n-',   // 학부모 서명 이미지 저장 폴더
+    STUDENT_FOLDER_ID: '1WDh936rDpZZKOva1zPLA7gza5nTWNDXe',  // 학생 서명 이미지 저장 폴더
     TARGET_ROW: ''
   },
 
@@ -52,7 +53,6 @@ let _configuredGasUrl = localStorage.getItem('ggom_gas_webapp_url') || DEFAULT_G
 export const SheetAPI = {
   config: ROLLBOOK_CONFIG,
   sheetId: SHEET_ID,
-
   gidAttendance: GID_ATTENDANCE,
   gidHolidays: GID_HOLIDAYS,
   sheetNameRecords: SHEET_NAME_RECORDS,
@@ -125,133 +125,33 @@ export const SheetAPI = {
   },
 
   /**
-   * Fetch CSV from Google Sheets with JSONP fallback
+   * Fetch a sheet by GID as CSV
    */
   async fetchSheetCsv(gid) {
     const csvUrl = `https://docs.google.com/spreadsheets/d/${this.sheetId}/export?format=csv&gid=${gid}`;
     try {
-      const response = await fetch(csvUrl);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return await response.text();
-    } catch (fetchErr) {
-      // Try gviz JSONP approach if direct fetch is blocked by CORS
-      return await this.fetchViaGvizJsonp(gid);
+      const resp = await fetch(csvUrl, { cache: 'no-cache' });
+      if (resp.ok) {
+        return await resp.text();
+      }
+    } catch (e) {
+      // Fallback to gviz JSONP
     }
+    return await this.fetchViaGvizJsonp(gid);
   },
 
   /**
-   * Fetch sheet by tab name (e.g. '출결기록')
+   * Fetch a sheet by name (for user-added sheets like '출결기록')
    */
   async fetchSheetByName(sheetName) {
-    const encName = encodeURIComponent(sheetName);
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${this.sheetId}/gviz/tq?tqx=out:csv&sheet=${encName}`;
-    try {
-      const response = await fetch(csvUrl);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return await response.text();
-    } catch (err) {
-      return await this.fetchViaGvizJsonpByName(sheetName);
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${this.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+    const resp = await fetch(csvUrl, { cache: 'no-cache' });
+    if (!resp.ok) {
+      throw new Error(`Sheet '${sheetName}' fetch failed: ${resp.status}`);
     }
+    return await resp.text();
   },
 
-  fetchViaGvizJsonpByName(sheetName) {
-    return new Promise((resolve, reject) => {
-      const callbackName = `gvizNameCallback_${Date.now()}_${Math.floor(Math.random()*1000)}`;
-      const script = document.createElement('script');
-      const encName = encodeURIComponent(sheetName);
-      script.src = `https://docs.google.com/spreadsheets/d/${this.sheetId}/gviz/tq?tqx=responseHandler:${callbackName}&sheet=${encName}`;
-
-      const timeout = setTimeout(() => {
-        cleanup();
-        reject(new Error(`Timeout fetching sheet ${sheetName}`));
-      }, 10000);
-
-      const cleanup = () => {
-        clearTimeout(timeout);
-        delete window[callbackName];
-        if (script.parentNode) script.parentNode.removeChild(script);
-      };
-
-      window[callbackName] = (json) => {
-        cleanup();
-        try {
-          const csv = this.convertGvizJsonToCsv(json);
-          resolve(csv);
-        } catch (e) {
-          reject(e);
-        }
-      };
-
-      script.onerror = () => {
-        cleanup();
-        reject(new Error(`Script error loading sheet ${sheetName}`));
-      };
-
-      document.head.appendChild(script);
-    });
-  },
-
-  /**
-   * Send attendance override records to Google Apps Script Web App
-   * @param {Array|Object} records [{ key, date, period, studentId, ban, num, name, room, status }]
-   */
-  async saveAttendanceRecords(records) {
-    const url = this.getGasUrl();
-    if (!url) {
-      console.warn('Google Apps Script Web App URL이 설정되지 않았습니다.');
-      return { status: 'no_gas_url', message: 'GAS URL 미설정' };
-    }
-
-    const payload = Array.isArray(records) ? { records } : records;
-
-    // Use text/plain to avoid CORS preflight OPTIONS check in GAS Web App
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      throw new Error(`GAS POST failed with HTTP ${response.status}`);
-    }
-
-    try {
-      return await response.json();
-    } catch (e) {
-      // Sometimes GAS redirects with opaque or plain response
-      return { status: 'success', raw: true };
-    }
-  },
-
-  /**
-   * Fetch submitted absence reports from GAS Web App
-   */
-  async fetchSubmittedReports() {
-    const gasUrl = this.getGasUrl();
-    if (!gasUrl) return [];
-    const teacherKey = localStorage.getItem('teacher_auth_key') || 'teacher2026';
-    const sep = gasUrl.includes('?') ? '&' : '?';
-    const url = `${gasUrl}${sep}action=get_submitted_reports&key=${encodeURIComponent(teacherKey)}`;
-
-    try {
-      const response = await fetch(url);
-      if (!response.ok) return [];
-      const json = await response.json();
-      if (json && json.status === 'success' && Array.isArray(json.reports)) {
-        return json.reports;
-      }
-      return [];
-    } catch (e) {
-      console.warn('Failed to fetch submitted reports from GAS:', e);
-      return [];
-    }
-  },
-
-  /**
-   * Fetch sheet data using Google Visualization API (JSONP callback)
-   */
   /**
    * Common helper to POST JSON payload to GAS Web App
    */
@@ -338,15 +238,17 @@ export const SheetAPI = {
     });
   },
 
+  /**
+   * Fetch sheet data using Google Visualization API (JSONP callback)
+   */
   fetchViaGvizJsonp(gid) {
     return new Promise((resolve, reject) => {
       const callbackName = `gvizCallback_${gid}_${Date.now()}`;
-      const script = document.createElement('script');
-      script.src = `https://docs.google.com/spreadsheets/d/${this.sheetId}/gviz/tq?tqx=responseHandler:${callbackName}&gid=${gid}`;
+      const url = `https://docs.google.com/spreadsheets/d/${this.sheetId}/gviz/tq?tqx=out:json;responseHandler:${callbackName}&gid=${gid}`;
 
       const timeout = setTimeout(() => {
         cleanup();
-        reject(new Error(`Timeout fetching GID ${gid} via JSONP`));
+        reject(new Error(`Timeout fetching GID ${gid} via gviz JSONP`));
       }, 10000);
 
       const cleanup = () => {
@@ -355,27 +257,28 @@ export const SheetAPI = {
         if (script.parentNode) script.parentNode.removeChild(script);
       };
 
-      window[callbackName] = (json) => {
+      window[callbackName] = (response) => {
         cleanup();
         try {
-          const csv = this.convertGvizJsonToCsv(json);
-          resolve(csv);
-        } catch (e) {
-          reject(e);
+          const csvText = this.convertGvizJsonToCsv(response);
+          resolve(csvText);
+        } catch (err) {
+          reject(err);
         }
       };
 
+      const script = document.createElement('script');
+      script.src = url;
       script.onerror = () => {
         cleanup();
         reject(new Error(`Script load error for GID ${gid}`));
       };
-
       document.head.appendChild(script);
     });
   },
 
   /**
-   * Convert gviz JSON table format to CSV string
+   * Convert Google Visualization API JSON response to CSV text
    */
   convertGvizJsonToCsv(json) {
     if (!json || !json.table || !json.table.rows) return '';
@@ -397,8 +300,10 @@ export const SheetAPI = {
     rows.forEach(r => {
       const cells = r.c || [];
       const line = cells.map(cell => {
-        if (!cell || cell.v === null || cell.v === undefined) return '';
-        let val = String(cell.v);
+        let val = '';
+        if (cell !== null && cell !== undefined) {
+          val = cell.v !== null && cell.v !== undefined ? String(cell.v) : '';
+        }
         if (val.includes(',') || val.includes('"') || val.includes('\n')) {
           val = '"' + val.replace(/"/g, '""') + '"';
         }
@@ -406,14 +311,14 @@ export const SheetAPI = {
       }).join(',');
       lines.push(line);
     });
-
     return lines.join('\n');
   },
 
   /**
-   * Standard robust CSV parser handling quoted values with commas
+   * Parse CSV string into 2D array, handling quoted cells with commas and newlines
    */
   parseCsv(text) {
+    if (!text || typeof text !== 'string') return [];
     const lines = [];
     let row = [''];
     let inQuotes = false;
@@ -426,10 +331,10 @@ export const SheetAPI = {
       if (char === '"') {
         if (inQuotes && nextChar === '"') {
           row[row.length - 1] += '"';
-          i += 2;
-          continue;
+          i++;
+        } else {
+          inQuotes = !inQuotes;
         }
-        inQuotes = !inQuotes;
       } else if (char === ',' && !inQuotes) {
         row.push('');
       } else if ((char === '\r' || char === '\n') && !inQuotes) {

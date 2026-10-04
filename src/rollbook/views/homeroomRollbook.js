@@ -1,75 +1,100 @@
 /**
- * Homeroom Rollbook View Generator (원적학급 주간 출석부 1~11반)
- * Generates 1 page per week on A4 Landscape (15mm margins).
- * Mon~Fri 42 Columns with 1-letter period headers ('조', 1~6/7, '종').
+ * HomeroomRollbookView - 원적학급(담임용) 주간 출석부 렌더링 뷰
+ * 담임교사가 자신의 학급 학생 전체의 주간 출결(조례~종례)을 한눈에 조회·수정합니다.
+ *
+ * 지원 기능:
+ * - 조례('조'), 1~7교시, 종례('종') 세션 지원
+ * - 수요일 5~6교시 창체('창') 시간 자동 음영 처리
+ * - 이동수업 교과(1~4, 7교시)는 학생별 배정 교실 시간표 연동
+ * - 출결 상태(병, 생, 체, 경, 전, 미, 기) 50% 진한 음영 표시
+ * - 출결 순환: [빈값] -> 병 -> 인(생리) -> 인(체험) -> 인(경조사) -> 인(전염병) -> 미 -> 기 -> [빈값]
+ * - 하단 일별 출석/결석 집계 행 제공
  */
 
 import { RollbookModel, AcademicConfig, escapeHtml } from '../models.js';
 
 export const HomeroomRollbookView = {
-  /**
-   * Render HTML for homeroom weekly rollbooks
-   * @param {Array} allStudents
-   * @param {Object} holidaysMap
-   * @param {Array} selectedBans e.g. [1, 2, 7]
-   * @param {Object} weekInfo e.g. { weekNum, label, days: [...] }
-   * @param {Object} options e.g. { showSpecialStudents: false }
-   */
-  render(allStudents, holidaysMap, selectedBans, weekInfo, options = {}) {
-    if (!selectedBans || selectedBans.length === 0 || !weekInfo) {
-      return `<div class="empty-state">선택된 학급 또는 주차가 없습니다.</div>`;
+
+  render(allStudents, holidaysMap, selectedBans, weekObj, options = {}) {
+    if (!selectedBans || selectedBans.length === 0) {
+      return `
+        <div class="empty-state">
+          <div class="empty-icon">🏫</div>
+          <div class="empty-title">선택된 학급이 없습니다.</div>
+          <div class="empty-desc">상단 학급 필터에서 조회할 학급을 선택해주세요.</div>
+        </div>
+      `;
     }
 
-    const pages = [];
+    if (!weekObj || !weekObj.days || weekObj.days.length === 0) {
+      return `
+        <div class="empty-state">
+          <div class="empty-icon">📅</div>
+          <div class="empty-title">선택된 주차 정보가 없습니다.</div>
+        </div>
+      `;
+    }
 
-    selectedBans.forEach(banNum => {
-      const banStudents = allStudents.filter(st => st.ban === banNum);
-      // Sort by student number or studentId
-      banStudents.sort((a, b) => a.num - b.num);
+    return selectedBans.map(ban => {
+      const students = (allStudents || []).filter(s => s.ban === ban);
+      students.sort((a, b) => a.num - b.num);
 
-      pages.push(this.renderBanPage(banNum, banStudents, weekInfo, holidaysMap, options));
-    });
-
-    return pages.join('\n');
+      return this._renderClassSheet(ban, students, holidaysMap, weekObj, options);
+    }).join('\n');
   },
 
-  /**
-   * Render 1-week page for 1 homeroom class
-   */
-  renderBanPage(banNum, students, weekInfo, holidaysMap, options = {}) {
-    const days = weekInfo.days; // Mon, Tue, Wed, Thu, Fri
+  _renderClassSheet(ban, students, holidaysMap, weekObj, options = {}) {
+    const days = weekObj.days; // [{ dateStr, dayOfWeek, label }, ...]
 
-    // Day configs: period count per day from AcademicConfig
-    const daySpecs = [
-      { day: '월', periods: this._buildPeriodList('월') },
-      { day: '화', periods: this._buildPeriodList('화') },
-      { day: '수', periods: this._buildPeriodList('수') },
-      { day: '목', periods: this._buildPeriodList('목') },
-      { day: '금', periods: this._buildPeriodList('금') }
-    ];
+    // Build day/session columns header
+    // Each day has: 조례('조'), 1..maxPeriod, 종례('종')
+    let colGroupHtml = `
+      <col class="col-seq" style="width: 38px;">
+      <col class="col-num" style="width: 42px;">
+      <col class="col-id" style="width: 58px;">
+      <col class="col-name" style="width: 72px;">
+      <col class="col-remark" style="width: 140px;">
+    `;
 
-    // Day header cells
-    const dayHeadersHtml = days.map((d, i) => {
-      const spec = daySpecs[i];
-      const holidayName = holidaysMap.fullDayEvents[d.dateStr];
-      const titleExtra = holidayName ? ` <span class="holiday-pill">[${escapeHtml(holidayName)}]</span>` : '';
-      return `<th colspan="${spec.periods.length}" class="day-group-header ${holidayName ? 'th-holiday' : ''}">
-        ${d.dayOfWeek} (${d.displayDate})${titleExtra}
-      </th>`;
-    }).join('');
+    let headerTopRow = `
+      <th rowspan="2" class="col-seq">No</th>
+      <th rowspan="2" class="col-num">번호</th>
+      <th rowspan="2" class="col-id">학번</th>
+      <th rowspan="2" class="col-name">성명</th>
+      <th rowspan="2" class="col-remark">비고</th>
+    `;
 
-    // Period subheader cells ('조', 1..6/7, '종')
-    let periodHeadersHtml = '';
-    daySpecs.forEach((spec, i) => {
-      const dayInfo = days[i];
-      const isHoliday = !!holidaysMap.fullDayEvents[dayInfo.dateStr];
+    let headerBottomRow = '';
+
+    const daySpecs = days.map(d => {
+      const maxP = AcademicConfig.periodsPerDay[d.dayOfWeek] || 6;
+      const periods = ['조'];
+      for (let p = 1; p <= maxP; p++) periods.push(p);
+      periods.push('종');
+
+      return {
+        day: d.dayOfWeek,
+        dateStr: d.dateStr,
+        label: d.label,
+        periods
+      };
+    });
+
+    daySpecs.forEach((spec, dIdx) => {
+      const isLastDay = (dIdx === daySpecs.length - 1);
+      const dayEndClass = isLastDay ? 'col-day-end' : '';
+
+      headerTopRow += `
+        <th colspan="${spec.periods.length}" class="col-day-header ${dayEndClass}">
+          ${spec.label} (${spec.day})
+        </th>
+      `;
 
       spec.periods.forEach((p, pIdx) => {
-        const isChangche = (spec.day === '수' && (p === 5 || p === 6));
-        const pLabel = isChangche ? '창' : p;
         const isDayEnd = (pIdx === spec.periods.length - 1);
-        const dayEndClass = isDayEnd ? 'col-day-end' : '';
-        periodHeadersHtml += `<th class="period-sub-th ${isHoliday ? 'th-holiday' : ''} ${dayEndClass}">${pLabel}</th>`;
+        const pClass = isDayEnd ? 'col-day-end col-period-header' : 'col-period-header';
+        headerBottomRow += `<th class="${pClass}">${p}</th>`;
+        colGroupHtml += `<col class="col-period" style="width: 26px;">`;
       });
     });
 
@@ -77,14 +102,16 @@ export const HomeroomRollbookView = {
     const showSpecialStudents = !!options.showSpecialStudents;
     const overridesMap = options.overridesMap || null;
     const registryMap = options.registryMap || null;
+
     const rowsHtml = students.map((st, idx) => {
       const isDarkRow = (st.pRemark.includes('자퇴') || st.pRemark.includes('위탁') || st.pRemark.includes('전출'));
       const darkClass = isDarkRow ? 'row-dark-50' : '';
 
       let cellsHtml = '';
+
       daySpecs.forEach((spec, dIdx) => {
         const dayInfo = days[dIdx];
-        const isHoliday = !!holidaysMap.fullDayEvents[dayInfo.dateStr];
+        const isHoliday = holidaysMap && holidaysMap.fullDayEvents && holidaysMap.fullDayEvents[dayInfo.dateStr];
 
         spec.periods.forEach((p, pIdx) => {
           let cellText = '';
@@ -99,13 +126,15 @@ export const HomeroomRollbookView = {
           const periodKey = p; // '조', 1..7, '종'
           const overrideKey = `${dayInfo.dateStr}_${periodKey}_${st.studentId}`;
 
+          let status = null;
+
           if (isHoliday) {
             cellText = '-';
           } else if (p === '조' || p === '종') {
             const origStatus = RollbookModel.getStudentPeriodStatus(st, spec.day, p, dayInfo.dateStr, showSpecialStudents);
             origStatusText = origStatus.text || '';
 
-            const status = RollbookModel.getEffectiveStudentPeriodStatus(st, spec.day, p, dayInfo.dateStr, showSpecialStudents, overridesMap, registryMap);
+            status = RollbookModel.getEffectiveStudentPeriodStatus(st, spec.day, p, dayInfo.dateStr, showSpecialStudents, overridesMap, registryMap);
             cellText = status.text;
             rawStatusValue = status.rawStatus || cellText;
             isTint = status.isShaded && !isDarkRow;
@@ -114,9 +143,9 @@ export const HomeroomRollbookView = {
             if (status.docSubmitted) isDocSubmitted = 'doc-submitted';
           } else if (spec.day === '수' && (p === 5 || p === 6)) {
             const origStatus = RollbookModel.getStudentPeriodStatus(st, spec.day, p, dayInfo.dateStr, showSpecialStudents);
-            const status = RollbookModel.getEffectiveStudentPeriodStatus(st, spec.day, p, dayInfo.dateStr, showSpecialStudents, overridesMap, registryMap);
+            status = RollbookModel.getEffectiveStudentPeriodStatus(st, spec.day, p, dayInfo.dateStr, showSpecialStudents, overridesMap, registryMap);
 
-            if (origStatus.is50Dark || !origStatus.isPresent) {
+            if (origStatus.is50Dark || !origStatus.isPresent || (status && status.isRegistryPriority)) {
               origStatusText = origStatus.text || '';
               cellText = status.text;
               rawStatusValue = status.rawStatus || cellText;
@@ -144,7 +173,7 @@ export const HomeroomRollbookView = {
             const origStatus = RollbookModel.getStudentPeriodStatus(st, spec.day, pNum, dayInfo.dateStr, showSpecialStudents);
             origStatusText = origStatus.text || '';
 
-            const status = RollbookModel.getEffectiveStudentPeriodStatus(st, spec.day, pNum, dayInfo.dateStr, showSpecialStudents, overridesMap, registryMap);
+            status = RollbookModel.getEffectiveStudentPeriodStatus(st, spec.day, pNum, dayInfo.dateStr, showSpecialStudents, overridesMap, registryMap);
             cellText = status.text;
             rawStatusValue = status.rawStatus || cellText;
             isTint = status.isShaded && !isDarkRow;
@@ -159,18 +188,18 @@ export const HomeroomRollbookView = {
           const overriddenClass = isOverridden ? `cell-overridden status-${overrideCat}` : '';
 
           let cellBadge = '';
-          let cellTitle = '醫뚰겢由? 異쒓껐 ?쒗솚 | Shift+?대┃: ??닚??| ?고겢由? 吏곸젒 ?좏깮/?꾧탳???쇨큵';
+          let cellTitle = '좌클릭: 출결 순환 | Shift+클릭: 역순환 | 우클릭: 직접 선택/전교시 일괄';
           let conflictClass = '';
           let registryClass = '';
 
-          if (status.hasConflict) {
+          if (status && status.hasConflict) {
             conflictClass = 'has-conflict';
-            cellBadge = `<span class="cell-conflict-badge" title="[????곗꽑 ?곸슜] 怨듭떇: ${escapeHtml(status.fullStatus || cellText)} | ?꾩옣 ?섏뾽湲곕줉: ${escapeHtml(status.conflictOverrideStatus)} (?곸땐)">?좑툘</span>`;
-            cellTitle = `[怨듭떇 寃곗꽍怨??곗꽑 ?곸슜: ${status.fullStatus || cellText}] ?꾩옣 湲곕줉(${status.conflictOverrideStatus})怨??곸땐 | ?대┃ ??蹂寃??뺤씤`;
-          } else if (status.isRegistryPriority) {
+            cellBadge = `<span class="cell-conflict-badge" title="[대장 우선 적용] 공식: ${escapeHtml(status.fullStatus || cellText)} | 현장 수업기록: ${escapeHtml(status.conflictOverrideStatus)} (상충)">⚡</span>`;
+            cellTitle = `[공식 결석계 우선 적용: ${status.fullStatus || cellText}] 현장 기록(${status.conflictOverrideStatus})과 상충 | 클릭 시 변경 확인`;
+          } else if (status && status.isRegistryPriority) {
             registryClass = 'is-registry-approved';
-            cellBadge = `<span class="cell-registry-badge" title="[???寃곗꽍怨??뱀씤] ${escapeHtml(status.fullStatus || cellText)}">?뱫</span>`;
-            cellTitle = `[怨듭떇 寃곗꽍怨??뱀씤: ${status.fullStatus || cellText}] 利앸튃?쒕쪟 ?뺤씤 ?꾨즺 | ?대┃ ??蹂寃??뺤씤`;
+            cellBadge = `<span class="cell-registry-badge" title="[대장 결석계 승인] ${escapeHtml(status.fullStatus || cellText)}">📑</span>`;
+            cellTitle = `[공식 결석계 승인: ${status.fullStatus || cellText}] 증빙서류 확인 완료 | 클릭 시 변경 확인`;
           }
 
           cellsHtml += `
@@ -182,12 +211,12 @@ export const HomeroomRollbookView = {
                 data-ban="${escapeHtml(st.ban)}"
                 data-num="${escapeHtml(st.num)}"
                 data-name="${escapeHtml(st.name)}"
-                data-room="${st.ban}諛?
+                data-room="${st.ban}반"
                 data-original-status="${escapeHtml(origStatusText)}"
                 data-current-status="${escapeHtml(rawStatusValue)}"
-                data-is-registry="${status.isRegistryPriority ? '1' : '0'}"
-                data-has-conflict="${status.hasConflict ? '1' : '0'}"
-                data-conflict-override="${escapeHtml(status.conflictOverrideStatus || '')}"
+                data-is-registry="${status && status.isRegistryPriority ? '1' : '0'}"
+                data-has-conflict="${status && status.hasConflict ? '1' : '0'}"
+                data-conflict-override="${escapeHtml((status && status.conflictOverrideStatus) || '')}"
                 title="${cellTitle}">
               ${escapeHtml(cellText) || '<span class="check-box-sm"></span>'}${cellBadge}
             </td>`;
@@ -227,44 +256,44 @@ export const HomeroomRollbookView = {
     }).join('');
 
     return `
-      <div class="print-page a4-landscape homeroom-page">
-        <div class="page-header">
-          <div class="page-title-group">
-            <h2 class="page-title">[3학년 ${banNum}반] 주간 출석부</h2>
-            <span class="page-period-tag">${escapeHtml(weekInfo.label)}</span>
+      <div class="rollbook-sheet homeroom-sheet" data-ban="${ban}">
+        <div class="sheet-header">
+          <div class="sheet-title-group">
+            <h2 class="sheet-title">제 3 학년 ${ban} 반 주간 출석부</h2>
+            <div class="sheet-subtitle">
+              <span class="sheet-badge homeroom-badge">담임용</span>
+              <span class="sheet-period-info">${weekObj.title || ''} (${weekObj.rangeStr || ''})</span>
+            </div>
           </div>
-          <div class="page-meta">
-            <span class="meta-item">재적: ${students.length}명</span>
-            <span class="meta-item">담임 확인: _______ (인)</span>
-            <span class="meta-item print-timestamp"></span>
+          <div class="sheet-meta">
+            <span class="meta-item">재적: <strong>${students.length}명</strong></span>
+            <span class="meta-item print-timestamp" data-timestamp=""></span>
           </div>
         </div>
 
-        <div class="table-wrapper homeroom-table-wrapper">
-          <table class="homeroom-table" data-ban="${banNum}">
+        <div class="table-container">
+          <table class="rollbook-table homeroom-table">
+            <colgroup>
+              ${colGroupHtml}
+            </colgroup>
             <thead>
-              <tr>
-                <th rowspan="2" class="col-seq">연번</th>
-                <th rowspan="2" class="col-num">번호</th>
-                <th rowspan="2" class="col-id">학번</th>
-                <th rowspan="2" class="col-name">이름</th>
-                <th rowspan="2" class="col-remark">비고</th>
-                ${dayHeadersHtml}
+              <tr class="header-row-top">
+                ${headerTopRow}
               </tr>
-              <tr>
-                ${periodHeadersHtml}
+              <tr class="header-row-bottom">
+                ${headerBottomRow}
               </tr>
             </thead>
             <tbody>
               ${rowsHtml}
             </tbody>
-            <tfoot class="homeroom-stats">
-              <tr class="homeroom-stat-row stat-row-presence">
-                <th colspan="5" class="stat-header">출석 인원</th>
+            <tfoot>
+              <tr class="stat-row stat-presence-row">
+                <td colspan="5" class="stat-label">출석 인원</td>
                 ${presenceRowHtml}
               </tr>
-              <tr class="homeroom-stat-row stat-row-absence">
-                <th colspan="5" class="stat-header">출결 변동 (결·지·퇴·과)</th>
+              <tr class="stat-row stat-absence-row">
+                <td colspan="5" class="stat-label">결석·지각·조퇴·결과</td>
                 ${absenceRowHtml}
               </tr>
             </tfoot>
@@ -293,45 +322,9 @@ export const HomeroomRollbookView = {
         if (analysis.isLate) late++;
         if (analysis.isEarlyLeave) earlyLeave++;
         if (analysis.isClassSkipped) classSkipped++;
-        if (!analysis.isAbsence) present++;
       }
     });
 
     return { present, absence, late, earlyLeave, classSkipped };
-  },
-
-  /**
-   * Build period list for a given day: ['조', 1, 2, ..., 6/7, '종']
-   */
-  _buildPeriodList(day) {
-    const maxPeriod = AcademicConfig.periodsPerDay[day] || 6;
-    const periods = ['조'];
-    for (let i = 1; i <= maxPeriod; i++) periods.push(i);
-    periods.push('종');
-    return periods;
-  },
-
-  /**
-   * Get only the special mark (특/파/순/자퇴...) for 조/종 columns
-   * without checking period-based attendance
-   * @param {Object} student
-   * @param {string} dateStr
-   * @param {boolean} showSpecialStudent
-   */
-  _getSpecialMarkOnly(student, dateStr = null, showSpecialStudent = false) {
-    const pRemark = student.pRemark;
-    if (pRemark.includes('자퇴') || pRemark.includes('위탁') || pRemark.includes('전출')) {
-      return { text: pRemark, isShaded: true };
-    }
-    if (showSpecialStudent && pRemark.includes('특수')) return { text: '특', isShaded: true };
-    if (pRemark.includes('파스') || pRemark.includes('패스')) {
-      const isPassActive = !dateStr || (dateStr >= AcademicConfig.passStartDate && dateStr <= AcademicConfig.passEndDate);
-      if (isPassActive) {
-        return { text: '파', isShaded: true };
-      }
-      return { text: '', isShaded: false };
-    }
-    if (pRemark.includes('순회')) return { text: '순', isShaded: true };
-    return { text: '', isShaded: false };
   }
 };

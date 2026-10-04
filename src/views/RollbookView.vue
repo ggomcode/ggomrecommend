@@ -140,12 +140,12 @@
               <span v-if="!collapsed" class="truncate">시트 새로고침</span>
             </button>
 
-            <!-- GAS 설정 버튼 -->
+            <!-- GAS 연동 설정 버튼 -->
             <button
               id="gasSettingsBtn"
-              class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 hover:text-slate-900 border border-slate-200 transition-all cursor-pointer"
+              class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all cursor-pointer border-none bg-transparent"
               :class="collapsed ? 'justify-center px-0' : 'justify-start'"
-              title="구글 앱스 스크립트(GAS) 설정"
+              title="구글 앱스 스크립트(GAS) Web App 주소 설정"
             >
               <span class="text-sm">⚙️</span>
               <span v-if="!collapsed" class="truncate">GAS 연동 설정</span>
@@ -218,270 +218,272 @@
       <!-- 본문 스크롤 영역 -->
       <div class="flex-1 overflow-y-auto bg-slate-50 relative">
         <!-- 초보 교사용 직관 퀵 팁 가이드 -->
-        <div class="quick-tip-banner no-print m-4 mb-2" id="quickTipBanner">
-          <span class="tip-icon">💡</span>
-          <span class="tip-text">
-            <strong>출석부 빠른 사용법:</strong> 학생 셀을 <strong>[좌클릭]</strong>하면 출결 상태가 순환 변경되며, <strong>[우클릭]</strong>하면 <strong>결석계 즉시 인쇄(A4 공식서식)</strong> 및 오늘 전교시 일괄 적용을 손쉽게 실행할 수 있습니다.
-          </span>
-          <button type="button" class="tip-close-btn" id="closeQuickTipBtn" title="안내 숨기기">&times;</button>
+        <div class="quick-tip-card no-print" style="margin: 12px 16px 0;">
+          <div class="tip-icon">💡</div>
+          <div class="tip-content">
+            <div class="tip-title">출결 관리 및 결석계 연동 안내</div>
+            <div class="tip-desc">
+              • <strong>출결 입력</strong>: 학생 셀을 <strong>좌클릭</strong>하면 [빈칸(출석) → 병 → 인(생리) → 인(체험) → 인(경조사) → 인(전염병) → 미 → 기] 순으로 순환 변경됩니다. (Shift+클릭 시 역순)<br>
+              • <strong>결석계 인쇄</strong>: 셀 <strong>우클릭</strong> 후 [📑 출석부 기반 결석계 인쇄 / 확인]을 누르면 날짜와 사유가 자동 분석된 결석계 인쇄 모달이 열립니다.<br>
+              • <strong>전교시 일괄 적용</strong>: 셀 <strong>우클릭</strong> 후 [⚡ 오늘 전 교시 일괄 적용]을 누르면 해당 학생의 오늘 전 교시 상태가 한 번에 변경됩니다.
+            </div>
+          </div>
         </div>
 
-        <!-- Dynamic Control Toolbar -->
-        <section class="app-toolbar no-print" id="toolbarControls"></section>
+        <!-- Main Content Area -->
+        <div class="content-area" id="contentContainer">
+          <div class="empty-state">출석부 데이터를 불러오는 중입니다...</div>
+        </div>
 
-        <!-- Main Output Area -->
-        <main class="content-area" id="appOutput" role="main"></main>
-      </div>
-
-      <!-- Custom Print Settings Modal -->
-      <div class="modal-backdrop no-print" id="printModal" style="display: none;">
-        <div class="modal-dialog print-modal-dialog">
-          <div class="modal-header">
-            <div class="modal-title-group">
-              <span class="modal-icon">🖨️</span>
-              <div>
-                <h3 class="modal-title">출석부 맞춤 인쇄 설정</h3>
-                <p class="modal-desc">인쇄할 주차, 날짜 범위, 학급 및 이동반 교실을 선택하세요 (기본값: 일괄 인쇄).</p>
+        <!-- Print Modal Dialog -->
+        <div class="modal-backdrop no-print" id="printModal" style="display: none;">
+          <div class="modal-dialog print-modal-dialog">
+            <div class="modal-header">
+              <div class="modal-title-group">
+                <span class="modal-icon">🖨️</span>
+                <div>
+                  <h3 class="modal-title">출석부 맞춤 인쇄 설정</h3>
+                  <p class="modal-desc">인쇄할 주차, 날짜 범위, 학급 및 이동반 교실을 선택하세요 (기본값: 일괄 인쇄).</p>
+                </div>
+              </div>
+              <button type="button" class="modal-close-btn" id="closePrintModalBtn" title="닫기">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div class="modal-section">
+                <label class="modal-label">인쇄 대상 출석부:</label>
+                <div class="modal-view-badge" id="printModalViewBadge">이동수업 출석부 (1~12반)</div>
+              </div>
+              <div class="modal-section">
+                <label class="modal-label">주차 및 요일 범위:</label>
+                <div class="modal-row" style="margin-bottom: 8px;">
+                  <select id="printModalWeekSelect" class="styled-select"></select>
+                </div>
+                <div class="modal-row day-checkboxes-row" id="printModalDayCheckboxes"></div>
+              </div>
+              <div class="modal-section">
+                <div class="modal-section-header">
+                  <label class="modal-label" id="printModalTargetLabel">인쇄 대상 학급/교실 선택:</label>
+                  <label class="check-label select-all-label">
+                    <input type="checkbox" id="printModalSelectAllTargets" checked /> 전체 선택
+                  </label>
+                </div>
+                <div class="modal-target-grid" id="printModalTargetGrid"></div>
+              </div>
+              <div class="print-estimate-card">
+                <div class="estimate-icon">📄</div>
+                <div class="estimate-info">
+                  <div class="estimate-title">예상 인쇄 매수: <strong id="printModalPageCount">0장</strong> (A4 가로)</div>
+                  <div class="estimate-desc" id="printModalSummary">선택된 학급과 날짜를 기반으로 자동 계산됩니다.</div>
+                </div>
               </div>
             </div>
-            <button type="button" class="modal-close-btn" id="closePrintModalBtn" title="닫기">&times;</button>
-          </div>
-          <div class="modal-body">
-            <div class="modal-section">
-              <label class="modal-label">인쇄 대상 출석부:</label>
-              <div class="modal-view-badge" id="printModalViewBadge">이동수업 출석부 (1~12반)</div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" id="cancelPrintModalBtn">취소</button>
+              <button type="button" class="btn btn-primary" id="confirmPrintModalBtn">
+                <span>🖨️</span> 인쇄 시작 (Ctrl+P)
+              </button>
             </div>
-            <div class="modal-section">
-              <label class="modal-label">주차 및 요일 범위:</label>
-              <div class="modal-row" style="margin-bottom: 8px;">
-                <select id="printModalWeekSelect" class="styled-select"></select>
-              </div>
-              <div class="modal-row day-checkboxes-row" id="printModalDayCheckboxes"></div>
-            </div>
-            <div class="modal-section">
-              <div class="modal-section-header">
-                <label class="modal-label" id="printModalTargetLabel">인쇄 대상 학급/교실 선택:</label>
-                <label class="check-label select-all-label">
-                  <input type="checkbox" id="printModalSelectAllTargets" checked /> 전체 선택
-                </label>
-              </div>
-              <div class="modal-target-grid" id="printModalTargetGrid"></div>
-            </div>
-            <div class="print-estimate-card">
-              <div class="estimate-icon">📄</div>
-              <div class="estimate-info">
-                <div class="estimate-title">예상 인쇄 매수: <strong id="printModalPageCount">0장</strong> (A4 가로)</div>
-                <div class="estimate-desc" id="printModalSummary">선택된 학급과 날짜를 기반으로 자동 계산됩니다.</div>
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" id="cancelPrintModalBtn">취소</button>
-            <button type="button" class="btn btn-primary" id="confirmPrintModalBtn">
-              <span>🖨️</span> 인쇄 시작 (Ctrl+P)
-            </button>
           </div>
         </div>
-      </div>
 
-      <!-- GAS Web App Settings Modal -->
-      <div class="modal-backdrop no-print" id="gasSettingsModal" style="display: none;">
-        <div class="modal-dialog">
-          <div class="modal-header">
-            <div class="modal-title-group">
-              <span class="modal-icon">⚙️</span>
-              <div>
-                <h3 class="modal-title">구글 앱스 스크립트(GAS) Web App 설정</h3>
-                <p class="modal-desc">'출결기록' 시트에 실시간 저장을 위한 웹 앱 주소를 등록합니다.</p>
+        <!-- GAS Web App Settings Modal -->
+        <div class="modal-backdrop no-print" id="gasSettingsModal" style="display: none;">
+          <div class="modal-dialog">
+            <div class="modal-header">
+              <div class="modal-title-group">
+                <span class="modal-icon">⚙️</span>
+                <div>
+                  <h3 class="modal-title">구글 앱스 스크립트(GAS) Web App 설정</h3>
+                  <p class="modal-desc">'출결기록' 시트에 실시간 저장을 위한 웹 앱 주소를 등록합니다.</p>
+                </div>
+              </div>
+              <button type="button" class="modal-close-btn" id="closeGasSettingsBtn" title="닫기">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div class="modal-section">
+                <label class="modal-label" for="gasUrlInput">배포된 Web App URL:</label>
+                <input type="url" id="gasUrlInput" class="styled-input" placeholder="https://script.google.com/macros/s/.../exec" />
+                <div class="field-hint">
+                  ※ 스프레드시트 [확장 프로그램] &gt; [Apps Script]에서 배포한 웹 앱 URL을 입력하세요.<br>
+                  ※ 자세한 설치 방법은 <code>docs/apps_script_code.js</code>를 참고하세요.
+                </div>
+              </div>
+              <div class="modal-section" style="margin-top: 15px;">
+                <label class="modal-label" for="teacherAuthKeyInput">교사용 결석계 관리 인증 키:</label>
+                <input type="text" id="teacherAuthKeyInput" class="styled-input" placeholder="teacher2026" />
+                <div class="field-hint">
+                  ※ 결석계 대장 조회 및 인쇄 페이지 접근 시 사용할 비밀 토큰입니다. (기본값: <code>teacher2026</code>)
+                </div>
               </div>
             </div>
-            <button type="button" class="modal-close-btn" id="closeGasSettingsBtn" title="닫기">&times;</button>
-          </div>
-          <div class="modal-body">
-            <div class="modal-section">
-              <label class="modal-label" for="gasUrlInput">배포된 Web App URL:</label>
-              <input type="url" id="gasUrlInput" class="styled-input" placeholder="https://script.google.com/macros/s/.../exec" />
-              <div class="field-hint">
-                ※ 스프레드시트 [확장 프로그램] &gt; [Apps Script]에서 배포한 웹 앱 URL을 입력하세요.<br>
-                ※ 자세한 설치 방법은 <code>docs/apps_script_code.js</code>를 참고하세요.
-              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" id="cancelGasSettingsBtn">취소</button>
+              <button type="button" class="btn btn-primary" id="saveGasSettingsBtn">저장하기</button>
             </div>
-            <div class="modal-section" style="margin-top: 15px;">
-              <label class="modal-label" for="teacherAuthKeyInput">교사용 결석계 관리 인증 키:</label>
-              <input type="text" id="teacherAuthKeyInput" class="styled-input" placeholder="teacher2026" />
-              <div class="field-hint">
-                ※ 결석계 대장 조회 및 인쇄 페이지 접근 시 사용할 비밀 토큰입니다. (기본값: <code>teacher2026</code>)
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" id="cancelGasSettingsBtn">취소</button>
-            <button type="button" class="btn btn-primary" id="saveGasSettingsBtn">저장하기</button>
           </div>
         </div>
-      </div>
 
-      <!-- NEIS Monthly Attendance Summary Report Modal -->
-      <div class="modal-backdrop no-print" id="neisReportModal" style="display: none;">
-        <div class="modal-dialog modal-xl">
-          <div class="modal-header">
-            <div class="modal-title-group">
-              <span class="modal-icon">📊</span>
-              <div>
-                <h3 class="modal-title">NEIS 월말 출결 마감 집계표</h3>
-                <p class="modal-desc">원적학급별 결석·지각·조퇴·결과 및 인정 4종 누계 내역을 산출합니다.</p>
+        <!-- NEIS Monthly Attendance Summary Report Modal -->
+        <div class="modal-backdrop no-print" id="neisReportModal" style="display: none;">
+          <div class="modal-dialog modal-xl">
+            <div class="modal-header">
+              <div class="modal-title-group">
+                <span class="modal-icon">📊</span>
+                <div>
+                  <h3 class="modal-title">NEIS 월말 출결 마감 집계표</h3>
+                  <p class="modal-desc">원적학급별 결석·지각·조퇴·결과 및 인정 4종 누계 내역을 산출합니다.</p>
+                </div>
               </div>
+              <button type="button" class="modal-close-btn" id="closeNeisReportBtn" title="닫기">&times;</button>
             </div>
-            <button type="button" class="modal-close-btn" id="closeNeisReportBtn" title="닫기">&times;</button>
-          </div>
-          <div class="modal-body">
-            <div class="neis-filter-bar">
-              <div class="neis-filter-group">
-                <label for="neisBanSelect"><strong>학급:</strong></label>
-                <select id="neisBanSelect" class="styled-select"></select>
+            <div class="modal-body">
+              <div class="neis-filter-bar">
+                <div class="neis-filter-group">
+                  <label for="neisBanSelect"><strong>학급:</strong></label>
+                  <select id="neisBanSelect" class="styled-select"></select>
+                </div>
+                <div class="neis-filter-group">
+                  <label for="neisMonthSelect"><strong>대상 월:</strong></label>
+                  <select id="neisMonthSelect" class="styled-select"></select>
+                </div>
+                <div class="neis-summary-badges" id="neisSummaryBadges"></div>
               </div>
-              <div class="neis-filter-group">
-                <label for="neisMonthSelect"><strong>대상 월:</strong></label>
-                <select id="neisMonthSelect" class="styled-select"></select>
+              <div class="neis-table-wrapper" id="neisTableContainer"></div>
+            </div>
+            <div class="modal-footer neis-footer">
+              <div class="footer-left">
+                <button type="button" class="btn btn-secondary" id="copyNeisClipboardBtn">📋 클립보드 복사 (엑셀용)</button>
+                <button type="button" class="btn btn-secondary" id="downloadNeisCsvBtn">📥 CSV 다운로드</button>
+                <button type="button" class="btn btn-secondary" id="printNeisReportBtn">🖨️ 집계표 인쇄</button>
               </div>
-              <div class="neis-summary-badges" id="neisSummaryBadges"></div>
+              <button type="button" class="btn btn-primary" id="closeNeisReportFooterBtn">닫기</button>
             </div>
-            <div class="neis-table-wrapper" id="neisTableContainer"></div>
-          </div>
-          <div class="modal-footer neis-footer">
-            <div class="footer-left">
-              <button type="button" class="btn btn-secondary" id="copyNeisClipboardBtn">📋 클립보드 복사 (엑셀용)</button>
-              <button type="button" class="btn btn-secondary" id="downloadNeisCsvBtn">📥 CSV 다운로드</button>
-              <button type="button" class="btn btn-secondary" id="printNeisReportBtn">🖨️ 집계표 인쇄</button>
-            </div>
-            <button type="button" class="btn btn-primary" id="closeNeisReportFooterBtn">닫기</button>
           </div>
         </div>
-      </div>
 
-      <!-- Attendance Context Menu (Right-Click) -->
-      <div class="context-menu no-print" id="attendanceContextMenu" style="display: none;">
-        <div class="context-menu-header" id="contextMenuTitle">학생 출결 관리</div>
-        <div class="context-menu-section-label">✏️ 출결 상태 빠른 입력</div>
-        <div class="context-menu-item" data-status=""><span class="status-indicator status-present-indicator"></span> 정상 출석 (빈값)</div>
-        <div class="context-menu-item" data-status="병"><span class="status-indicator status-byeong-indicator">병</span> 질병 (병결·병지각)</div>
-        <div class="context-menu-item" data-status="인(생리)"><span class="status-indicator status-in-indicator">인</span> 인정(생리통)</div>
-        <div class="context-menu-item" data-status="인(체험)"><span class="status-indicator status-in-indicator">인</span> 인정(교외체험학습)</div>
-        <div class="context-menu-item" data-status="인(경조사)"><span class="status-indicator status-in-indicator">인</span> 인정(경조사)</div>
-        <div class="context-menu-item" data-status="인(전염병)"><span class="status-indicator status-in-indicator">인</span> 인정(법정 전염병)</div>
-        <div class="context-menu-item" data-status="미"><span class="status-indicator status-mi-indicator">미</span> 미인정 (무단)</div>
-        <div class="context-menu-item" data-status="기"><span class="status-indicator status-gita-indicator">기</span> 기타 결석</div>
-        <div class="context-menu-divider"></div>
-        <div class="context-menu-section-label">⚡ 업무 보조 및 서류</div>
-        <div class="context-menu-item context-menu-action" id="applyAllPeriodsItem"><span>⚡</span> <strong>오늘 전 교시 일괄 적용</strong></div>
-        <div class="context-menu-item context-menu-action" id="toggleDocSubmittedItem"><span>📎</span> <span id="docSubmittedText">증빙서류 제출 여부 토글</span></div>
-        <div class="context-menu-divider"></div>
-        <div class="context-menu-section-card">
-          <div class="context-menu-section-label" style="color: #1d4ed8;">📑 결석계 공식 양식 연동</div>
-          <div class="context-menu-item context-menu-action context-menu-highlight" id="generateAbsenceReportItem"><span>📑</span> <strong>출석부 기반 결석계 인쇄 / 확인</strong></div>
-          <div class="context-menu-item context-menu-action" id="viewAbsenceReportPdfItem" style="display: none;"><span>📄</span> <span id="viewAbsenceReportPdfText" style="color: #4A86E8; font-weight: bold;">결석계 원본 PDF 보기</span></div>
+        <!-- Attendance Context Menu (Right-Click) -->
+        <div class="context-menu no-print" id="attendanceContextMenu" style="display: none;">
+          <div class="context-menu-header" id="contextMenuTitle">학생 출결 관리</div>
+          <div class="context-menu-section-label">✏️ 출결 상태 빠른 입력</div>
+          <div class="context-menu-item" data-status=""><span class="status-indicator status-present-indicator"></span> 정상 출석 (빈값)</div>
+          <div class="context-menu-item" data-status="병"><span class="status-indicator status-byeong-indicator">병</span> 질병 (병결·병지각)</div>
+          <div class="context-menu-item" data-status="인(생리)"><span class="status-indicator status-in-indicator">인</span> 인정(생리통)</div>
+          <div class="context-menu-item" data-status="인(체험)"><span class="status-indicator status-in-indicator">인</span> 인정(교외체험학습)</div>
+          <div class="context-menu-item" data-status="인(경조사)"><span class="status-indicator status-in-indicator">인</span> 인정(경조사)</div>
+          <div class="context-menu-item" data-status="인(전염병)"><span class="status-indicator status-in-indicator">인</span> 인정(법정 전염병)</div>
+          <div class="context-menu-item" data-status="미"><span class="status-indicator status-mi-indicator">미</span> 미인정 (무단)</div>
+          <div class="context-menu-item" data-status="기"><span class="status-indicator status-gita-indicator">기</span> 기타 결석</div>
+          <div class="context-menu-divider"></div>
+          <div class="context-menu-section-label">⚡ 업무 보조 및 서류</div>
+          <div class="context-menu-item context-menu-action" id="applyAllPeriodsItem"><span>⚡</span> <strong>오늘 전 교시 일괄 적용</strong></div>
+          <div class="context-menu-item context-menu-action" id="toggleDocSubmittedItem"><span>📎</span> <span id="docSubmittedText">증빙서류 제출 여부 토글</span></div>
+          <div class="context-menu-divider"></div>
+          <div class="context-menu-section-card">
+            <div class="context-menu-section-label" style="color: #1d4ed8;">📑 결석계 공식 양식 연동</div>
+            <div class="context-menu-item context-menu-action context-menu-highlight" id="generateAbsenceReportItem"><span>📑</span> <strong>출석부 기반 결석계 인쇄 / 확인</strong></div>
+            <div class="context-menu-item context-menu-action" id="viewAbsenceReportPdfItem" style="display: none;"><span>📄</span> <span id="viewAbsenceReportPdfText" style="color: #4A86E8; font-weight: bold;">결석계 원본 PDF 보기</span></div>
+          </div>
         </div>
-      </div>
 
-      <!-- 출석부 기반 결석계 인쇄 및 확인 모달 -->
-      <div class="modal-backdrop no-print" id="absenceQuickEditModal" style="display: none;">
-        <div class="modal-dialog" style="max-width: 580px; background: #ffffff;">
-          <div class="modal-header">
-            <div class="modal-title-group">
-              <span class="modal-icon">📑</span>
-              <div>
-                <h3 class="modal-title" id="aqeModalTitle">출석부 기반 결석계 인쇄</h3>
-                <p class="modal-desc" id="aqeModalDesc">출석부 기록을 바탕으로 자동 분석된 결석계 내용입니다.</p>
+        <!-- 출석부 기반 결석계 인쇄 및 확인 모달 -->
+        <div class="modal-backdrop no-print" id="absenceQuickEditModal" style="display: none;">
+          <div class="modal-dialog" style="max-width: 580px; background: #ffffff;">
+            <div class="modal-header">
+              <div class="modal-title-group">
+                <span class="modal-icon">📑</span>
+                <div>
+                  <h3 class="modal-title" id="aqeModalTitle">출석부 기반 결석계 인쇄</h3>
+                  <p class="modal-desc" id="aqeModalDesc">출석부 기록을 바탕으로 자동 분석된 결석계 내용입니다.</p>
+                </div>
+              </div>
+              <button type="button" class="modal-close-btn" id="closeAqeModalBtn" title="닫기">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div style="background: #eef4ff; border: 1px solid #c9dafc; border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; color: #1a4299;">
+                💡 <strong>출석부 자동 분석 완료:</strong> 필요 시 내용을 수정한 후 인쇄하실 수 있습니다.
+              </div>
+              <div id="aqeStreakNotice" style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 9px 12px; margin-bottom: 12px; font-size: 12.5px; color: #15803d; line-height: 1.4;"></div>
+              <div id="aqePrintModeWrap" style="display: none; background: #fff; border: 1.5px solid #3b82f6; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.08);">
+                <div style="font-size: 12.5px; font-weight: 700; color: #1e40af; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                  <span>🖨️</span> <span>인쇄 방식 선택 (연속 출결 감지됨)</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 6px 8px; border-radius: 4px; background: #eff6ff;" id="aqeModeCombinedLabel">
+                    <input type="radio" name="aqePrintMode" id="aqeModeCombined" value="combined" checked style="cursor: pointer; width: 16px; height: 16px;" />
+                    <div>
+                      <strong style="color: #1d4ed8;">날짜 범위를 묶어 1장으로 통합 인쇄 (권장)</strong>
+                      <div style="font-size: 11.5px; color: #475569;" id="aqeModeCombinedDesc">예: 2026-09-21 ~ 2026-09-23 (3일간) → 1장 출력</div>
+                    </div>
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 6px 8px; border-radius: 4px;" id="aqeModeIndividualLabel">
+                    <input type="radio" name="aqePrintMode" id="aqeModeIndividual" value="individual" style="cursor: pointer; width: 16px; height: 16px;" />
+                    <div>
+                      <strong style="color: #334155;">각 날짜별로 1장씩 분할 인쇄</strong>
+                      <div style="font-size: 11.5px; color: #475569;" id="aqeModeIndividualDesc">예: 각 일자별 1일간 → 총 N장 분할 출력</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+              <div class="row" style="display: flex; gap: 10px; margin-bottom: 12px;">
+                <div style="flex: 1;">
+                  <label class="modal-label">학생 정보:</label>
+                  <input type="text" id="aqeStudentInfo" class="styled-input" readonly style="background: #f8f9fa;" />
+                </div>
+                <div style="flex: 1;">
+                  <label class="modal-label">출결 구분:</label>
+                  <select id="aqeCat" class="styled-input">
+                    <option value="결석">결석</option>
+                    <option value="지각">지각</option>
+                    <option value="조퇴">조퇴</option>
+                    <option value="결과">결과</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row" style="display: flex; gap: 10px; margin-bottom: 12px;">
+                <div style="flex: 1;">
+                  <label class="modal-label">출결 종류:</label>
+                  <select id="aqeType" class="styled-input">
+                    <option value="질병">질병</option>
+                    <option value="생리통">생리통</option>
+                    <option value="출석인정">출석인정</option>
+                    <option value="기타">기타</option>
+                  </select>
+                </div>
+                <div style="flex: 1;" id="aqeSubTypeWrap">
+                  <label class="modal-label">인정 세부종류:</label>
+                  <input type="text" id="aqeSubType" class="styled-input" placeholder="교외체험학습, 경조사, 전염병 등" />
+                </div>
+              </div>
+              <div class="row" style="display: flex; gap: 10px; margin-bottom: 12px;">
+                <div style="flex: 1;">
+                  <label class="modal-label">시작일:</label>
+                  <input type="date" id="aqeStartDate" class="styled-input" />
+                </div>
+                <div style="flex: 1;">
+                  <label class="modal-label">종료일:</label>
+                  <input type="date" id="aqeEndDate" class="styled-input" />
+                </div>
+              </div>
+              <div class="row" style="display: flex; gap: 10px; margin-bottom: 12px;">
+                <div style="flex: 1;">
+                  <label class="modal-label">총 기간 표기:</label>
+                  <input type="text" id="aqeTotalDays" class="styled-input" placeholder="예: 1일간, 3일간" />
+                </div>
+                <div style="flex: 1;">
+                  <label class="modal-label">교시 범위 (지각·조퇴·결과):</label>
+                  <input type="text" id="aqePeriods" class="styled-input" placeholder="예: 1교시 ~ 6교시" />
+                </div>
+              </div>
+              <div style="margin-bottom: 12px;">
+                <label class="modal-label">사유 상세:</label>
+                <input type="text" id="aqeReason" class="styled-input" placeholder="사유를 입력하세요" />
+              </div>
+              <div style="margin-bottom: 12px;">
+                <label class="modal-label">보호자 성명:</label>
+                <input type="text" id="aqeParentName" class="styled-input" value="학부모" />
               </div>
             </div>
-            <button type="button" class="modal-close-btn" id="closeAqeModalBtn" title="닫기">&times;</button>
-          </div>
-          <div class="modal-body">
-            <div style="background: #eef4ff; border: 1px solid #c9dafc; border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; color: #1a4299;">
-              💡 <strong>출석부 자동 분석 완료:</strong> 필요 시 내용을 수정한 후 인쇄하실 수 있습니다.
-            </div>
-            <div id="aqeStreakNotice" style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 9px 12px; margin-bottom: 12px; font-size: 12.5px; color: #15803d; line-height: 1.4;"></div>
-            <div id="aqePrintModeWrap" style="display: none; background: #fff; border: 1.5px solid #3b82f6; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.08);">
-              <div style="font-size: 12.5px; font-weight: 700; color: #1e40af; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-                <span>🖨️</span> <span>인쇄 방식 선택 (연속 출결 감지됨)</span>
-              </div>
-              <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 6px 8px; border-radius: 4px; background: #eff6ff;" id="aqeModeCombinedLabel">
-                  <input type="radio" name="aqePrintMode" id="aqeModeCombined" value="combined" checked style="cursor: pointer; width: 16px; height: 16px;" />
-                  <div>
-                    <strong style="color: #1d4ed8;">날짜 범위를 묶어 1장으로 통합 인쇄 (권장)</strong>
-                    <div style="font-size: 11.5px; color: #475569;" id="aqeModeCombinedDesc">예: 2026-09-21 ~ 2026-09-23 (3일간) → 1장 출력</div>
-                  </div>
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 6px 8px; border-radius: 4px;" id="aqeModeIndividualLabel">
-                  <input type="radio" name="aqePrintMode" id="aqeModeIndividual" value="individual" style="cursor: pointer; width: 16px; height: 16px;" />
-                  <div>
-                    <strong style="color: #334155;">각 날짜별로 1장씩 분할 인쇄</strong>
-                    <div style="font-size: 11.5px; color: #475569;" id="aqeModeIndividualDesc">예: 각 일자별 1일간 → 총 N장 분할 출력</div>
-                  </div>
-                </label>
-              </div>
-            </div>
-            <div class="row" style="display: flex; gap: 10px; margin-bottom: 12px;">
-              <div style="flex: 1;">
-                <label class="modal-label">학생 정보:</label>
-                <input type="text" id="aqeStudentInfo" class="styled-input" readonly style="background: #f8f9fa;" />
-              </div>
-              <div style="flex: 1;">
-                <label class="modal-label">출결 구분:</label>
-                <select id="aqeCat" class="styled-input">
-                  <option value="결석">결석</option>
-                  <option value="지각">지각</option>
-                  <option value="조퇴">조퇴</option>
-                  <option value="결과">결과</option>
-                </select>
-              </div>
-            </div>
-            <div class="row" style="display: flex; gap: 10px; margin-bottom: 12px;">
-              <div style="flex: 1;">
-                <label class="modal-label">출결 종류:</label>
-                <select id="aqeType" class="styled-input">
-                  <option value="질병">질병</option>
-                  <option value="생리통">생리통</option>
-                  <option value="출석인정">출석인정</option>
-                  <option value="기타">기타</option>
-                </select>
-              </div>
-              <div style="flex: 1;" id="aqeSubTypeWrap">
-                <label class="modal-label">인정 세부종류:</label>
-                <input type="text" id="aqeSubType" class="styled-input" placeholder="교외체험학습, 경조사, 전염병 등" />
-              </div>
-            </div>
-            <div class="row" style="display: flex; gap: 10px; margin-bottom: 12px;">
-              <div style="flex: 1;">
-                <label class="modal-label">시작일:</label>
-                <input type="date" id="aqeStartDate" class="styled-input" />
-              </div>
-              <div style="flex: 1;">
-                <label class="modal-label">종료일:</label>
-                <input type="date" id="aqeEndDate" class="styled-input" />
-              </div>
-            </div>
-            <div class="row" style="display: flex; gap: 10px; margin-bottom: 12px;">
-              <div style="flex: 1;">
-                <label class="modal-label">총 기간 표기:</label>
-                <input type="text" id="aqeTotalDays" class="styled-input" placeholder="예: 1일간, 3일간" />
-              </div>
-              <div style="flex: 1;">
-                <label class="modal-label">교시 범위 (지각·조퇴·결과):</label>
-                <input type="text" id="aqePeriods" class="styled-input" placeholder="예: 1교시 ~ 6교시" />
-              </div>
-            </div>
-            <div style="margin-bottom: 12px;">
-              <label class="modal-label">사유 상세:</label>
-              <input type="text" id="aqeReason" class="styled-input" placeholder="사유를 입력하세요" />
-            </div>
-            <div style="margin-bottom: 12px;">
-              <label class="modal-label">보호자 성명:</label>
-              <input type="text" id="aqeParentName" class="styled-input" value="학부모" />
-            </div>
-          </div>
-          <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
               <button type="button" class="btn btn-secondary" id="cancelAqeModalBtn">취소</button>
               <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                 <a :href="printSheetUrl" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="구글 스프레드시트 공식 인쇄 양식 열기">
@@ -493,13 +495,14 @@
           </div>
         </div>
 
-      <!-- A4 결석계 브라우저 직접 인쇄 컨테이너 -->
-      <div id="absencePrintSection" class="print-only" style="display: none;"></div>
+        <!-- A4 결석계 브라우저 직접 인쇄 컨테이너 -->
+        <div id="absencePrintSection" class="print-only" style="display: none;"></div>
 
-      <!-- Loading Overlay -->
-      <div class="loading-overlay" id="loadingOverlay" style="display: none;">
-        <div class="spinner"></div>
-        <div class="loading-text">구글 시트 데이터를 동기화하고 출석부를 생성하고 있습니다...</div>
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+          <div class="spinner"></div>
+          <div class="loading-text">구글 시트 데이터를 동기화하고 출석부를 생성하고 있습니다...</div>
+        </div>
       </div>
     </div>
   </div>

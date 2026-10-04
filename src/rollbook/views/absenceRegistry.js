@@ -1,4 +1,3 @@
-import { SheetAPI } from '../api.js';
 /**
  * AbsenceRegistryView - 교사용 결석계 대장 조회 및 브라우저 즉시 인쇄 뷰
  * 구글 시트('대장')를 gviz/tq로 직접 실시간 조회하여 0초 만에 대장을 표시하고 브라우저로 직접 A4 출력합니다.
@@ -197,7 +196,7 @@ export const AbsenceRegistryView = {
                   <th style="width: 140px; padding: 10px;">기간</th>
                   <th style="padding: 10px; text-align: left;">사유</th>
                   <th style="width: 110px; padding: 10px;">출력상태</th>
-                  <th style="width: 170px; padding: 10px;">작업 / 서식</th>
+                  <th style="width: 120px; padding: 10px;">작업</th>
                 </tr>
               </thead>
               <tbody>
@@ -223,18 +222,11 @@ export const AbsenceRegistryView = {
                       <td style="padding: 10px; font-size: 12px; color: #495057;">${escapeHtml(r.startDate)} ~ ${escapeHtml(r.endDate)}</td>
                       <td style="padding: 10px; text-align: left; color: #333; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(r.reason)}">${escapeHtml(r.reason)}</td>
                       <td style="padding: 10px;">${printBadge}</td>
-                      <td style="padding: 8px 10px; white-space: nowrap;">
-  <div style="display: inline-flex; gap: 5px; align-items: center;">
-    <button type="button" class="btn btn-sm btn-print-single" data-no="${escapeHtml(r.no)}" style="padding: 4px 10px; font-size: 12px; background: #4A86E8; color: white; border: none; border-radius: 4px; cursor: pointer;" title="포곡고 공식 A4 양식으로 즉시 인쇄">
-      🖨️ 인쇄
-    </button>
-    ${r.pdfUrl ? `
-      <a href="${escapeHtml(r.pdfUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="padding: 3px 8px; font-size: 11px; background: #e0f2fe; color: #0284c7; text-decoration: none; border-radius: 4px; border: 1px solid #bae6fd; font-weight: 500;" title="구글 드라이브에 보관된 PDF 열기">
-        📄 PDF
-      </a>
-    ` : ''}
-  </div>
-</td>
+                      <td style="padding: 10px;">
+                        <button type="button" class="btn btn-sm btn-print-single" data-no="${escapeHtml(r.no)}" style="padding: 4px 10px; font-size: 12px; background: #4A86E8; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                          🖨️ 인쇄
+                        </button>
+                      </td>
                     </tr>
                   `;
                 }).join('')}
