@@ -682,27 +682,6 @@ export function printRuralClassRoster(title, rosterRows) {
             <h1 class="main-title">2027학년도 대입 농어촌 전형 추천 대장</h1>
             <div class="sub-title">학급: <strong>${group.label}</strong> (신청 건수: 총 ${group.rows.length}건)</div>
           </div>
-
-          <!-- 4단 결재란 (단일 tbody 구성) -->
-          <div class="approval-area">
-            <table class="stamp-box">
-              <tbody>
-                <tr>
-                  <th rowspan="2" class="stamp-side-th">결<br>재</th>
-                  <td class="stamp-header-td">담임</td>
-                  <td class="stamp-header-td">부장</td>
-                  <td class="stamp-header-td">교감</td>
-                  <td class="stamp-header-td">교장</td>
-                </tr>
-                <tr>
-                  <td class="stamp-sign-td"></td>
-                  <td class="stamp-sign-td"></td>
-                  <td class="stamp-sign-td"></td>
-                  <td class="stamp-sign-td"></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
         </div>
 
         <!-- 2행: 대장 테이블 (A4 가로 9개 컬럼 규격) -->
@@ -803,40 +782,6 @@ export function printRuralClassRoster(title, rosterRows) {
           font-size: 11.5px;
           color: #475569;
           margin-top: 4px;
-        }
-
-        /* 결재란 */
-        .approval-area {
-          margin-left: 16px;
-        }
-        .stamp-box {
-          border-collapse: collapse;
-          text-align: center;
-          border: 1px solid #334155;
-          background: #ffffff;
-        }
-        .stamp-side-th {
-          padding: 2px 6px;
-          border: 1px solid #334155;
-          background: #f1f5f9;
-          font-weight: 800;
-          font-size: 11px;
-          line-height: 1.2;
-          width: 22px;
-        }
-        .stamp-header-td {
-          padding: 3px 8px;
-          border: 1px solid #334155;
-          background: #f8fafc;
-          font-weight: bold;
-          font-size: 11px;
-          width: 52px;
-          text-align: center;
-        }
-        .stamp-sign-td {
-          height: 40px;
-          border: 1px solid #334155;
-          min-width: 52px;
         }
 
         /* 테이블 */
