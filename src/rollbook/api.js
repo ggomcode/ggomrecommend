@@ -1,27 +1,79 @@
 /**
- * Google Sheets API & CSV Loader Service for ggomrollbook
- * Supports live Google Sheets fetch via gviz/tq (JSONP / CSV) with offline fallback.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * [통합 환경 설정] 선택교과 출석관리 및 결석계 관리 시스템
+ * 구글 스크립트 속성에 일일이 들어갈 필요 없이, 모든 시트 ID, GID, GAS 웹앱 URL,
+ * 드라이브 폴더 ID를 이 파일 상단에서 모두 일괄 관리합니다.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 
-const SHEET_ID = '1-Ki9X_EKw5xEq-Pc-ba-PBU6VWhvdBun-1bkUjTTH0Q';
-const GID_ATTENDANCE = '923106420'; // 출결사항 (구 취합)
-const GID_HOLIDAYS = '969683114';   // 행사및휴일
-const SHEET_NAME_RECORDS = '출결기록'; // 사용자 추가 시트
-const GID_PRINT = '256444665';       // 인쇄 양식 시트
-const GID_REGISTRY = '334191447';    // 결석계 접수 대장 시트
+export const ROLLBOOK_CONFIG = {
+  // 1. 구글 스프레드시트 및 스크립트 ID
+  SHEET_ID: '1-Ki9X_EKw5xEq-Pc-ba-PBU6VWhvdBun-1bkUjTTH0Q',
+  SCRIPT_ID: '1CL3o-9sgbEvpGbz645c1fY-luyzMbjS4u6C8cZ_7v9M',
 
-// Deployed Google Apps Script (GAS) Web App URL for real-time sheet sync
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbwmLRX6kyuS3NTTeCLk0T7PB-Zk-tZlfFsTnjOyvdwlcGn03PAbufa8s4MbYJs8nFI/exec';
+  // 2. 배포된 Google Apps Script (GAS) Web App URL
+  DEFAULT_GAS_URL: 'https://script.google.com/macros/s/AKfycbwmLRX6kyuS3NTTeCLk0T7PB-Zk-tZlfFsTnjOyvdwlcGn03PAbufa8s4MbYJs8nFI/exec',
+
+  // 3. 스프레드시트 각 탭 GID 및 시트명
+  GIDS: {
+    ATTENDANCE: '923106420',   // 출결사항 (구 취합)
+    HOLIDAYS: '969683114',     // 행사및휴일
+    REGISTRY: '334191447',     // 결석계 접수 대장
+    PRINT: '256444665',        // 공식 결석계 인쇄 양식
+    RECORDS_NAME: '출결기록'   // 실시간 출결 오버라이드 기록 시트명
+  },
+
+  // 4. 구글 드라이브 저장 폴더 ID (기존 GAS 스크립트 속성 대체)
+  // 여기에 드라이브 폴더 ID 문자열을 적어두시면 GAS가 이 값을 바로 인식하여 저장합니다.
+  DRIVE_FOLDERS: {
+    FOLDER_ID: '',          // 생성된 공식 결석계 PDF 파일이 저장될 폴더 ID
+    PARENT_FOLDER_ID: '',   // 학부모 전자 서명 이미지(PNG)가 저장될 폴더 ID
+    STUDENT_FOLDER_ID: '',  // 학생 전자 서명 이미지(PNG)가 저장될 폴더 ID
+    TARGET_ROW: ''          // 대상 행 지정 (선택적)
+  },
+
+  // 5. 시스템 기본값 (학년, 반 구성)
+  SYSTEM_DEFAULTS: {
+    TARGET_GRADE: 3,  // 기본 대상 학년
+    MAX_GRADE: 3,     // 최대 학년
+    MAX_CLASS: 11,    // 최대 반 수 (1~11반)
+    MAX_NUMBER: 35    // 최대 학생 번호
+  }
+};
+
+const SHEET_ID = ROLLBOOK_CONFIG.SHEET_ID;
+const GID_ATTENDANCE = ROLLBOOK_CONFIG.GIDS.ATTENDANCE;
+const GID_HOLIDAYS = ROLLBOOK_CONFIG.GIDS.HOLIDAYS;
+const SHEET_NAME_RECORDS = ROLLBOOK_CONFIG.GIDS.RECORDS_NAME;
+const GID_PRINT = ROLLBOOK_CONFIG.GIDS.PRINT;
+const GID_REGISTRY = ROLLBOOK_CONFIG.GIDS.REGISTRY;
+const DEFAULT_GAS_URL = ROLLBOOK_CONFIG.DEFAULT_GAS_URL;
+
 let _configuredGasUrl = localStorage.getItem('ggom_gas_webapp_url') || DEFAULT_GAS_URL;
 
 export const SheetAPI = {
+  config: ROLLBOOK_CONFIG,
   sheetId: SHEET_ID,
+  scriptId: ROLLBOOK_CONFIG.SCRIPT_ID,
   gidAttendance: GID_ATTENDANCE,
   gidHolidays: GID_HOLIDAYS,
   sheetNameRecords: SHEET_NAME_RECORDS,
   gidPrint: GID_PRINT,
   gidRegistry: GID_REGISTRY,
+  driveFolders: ROLLBOOK_CONFIG.DRIVE_FOLDERS,
+  systemDefaults: ROLLBOOK_CONFIG.SYSTEM_DEFAULTS,
   defaultGasUrl: DEFAULT_GAS_URL,
+
+  // 시트 바로가기 URL 생성 헬퍼
+  getRegistrySheetUrl() {
+    return `https://docs.google.com/spreadsheets/d/${this.sheetId}/edit?gid=${this.gidRegistry}#gid=${this.gidRegistry}`;
+  },
+  getPrintSheetUrl() {
+    return `https://docs.google.com/spreadsheets/d/${this.sheetId}/edit?gid=${this.gidPrint}#gid=${this.gidPrint}`;
+  },
+  getHolidaysSheetUrl() {
+    return `https://docs.google.com/spreadsheets/d/${this.sheetId}/edit?gid=${this.gidHolidays}#gid=${this.gidHolidays}`;
+  },
 
   getGasUrl() {
     return _configuredGasUrl || localStorage.getItem('ggom_gas_webapp_url') || DEFAULT_GAS_URL;
@@ -208,13 +260,25 @@ export const SheetAPI = {
       return { status: 'no_gas_url', message: 'GAS URL 미설정' };
     }
 
+    // api.js 상단 설정값 자동 주입
+    const enrichedPayload = {
+      folderConfig: {
+        folderId: ROLLBOOK_CONFIG.DRIVE_FOLDERS.FOLDER_ID,
+        parentFolderId: ROLLBOOK_CONFIG.DRIVE_FOLDERS.PARENT_FOLDER_ID,
+        studentFolderId: ROLLBOOK_CONFIG.DRIVE_FOLDERS.STUDENT_FOLDER_ID,
+        targetRow: ROLLBOOK_CONFIG.DRIVE_FOLDERS.TARGET_ROW
+      },
+      systemConfig: ROLLBOOK_CONFIG.SYSTEM_DEFAULTS,
+      ...payload
+    };
+
     try {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'text/plain;charset=utf-8'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(enrichedPayload)
       });
 
       if (!response.ok) {

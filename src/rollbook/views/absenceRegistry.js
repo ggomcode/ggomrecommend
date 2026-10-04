@@ -1,3 +1,4 @@
+import { SheetAPI } from '../api.js';
 /**
  * AbsenceRegistryView - 교사용 결석계 대장 조회 및 브라우저 즉시 인쇄 뷰
  * 구글 시트('대장')를 gviz/tq로 직접 실시간 조회하여 0초 만에 대장을 표시하고 브라우저로 직접 A4 출력합니다.

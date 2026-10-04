@@ -278,7 +278,7 @@
           <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
               <button type="button" class="btn btn-secondary" id="cancelAqeModalBtn">취소</button>
               <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                <a href="https://docs.google.com/spreadsheets/d/1-Ki9X_EKw5xEq-Pc-ba-PBU6VWhvdBun-1bkUjTTH0Q/edit?gid=256444665#gid=256444665" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="구글 스프레드시트 공식 인쇄 양식 열기">
+                <a :href="printSheetUrl" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="구글 스프레드시트 공식 인쇄 양식 열기">
                   📑 인쇄 시트 원본
                 </a>
                 <button type="button" class="btn btn-primary" id="printAqeBtn">🖨️ 포곡고 공식 양식 즉시 인쇄</button>
@@ -320,7 +320,7 @@
           <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
               <button type="button" class="btn btn-secondary" id="cancelAqeModalBtn">취소</button>
               <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                <a href="https://docs.google.com/spreadsheets/d/1-Ki9X_EKw5xEq-Pc-ba-PBU6VWhvdBun-1bkUjTTH0Q/edit?gid=256444665#gid=256444665" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="구글 스프레드시트 공식 인쇄 양식 열기">
+                <a :href="printSheetUrl" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="구글 스프레드시트 공식 인쇄 양식 열기">
                   📑 인쇄 시트 원본
                 </a>
                 <button type="button" class="btn btn-primary" id="printAqeBtn">🖨️ 포곡고 공식 양식 즉시 인쇄</button>
@@ -492,7 +492,7 @@
           <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
               <button type="button" class="btn btn-secondary" id="cancelAqeModalBtn">취소</button>
               <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                <a href="https://docs.google.com/spreadsheets/d/1-Ki9X_EKw5xEq-Pc-ba-PBU6VWhvdBun-1bkUjTTH0Q/edit?gid=256444665#gid=256444665" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="구글 스프레드시트 공식 인쇄 양식 열기">
+                <a :href="printSheetUrl" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="구글 스프레드시트 공식 인쇄 양식 열기">
                   📑 인쇄 시트 원본
                 </a>
                 <button type="button" class="btn btn-primary" id="printAqeBtn">🖨️ 포곡고 공식 양식 즉시 인쇄</button>
@@ -520,6 +520,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { BookOpen, ChevronRight, Menu, Home, LogOut, User } from 'lucide-vue-next'
+import { SheetAPI } from '../rollbook/api.js'
 import App from '../rollbook/app.js'
 import '../rollbook/rollbook.css'
 
@@ -529,6 +530,7 @@ const rollbookContainer = ref(null)
 const collapsed = ref(false)
 const activeView = ref('homeroom')
 let appInstance = null
+const printSheetUrl = computed(() => SheetAPI.getPrintSheetUrl())
 
 // 사이드바 메뉴 정의 (전체 테마와 일치하는 효율적 구조)
 const rollbookMenus = [
