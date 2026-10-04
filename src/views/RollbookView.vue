@@ -275,17 +275,14 @@
               </div>
             </div>
           </div>
-          <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-              <button type="button" class="btn btn-secondary" id="cancelAqeModalBtn">취소</button>
-              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                <a :href="printSheetUrl" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="구글 스프레드시트 공식 인쇄 양식 열기">
-                  📑 인쇄 시트 원본
-                </a>
-                <button type="button" class="btn btn-primary" id="printAqeBtn">🖨️ 포곡고 공식 양식 즉시 인쇄</button>
-              </div>
-            </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="cancelPrintModalBtn">취소</button>
+            <button type="button" class="btn btn-primary" id="confirmPrintModalBtn">
+              <span>🖨️</span> 인쇄 시작 (Ctrl+P)
+            </button>
           </div>
         </div>
+      </div>
 
       <!-- GAS Web App Settings Modal -->
       <div class="modal-backdrop no-print" id="gasSettingsModal" style="display: none;">
@@ -317,17 +314,12 @@
               </div>
             </div>
           </div>
-          <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-              <button type="button" class="btn btn-secondary" id="cancelAqeModalBtn">취소</button>
-              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                <a :href="printSheetUrl" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="구글 스프레드시트 공식 인쇄 양식 열기">
-                  📑 인쇄 시트 원본
-                </a>
-                <button type="button" class="btn btn-primary" id="printAqeBtn">🖨️ 포곡고 공식 양식 즉시 인쇄</button>
-              </div>
-            </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="cancelGasSettingsBtn">취소</button>
+            <button type="button" class="btn btn-primary" id="saveGasSettingsBtn">저장하기</button>
           </div>
         </div>
+      </div>
 
       <!-- NEIS Monthly Attendance Summary Report Modal -->
       <div class="modal-backdrop no-print" id="neisReportModal" style="display: none;">
@@ -500,7 +492,6 @@
             </div>
           </div>
         </div>
-      </div>
 
       <!-- A4 결석계 브라우저 직접 인쇄 컨테이너 -->
       <div id="absencePrintSection" class="print-only" style="display: none;"></div>
