@@ -7,6 +7,8 @@ const SHEET_ID = '1-Ki9X_EKw5xEq-Pc-ba-PBU6VWhvdBun-1bkUjTTH0Q';
 const GID_ATTENDANCE = '923106420'; // 출결사항 (구 취합)
 const GID_HOLIDAYS = '969683114';   // 행사및휴일
 const SHEET_NAME_RECORDS = '출결기록'; // 사용자 추가 시트
+const GID_PRINT = '256444665';       // 인쇄 양식 시트
+const GID_REGISTRY = '334191447';    // 결석계 접수 대장 시트
 
 // Deployed Google Apps Script (GAS) Web App URL for real-time sheet sync
 const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbwmLRX6kyuS3NTTeCLk0T7PB-Zk-tZlfFsTnjOyvdwlcGn03PAbufa8s4MbYJs8nFI/exec';
@@ -17,6 +19,8 @@ export const SheetAPI = {
   gidAttendance: GID_ATTENDANCE,
   gidHolidays: GID_HOLIDAYS,
   sheetNameRecords: SHEET_NAME_RECORDS,
+  gidPrint: GID_PRINT,
+  gidRegistry: GID_REGISTRY,
   defaultGasUrl: DEFAULT_GAS_URL,
 
   getGasUrl() {
@@ -194,6 +198,80 @@ export const SheetAPI = {
   /**
    * Fetch sheet data using Google Visualization API (JSONP callback)
    */
+  /**
+   * Common helper to POST JSON payload to GAS Web App
+   */
+  async postToGas(payload) {
+    const url = this.getGasUrl();
+    if (!url) {
+      console.warn('Google Apps Script Web App URL이 설정되지 않았습니다.');
+      return { status: 'no_gas_url', message: 'GAS URL 미설정' };
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`GAS POST failed with HTTP ${response.status}`);
+      }
+
+      try {
+        return await response.json();
+      } catch (e) {
+        return { status: 'success', raw: true };
+      }
+    } catch (err) {
+      console.error('GAS 요청 실패:', err);
+      throw err;
+    }
+  },
+
+  /**
+   * Submit absence report to GAS (Maps to '인쇄' sheet, creates PDF, saves to '대장')
+   */
+  async submitAbsenceReport(reportData) {
+    return await this.postToGas({
+      action: 'submitReport',
+      data: reportData
+    });
+  },
+
+  /**
+   * Map to '인쇄' sheet and generate PDF without adding a new row to '대장'
+   */
+  async printReportOnly(reportData) {
+    return await this.postToGas({
+      action: 'printReport',
+      data: reportData
+    });
+  },
+
+  /**
+   * Recreate PDF for a specific row in '대장' sheet
+   */
+  async recreateAbsencePdf(rowNo) {
+    return await this.postToGas({
+      action: 'recreatePdf',
+      rowNo
+    });
+  },
+
+  /**
+   * Generate merged single PDF for multiple selected rows
+   */
+  async generateMergedAbsencePdf(rowNos) {
+    return await this.postToGas({
+      action: 'generateMergedPdf',
+      rowNos
+    });
+  },
+
   fetchViaGvizJsonp(gid) {
     return new Promise((resolve, reject) => {
       const callbackName = `gvizCallback_${gid}_${Date.now()}`;
@@ -235,9 +313,21 @@ export const SheetAPI = {
    */
   convertGvizJsonToCsv(json) {
     if (!json || !json.table || !json.table.rows) return '';
-    const rows = json.table.rows;
     const lines = [];
 
+    // Include header row from cols if present
+    if (json.table.cols && json.table.cols.some(c => c && c.label)) {
+      const headerLine = json.table.cols.map(c => {
+        let val = c ? (c.label || '') : '';
+        if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+          val = '"' + val.replace(/"/g, '""') + '"';
+        }
+        return val;
+      }).join(',');
+      lines.push(headerLine);
+    }
+
+    const rows = json.table.rows;
     rows.forEach(r => {
       const cells = r.c || [];
       const line = cells.map(cell => {

@@ -1,47 +1,208 @@
 <template>
-  <div class="rollbook-root">
-    <!-- ggomrecommend 전용 상단 네비게이션 바 (인쇄 시 숨김) -->
-    <div class="rb-site-header no-print">
-      <div class="rb-site-header-inner">
-        <div class="rb-site-brand">
-          <div class="rb-site-brand-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-            </svg>
+  <div class="flex h-screen overflow-hidden bg-slate-100 font-sans rollbook-root">
+
+    <!-- 1. 좌측 사이드바 (전체 앱 테마와 일치, 인쇄 시 자동 숨김) -->
+    <aside
+      class="flex flex-col shrink-0 bg-white border-r border-slate-200 overflow-hidden transition-all duration-200 shadow-sm no-print select-none z-40"
+      :style="{ width: collapsed ? '64px' : '240px' }"
+    >
+      <!-- 로고 & 시스템명 & 접기 버튼 -->
+      <div class="flex items-center shrink-0 h-15 border-b border-slate-100 px-3 justify-between">
+        <div v-if="!collapsed" class="flex items-center gap-2.5 whitespace-nowrap overflow-hidden">
+          <div class="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <BookOpen :size="18" />
           </div>
-          <div>
-            <span class="rb-site-school">{{ schoolName }}</span>
-            <span class="rb-site-title">선택교과 출석관리</span>
+          <div class="flex flex-col leading-tight">
+            <span class="text-[11px] font-extrabold text-teal-600 tracking-tight">{{ schoolName }}</span>
+            <span class="text-sm font-bold text-slate-900 truncate">선택교과 출석관리</span>
           </div>
         </div>
-        <div class="rb-site-actions">
-          <div class="rb-site-user">
-            <span class="rb-user-name">{{ userName }}</span>
-            <span class="rb-user-role" :class="roleBadgeClass">{{ roleLabel }}</span>
+        <button
+          @click="collapsed = !collapsed"
+          class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer border-none bg-transparent"
+          :title="collapsed ? '사이드바 펼치기' : '사이드바 접기'"
+        >
+          <ChevronRight v-if="collapsed" :size="18" />
+          <Menu v-else :size="18" />
+        </button>
+      </div>
+
+      <!-- 메뉴 내비게이션 목록 (세로 배치 및 효율적 그룹화) -->
+      <div class="flex-1 overflow-y-auto p-2 space-y-4">
+        <!-- 그룹 1: 출석부 조회/체크 -->
+        <div>
+          <div v-if="!collapsed" class="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-1.5">
+            출석부 조회 / 체크
           </div>
-          <button @click="goToPortal" class="rb-nav-btn" title="포털(대문)으로 이동">
-            🏠 <span class="rb-nav-btn-text">포털 이동</span>
-          </button>
-          <button @click="handleLogout" class="rb-nav-btn rb-nav-btn-logout">로그아웃</button>
+          <div class="space-y-1">
+            <button
+              v-for="item in rollbookMenus"
+              :key="item.key"
+              :id="item.id"
+              :data-view="item.key"
+              @click="handleMenuClick(item.key)"
+              :title="item.label + (item.sub ? ' (' + item.sub + ')' : '')"
+              :class="[
+                'nav-btn rb-sidebar-nav-btn w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-150 cursor-pointer border-none text-left',
+                activeView === item.key
+                  ? 'bg-teal-50 text-teal-700 font-bold shadow-2xs'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium',
+                collapsed ? 'justify-center px-0' : 'justify-start'
+              ]"
+            >
+              <span class="text-base shrink-0">{{ item.icon }}</span>
+              <span v-if="!collapsed" class="truncate flex-1">{{ item.label }}</span>
+              <span
+                v-if="!collapsed && item.sub"
+                :class="[
+                  'text-[10px] font-semibold px-1.5 py-0.5 rounded',
+                  item.highlight ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500'
+                ]"
+              >
+                {{ item.sub }}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 그룹 2: 출결 관리 & 부가기능 -->
+        <div>
+          <div v-if="!collapsed" class="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-1.5">
+            출결 관리 &amp; 부가기능
+          </div>
+          <div class="space-y-1">
+            <button
+              v-for="item in serviceMenus"
+              :key="item.key"
+              :id="item.id"
+              :data-view="item.key"
+              @click="handleMenuClick(item.key)"
+              :title="item.label + (item.sub ? ' (' + item.sub + ')' : '')"
+              :class="[
+                'nav-btn rb-sidebar-nav-btn w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-150 cursor-pointer border-none text-left',
+                activeView === item.key
+                  ? 'bg-teal-50 text-teal-700 font-bold shadow-2xs'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium',
+                collapsed ? 'justify-center px-0' : 'justify-start'
+              ]"
+            >
+              <span class="text-base shrink-0">{{ item.icon }}</span>
+              <span v-if="!collapsed" class="truncate flex-1">{{ item.label }}</span>
+              <span
+                v-if="!collapsed && item.sub"
+                :class="[
+                  'text-[10px] font-semibold px-1.5 py-0.5 rounded',
+                  item.highlight ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500'
+                ]"
+              >
+                {{ item.sub }}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 빠른 실행 도구 (Quick Tools) -->
+        <div>
+          <div v-if="!collapsed" class="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-1.5">
+            빠른 실행 도구
+          </div>
+          <div class="space-y-1">
+            <!-- 출석부 인쇄 버튼 -->
+            <button
+              id="printBtn"
+              class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 transition-all cursor-pointer border-none shadow-2xs"
+              :class="collapsed ? 'justify-center px-0' : 'justify-start'"
+              title="A4 가로 정밀 인쇄 (Ctrl+P)"
+            >
+              <span class="text-sm">🖨️</span>
+              <span v-if="!collapsed" class="truncate">출석부 인쇄 (Ctrl+P)</span>
+            </button>
+
+            <!-- NEIS 마감 집계 버튼 -->
+            <button
+              id="neisReportBtn"
+              class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 hover:text-slate-900 border border-slate-200 transition-all cursor-pointer"
+              :class="collapsed ? 'justify-center px-0' : 'justify-start'"
+              title="NEIS 월말 출결 마감용 학생별 누계표"
+            >
+              <span class="text-sm">📊</span>
+              <span v-if="!collapsed" class="truncate">NEIS 마감 집계</span>
+            </button>
+
+            <!-- 시트 새로고침 버튼 -->
+            <button
+              id="refreshBtn"
+              class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 hover:text-slate-900 border border-slate-200 transition-all cursor-pointer"
+              :class="collapsed ? 'justify-center px-0' : 'justify-start'"
+              title="구글 시트 실시간 데이터 새로고침"
+            >
+              <span class="text-sm refresh-icon">🔄</span>
+              <span v-if="!collapsed" class="truncate">시트 새로고침</span>
+            </button>
+
+            <!-- GAS 설정 버튼 -->
+            <button
+              id="gasSettingsBtn"
+              class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 hover:text-slate-900 border border-slate-200 transition-all cursor-pointer"
+              :class="collapsed ? 'justify-center px-0' : 'justify-start'"
+              title="구글 앱스 스크립트(GAS) 설정"
+            >
+              <span class="text-sm">⚙️</span>
+              <span v-if="!collapsed" class="truncate">GAS 연동 설정</span>
+            </button>
+
+            <!-- 결석계 관리 바로가기 리스너 연결용 숨김 태그 -->
+            <button id="absenceReportBtn" style="display: none;"></button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- ggomrollbook 앱 영역 (원본 HTML 구조 그대로) -->
-    <div class="rollbook-app" ref="rollbookContainer">
-
-      <!-- App Header -->
-      <header class="app-header no-print">
-        <div class="brand-section">
-          <span class="brand-logo">📚</span>
-          <div>
-            <h1 class="brand-title">ggomrollbook</h1>
+      <!-- 사이드바 하단: 사용자 정보 & 포털/로그아웃 -->
+      <div class="p-3 border-t border-slate-200 bg-slate-50/50 flex flex-col gap-2 shrink-0">
+        <div v-if="!collapsed" class="flex items-center gap-2 px-1">
+          <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-xs shrink-0">
+            <User :size="16" />
           </div>
-          <span class="brand-badge">고3 출석부 &amp; 급식</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-bold text-slate-800 truncate m-0">{{ userName }}</p>
+            <span class="text-[10px] font-semibold text-teal-600">{{ roleLabel }}</span>
+          </div>
         </div>
 
-        <div class="header-actions">
+        <button
+          @click="goToPortal"
+          class="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+          title="대문(포털)으로 이동"
+        >
+          <Home :size="14" />
+          <span v-if="!collapsed">포털 이동</span>
+        </button>
+
+        <button
+          @click="handleLogout"
+          class="w-full flex items-center justify-center gap-1.5 py-1 px-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer border-none bg-transparent"
+        >
+          <LogOut :size="14" />
+          <span v-if="!collapsed">로그아웃</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 2. 우측 메인 영역 -->
+    <div class="flex-1 flex flex-col h-screen overflow-hidden rollbook-app" ref="rollbookContainer">
+      <!-- 메인 상단 헤더 바 (인쇄 시 자동 숨김) -->
+      <header class="h-14 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shrink-0 shadow-2xs z-30 no-print">
+        <!-- 현재 화면 정보 -->
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span class="text-xl shrink-0">{{ currentViewInfo.icon }}</span>
+          <div class="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0">
+            <h2 class="text-sm sm:text-base font-bold text-slate-900 m-0 truncate">{{ currentViewInfo.label }}</h2>
+            <span class="text-xs text-slate-400 font-medium hidden md:inline truncate">{{ currentViewInfo.desc }}</span>
+          </div>
+        </div>
+
+        <!-- 우측 상태 지표 배지들 -->
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
           <div id="todayBadge" class="status-badge status-today">
             <span>📅</span> 오늘: 계산 중...
           </div>
@@ -51,60 +212,26 @@
           <div id="saveStatus" class="status-badge status-saved" style="display: none;">
             <span>☁️</span> <span id="saveStatusText">저장됨</span>
           </div>
-          <button id="refreshBtn" class="icon-btn" title="구글 시트 실시간 데이터 새로고침">
-            <span class="refresh-icon">🔄</span> 시트 새로고침
-          </button>
-          <button id="gasSettingsBtn" class="icon-btn" title="구글 앱스 스크립트(GAS) 설정">
-            <span>⚙️</span> GAS 설정
-          </button>
-          <button id="neisReportBtn" class="icon-btn" title="NEIS 월말 출결 마감용 학생별 누계표">
-            <span>📊</span> NEIS 마감 집계
-          </button>
-          <button id="absenceReportBtn" class="icon-btn" title="결석계 온라인 접수 및 대장 조회/인쇄 프로그램 열기">
-            <span>📝</span> 결석계 관리
-          </button>
-          <button id="printBtn" class="icon-btn print-btn-primary" title="A4 가로 정밀 인쇄 (Ctrl+P)">
-            <span>🖨️</span> 출석부 인쇄 (Ctrl+P)
-          </button>
         </div>
       </header>
 
-      <!-- App Navigation Tabs -->
-      <nav class="app-nav no-print" aria-label="출석부 메뉴">
-        <button class="nav-btn" data-view="today" id="navTodayBtn">
-          <span>📢</span> 오늘의 출결 <span class="nav-sub-badge">실시간</span>
-        </button>
-        <button class="nav-btn active" data-view="homeroom" id="navHomeroomBtn">
-          <span>🏫</span> 원적학급 <span class="nav-sub-badge">담임용</span>
-        </button>
-        <button class="nav-btn" data-view="moving" id="navMovingBtn">
-          <span>🏃</span> 이동수업 <span class="nav-sub-badge">교과용</span>
-        </button>
-        <button class="nav-btn" data-view="absence" id="navAbsenceBtn">
-          <span>📑</span> 결석계 관리 <span class="nav-sub-badge nav-sub-highlight">대장·인쇄</span>
-        </button>
-        <button class="nav-btn" data-view="lunch" id="navLunchBtn">
-          <span>🍱</span> 급식 캘린더
-        </button>
-        <button class="nav-btn" data-view="finder" id="navFinderBtn">
-          <span>🔍</span> 학생 검색
-        </button>
-      </nav>
+      <!-- 본문 스크롤 영역 -->
+      <div class="flex-1 overflow-y-auto bg-slate-50 relative">
+        <!-- 초보 교사용 직관 퀵 팁 가이드 -->
+        <div class="quick-tip-banner no-print m-4 mb-2" id="quickTipBanner">
+          <span class="tip-icon">💡</span>
+          <span class="tip-text">
+            <strong>출석부 빠른 사용법:</strong> 학생 셀을 <strong>[좌클릭]</strong>하면 출결 상태가 순환 변경되며, <strong>[우클릭]</strong>하면 <strong>결석계 즉시 인쇄(A4 공식서식)</strong> 및 오늘 전교시 일괄 적용을 손쉽게 실행할 수 있습니다.
+          </span>
+          <button type="button" class="tip-close-btn" id="closeQuickTipBtn" title="안내 숨기기">&times;</button>
+        </div>
 
-      <!-- 초보 교사용 직관 퀵 팁 가이드 -->
-      <div class="quick-tip-banner no-print" id="quickTipBanner">
-        <span class="tip-icon">💡</span>
-        <span class="tip-text">
-          <strong>출석부 빠른 사용법:</strong> 학생 셀을 <strong>[좌클릭]</strong>하면 출결 상태가 순환 변경되며, <strong>[우클릭]</strong>하면 <strong>결석계 즉시 인쇄(A4 공식서식)</strong> 및 오늘 전교시 일괄 적용을 손쉽게 실행할 수 있습니다.
-        </span>
-        <button type="button" class="tip-close-btn" id="closeQuickTipBtn" title="안내 숨기기">&times;</button>
+        <!-- Dynamic Control Toolbar -->
+        <section class="app-toolbar no-print" id="toolbarControls"></section>
+
+        <!-- Main Output Area -->
+        <main class="content-area" id="appOutput" role="main"></main>
       </div>
-
-      <!-- Dynamic Control Toolbar -->
-      <section class="app-toolbar no-print" id="toolbarControls"></section>
-
-      <!-- Main Output Area -->
-      <main class="content-area" id="appOutput" role="main"></main>
 
       <!-- Custom Print Settings Modal -->
       <div class="modal-backdrop no-print" id="printModal" style="display: none;">
@@ -380,13 +507,42 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
+import { BookOpen, ChevronRight, Menu, Home, LogOut, User } from 'lucide-vue-next'
 import App from '../rollbook/app.js'
 import '../rollbook/rollbook.css'
 
 const router = useRouter()
 const auth = useAuthStore()
 const rollbookContainer = ref(null)
+const collapsed = ref(false)
+const activeView = ref('homeroom')
 let appInstance = null
+
+// 사이드바 메뉴 정의 (전체 테마와 일치하는 효율적 구조)
+const rollbookMenus = [
+  { key: 'homeroom', id: 'navHomeroomBtn', label: '원적학급 출석부', sub: '담임용', icon: '🏫', desc: '담임교사용 학급 출석부 (출석체크 및 결석계 연동)' },
+  { key: 'moving', id: 'navMovingBtn', label: '이동수업 출석부', sub: '교과용', icon: '🏃', desc: '선택교과 교실별 학생 출결 체크' },
+  { key: 'today', id: 'navTodayBtn', label: '오늘의 출결 현황', sub: '실시간', icon: '📢', desc: '전체 학급 실시간 출결 집계 및 조회' },
+]
+
+const serviceMenus = [
+  { key: 'absence', id: 'navAbsenceBtn', label: '결석계 관리', sub: '대장·인쇄', highlight: true, icon: '📑', desc: '온라인 결석계 접수 대장 조회 및 A4 공식서식 인쇄' },
+  { key: 'lunch', id: 'navLunchBtn', label: '급식 캘린더', sub: '', icon: '🍱', desc: '월간 급식 식단표 및 영양 정보' },
+  { key: 'finder', id: 'navFinderBtn', label: '학생 검색', sub: '', icon: '🔍', desc: '학생 이동수업 반 및 시간표 빠른 검색' },
+]
+
+const allMenus = [...rollbookMenus, ...serviceMenus]
+
+const currentViewInfo = computed(() => {
+  return allMenus.find(m => m.key === activeView.value) || rollbookMenus[0]
+})
+
+function handleMenuClick(key) {
+  activeView.value = key
+  if (appInstance) {
+    appInstance.switchView(key)
+  }
+}
 
 const userName = computed(() => {
   if (auth.isAdmin) return '관리자'
@@ -398,11 +554,6 @@ const roleLabel = computed(() => {
   if (auth.isAdmin) return '시스템 관리자'
   if (auth.isTeacher) return '담임 교사'
   return ''
-})
-
-const roleBadgeClass = computed(() => {
-  if (auth.isAdmin) return 'rb-role-admin'
-  return 'rb-role-teacher'
 })
 
 function goToPortal() {
@@ -428,11 +579,36 @@ onMounted(async () => {
   window.addEventListener('beforeprint', beforePrintHandler)
   window._rollbookBeforePrintHandler = beforePrintHandler
 
-  // ggomrollbook App 초기화
+  // URL Hash 감지하여 activeView 동기화
+  const syncHashToView = () => {
+    const hash = window.location.hash
+    if (hash.startsWith('#v=')) {
+      const v = hash.replace('#v=', '').split('&')[0]
+      if (v && allMenus.some(m => m.key === v)) {
+        activeView.value = v
+      }
+    }
+  }
+  syncHashToView()
+  window.addEventListener('hashchange', syncHashToView)
+  window._rollbookHashHandler = syncHashToView
+
+  // Rollbook App 초기화
   try {
     appInstance = new App()
     window.appInstance = appInstance
+
+    // switchView 가 app 내부에서 호출될 때 activeView 도 자동 동기화되도록 연동
+    const originalSwitchView = appInstance.switchView.bind(appInstance)
+    appInstance.switchView = (view) => {
+      activeView.value = view
+      return originalSwitchView(view)
+    }
+
     await appInstance.init()
+    if (appInstance.state?.view) {
+      activeView.value = appInstance.state.view
+    }
   } catch (e) {
     console.error('Failed to initialize rollbook app:', e)
   }
@@ -443,6 +619,10 @@ onUnmounted(() => {
   if (window._rollbookBeforePrintHandler) {
     window.removeEventListener('beforeprint', window._rollbookBeforePrintHandler)
     delete window._rollbookBeforePrintHandler
+  }
+  if (window._rollbookHashHandler) {
+    window.removeEventListener('hashchange', window._rollbookHashHandler)
+    delete window._rollbookHashHandler
   }
 
   // 삽입된 인쇄 방향 스타일 및 클래스 정리
@@ -461,122 +641,87 @@ onUnmounted(() => {
 </script>
 
 <style>
-/* ggomrecommend 전용 사이트 헤더 (rollbook 위에 표시) */
-.rb-site-header {
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  padding: 10px 20px;
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+/* 사이드바 nav-btn 리셋 및 스타일 최적화 */
+.rb-sidebar-nav-btn {
+  text-decoration: none;
+  font-family: inherit;
+  outline: none;
 }
-.rb-site-header-inner {
-  max-width: 1400px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+.rb-sidebar-nav-btn:hover {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
 }
-.rb-site-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.rb-site-brand-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: #0d9488;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.rb-site-school {
-  display: block;
-  font-size: 11px;
-  font-weight: 800;
-  color: #0d9488;
-  letter-spacing: 0.5px;
-}
-.rb-site-title {
-  display: block;
-  font-size: 15px;
-  font-weight: 700;
-  color: #0f172a;
-}
-.rb-site-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.rb-site-user {
-  display: none;
-}
-@media (min-width: 640px) {
-  .rb-site-user {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-}
-.rb-user-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #334155;
-}
-.rb-user-role {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 999px;
-}
-.rb-role-admin {
-  background: #f3e8ff;
-  color: #7c3aed;
-}
-.rb-role-teacher {
-  background: #d1fae5;
-  color: #059669;
-}
-.rb-nav-btn {
-  font-size: 12px;
-  font-weight: 600;
-  color: #475569;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  padding: 6px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-.rb-nav-btn:hover {
-  background: #e2e8f0;
-  color: #0f172a;
-}
-.rb-nav-btn-logout {
-  color: #94a3b8;
-}
-.rb-nav-btn-text {
-  display: none;
-}
-@media (min-width: 640px) {
-  .rb-nav-btn-text {
-    display: inline;
-  }
+.rb-sidebar-nav-btn.active {
+  background-color: #f0fdfa !important;
+  color: #0f766e !important;
+  border-left: 3px solid #0d9488 !important;
+  font-weight: 700 !important;
 }
 
-/* rollbook-root는 전체 페이지를 차지 */
+/* rollbook-root 레이아웃 */
 .rollbook-root {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 }
-.rollbook-app {
-  flex: 1;
+
+/* 상단 헤더 내 상태 뱃지 라이트 테마 조율 */
+.rollbook-app .status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  padding: 3px 9px;
+  border-radius: 9999px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.rollbook-app .status-today {
+  background-color: #f1f5f9;
+  color: #334155;
+  border-color: #e2e8f0;
+}
+.rollbook-app .status-live {
+  background-color: #ecfdf5;
+  color: #059669;
+  border-color: #a7f3d0;
+}
+.rollbook-app .status-offline {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+.rollbook-app .status-saved {
+  background-color: #f0fdf4;
+  color: #16a34a;
+  border-color: #bbf7d0;
+}
+.rollbook-app .status-saving {
+  background-color: #fefce8;
+  color: #ca8a04;
+  border-color: #fef08a;
+}
+.rollbook-app .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: currentColor;
+  display: inline-block;
+}
+
+/* rollbook.css 의 .app-header 와 .app-nav 가 있을 경우 숨김 처리 */
+.app-header {
+  display: none !important;
+}
+.app-nav {
+  display: none !important;
+}
+
+/* 본문 콘텐츠 패딩 조율 */
+.rollbook-app .content-area {
+  padding: 12px 16px 32px;
+}
+.rollbook-app .app-toolbar {
+  margin: 0 16px 12px;
 }
 </style>

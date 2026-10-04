@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background: #f8f9fa;
+            padding: 15px;
+            font-size: 15px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            background: #4A86E8;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 10px;
+            margin-top: 0;
+        }
+
+        .section {
+            border: 1px solid #e1e4e8;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            background: #fff;
+        }
+
+        .section-title {
+            font-weight: bold;
+            color: #4A86E8;
+            margin-bottom: 15px;
+            border-left: 5px solid #4A86E8;
+            padding-left: 10px;
+        }
+
+        .row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .date-period-item {
+            flex: 1;
+            min-width: 140px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .item {
+            flex: 1;
+            min-width: 140px;
+        }
+
+        label {
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+
+        .check-group-horizontal {
+            display: flex;
+            background: #f1f3f5;
+            padding: 20px 10px;
+            border-radius: 10px;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+
+        .check-item-vertical {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            cursor: pointer;
+            flex-basis: 25%;
+            text-align: center;
+            font-weight: bold;
+            min-width: 80px;
+            height: 75px;
+        }
+
+        .check-item-vertical input[type="radio"],
+        .check-item-vertical input[type="checkbox"],
+        .doc-item-horizontal input[type="checkbox"] {
+            width: 20px !important;
+            height: 20px !important;
+            margin: 0;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .check-item-vertical span {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            line-height: 1.2;
+            height: 2.4em;
+            word-break: keep-all;
+            font-size: 14px;
+        }
+
+        .attachment-box {
+            background: #fffde7;
+            border: 1px solid #fff59d;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .doc-list-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 10px 5px;
+        }
+
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        .doc-item-horizontal {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .doc-item-horizontal span {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .doc-item-horizontal input[type="checkbox"] {
+            margin-top: 4px;
+            flex-shrink: 0;
+        }
+
+        .etc-input {
+            width: auto;
+            flex: 1;
+            min-width: 200px;
+            padding: 5px 10px;
+            border: 1px solid #4A86E8;
+            border-radius: 4px;
+            display: none;
+            margin-left: 10px;
+        }
+
+        .btn-submit {
+            background: #4A86E8;
+            color: white;
+            border: none;
+            padding: 20px;
+            width: 100%;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+
+        /* 모달 배경 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(3px);
+        }
+
+        /* 모달 박스 */
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 15px;
+            width: 95%;
+            max-width: 95%;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 모달 헤더 */
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #4A86E8;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #4A86E8;
+        }
+
+        /* 닫기 버튼 */
+        .close-modal {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-modal:hover {
+            color: #000;
+        }
+
+        /* PDF 프레임 */
+        #pdfFrame {
+            width: 100%;
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        /* 서명 패드 스타일 */
+        .signature-wrapper {
+            position: relative;
+            width: 100%;
+            height: 150px;
+            -moz-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+
+        .signature-pad {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .signature-label {
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .signature-actions {
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        .btn-clear {
+            padding: 5px 10px;
+            font-size: 12px;
+            background: #f1f3f5;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* 모바일 가로폭 대응 (600px 이하) */
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+            }
+
+            .check-group-horizontal {
+                flex-wrap: wrap;
+                justify-content: flex-start;
+                gap: 10px;
+                padding: 15px 5px;
+            }
+
+            .check-item-vertical {
+                flex-basis: calc(50% - 10px);
+                min-width: unset;
+                height: auto;
+                padding: 5px 0;
+            }
+
+            .check-item-vertical span {
+                height: auto;
+                min-height: 2.4em;
+            }
+
+            .row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+
+            .item,
+            .date-period-item,
+            .row>div {
+                width: 100%;
+                flex: none !important;
+            }
+
+            .signature-wrapper {
+                height: 180px;
+                /* 모바일에서 조금 더 크게 조절 */
+            }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <h2>📋 2026학년도 결석계 작성</h2>
+        <form id="absenceForm">
+
+            <div class="section">
+                <div class="section-title">1. 인적 사항</div>
+                <div class="row">
+                    <div class="item"><label id="gradeLabel">학년</label><select name="grade" id="gradeSelect"></select>
+                    </div>
+                    <div class="item"><label id="classLabel">반</label><select name="class" id="classSelect"></select>
+                    </div>
+                    <div class="item"><label id="numberLabel">번호</label><select name="number"
+                            id="numberSelect"></select></div>
+                    <div style="flex:2;"><label>학생 성명</label><input type="text" name="name" placeholder="실명을 입력하세요"
+                            required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">2. 출결 정보 선택</div>
+                <label>출결 구분</label>
+                <div class="check-group-horizontal">
+                    <label class="check-item-vertical"><input type="radio" name="cat" value="결석"
+                            onclick="updateAutoDetail()"><span>결석</span></label>
+                    <label class="check-item-vertical"><input type="radio" name="cat" value="지각"
+                            onclick="updateAutoDetail()"><span>지각</span></label>
+                    <label class="check-item-vertical"><input type="radio" name="cat" value="조퇴"
+                            onclick="updateAutoDetail()"><span>조퇴</span></label>
+                    <label class="check-item-vertical"><input type="radio" name="cat" value="결과"
+                            onclick="updateAutoDetail()"><span>결과</span></label>
+                </div>
+                <br>
+                <label>결석 종류</label>
+                <div class="check-group-horizontal">
+                    <label class="check-item-vertical"><input type="radio" name="type" value="질병"
+                            onclick="updateUI()"><span>질병</span></label>
+                    <label class="check-item-vertical"><input type="radio" name="type" value="출석인정"
+                            onclick="updateUI()"><span>출석인정<br>(생리통, 경조사 등)</span></label>
+                    <label class="check-item-vertical"><input type="radio" name="type" value="기타"
+                            onclick="updateUI()"><span>기타</span></label>
+                </div>
+                <!-- 하위 선택지 추가 -->
+                <div id="subTypeDiv"
+                    style="display:none; margin-top:15px; background:#f1f3f5; padding:15px; border-radius:10px; border:1px solid #ced4da;">
+                    <label style="font-size:14px; margin-bottom:10px; display:block; color:#4A86E8;">■ 출석인정 세부 사유 선택
+                        ■</label>
+                    <div class="check-group-horizontal" style="background:transparent; padding:0;">
+                        <label class="check-item-vertical"><input type="radio" name="subType" value="생리통"
+                                onclick="updateUI()"><span>생리통</span></label>
+                        <label class="check-item-vertical"><input type="radio" name="subType" value="경조사"
+                                onclick="updateUI()"><span>경조사</span></label>
+                        <label class="check-item-vertical"><input type="radio" name="subType" value="전염병"
+                                onclick="updateUI()"><span>전염병</span></label>
+                        <label class="check-item-vertical"><input type="radio" name="subType" value="대입 관련"
+                                onclick="updateUI()"><span>대입 관련</span></label>
+                        <label class="check-item-vertical"><input type="radio" name="subType" value="기타"
+                                onclick="updateUI()"><span>기타</span></label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">3. 기간 및 구체적 사유</div>
+                <div class="row">
+                    <div class="date-period-item"><label>시작일</label><input type="date" name="startDate" id="startDate"
+                            onchange="calcDays()"></div>
+                    <div class="date-period-item"><label>시작교시</label><input type="number" name="startPeriod" value="1"
+                            min="1" max="7"></div>
+                </div>
+                <div class="row">
+                    <div class="date-period-item"><label>종료일</label><input type="date" name="endDate" id="endDate"
+                            onchange="calcDays()"></div>
+                    <div class="date-period-item"><label>종료교시</label><input type="number" name="endPeriod" value="7"
+                            min="1" max="7"></div>
+                </div>
+                <div class="row">
+                    <div style="flex:1;"><label>기간(일)</label><input type="text" name="totalDays" id="totalDays" readonly
+                            style="background:#e9ecef;"></div>
+                </div>
+                <label>구체적 사유</label>
+                <textarea name="reason" id="reason" rows="2" oninput="updateAutoDetail()"></textarea>
+
+                <div class="row" style="margin-top:15px;">
+                    <div style="flex:1;"><label>작성일</label><input type="date" name="writeDate" id="writeDate"></div>
+                    <div style="flex:1;"><label>학부모 성함</label><input type="text" name="parentName"></div>
+                </div>
+
+                <div class="row">
+                    <div style="flex:1;">
+                        <div class="signature-label">학생 서명</div>
+                        <div class="signature-wrapper">
+                            <canvas id="student-signature-pad" class="signature-pad"></canvas>
+                        </div>
+                        <div class="signature-actions">
+                            <button type="button" class="btn-clear" onclick="studentSignaturePad.clear()">지우기</button>
+                        </div>
+                    </div>
+                    <div style="flex:1;">
+                        <div class="signature-label">학부모 서명</div>
+                        <div class="signature-wrapper">
+                            <canvas id="parent-signature-pad" class="signature-pad"></canvas>
+                        </div>
+                        <div class="signature-actions">
+                            <button type="button" class="btn-clear" onclick="parentSignaturePad.clear()">지우기</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section attachment-box">
+                <div class="section-title">
+                    4. 첨부 서류 선택
+                    <span id="periodGuide" style="color: #d93025; font-size: 13px; margin-left: 10px; display: none;">
+                        (※ 생리통의 경우, 시험 기간만 서류 첨부)
+                    </span>
+                </div>
+                <div id="docList" class="doc-list-vertical">결석 종류를 먼저 선택해주세요.</div>
+            </div>
+
+            <div class="section" style="background:#f1f8ff;">
+                <div class="section-title">5. 교사 확인란</div>
+                <div class="row">
+                    <div class="item"><label>담임교사 확인일</label><input type="date" name="confirmDate" id="confirmDate">
+                    </div>
+                </div>
+                <label>확인 방법</label>
+                <div class="check-group-horizontal">
+                    <label class="check-item-vertical"><input type="checkbox"
+                            name="m_visit"><span>가정<br>방문</span></label>
+                    <label class="check-item-vertical"><input type="checkbox"
+                            name="m_phone"><span>전화<br>연락</span></label>
+                    <label class="check-item-vertical"><input type="checkbox"
+                            name="m_school"><span>학부모<br>내교</span></label>
+                    <label class="check-item-vertical"><input type="checkbox" name="m_other"
+                            onchange="toggleMOtherInput(this)"><span>기타</span></label>
+                </div>
+                <!-- 교사 확인 기타 방법 입력란 -->
+                <div id="mOtherInputDiv" style="display:none; margin-top:10px; text-align:center;">
+                    <input type="text" name="m_other_text" id="m_other_text" placeholder="방법 입력 (최대 6자)" maxlength="6"
+                        style="width:160px; padding:8px; border:1px solid #4A86E8; border-radius:5px; font-size:13px; text-align:center;">
+                </div>
+                <br>
+                <label>확인 내용 (자동 생성)</label>
+                <input type="text" name="confirmDetail" id="confirmDetail" readonly
+                    style="background:#e9ecef; color:#0056b3; font-weight:bold;">
+                <div class="row" style="margin-top:20px;">
+                    <div class="item"><label>담임교사 성함</label><input type="text" name="teacherName"></div>
+                    <div class="item"><label>담임 작성일</label><input type="date" name="teacherDate" id="teacherDate"></div>
+                </div>
+            </div>
+
+            <button type="button" class="btn-submit" onclick="submitData()">결석계 온라인 제출</button>
+        </form>
+    </div>
+
+    <div id="pdfModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📄 결석계 미리보기 및 인쇄</h3>
+                <span class="close-modal" onclick="closeModal()">&times;</span>
+            </div>
+
+            <iframe id="pdfFrame" src="" style="width:100%; height:100%; border:1px solid #eee;"></iframe>
+
+            <div
+                style="text-align:center; padding:15px; background:#f1f3f5; border-radius:0 0 15px 15px; margin-top:5px;">
+                <p style="margin-bottom:10px; font-size:14px; color:#c92a2a; font-weight:bold;">
+                    ※ 아래 [즉시 인쇄하기] 버튼을 누르면 인쇄 화면으로 연결됩니다.
+                </p>
+                <div style="display:flex; gap:12px; justify-content:center;">
+                    <button type="button" onclick="printPDF()"
+                        style="padding:12px 25px; background:#228be6; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:16px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                        🖨️ 즉시 인쇄하기
+                    </button>
+                    <button type="button" onclick="closeModal()"
+                        style="padding:12px 25px; background:#868e96; color:white; border:none; border-radius:6px; cursor:pointer; font-size:16px;">
+                        닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let holidayList = [];
+        let studentSignaturePad, parentSignaturePad;
+
+        // 페이지 로딩 시 서버에서 휴일 데이터를 미리 가져옵니다.
+        window.onload = function () {
+            // [추가] 앱 설정 로드 (학년/반 구성)
+            google.script.run.withSuccessHandler(function (settings) {
+                const gradeSel = document.getElementById('gradeSelect');
+                const classSel = document.getElementById('classSelect');
+                const numberSel = document.getElementById('numberSelect');
+
+                // 학년 드롭다운 생성
+                if (settings.targetGrade && settings.targetGrade !== 0) {
+                    const opt = document.createElement('option');
+                    opt.value = settings.targetGrade;
+                    opt.text = settings.targetGrade + "학년";
+                    gradeSel.add(opt);
+                    document.getElementById('gradeLabel').innerText = "학년 (고정)";
+                } else {
+                    for (let i = 1; i <= settings.maxGrade; i++) {
+                        const opt = document.createElement('option');
+                        opt.value = i;
+                        opt.text = i + "학년";
+                        gradeSel.add(opt);
+                        if (i === settings.maxGrade) opt.selected = true;
+                    }
+                }
+
+                // 반 드롭다운 생성
+                for (let i = 1; i <= settings.maxClass; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.text = i + "반";
+                    classSel.add(opt);
+                }
+
+                // 번호 드롭다운 생성
+                for (let i = 1; i <= settings.maxNumber; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.text = i + "번";
+                    numberSel.add(opt);
+                }
+            }).getAppSettings();
+
+            google.script.run.withSuccessHandler(function (hl) {
+                holidayList = hl;
+                calcDays(); // 데이터 로드 후 초기 계산 수행
+            }).getHolidays();
+
+            const today = new Date().toISOString().substring(0, 10);
+            ['startDate', 'endDate', 'writeDate', 'confirmDate', 'teacherDate'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.value = today;
+            });
+
+            // 서명 패드 초기화
+            const studentCanvas = document.getElementById('student-signature-pad');
+            const parentCanvas = document.getElementById('parent-signature-pad');
+
+            studentSignaturePad = new SignaturePad(studentCanvas, { minWidth: 2, maxWidth: 4 });
+            parentSignaturePad = new SignaturePad(parentCanvas, { minWidth: 2, maxWidth: 4 });
+
+            function resizeCanvas(canvas) {
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext("2d").scale(ratio, ratio);
+            }
+
+            window.addEventListener("resize", () => {
+                resizeCanvas(studentCanvas);
+                resizeCanvas(parentCanvas);
+                studentSignaturePad.clear();
+                parentSignaturePad.clear();
+            });
+
+            resizeCanvas(studentCanvas);
+            resizeCanvas(parentCanvas);
+        };
+
+        // [핵심] 결석일수 계산 함수
+        function calcDays() {
+            const sVal = document.getElementById('startDate').value;
+            const eVal = document.getElementById('endDate').value;
+            if (!sVal || !eVal) return;
+
+            let start = new Date(sVal);
+            let end = new Date(eVal);
+            start.setHours(12, 0, 0, 0); // 시간 오차 방지
+            end.setHours(12, 0, 0, 0);
+
+            if (start > end) {
+                document.getElementById('totalDays').value = "0일";
+                return;
+            }
+
+            let count = 0;
+            let current = new Date(start);
+            while (current <= end) {
+                const dStr = current.getFullYear() + "-" +
+                    String(current.getMonth() + 1).padStart(2, '0') + "-" +
+                    String(current.getDate()).padStart(2, '0');
+
+                const day = current.getDay(); // 0:일, 6:토
+                // 주말이 아니고, 가져온 휴일 목록에 없는 경우만 카운트
+                if (day !== 0 && day !== 6 && !holidayList.includes(dStr)) {
+                    count++;
+                }
+                current.setDate(current.getDate() + 1);
+            }
+            document.getElementById('totalDays').value = count + "일";
+        }
+
+        function updateAutoDetail() {
+            const c = document.querySelector('input[name="cat"]:checked');
+            if (!c) return;
+            const typeNode = document.querySelector('input[name="type"]:checked');
+            const subTypeNode = document.querySelector('input[name="subType"]:checked');
+
+            let rText = "";
+            if (typeNode && typeNode.value === "출석인정") {
+                if (subTypeNode && subTypeNode.value === "생리통") {
+                    rText = "생리통";
+                } else if (subTypeNode) {
+                    const r = document.getElementById('reason').value.trim();
+                    rText = r ? `${subTypeNode.value}(${r})` : subTypeNode.value;
+                }
+            } else {
+                rText = document.getElementById('reason').value.trim();
+            }
+
+            if (!rText) {
+                document.getElementById('confirmDetail').value = "";
+                return;
+            }
+            const code = rText.slice(-1).charCodeAt(0);
+            let j = (code >= 44032 && code <= 55203 && (code - 44032) % 28 !== 0 && (code - 44032) % 28 !== 8) ? "으로" : "로";
+            const lastChar = rText.slice(-1);
+            if (lastChar.match(/[)\]a-zA-Z0-9]/)) { j = "로"; } // 괄호나 숫자/영문으로 끝나면 보통 '로'가 자연스러움
+
+            document.getElementById('confirmDetail').value = `${rText}${j} 인하여 ${c.value}함을 확인함.`;
+        }
+
+        function toggleMOtherInput(cb) {
+            const div = document.getElementById('mOtherInputDiv');
+            div.style.display = cb.checked ? "block" : "none";
+            if (!cb.checked) document.getElementById('m_other_text').value = "";
+        }
+
+        function updateUI() {
+            const typeNode = document.querySelector('input[name="type"]:checked');
+            if (!typeNode) return;
+            const t = typeNode.value;
+            const subTypeDiv = document.getElementById('subTypeDiv');
+            const subTypeNode = document.querySelector('input[name="subType"]:checked');
+            const pg = document.getElementById('periodGuide');
+            if (pg) pg.style.display = "none";
+
+            let realType = t;
+            if (t === "출석인정") {
+                subTypeDiv.style.display = "block";
+                if (!subTypeNode) {
+                    document.getElementById('docList').innerHTML = "출석인정 세부 사유를 선택해주세요.";
+                    return;
+                }
+                realType = subTypeNode.value;
+
+                const reasonBox = document.getElementById('reason');
+                if (realType === "생리통") {
+                    reasonBox.value = "";
+                    reasonBox.disabled = true;
+                    reasonBox.placeholder = "생리통은 구체적 사유 작성이 필요 없습니다.";
+                } else {
+                    reasonBox.disabled = false;
+                    reasonBox.placeholder = "구체적 사유를 자세히 적어주세요.";
+                }
+            } else {
+                subTypeDiv.style.display = "none";
+                document.getElementById('reason').disabled = false;
+                document.getElementById('reason').placeholder = "";
+            }
+            updateAutoDetail();
+
+            const d = document.getElementById('docList');
+            let options = [];
+            if (t === "질병") {
+                options = [
+                    { label: "의사진단서, 소견서, 진료확인서, 처방전, 약봉투(병명, 진료 기간 등이 기록된 증빙서류)", warning: "" },
+                    { label: "담임교사 확인서", warning: "※ 상습적이지 않은 2일 이내 질병 근태의 경우에 한함. 즉, 질병 발생 첫날 의사 진단서, 소견서, 진료확인서, 처방전, 약봉투 제출 시, 익일(2일차)은 담임교사 확인서, 학부모 의견서 중 하나로 갈음할 수 있음." },
+                    { label: "학부모 의견서", warning: "※ 상습적이지 않은 2일 이내 질병 근태의 경우에 한함. 즉, 질병 발생 첫날 의사 진단서, 소견서, 진료확인서, 처방전, 약봉투 제출 시, 익일(2일차)은 담임교사 확인서, 학부모 의견서 중 하나로 갈음할 수 있음." }
+                ];
+            } else if (realType === "생리통") {
+                options = [
+                    { label: "의사진단서, 소견서, 진료확인서 (※ 시험 기간 질병 처리 필수 서류임.)", warning: "" }
+                ];
+            } else if (t === "출석인정") {
+                if (realType === "대입 관련") {
+                    options = [
+                        { label: "대입 관련 증빙 서류", warning: "", isEtc: true }
+                    ];
+                } else if (realType === "기타") {
+                    options = [
+                        { label: "기타 증빙 서류", warning: "", isEtc: true }
+                    ];
+                } else {
+                    options = [
+                        { label: "의사진단서, 소견서(질병명, 날짜, 인적사항 포함)", warning: "" },
+                        { label: "경조사 등(학생과 경조사의 인과관계를 입증할 수 있는 서류 등)", warning: "" }
+                    ];
+                }
+            } else {
+                options = [
+                    { label: "기타 증빙 서류", warning: "", isEtc: true }
+                ];
+            }
+
+            d.innerHTML = options.map((opt, i) => {
+                let isEtc = !!opt.isEtc;
+                return `
+          <label class="doc-item-horizontal" style="align-items:flex-start;">
+            <input type="checkbox" name="doc${i + 1}" value="${opt.label}" style="margin-top:4px;" onchange="toggleEtcInput(this, ${isEtc})">
+            <div style="flex:1;">
+                <span style="font-weight:bold; color:#333;">${opt.label}</span>
+                ${opt.warning ? `<div style="color:#d93025; font-size:12px; margin-top:3px; word-break:keep-all;">${opt.warning}</div>` : ''}
+                ${isEtc ? `<div style="margin-top:5px;"><input type="text" id="etcDetail" class="etc-input" placeholder="서류명을 입력하세요"></div>` : ''}
+            </div>
+          </label>`;
+            }).join("");
+        }
+
+        function toggleEtcInput(checkbox, isEtc) {
+            if (!isEtc) return;
+            const input = document.getElementById('etcDetail');
+            input.style.display = checkbox.checked ? "inline-block" : "none";
+            if (!checkbox.checked) input.value = "";
+        }
+
+        function submitData() {
+            const f = document.getElementById('absenceForm');
+
+            // 1. 유효성 검사 (학년/반/번호/성명 및 날짜)
+            const g = f.grade.value;
+            const c = f.class.value;
+            const n = f.number.value;
+            const name = f.name.value.trim();
+            const startDate = f.startDate.value;
+            const endDate = f.endDate.value;
+            const writeDate = f.writeDate.value;
+
+            if (!g) { alert("학년을 선택해주세요."); return; }
+            if (!c) { alert("반을 선택해주세요."); return; }
+            if (!n) { alert("번호를 선택해주세요."); return; }
+            if (!name) { alert("학생 성명을 입력해주세요."); return; }
+            if (!startDate) { alert("시작일을 선택해주세요."); return; }
+            if (!endDate) { alert("종료일을 선택해주세요."); return; }
+            if (!writeDate) { alert("작성일을 선택해주세요."); return; }
+
+            if (new Date(startDate) > new Date(endDate)) {
+                alert("시작일은 종료일보다 이전이어야 합니다.");
+                return;
+            }
+
+            const btn = document.querySelector('.btn-submit');
+            if (studentSignaturePad.isEmpty()) { alert("학생 서명이 필요합니다."); return; }
+
+            const formData = new FormData(f);
+            const data = Object.fromEntries(formData.entries());
+
+            // --- 타입 포맷 변경 패치 (DB 하위 호환성 및 F19 사유 조합 보장) ---
+            if (data.type === "출석인정") {
+                if (!data.subType) {
+                    alert("출석인정 세부 사유(생리통, 경조사 등)를 선택해주세요.");
+                    return;
+                }
+
+                if (data.subType === "생리통") {
+                    data.type = "생리통";
+                    data.reason = "생리통";
+                } else {
+                    const typedReason = data.reason || "";
+                    if (!typedReason.trim()) {
+                        alert("출석인정에 대한 구체적 사유를 작성해주세요.");
+                        return;
+                    }
+                    data.reason = typedReason.trim();
+                }
+            }
+            // -----------------------------------------------------------
+
+            // 체크박스 데이터 정리
+            data.m_visit = f.m_visit.checked;
+            data.m_phone = f.m_phone.checked;
+            data.m_school = f.m_school.checked;
+            data.m_other = f.m_other.checked;
+
+            // 첨부서류 데이터 정리
+            for (let i = 1; i <= 4; i++) {
+                let chk = f.elements["doc" + i];
+                if (chk && chk.checked) {
+                    if (chk.value.includes("기타") || chk.value.includes("대입 관련")) {
+                        const detail = document.getElementById('etcDetail').value.trim();
+                        let docVal = detail ? `${chk.value}(${detail})` : chk.value;
+                        if (data.type === "출석인정" && (data.subType === "대입 관련" || data.subType === "기타")) {
+                            docVal = "출석인정 - " + docVal;
+                        }
+                        data["doc" + i] = docVal;
+                    } else {
+                        data["doc" + i] = chk.value;
+                    }
+                } else {
+                    data["doc" + i] = "";
+                }
+            }
+
+            btn.innerText = "서명 저장 중...";
+            btn.disabled = true;
+
+            const studentSig = studentSignaturePad.toDataURL();
+            const parentSig = parentSignaturePad.isEmpty() ? null : parentSignaturePad.toDataURL();
+
+            // 학생 서명 저장 (필수)
+            google.script.run
+                .withFailureHandler(err => {
+                    alert("학생 서명 저장 실패: " + err.toString());
+                    resetSubmitBtn(btn);
+                })
+                .withSuccessHandler(id1 => {
+                    data.studentSigId = id1;
+
+                    if (parentSig) {
+                        // 학부모 서명이 있는 경우만 저장 시도
+                        google.script.run
+                            .withFailureHandler(err => {
+                                alert("학부모 서명 저장 실패: " + err.toString());
+                                resetSubmitBtn(btn);
+                            })
+                            .withSuccessHandler(id2 => {
+                                data.parentSigId = id2;
+                                processFinalSubmit(data);
+                            })
+                            .saveSignature(parentSig, "parent");
+                    } else {
+                        // 학부모 서명이 없는 경우 건너뜀
+                        data.parentSigId = null;
+                        processFinalSubmit(data);
+                    }
+                })
+                .saveSignature(studentSig, "student");
+        }
+
+        function resetSubmitBtn(btn) {
+            btn.innerText = "결석계 온라인 제출";
+            btn.disabled = false;
+        }
+
+        function processFinalSubmit(data) {
+            const btn = document.querySelector('.btn-submit');
+            btn.innerText = "제출 및 PDF 생성 중... 잠시만 기다려 주세요.";
+
+            google.script.run
+                .withSuccessHandler(function (res) {
+                    if (res.status === "success" || res.status === "partial_success") {
+
+                        if (res.pdfUrl) {
+                            // 1. 모달 띄우기
+                            document.getElementById('pdfModal').style.display = "block";
+                            document.body.classList.add('modal-open');
+                            // 2. iframe에 PDF 주소 넣기 (미리보기)
+                            document.getElementById('pdfFrame').src = res.pdfUrl;
+                        } else {
+                            alert(res.message);
+                            document.getElementById('absenceForm').reset();
+                            calcDays();
+                        }
+
+                    } else {
+                        alert("오류 발생: " + res.message);
+                    }
+                    btn.innerText = "결석계 온라인 제출";
+                    btn.disabled = false;
+                })
+                .withFailureHandler(function (err) {
+                    alert("시스템 통신 오류: " + err.toString());
+                    btn.innerText = "결석계 온라인 제출";
+                    btn.disabled = false;
+                })
+                .processFormData(data);
+        }
+
+        // 모달에 뜬 PDF를 새 창으로 열어 인쇄를 돕는 함수
+        function printFromModal() {
+            const url = document.getElementById('pdfFrame').src;
+            if (url) {
+                // preview 주소를 다시 view 주소로 바꿔서 열어줌
+                const printUrl = url.replace('/preview', '/view');
+                window.open(printUrl, '_blank');
+            }
+        }
+
+        // 모달 닫기 및 리셋 함수
+        function closeModal() {
+            document.getElementById('pdfModal').style.display = "none";
+            document.body.classList.remove('modal-open');
+            document.getElementById('pdfFrame').src = "";
+            document.getElementById('absenceForm').reset();
+            calcDays();
+            // 서류 목록 초기화 등 추가
+        }
+
+        // PDF 인쇄 실행 함수
+        function printPDF() {
+            const frame = document.getElementById('pdfFrame');
+            if (frame.src) {
+                // preview 주소를 활용해 구글 뷰어의 인쇄 모드로 유도
+                // 팝업 차단 방지를 위해 직접 window.open 사용
+                const printUrl = frame.src.replace('/preview', '/view');
+                const printWin = window.open(printUrl, '_blank');
+
+                if (printWin) {
+                    printWin.focus();
+                    // 새 창이 뜨면 사용자가 거기서 인쇄 아이콘을 누르거나 Ctrl+P를 누르도록 안내
+                } else {
+                    alert("팝업이 차단되었습니다. 주소창 옆의 팝업 차단 해제를 눌러주세요.");
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

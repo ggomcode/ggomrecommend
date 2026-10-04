@@ -1252,11 +1252,74 @@ class App {
             parentSigUrl: ''
           };
 
+                      closeModal();
+            this.printAbsenceRecords([finalRecord]);
+          }
+        };
+      }
+
+      const saveAndPdfBtn = document.getElementById('saveAndPdfAqeBtn');
+      if (saveAndPdfBtn) {
+        saveAndPdfBtn.onclick = async () => {
+          let sp = '';
+          let ep = '';
+          if (periodsEl && periodsEl.value) {
+            const m = periodsEl.value.match(/(\d+)/g);
+            if (m && m.length >= 2) {
+              sp = m[0]; ep = m[1];
+            } else if (m && m.length === 1) {
+              sp = m[0]; ep = m[0];
+            }
+          }
+
+          const sDateVal = (startDateEl && !startDateEl.disabled) ? startDateEl.value : (report.startDate || date);
+          const eDateVal = (endDateEl && !endDateEl.disabled) ? endDateEl.value : (report.endDate || sDateVal);
+
+          const finalRecord = {
+            grade: '3',
+            class: report.ban,
+            ban: report.ban,
+            number: report.num,
+            num: report.num,
+            name: report.name,
+            cat: catEl ? catEl.value : report.cat,
+            type: typeEl ? typeEl.value : report.type,
+            subType: subTypeEl ? subTypeEl.value.trim() : '',
+            startDate: sDateVal,
+            endDate: eDateVal,
+            startPeriod: sp || '1',
+            endPeriod: ep || '7',
+            totalDays: (totalDaysEl && !totalDaysEl.disabled) ? totalDaysEl.value.trim() : (report.totalDays || '1일간'),
+            reason: reasonEl ? reasonEl.value.trim() : '건강상의 사유',
+            parentName: parentNameEl ? (parentNameEl.value.trim() || '학부모') : '학부모',
+            writeDate: eDateVal || sDateVal || date,
+            confirmDate: eDateVal || sDateVal || date,
+            teacherDate: eDateVal || sDateVal || date
+          };
+
           closeModal();
-          this.printAbsenceRecords([finalRecord]);
-        }
-      };
-    }
+          this.showLoading(true);
+          try {
+            const res = await SheetAPI.submitAbsenceReport(finalRecord);
+            if (res && res.status === 'success' && res.pdfUrl) {
+              window.open(res.pdfUrl, '_blank');
+              alert(`✨ ${finalRecord.name} 학생의 결석계가 '대장'에 정식 접수되었고, '인쇄' 양식 PDF가 성공적으로 생성되었습니다.`);
+              await this.loadAbsenceRegistryData();
+            } else if (res && res.pdfUrl) {
+              window.open(res.pdfUrl, '_blank');
+              await this.loadAbsenceRegistryData();
+            } else {
+              alert(res.message || '결석계가 접수되었습니다.');
+              await this.loadAbsenceRegistryData();
+            }
+          } catch (err) {
+            console.error('공식 PDF 생성/대장 등록 실패:', err);
+            alert('공식 PDF 생성 중 오류가 발생했습니다. 브라우저 빠른 인쇄를 이용해 주세요: ' + err.message);
+          } finally {
+            this.showLoading(false);
+          }
+        };
+      }
 
     modal.style.display = 'flex';
   }
@@ -2330,19 +2393,70 @@ class App {
       });
     }
 
-    const btnBulk = document.getElementById('btnBulkPrintAbsence');
-    if (btnBulk) {
-      btnBulk.addEventListener('click', () => {
-        const checkedBoxes = Array.from(document.querySelectorAll('.chk-absence-row:checked'));
-        if (checkedBoxes.length === 0) {
-          alert('인쇄할 결석계 항목을 1건 이상 체크해 주세요.');
-          return;
-        }
-        const selectedNos = checkedBoxes.map(c => c.dataset.no);
-        const selectedRecords = (this.state.absenceRegistryRecords || []).filter(r => selectedNos.includes(String(r.no)));
-        this.printAbsenceRecords(selectedRecords);
+          const btnBulk = document.getElementById('btnBulkPrintAbsence');
+      if (btnBulk) {
+        btnBulk.addEventListener('click', () => {
+          const checkedBoxes = Array.from(document.querySelectorAll('.chk-absence-row:checked'));
+          if (checkedBoxes.length === 0) {
+            alert('인쇄할 결석계 항목을 1건 이상 체크해 주세요.');
+            return;
+          }
+          const selectedNos = checkedBoxes.map(c => c.dataset.no);
+          const selectedRecords = (this.state.absenceRegistryRecords || []).filter(r => selectedNos.includes(String(r.no)));
+          this.printAbsenceRecords(selectedRecords);
+        });
+      }
+
+      const btnBulkPdf = document.getElementById('btnBulkPdfAbsence');
+      if (btnBulkPdf) {
+        btnBulkPdf.addEventListener('click', async () => {
+          const checkedBoxes = Array.from(document.querySelectorAll('.chk-absence-row:checked'));
+          if (checkedBoxes.length === 0) {
+            alert('통합 PDF로 생성할 결석계 항목을 1건 이상 체크해 주세요.');
+            return;
+          }
+          const selectedNos = checkedBoxes.map(c => c.dataset.no);
+          this.showLoading(true);
+          try {
+            const res = await SheetAPI.generateMergedAbsencePdf(selectedNos);
+            if (res && res.pdfUrl) {
+              window.open(res.pdfUrl, '_blank');
+            } else if (res && res.message) {
+              alert(res.message);
+            } else {
+              alert('통합 PDF 생성이 완료되었습니다.');
+            }
+          } catch (err) {
+            alert('통합 PDF 생성 중 오류가 발생했습니다: ' + err.message);
+          } finally {
+            this.showLoading(false);
+          }
+        });
+      }
+
+      document.querySelectorAll('.btn-create-pdf').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const no = e.target.dataset.no;
+          if (!no) return;
+          this.showLoading(true);
+          try {
+            const res = await SheetAPI.recreateAbsencePdf(no);
+            if (res && res.pdfUrl) {
+              window.open(res.pdfUrl, '_blank');
+              await this.loadAbsenceRegistryData();
+            } else if (res && res.message) {
+              alert(res.message);
+            } else {
+              alert('PDF 생성이 완료되었습니다.');
+              await this.loadAbsenceRegistryData();
+            }
+          } catch (err) {
+            alert('PDF 생성 중 오류가 발생했습니다: ' + err.message);
+          } finally {
+            this.showLoading(false);
+          }
+        });
       });
-    }
 
     document.querySelectorAll('.btn-print-single').forEach(btn => {
       btn.addEventListener('click', (e) => {

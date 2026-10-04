@@ -203,10 +203,13 @@ export const RollbookModel = {
    */
   parseAttendanceRecords(csvRows) {
     const overridesMap = new Map();
-    if (!csvRows || csvRows.length < 2) return overridesMap;
+    if (!csvRows || csvRows.length === 0) return overridesMap;
 
-    // Row 0: Headers (고유키, 날짜, 교시, 반, 번호, 이름, 이동반교실, 출결내용, 수정일시)
-    for (let r = 1; r < csvRows.length; r++) {
+    // Check if row 0 is header or actual data
+    const firstVal = (csvRows[0] && csvRows[0][0]) ? String(csvRows[0][0]).trim() : '';
+    const isHeader = !firstVal.match(/^\d{4}-\d{2}-\d{2}/);
+    const startIdx = isHeader ? 1 : 0;
+    for (let r = startIdx; r < csvRows.length; r++) {
       const row = csvRows[r];
       if (!row || row.length < 3) continue;
 

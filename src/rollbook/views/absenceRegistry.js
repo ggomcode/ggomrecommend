@@ -196,7 +196,7 @@ export const AbsenceRegistryView = {
                   <th style="width: 140px; padding: 10px;">기간</th>
                   <th style="padding: 10px; text-align: left;">사유</th>
                   <th style="width: 110px; padding: 10px;">출력상태</th>
-                  <th style="width: 120px; padding: 10px;">작업</th>
+                  <th style="width: 170px; padding: 10px;">작업 / 서식</th>
                 </tr>
               </thead>
               <tbody>
@@ -222,11 +222,22 @@ export const AbsenceRegistryView = {
                       <td style="padding: 10px; font-size: 12px; color: #495057;">${escapeHtml(r.startDate)} ~ ${escapeHtml(r.endDate)}</td>
                       <td style="padding: 10px; text-align: left; color: #333; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(r.reason)}">${escapeHtml(r.reason)}</td>
                       <td style="padding: 10px;">${printBadge}</td>
-                      <td style="padding: 10px;">
-                        <button type="button" class="btn btn-sm btn-print-single" data-no="${escapeHtml(r.no)}" style="padding: 4px 10px; font-size: 12px; background: #4A86E8; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                          🖨️ 인쇄
-                        </button>
-                      </td>
+                      <td style="padding: 8px 10px; white-space: nowrap;">
+  <div style="display: inline-flex; gap: 4px; align-items: center;">
+    <button type="button" class="btn btn-sm btn-print-single" data-no="${escapeHtml(r.no)}" style="padding: 4px 8px; font-size: 11px; background: #4A86E8; color: white; border: none; border-radius: 4px; cursor: pointer;" title="브라우저 고속 A4 직접 인쇄">
+      🖨️ 인쇄
+    </button>
+    ${r.pdfUrl ? `
+      <a href="${escapeHtml(r.pdfUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="padding: 3px 7px; font-size: 11px; background: #e0f2fe; color: #0284c7; text-decoration: none; border-radius: 4px; border: 1px solid #bae6fd; font-weight: 500;" title="구글 드라이브에 저장된 공식 신고서 PDF 열기">
+        📄 공식 PDF
+      </a>
+    ` : `
+      <button type="button" class="btn btn-sm btn-create-pdf" data-no="${escapeHtml(r.no)}" style="padding: 3px 7px; font-size: 11px; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;" title="인쇄 시트 양식 기반 공식 PDF 생성 및 드라이브 저장">
+        📄 PDF 생성
+      </button>
+    `}
+  </div>
+</td>
                     </tr>
                   `;
                 }).join('')}
