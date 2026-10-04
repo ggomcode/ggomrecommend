@@ -7,38 +7,36 @@
  */
 
 export const ROLLBOOK_CONFIG = {
-  // 1. 구글 스프레드시트 및 스크립트 ID
+  // 1. 구글 스프레드시트 ID (단 하나만 필요)
   SHEET_ID: '1-Ki9X_EKw5xEq-Pc-ba-PBU6VWhvdBun-1bkUjTTH0Q',
-  SCRIPT_ID: '1CL3o-9sgbEvpGbz645c1fY-luyzMbjS4u6C8cZ_7v9M',
 
-  // 2. 배포된 Google Apps Script (GAS) Web App URL
-  DEFAULT_GAS_URL: 'https://script.google.com/macros/s/AKfycbwmLRX6kyuS3NTTeCLk0T7PB-Zk-tZlfFsTnjOyvdwlcGn03PAbufa8s4MbYJs8nFI/exec',
-
-  // 3. 스프레드시트 각 탭 GID 및 시트명
+  // 2. 스프레드시트 각 탭 GID 및 시트명 (gviz로 0초 만에 실시간 조회)
   GIDS: {
-    ATTENDANCE: '923106420',   // 출결사항 (구 취합)
+    ATTENDANCE: '923106420',   // 출결사항 (학생·시간표)
     HOLIDAYS: '969683114',     // 행사및휴일
     REGISTRY: '334191447',     // 결석계 접수 대장
     PRINT: '256444665',        // 공식 결석계 인쇄 양식
     RECORDS_NAME: '출결기록'   // 실시간 출결 오버라이드 기록 시트명
   },
 
-  // 4. 구글 드라이브 저장 폴더 ID (기존 GAS 스크립트 속성 대체)
-  // 여기에 드라이브 폴더 ID 문자열을 적어두시면 GAS가 이 값을 바로 인식하여 저장합니다.
+  // 3. 구글 드라이브 폴더 ID (필요 시 지정)
   DRIVE_FOLDERS: {
-    FOLDER_ID: '',          // 생성된 공식 결석계 PDF 파일이 저장될 폴더 ID
-    PARENT_FOLDER_ID: '',   // 학부모 전자 서명 이미지(PNG)가 저장될 폴더 ID
-    STUDENT_FOLDER_ID: '',  // 학생 전자 서명 이미지(PNG)가 저장될 폴더 ID
-    TARGET_ROW: ''          // 대상 행 지정 (선택적)
+    FOLDER_ID: '',          // 결석계 PDF 저장 폴더
+    PARENT_FOLDER_ID: '',   // 학부모 서명 이미지 저장 폴더
+    STUDENT_FOLDER_ID: '',  // 학생 서명 이미지 저장 폴더
+    TARGET_ROW: ''
   },
 
-  // 5. 시스템 기본값 (학년, 반 구성)
+  // 4. 시스템 기본값 (학년, 반 구성)
   SYSTEM_DEFAULTS: {
     TARGET_GRADE: 3,  // 기본 대상 학년
     MAX_GRADE: 3,     // 최대 학년
     MAX_CLASS: 11,    // 최대 반 수 (1~11반)
     MAX_NUMBER: 35    // 최대 학생 번호
-  }
+  },
+
+  // 5. GAS 웹앱 연동 URL (미사용 시 빈 문자열로 유지)
+  GAS_WEBAPP_URL: ''
 };
 
 const SHEET_ID = ROLLBOOK_CONFIG.SHEET_ID;
@@ -47,14 +45,14 @@ const GID_HOLIDAYS = ROLLBOOK_CONFIG.GIDS.HOLIDAYS;
 const SHEET_NAME_RECORDS = ROLLBOOK_CONFIG.GIDS.RECORDS_NAME;
 const GID_PRINT = ROLLBOOK_CONFIG.GIDS.PRINT;
 const GID_REGISTRY = ROLLBOOK_CONFIG.GIDS.REGISTRY;
-const DEFAULT_GAS_URL = ROLLBOOK_CONFIG.DEFAULT_GAS_URL;
+const DEFAULT_GAS_URL = ROLLBOOK_CONFIG.GAS_WEBAPP_URL;
 
 let _configuredGasUrl = localStorage.getItem('ggom_gas_webapp_url') || DEFAULT_GAS_URL;
 
 export const SheetAPI = {
   config: ROLLBOOK_CONFIG,
   sheetId: SHEET_ID,
-  scriptId: ROLLBOOK_CONFIG.SCRIPT_ID,
+
   gidAttendance: GID_ATTENDANCE,
   gidHolidays: GID_HOLIDAYS,
   sheetNameRecords: SHEET_NAME_RECORDS,
