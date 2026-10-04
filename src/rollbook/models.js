@@ -477,20 +477,227 @@ export const RollbookModel = {
   /**
    * Get effective status taking overridesMap into account
    */
-  getEffectiveStudentPeriodStatus(student, dayOfWeek, periodNum, dateStr = null, showSpecialStudent = false, overridesMap = null) {
+  /**
+   * Determine fullStatus and rawStatus from registry record
+   * Returns: { rawStatus, fullStatus, category }
+   */
+  getRegistryFullStatus(r) {
+    if (!r) return { rawStatus: '', fullStatus: '', category: 'present' };
+
+    const cat = (r.cat || '寃곗꽍').trim();
+    const type = (r.type || '吏덈퀝').trim();
+    const reason = (r.reason || '').trim();
+    const subType = (r.subType || '').trim();
+
+    let rawStatus = '蹂?;
+    if (type.includes('?앸━') || reason.includes('?앸━')) {
+      rawStatus = '???앸━)';
+    } else if (type.includes('?몄젙') || type.includes('異쒖꽍?몄젙')) {
+      if (reason.includes('泥댄뿕') || subType.includes('泥댄뿕')) rawStatus = '??泥댄뿕)';
+      else if (reason.includes('寃쎌“') || subType.includes('寃쎌“')) rawStatus = '??寃쎌“??';
+      else if (reason.includes('?꾩뿼') || reason.includes('肄붾줈??) || reason.includes('?낃컧')) rawStatus = '???꾩뿼蹂?';
+      else rawStatus = '??泥댄뿕)';
+    } else if (type.includes('誘몄씤??) || type.includes('臾대떒')) {
+      rawStatus = '誘?;
+    } else if (type.includes('湲고?')) {
+      rawStatus = '湲?;
+    } else if (type.includes('吏덈퀝') || reason.includes('媛먭린') || reason.includes('蹂묒썝') || reason.includes('吏꾨즺')) {
+      rawStatus = '蹂?;
+    }
+
+    const fullStatus = `${type}${cat}`;
+    const category = this.getCategoryFromRawStatus(rawStatus);
+
+    return { rawStatus, fullStatus, category };
+  },
+
+  /**
+   * Parse absence registry records into date_period_studentId lookup map
+   * Map key: `${dateStr}_${period}_${studentId}`
+   */
+  parseRegistryData(records, allStudents = null) {
+    const map = new Map();
+    if (!records || !Array.isArray(records)) return map;
+
+    // Student lookup helper
+    const studentLookup = new Map();
+    if (allStudents && Array.isArray(allStudents)) {
+      allStudents.forEach(st => {
+        studentLookup.set(`${st.ban}_${st.num}`, st.studentId);
+        studentLookup.set(`${st.ban}_${st.name}`, st.studentId);
+        studentLookup.set(st.studentId, st.studentId);
+      });
+    }
+
+    const normalizeDateStr = (dateRaw) => {
+      if (!dateRaw) return '';
+      const cleaned = String(dateRaw).trim().replace(/[^\d.-/]/g, '').replace(/[\/.]/g, '-');
+      const parts = cleaned.split('-').filter(Boolean);
+      if (parts.length === 3) {
+        const y = parts[0];
+        const m = parts[1].padStart(2, '0');
+        const d = parts[2].padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+      return '';
+    };
+
+    const getDateRange = (startRaw, endRaw) => {
+      const s = normalizeDateStr(startRaw);
+      const e = normalizeDateStr(endRaw) || s;
+      if (!s) return [];
+      if (!e || s === e) return [s];
+
+      const dates = [];
+      const cur = new Date(s);
+      const end = new Date(e);
+      let count = 0;
+      while (cur <= end && count < 35) {
+        const y = cur.getFullYear();
+        const m = String(cur.getMonth() + 1).padStart(2, '0');
+        const d = String(cur.getDate()).padStart(2, '0');
+        dates.push(`${y}-${m}-${d}`);
+        cur.setDate(cur.getDate() + 1);
+        count++;
+      }
+      return dates;
+    };
+
+    const allPeriodsOrder = ['議?, 1, 2, 3, 4, 5, 6, 7, '醫?];
+
+    records.forEach(r => {
+      const ban = String(r.ban || '').trim();
+      const num = String(r.num || '').trim();
+      const name = String(r.name || '').trim();
+      const grade = String(r.grade || '3').trim();
+
+      let studentId = '';
+      if (studentLookup.has(`${ban}_${num}`)) {
+        studentId = studentLookup.get(`${ban}_${num}`);
+      } else if (studentLookup.has(`${ban}_${name}`)) {
+        studentId = studentLookup.get(`${ban}_${name}`);
+      } else {
+        studentId = `${grade}${ban.padStart(2, '0')}${num.padStart(2, '0')}`;
+      }
+
+      const statusInfo = this.getRegistryFullStatus(r);
+      const dates = getDateRange(r.startDate, r.endDate);
+
+      // Determine periods to apply
+      let targetPeriods = [];
+      const cat = (r.cat || '').trim();
+      const startP = r.startPeriod ? (parseInt(r.startPeriod, 10) || r.startPeriod) : '';
+      const endP = r.endPeriod ? (parseInt(r.endPeriod, 10) || r.endPeriod) : '';
+
+      if (cat === '寃곗꽍') {
+        targetPeriods = ['議?, 1, 2, 3, 4, 5, 6, 7, '醫?];
+      } else if (cat === '吏媛?) {
+        const limitP = endP || startP || 1;
+        const idx = allPeriodsOrder.indexOf(limitP);
+        targetPeriods = (idx >= 0) ? allPeriodsOrder.slice(0, idx + 1) : ['議?, 1];
+      } else if (cat === '議고눜') {
+        const fromP = startP || endP || 5;
+        const idx = allPeriodsOrder.indexOf(fromP);
+        targetPeriods = (idx >= 0) ? allPeriodsOrder.slice(idx) : [5, 6, 7, '醫?];
+      } else if (cat === '寃곌낵') {
+        if (startP && endP) {
+          const sIdx = allPeriodsOrder.indexOf(startP);
+          const eIdx = allPeriodsOrder.indexOf(endP);
+          if (sIdx >= 0 && eIdx >= 0 && sIdx <= eIdx) {
+            targetPeriods = allPeriodsOrder.slice(sIdx, eIdx + 1);
+          } else {
+            targetPeriods = [startP];
+          }
+        } else if (startP) {
+          targetPeriods = [startP];
+        } else if (endP) {
+          targetPeriods = [endP];
+        } else {
+          targetPeriods = [1];
+        }
+      } else {
+        targetPeriods = ['議?, 1, 2, 3, 4, 5, 6, 7, '醫?];
+      }
+
+      dates.forEach(dStr => {
+        targetPeriods.forEach(p => {
+          const key = `${dStr}_${p}_${studentId}`;
+          map.set(key, {
+            studentId,
+            dateStr: dStr,
+            period: p,
+            rawStatus: statusInfo.rawStatus,
+            fullStatus: statusInfo.fullStatus,
+            category: statusInfo.category,
+            record: r
+          });
+        });
+      });
+    });
+
+    return map;
+  },
+
+  /**
+   * Get effective status taking overridesMap into account
+   * Priority:
+   * 1. Registry Map ('??? 怨듭떇 ?뱀씤蹂?- 理쒖슦???뺤젙)
+   * 2. Attendance Overrides ('異쒓껐湲곕줉' ?ㅼ떆媛??꾩옣 ?낅젰)
+   * 3. Default Timetable Status
+   */
+  getEffectiveStudentPeriodStatus(student, dayOfWeek, periodNum, dateStr = null, showSpecialStudent = false, overridesMap = null, registryMap = null) {
     const def = this.getStudentPeriodStatus(student, dayOfWeek, periodNum, dateStr, showSpecialStudent);
     const key = `${dateStr}_${periodNum}_${student?.studentId || ''}`;
-    if (overridesMap && student && overridesMap.has(key)) {
+
+    // 1?쒖쐞: [????곗꽑 ?먯튃] '??? ?쒗듃???묒닔쨌寃곗옱??怨듭떇 寃곗꽍怨꾧? ?덈뒗 寃쎌슦 (理쒖슦???뺤젙)
+    if (registryMap && student && registryMap.has(key)) {
+      const regRec = registryMap.get(key);
+      const rawStatus = regRec.rawStatus || this.getRegistryFullStatus(regRec.record).rawStatus;
+      const fullStatus = regRec.fullStatus || this.getRegistryFullStatus(regRec.record).fullStatus;
+      const displayText = this.getStatusDisplayText(rawStatus);
+      const remarkText = this.getStatusRemarkText(rawStatus);
+      const cat = regRec.category || this.getCategoryFromRawStatus(rawStatus);
+
+      // ?곸땐(Conflict) 媛먯?: ?꾩옣 ?섏뾽 '異쒓껐湲곕줉' ?쒗듃???ㅻⅨ ?곹깭媛 ?곹? ?덈뒗媛?
+      let hasConflict = false;
+      let conflictOverrideStatus = '';
+      if (overridesMap && overridesMap.has(key)) {
+        const ovRec = overridesMap.get(key);
+        const ovStatus = (ovRec.status || '').trim();
+        if (ovStatus && !this.isStatusEquivalent(ovStatus, rawStatus) && ovStatus !== '異쒖꽍') {
+          hasConflict = true;
+          conflictOverrideStatus = ovStatus;
+        }
+      }
+
+      return {
+        text: displayText,
+        rawStatus,
+        fullStatus,
+        remarkText,
+        isShaded: true,
+        is50Dark: false,
+        isPresent: false,
+        category: cat,
+        isOverridden: true,
+        isRegistryPriority: true,      // ????곗꽑 ?뱀씤 ?뚮옒洹?        hasConflict,                  // ?꾩옣 湲곕줉怨??곸땐 諛쒖깮 ?щ?
+        conflictOverrideStatus,       // 援먭낵援먯궗媛 泥댄겕?덈뜕 ?꾩옣 湲곕줉
+        registryRecord: regRec.record, // ???怨듭떇 寃곗꽍怨?媛앹껜
+        docSubmitted: true            // 利앸튃?쒕쪟 ?뺤씤 ?꾨즺
+      };
+    }
+
+    // 2?쒖쐞: '異쒓껐湲곕줉' ?쒗듃???꾩옣 ?ㅼ떆媛??ㅻ쾭?쇱씠??    if (overridesMap && student && overridesMap.has(key)) {
       const rec = overridesMap.get(key);
       const rawStatus = (rec.status || '').trim();
 
       // If override value matches the student's original status, it is not an override
       if (this.isStatusEquivalent(rawStatus, def.text)) {
-        return { ...def, rawStatus: def.text, remarkText: '', isOverridden: false, docSubmitted: false };
+        return { ...def, rawStatus: def.text, remarkText: '', isOverridden: false, isRegistryPriority: false, hasConflict: false, docSubmitted: false };
       }
 
-      if (!rawStatus || rawStatus === '출석') {
-        return { text: '', rawStatus: '', remarkText: '', isShaded: false, is50Dark: false, isPresent: true, category: 'present', isOverridden: true };
+      if (!rawStatus || rawStatus === '異쒖꽍') {
+        return { text: '', rawStatus: '', remarkText: '', isShaded: false, is50Dark: false, isPresent: true, category: 'present', isOverridden: true, isRegistryPriority: false, hasConflict: false };
       }
       const displayText = this.getStatusDisplayText(rawStatus);
       const remarkText = this.getStatusRemarkText(rawStatus);
@@ -505,13 +712,15 @@ export const RollbookModel = {
         isPresent: false,
         category: cat,
         isOverridden: true,
+        isRegistryPriority: false,
+        hasConflict: false,
         docSubmitted: !!rec.docSubmitted
       };
     }
-    return { ...def, rawStatus: def.text, remarkText: '', isOverridden: false, docSubmitted: false };
-  },
 
-  /**
+    // 3?쒖쐞: 湲곕낯 ?먯쿇 ?쒓컙???곹깭
+    return { ...def, rawStatus: def.text, remarkText: '', isOverridden: false, isRegistryPriority: false, hasConflict: false, docSubmitted: false };
+  },/**
    * Analyze student daily attendance across whole day:
    * Sessions: ['조', 1, 2, ..., maxPeriod, '종']
    * Classifies into:
@@ -520,14 +729,14 @@ export const RollbookModel = {
    * - 조퇴: 출석 후 뒷부분~종례 불참
    * - 결과: 앞뒤 출석 중 중간 교시 불참
    */
-  analyzeDailyAttendance(student, dayOfWeek, dateStr, overridesMap = null, showSpecialStudent = false) {
+  analyzeDailyAttendance(student, dayOfWeek, dateStr, overridesMap = null, showSpecialStudent = false, registryMap = null) {
     const maxPeriod = AcademicConfig.periodsPerDay[dayOfWeek] || 6;
     const periods = ['조'];
     for (let p = 1; p <= maxPeriod; p++) periods.push(p);
     periods.push('종');
 
     const sessionResults = periods.map(p => {
-      const st = this.getEffectiveStudentPeriodStatus(student, dayOfWeek, p, dateStr, showSpecialStudent, overridesMap);
+      const st = this.getEffectiveStudentPeriodStatus(student, dayOfWeek, p, dateStr, showSpecialStudent, overridesMap, registryMap);
       return {
         period: p,
         isPresent: st.isPresent,
@@ -1021,7 +1230,7 @@ export const RollbookModel = {
   /**
    * Get effective display remark combining base remark and attendance reasons (same simple format as moving rollbook)
    */
-  getEffectiveDisplayRemark(pRemark, studentId, dateOrDays, overridesMap = null, showSpecialStudent = false, student = null) {
+  getEffectiveDisplayRemark(pRemark, studentId, dateOrDays, overridesMap = null, showSpecialStudent = false, student = null, registryMap = null) {
     const base = this.getDisplayRemark(pRemark, dateOrDays, showSpecialStudent);
     if (!studentId || !dateOrDays) return base;
 
@@ -1044,6 +1253,19 @@ export const RollbookModel = {
           if (overridesMap.has(key)) {
             const rec = overridesMap.get(key);
             const rText = this.getStatusRemarkText(rec.status);
+            if (rText) extraRemarks.add(rText);
+          }
+        });
+      }
+
+            // Check registryMap for official approved absence remarks
+      if (registryMap) {
+        const checkPeriods = ['議?, 1, 2, 3, 4, 5, 6, 7, '醫?];
+        checkPeriods.forEach(p => {
+          const key = `${dStr}_${p}_${studentId}`;
+          if (registryMap.has(key)) {
+            const regRec = registryMap.get(key);
+            const rText = this.getStatusRemarkText(regRec.rawStatus);
             if (rText) extraRemarks.add(rText);
           }
         });

@@ -164,10 +164,11 @@ export const MovingRollbookView = {
     // Render student table rows (up to 35 rows)
     const students = roster.students || [];
     const overridesMap = options.overridesMap || null;
+      const registryMap = options.registryMap || null;
 
     const rowsHtml = students.map((st, idx) => {
       const origStatus = RollbookModel.getStudentPeriodStatus(st, dayInfo.dayOfWeek, roster.periodNum, dayInfo.dateStr, showSpecialStudents);
-      const status = RollbookModel.getEffectiveStudentPeriodStatus(st, dayInfo.dayOfWeek, roster.periodNum, dayInfo.dateStr, showSpecialStudents, overridesMap);
+      const status = RollbookModel.getEffectiveStudentPeriodStatus(st, dayInfo.dayOfWeek, roster.periodNum, dayInfo.dateStr, showSpecialStudents, overridesMap, registryMap);
 
       const is50Dark = status.is50Dark ? 'row-dark-50' : '';
       const is10Tint = (!status.is50Dark && status.isShaded) ? 'cell-tint-10' : '';
@@ -186,7 +187,7 @@ export const MovingRollbookView = {
           <td class="col-seq">${idx + 1}</td>
           <td class="col-id">${escapeHtml(st.studentId)}</td>
           <td class="col-name">${escapeHtml(st.name)}</td>
-          <td class="col-check interactive-cell ${is10Tint} ${isOverriddenClass} ${isDocSubmitted}"
+          <td class="col-check interactive-cell ${is10Tint} ${isOverriddenClass} ${isDocSubmitted} ${status.isRegistryPriority ? 'is-registry-approved' : ''} ${status.hasConflict ? 'has-conflict' : ''}"
               data-action="attendance-cell"
               data-student-id="${escapeHtml(st.studentId)}"
               data-date="${escapeHtml(dayInfo.dateStr)}"
@@ -197,8 +198,11 @@ export const MovingRollbookView = {
               data-room="${escapeHtml(roster.room || '')}"
               data-original-status="${escapeHtml(originalStatusText)}"
               data-current-status="${escapeHtml(rawStatusValue)}"
-              title="좌클릭: 출결 순환 | Shift+클릭: 역순환 | 우클릭: 직접 선택/전교시 일괄">
-            ${escapeHtml(status.text) || '<span class="check-box"></span>'}
+              data-is-registry="${status.isRegistryPriority ? '1' : '0'}"
+              data-has-conflict="${status.hasConflict ? '1' : '0'}"
+              data-conflict-override="${escapeHtml(status.conflictOverrideStatus || '')}"
+              title="${status.hasConflict ? `[怨듭떇 寃곗꽍怨??곗꽑 ?곸슜: ${status.fullStatus || currentStatusText}] ?꾩옣 湲곕줉(${status.conflictOverrideStatus})怨??곸땐 | ?대┃ ??蹂寃??뺤씤` : (status.isRegistryPriority ? `[怨듭떇 寃곗꽍怨??뱀씤: ${status.fullStatus || currentStatusText}] 利앸튃?쒕쪟 ?뺤씤 ?꾨즺 | ?대┃ ??蹂寃??뺤씤` : '醫뚰겢由? 異쒓껐 ?쒗솚 | Shift+?대┃: ??닚??| ?고겢由? 吏곸젒 ?좏깮/?꾧탳???쇨큵')}">
+            ${escapeHtml(status.text) || '<span class="check-box"></span>'}${status.hasConflict ? `<span class="cell-conflict-badge" title="?곸땐: ?꾩옣湲곕줉(${escapeHtml(status.conflictOverrideStatus)})">?좑툘</span>` : (status.isRegistryPriority ? `<span class="cell-registry-badge" title="???怨듭떇 寃곗꽍怨??뱀씤">?뱫</span>` : '')}
           </td>
           <td class="col-remark" data-student-id="${escapeHtml(st.studentId)}" data-base-remark="${escapeHtml(baseRemark)}">${escapeHtml(displayRemark)}</td>
         </tr>

@@ -21,9 +21,9 @@ export const ROLLBOOK_CONFIG = {
 
   // 3. 구글 드라이브 폴더 ID (필요 시 지정)
   DRIVE_FOLDERS: {
-    FOLDER_ID: '',          // 결석계 PDF 저장 폴더
-    PARENT_FOLDER_ID: '',   // 학부모 서명 이미지 저장 폴더
-    STUDENT_FOLDER_ID: '',  // 학생 서명 이미지 저장 폴더
+    FOLDER_ID: '11gsPw9c_6SYtu4z-6sFFyJ6ZFXW0lvxq',          // 寃곗꽍怨?PDF ????대뜑
+    PARENT_FOLDER_ID: '1SkhLY-CuzamZNTXkHwHKZ0d_ijWu2_n-',   // ?숇?紐??쒕챸 ?대?吏 ????대뜑
+    STUDENT_FOLDER_ID: '1WDh936rDpZZKOva1zPLA7gza5nTWNDXe',  // ?숈깮 ?쒕챸 ?대?吏 ????대뜑
     TARGET_ROW: ''
   },
 
@@ -93,18 +93,21 @@ export const SheetAPI = {
     let attendanceCsv = '';
     let holidaysCsv = '';
     let recordsCsv = '';
+    let registryCsv = '';
     let isLive = false;
 
     try {
-      // Live fetch for attendance, holidays, and records sheet
-      const [attData, holData, recData] = await Promise.all([
+      // Live fetch for attendance, holidays, records, and registry sheets
+      const [attData, holData, recData, regData] = await Promise.all([
         this.fetchSheetCsv(this.gidAttendance),
         this.fetchSheetCsv(this.gidHolidays),
-        this.fetchSheetByName(this.sheetNameRecords).catch(() => '')
+        this.fetchSheetByName(this.sheetNameRecords).catch(() => ''),
+        this.fetchSheetCsv(this.gidRegistry).catch(() => '')
       ]);
       attendanceCsv = attData;
       holidaysCsv = holData;
       recordsCsv = recData;
+      registryCsv = regData;
       isLive = true;
     } catch (err) {
       console.error('Live Google Sheets fetch failed:', err);
@@ -115,8 +118,9 @@ export const SheetAPI = {
       attendanceCsv,
       holidaysCsv,
       recordsCsv,
+      registryCsv,
       isLive,
-      timestamp: new Date()
+      timestamp: new Date().toISOString()
     };
   },
 

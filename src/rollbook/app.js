@@ -23,6 +23,7 @@ class App {
       view: 'homeroom', // 'moving' | 'homeroom' | 'lunch' | 'finder' | 'today' | 'absence'
       absenceFilters: { grade: '3', ban: '', num: '', name: '', month: '', printStatus: 'all' },
       absenceRegistryRecords: [],
+      registryMap: new Map(),
       allStudents: [],
       holidaysMap: { fullDayEvents: {}, periodOverrides: {} },
       weeks: [],
@@ -69,7 +70,7 @@ class App {
   async loadData() {
     this.showLoading(true);
     try {
-      const { attendanceCsv, holidaysCsv, recordsCsv, isLive, timestamp } = await SheetAPI.loadAllData();
+      const { attendanceCsv, holidaysCsv, recordsCsv, registryCsv, isLive, timestamp } = await SheetAPI.loadAllData();
       const attRows = SheetAPI.parseCsv(attendanceCsv);
       const holRows = SheetAPI.parseCsv(holidaysCsv);
       const recRows = SheetAPI.parseCsv(recordsCsv || '');
@@ -77,6 +78,13 @@ class App {
       this.state.allStudents = RollbookModel.parseAttendanceData(attRows);
       this.state.holidaysMap = RollbookModel.parseHolidaysData(holRows);
       this.state.attendanceOverrides = RollbookModel.parseAttendanceRecords(recRows);
+      if (registryCsv) {
+        this.state.absenceRegistryRecords = AbsenceRegistryView.parseRegistryCsv(registryCsv);
+        this.state.registryMap = RollbookModel.parseRegistryData(this.state.absenceRegistryRecords, this.state.allStudents);
+      } else {
+        this.state.absenceRegistryRecords = [];
+        this.state.registryMap = new Map();
+      }
       this.state.isLive = isLive;
       this.state.lastUpdated = timestamp;
 
@@ -1298,6 +1306,13 @@ class App {
   }
 
   applyAttendanceChange(cellEl, nextStatus) {
+    if (cellEl.dataset.isRegistry === '1') {
+      const cur = cellEl.dataset.currentStatus || '';
+      const msg = `[?덈궡: ???怨듭떇 寃곗꽍怨??뱀씤 嫄?\n\n???숈깮? 寃곗꽍怨???μ뿉 [${cur}] ?곹깭濡?怨듭떇 ?뱀씤?섏뼱 ?덉뒿?덈떎.\n\n?꾩옣 異쒓껐湲곕줉??[${nextStatus || '異쒖꽍'}] (??濡?蹂寃쏀븯?쒓쿋?듬땲源?\n\n(?????怨듭떇 ?뱀씤??理쒖슦???곸슜?섎?濡? ?꾩옣 湲곕줉 蹂寃???'?곸땐(?좑툘)'?쇰줈 ?쒖떆?⑸땲??)`;
+      if (!confirm(msg)) {
+        return;
+      }
+    }
     const { studentId, date, period, ban, num, name, room, originalStatus, currentStatus } = cellEl.dataset;
     const key = `${date}_${period}_${studentId}`;
 
@@ -1570,6 +1585,18 @@ class App {
     const key = `${cellEl.dataset.date}_${cellEl.dataset.period}_${cellEl.dataset.studentId}`;
     const rec = this.state.attendanceOverrides.get(key);
     cellEl.classList.toggle('doc-submitted', !!(rec && rec.docSubmitted));
+
+    // Update registry priority and conflict classes live
+    if (this.state.registryMap && this.state.registryMap.has(key)) {
+      const regRec = this.state.registryMap.get(key);
+      const isReg = true;
+      const hasConflict = !!(statusText && !RollbookModel.isStatusEquivalent(statusText, regRec.rawStatus) && statusText !== '異쒖꽍');
+      cellEl.dataset.isRegistry = '1';
+      cellEl.dataset.hasConflict = hasConflict ? '1' : '0';
+      cellEl.dataset.conflictOverrideStatus = hasConflict ? statusText : '';
+      cellEl.classList.add('is-registry-approved');
+      cellEl.classList.toggle('has-conflict', hasConflict);
+    }
   }
 
   updateRemarkDom(studentId) {
@@ -1600,7 +1627,8 @@ class App {
         dates,
         this.state.attendanceOverrides,
         this.state.showSpecialStudents,
-        student
+        student,
+        this.state.registryMap
       );
       cell.textContent = newRemark;
     });
@@ -2183,12 +2211,14 @@ class App {
 
       html = MovingRollbookView.render(allStudents, holidaysMap, selectedRooms, targetDays, {
         showSpecialStudents,
-        overridesMap: this.state.attendanceOverrides
+        overridesMap: this.state.attendanceOverrides,
+        registryMap: this.state.registryMap
       });
     } else if (view === 'homeroom') {
       html = HomeroomRollbookView.render(allStudents, holidaysMap, selectedBans, weekObj, {
         showSpecialStudents,
-        overridesMap: this.state.attendanceOverrides
+        overridesMap: this.state.attendanceOverrides,
+        registryMap: this.state.registryMap
       });
     } else if (view === 'lunch') {
       html = LunchCalendarView.render(allStudents, holidaysMap, selectedLunchYear, selectedLunchMonth);
@@ -2362,7 +2392,8 @@ class App {
     try {
       const csv = await SheetAPI.fetchSheetByName('대장');
       this.state.absenceRegistryRecords = AbsenceRegistryView.parseRegistryCsv(csv);
-      if (this.state.view === 'absence') {
+      this.state.registryMap = RollbookModel.parseRegistryData(this.state.absenceRegistryRecords, this.state.allStudents);
+      if (this.state.view === 'absence' || this.state.view === 'homeroom' || this.state.view === 'moving') {
         this.renderContent();
       }
     } catch (e) {
@@ -2597,7 +2628,7 @@ class App {
     setTimeout(() => {
       document.body.classList.remove('printing-absence');
       printSection.innerHTML = '';
-      if (this.state.view === 'absence') {
+      if (this.state.view === 'absence' || this.state.view === 'homeroom' || this.state.view === 'moving') {
         this.renderContent();
       }
     }, 1000);
