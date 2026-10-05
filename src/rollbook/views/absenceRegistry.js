@@ -132,27 +132,28 @@ export const AbsenceRegistryView = {
       return true;
     });
 
-    const months = ['03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '01', '02'];
+    // Month select options (2026-03 to 2027-02)
+    const months = [
+      '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08',
+      '2026-09', '2026-10', '2026-11', '2026-12', '2027-01', '2027-02'
+    ];
     const monthOpts = months.map(m => {
-      const year = (m === '01' || m === '02') ? '2027' : '2026';
-      const val = `${year}-${m}`;
-      return `<option value="${val}" ${month === val ? 'selected' : ''}>${val}월</option>`;
+      const [y, mm] = m.split('-');
+      const sel = (month === m) ? 'selected' : '';
+      return `<option value="${m}" ${sel}>${y}년 ${parseInt(mm, 10)}월</option>`;
     }).join('');
 
     return `
-      <div class="absence-registry-container">
-        <!-- 뷰 헤더 바 -->
-        <div class="registry-header-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+      <div class="absence-registry-view no-print">
+        <div class="view-header-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
           <div>
-            <h2 style="margin: 0; font-size: 20px; color: #1e293b; display: flex; align-items: center; gap: 8px;">
-              <span>📑</span> 공식 결석계 접수 대장
+            <h2 style="font-size: 20px; color: var(--text-dark, #212529); margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+              <span>📋</span> 결석계 접수 대장 및 인쇄 관리
             </h2>
-            <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b;">
-              구글 시트 '대장'에 접수된 결석계를 조회하고, 공식 결석계를 원클릭으로 A4 출력합니다.
-            </p>
+            <p style="font-size: 13px; color: #6c757d;">구글 시트 '대장'과 실시간 직통 연동되어 브라우저에서 즉시 검색 및 A4 고속 인쇄가 가능합니다.</p>
           </div>
-          <div style="display: flex; gap: 8px;">
-            <button type="button" class="btn btn-primary" id="btnPrintSelectedAbsence">
+          <div style="display: flex; gap: 10px;">
+            <button type="button" class="btn btn-primary" id="btnBulkPrintAbsence" style="background: #20c997; border-color: #20c997;">
               🖨️ 선택 일괄 인쇄
             </button>
             <button type="button" class="btn btn-secondary" id="btnRefreshAbsenceRegistry">

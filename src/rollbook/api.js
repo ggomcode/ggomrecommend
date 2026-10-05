@@ -11,10 +11,10 @@ export const ROLLBOOK_CONFIG = {
   // 1. 구글 스프레드시트 ID (단 하나만 필요)
   SHEET_ID: '1-Ki9X_EKw5xEq-Pc-ba-PBU6VWhvdBun-1bkUjTTH0Q',
 
-  // 2. 스프레드시트 각 탭 GID 및 시트명 (gviz로 0초 만에 실시간 조회)
+  // 2. 스프레드시트 각 시트 GID 및 시트명 (gviz로 0초 만에 실시간 조회)
   GIDS: {
     ATTENDANCE: '923106420',   // 출결사항 (학생·시간표)
-    HOLIDAYS: '969683114',     // 행사및휴일
+    HOLIDAYS: '969683114',     // 행사및휴업
     REGISTRY: '334191447',     // 결석계 접수 대장
     PRINT: '256444665',        // 공식 결석계 인쇄 양식
     RECORDS_NAME: '출결기록'   // 실시간 출결 오버라이드 기록 시트명
@@ -224,13 +224,11 @@ export const SheetAPI = {
         }
       };
 
-      const script = document.createElement('script');
-      script.src = script.src; // kept
-      script.src = `https://docs.google.com/spreadsheets/d/${this.sheetId}/gviz/tq?tqx=responseHandler:${callbackName}&gid=${gid}`;
       script.onerror = () => {
         cleanup();
         reject(new Error(`Script load error for GID ${gid}`));
       };
+
       document.head.appendChild(script);
     });
   },
@@ -408,9 +406,11 @@ export const SheetAPI = {
       }
       i++;
     }
+
     if (row.length > 1 || row[0] !== '') {
       lines.push(row);
     }
+
     return lines;
   }
 };
