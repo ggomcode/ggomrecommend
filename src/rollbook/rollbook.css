@@ -960,17 +960,18 @@
 }
 
 /* Fixed column widths for homeroom */
-.homeroom-table .col-seq { width: 24px; }
-.homeroom-table .col-num { width: 24px; }
-.homeroom-table .col-id { width: 42px; font-family: monospace; font-size: 9px; }
-.homeroom-table .col-name { width: 44px; text-align: left; padding-left: 3px; font-weight: 600; }
+.homeroom-table .col-seq { width: 30px; }
+.homeroom-table .col-num { width: 32px; }
+.homeroom-table .col-id { width: 44px; font-family: monospace; font-size: 9px; }
+.homeroom-table .col-name { width: 48px; text-align: left; padding-left: 3px; font-weight: 600; }
 .homeroom-table .col-remark {
-  width: 34px;
-  font-size: 7px;
+  width: 38px;
+  font-size: 8px;
   line-height: 1.15;
   white-space: normal;
   word-break: keep-all;
-  padding: 1px 1.5px;
+  padding: 1px 1px;
+  text-align: center;
   border-right: 2px solid #000000 !important; /* 비고와 요일 구분선 (진한선) */
 }
 

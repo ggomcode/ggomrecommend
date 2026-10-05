@@ -49,11 +49,11 @@ export const HomeroomRollbookView = {
     // Build day/session columns header
     // Each day has: 조례('조'), 1..maxPeriod, 종례('종')
     let colGroupHtml = `
-      <col class="col-seq" style="width: 38px;">
-      <col class="col-num" style="width: 42px;">
-      <col class="col-id" style="width: 58px;">
-      <col class="col-name" style="width: 72px;">
-      <col class="col-remark" style="width: 140px;">
+      <col class="col-seq" style="width: 30px;">
+      <col class="col-num" style="width: 32px;">
+      <col class="col-id" style="width: 44px;">
+      <col class="col-name" style="width: 48px;">
+      <col class="col-remark" style="width: 38px;">
     `;
 
     let headerTopRow = `
@@ -255,6 +255,10 @@ export const HomeroomRollbookView = {
       </td>`;
     }).join('');
 
+    const weekTitle = (weekObj && weekObj.title) || (weekObj && weekObj.weekNum ? `2학기 ${weekObj.weekNum}주차` : (weekObj && weekObj.label) || '');
+    const rangeText = (weekObj && weekObj.rangeStr) || (days && days.length > 0 ? `${days[0].displayDate || days[0].label} ~ ${days[days.length - 1].displayDate || days[days.length - 1].label}` : '');
+    const periodDisplay = rangeText ? `${weekTitle} (${rangeText})` : weekTitle;
+
     return `
       <div class="rollbook-sheet homeroom-sheet" data-ban="${ban}">
         <div class="sheet-header">
@@ -262,7 +266,7 @@ export const HomeroomRollbookView = {
             <h2 class="sheet-title">제 3 학년 ${ban} 반 주간 출석부</h2>
             <div class="sheet-subtitle">
               <span class="sheet-badge homeroom-badge">담임용</span>
-              <span class="sheet-period-info">${weekObj.title || ''} (${weekObj.rangeStr || ''})</span>
+              <span class="sheet-period-info">${periodDisplay}</span>
             </div>
           </div>
           <div class="sheet-meta">

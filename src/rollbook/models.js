@@ -297,6 +297,8 @@ export const RollbookModel = {
         weekNum: w,
         label: `2학기 ${w}주차 (${days[0].displayDate} ~ ${days[4].displayDate})${isCurrent ? ' ★ [이번 주]' : ''}`,
         shortLabel: `${w}주차`,
+        title: `2학기 ${w}주차`,
+        rangeStr: `${days[0].displayDate} ~ ${days[4].displayDate}`,
         isCurrent,
         days
       });
