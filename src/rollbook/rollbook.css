@@ -1980,6 +1980,27 @@
   border: 1px solid #bfdbfe;
 }
 
+.print-view-select {
+  width: 100%;
+  background-color: #f0f7ff;
+  color: #1e40af;
+  font-weight: 700;
+  font-size: 13.5px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1.5px solid #bfdbfe;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.print-view-select:focus {
+  outline: none;
+  border-color: #2563eb;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
 .modal-row {
   display: flex;
   align-items: center;

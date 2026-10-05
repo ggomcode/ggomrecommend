@@ -351,16 +351,14 @@ class App {
     const modal = document.getElementById('printModal');
     if (!modal) return;
 
-    const { view, weeks, currentWeekNum, selectedDayIdx, selectedRooms, selectedBans } = this.state;
+    const { view, weeks, currentWeekNum, selectedDayIdx } = this.state;
     const weekObj = weeks.find(w => w.weekNum === currentWeekNum) || weeks[0];
 
-    // 1. View badge
-    const viewBadge = document.getElementById('printModalViewBadge');
-    if (viewBadge) {
-      if (view === 'moving') viewBadge.textContent = '이동수업 출석부 (1~12반 교실)';
-      else if (view === 'homeroom') viewBadge.textContent = '원적학급 주간 출석부 (1~11반)';
-      else if (view === 'lunch') viewBadge.textContent = '월별 예상 급식 캘린더';
-      else if (view === 'finder') viewBadge.textContent = '학생·시간표 검색 결과';
+    // 1. View select dropdown (defaults to the currently displayed rollbook on screen)
+    const viewSelect = document.getElementById('printModalViewSelect');
+    const defaultPrintView = (view === 'moving') ? 'moving' : 'homeroom';
+    if (viewSelect) {
+      viewSelect.value = defaultPrintView;
     }
 
     // 2. Week select
@@ -388,39 +386,57 @@ class App {
     }
 
     // 4. Target classes / rooms grid
+    this.updatePrintModalTargets(defaultPrintView);
+
+    this.calculatePrintModalEstimate();
+    modal.style.display = 'flex';
+  }
+
+  updatePrintModalTargets(targetView) {
     const targetLabel = document.getElementById('printModalTargetLabel');
     const targetGrid = document.getElementById('printModalTargetGrid');
     const selectAllTargets = document.getElementById('printModalSelectAllTargets');
+    const dayContainer = document.getElementById('printModalDayCheckboxes');
+    const periodLabel = document.getElementById('printModalPeriodLabel');
+    const homeroomNote = document.getElementById('printModalHomeroomDayNote');
 
-    if (targetGrid) {
-      if (view === 'moving') {
-        if (targetLabel) targetLabel.textContent = '인쇄 대상 교실 선택 (1~12반):';
-        targetGrid.innerHTML = this.allRooms.map(r => `
-          <label class="target-check-card">
-            <input type="checkbox" class="print-target-cb" value="${r}" ${selectedRooms.includes(r) ? 'checked' : ''} />
-            <span>${r}</span>
-          </label>
-        `).join('');
-      } else if (view === 'homeroom') {
-        if (targetLabel) targetLabel.textContent = '인쇄 대상 학급 선택 (1~11반):';
-        targetGrid.innerHTML = this.allBans.map(b => `
-          <label class="target-check-card">
-            <input type="checkbox" class="print-target-cb" value="${b}" ${selectedBans.includes(b) ? 'checked' : ''} />
-            <span>${b}반</span>
-          </label>
-        `).join('');
-      } else {
-        if (targetLabel) targetLabel.textContent = '인쇄 대상:';
-        targetGrid.innerHTML = `<div style="grid-column: 1/-1; padding: 10px; color: var(--text-muted); font-size: 13px;">현재 화면(1페이지)이 인쇄됩니다.</div>`;
-      }
+    if (!targetGrid) return;
+
+    if (targetView === 'moving') {
+      if (periodLabel) periodLabel.textContent = '주차 및 요일 범위:';
+      if (dayContainer) dayContainer.style.display = 'flex';
+      if (homeroomNote) homeroomNote.style.display = 'none';
+
+      if (targetLabel) targetLabel.textContent = '인쇄 대상 교실 선택 (1~12반):';
+      targetGrid.innerHTML = this.allRooms.map(r => `
+        <label class="target-check-card">
+          <input type="checkbox" class="print-target-cb" value="${r}" checked />
+          <span>${r}</span>
+        </label>
+      `).join('');
+    } else if (targetView === 'homeroom') {
+      if (periodLabel) periodLabel.textContent = '인쇄 대상 주차 선택:';
+      if (dayContainer) dayContainer.style.display = 'none';
+      if (homeroomNote) homeroomNote.style.display = 'block';
+
+      if (targetLabel) targetLabel.textContent = '인쇄 대상 학급 선택 (1~11반):';
+      targetGrid.innerHTML = this.allBans.map(b => `
+        <label class="target-check-card">
+          <input type="checkbox" class="print-target-cb" value="${b}" checked />
+          <span>${b}반</span>
+        </label>
+      `).join('');
+    } else {
+      if (periodLabel) periodLabel.textContent = '주차 및 요일:';
+      if (dayContainer) dayContainer.style.display = 'flex';
+      if (homeroomNote) homeroomNote.style.display = 'none';
+      if (targetLabel) targetLabel.textContent = '인쇄 대상:';
+      targetGrid.innerHTML = `<div style="grid-column: 1/-1; padding: 10px; color: var(--text-muted); font-size: 13px;">현재 화면(1페이지)이 인쇄됩니다.</div>`;
     }
 
     if (selectAllTargets) {
       selectAllTargets.checked = true;
     }
-
-    this.calculatePrintModalEstimate();
-    modal.style.display = 'flex';
   }
 
   setupPrintModalListeners() {
@@ -432,6 +448,7 @@ class App {
     const confirmBtn = document.getElementById('confirmPrintModalBtn');
     const selectAllTargets = document.getElementById('printModalSelectAllTargets');
     const weekSelect = document.getElementById('printModalWeekSelect');
+    const viewSelect = document.getElementById('printModalViewSelect');
 
     const closeModal = () => { modal.style.display = 'none'; };
 
@@ -442,6 +459,13 @@ class App {
       if (e.target === modal) closeModal();
     });
 
+    if (viewSelect) {
+      viewSelect.addEventListener('change', () => {
+        this.updatePrintModalTargets(viewSelect.value);
+        this.calculatePrintModalEstimate();
+      });
+    }
+
     if (weekSelect) {
       weekSelect.addEventListener('change', () => {
         this.updatePrintModalDayLabels();
@@ -451,7 +475,7 @@ class App {
 
     if (selectAllTargets) {
       selectAllTargets.addEventListener('change', (e) => {
-        document.querySelectorAll('.print-target-cb').forEach(cb => {
+        modal.querySelectorAll('.print-target-cb').forEach(cb => {
           cb.checked = e.target.checked;
         });
         this.calculatePrintModalEstimate();
@@ -460,6 +484,11 @@ class App {
 
     modal.addEventListener('change', (e) => {
       if (e.target.classList.contains('print-day-cb') || e.target.classList.contains('print-target-cb')) {
+        if (e.target.classList.contains('print-target-cb') && selectAllTargets) {
+          const allTargets = modal.querySelectorAll('.print-target-cb');
+          const checkedTargets = modal.querySelectorAll('.print-target-cb:checked');
+          selectAllTargets.checked = (allTargets.length > 0 && allTargets.length === checkedTargets.length);
+        }
         this.calculatePrintModalEstimate();
       }
     });
@@ -489,7 +518,9 @@ class App {
   }
 
   calculatePrintModalEstimate() {
-    const { view } = this.state;
+    const viewSelect = document.getElementById('printModalViewSelect');
+    const targetPrintView = viewSelect ? viewSelect.value : ((this.state.view === 'moving') ? 'moving' : 'homeroom');
+
     const countEl = document.getElementById('printModalPageCount');
     const summaryEl = document.getElementById('printModalSummary');
     if (!countEl) return;
@@ -500,10 +531,10 @@ class App {
     let estimate = 0;
     let summaryText = '';
 
-    if (view === 'moving') {
+    if (targetPrintView === 'moving') {
       estimate = checkedTargets.length * checkedDays.length * 2;
       summaryText = `교실 ${checkedTargets.length}개 × 선택 요일 ${checkedDays.length}일 × 오전/오후 2장 = 약 ${estimate}장`;
-    } else if (view === 'homeroom') {
+    } else if (targetPrintView === 'homeroom') {
       estimate = checkedTargets.length;
       summaryText = `선택 학급 ${checkedTargets.length}개 × 주간 출석부 1장 = 약 ${estimate}장`;
     } else {
@@ -519,9 +550,12 @@ class App {
     const modal = document.getElementById('printModal');
     if (modal) modal.style.display = 'none';
 
-    const { view, allStudents, holidaysMap, weeks, showSpecialStudents, attendanceOverrides } = this.state;
+    const { allStudents, holidaysMap, weeks, showSpecialStudents, attendanceOverrides } = this.state;
     const container = document.getElementById('appOutput') || document.getElementById('contentContainer');
     if (!container) return;
+
+    const viewSelect = document.getElementById('printModalViewSelect');
+    const targetPrintView = viewSelect ? viewSelect.value : ((this.state.view === 'moving') ? 'moving' : 'homeroom');
 
     const weekSelect = document.getElementById('printModalWeekSelect');
     const targetWeekNum = weekSelect ? parseInt(weekSelect.value, 10) : this.state.currentWeekNum;
@@ -535,14 +569,14 @@ class App {
     // Save current screen view HTML to restore after printing
     this._cachedViewBeforePrint = container.innerHTML;
 
-    // Render print view
+    // Render print view based on selected dropdown rollbook
     let printHtml = '';
-    if (view === 'moving') {
+    if (targetPrintView === 'moving') {
       printHtml = MovingRollbookView.render(allStudents, holidaysMap, checkedTargets, targetDays, {
         showSpecialStudents,
         overridesMap: attendanceOverrides
       });
-    } else if (view === 'homeroom') {
+    } else if (targetPrintView === 'homeroom') {
       const bansToPrint = checkedTargets.map(Number);
       printHtml = HomeroomRollbookView.render(allStudents, holidaysMap, bansToPrint, weekObj, {
         showSpecialStudents,

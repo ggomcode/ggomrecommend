@@ -302,15 +302,23 @@
             </div>
             <div class="modal-body">
               <div class="modal-section">
-                <label class="modal-label">인쇄 대상 출석부:</label>
-                <div class="modal-view-badge" id="printModalViewBadge">이동수업 출석부 (1~12반)</div>
+                <label class="modal-label" for="printModalViewSelect">인쇄 대상 출석부:</label>
+                <div class="modal-row">
+                  <select id="printModalViewSelect" class="styled-select print-view-select">
+                    <option value="homeroom">원적학급 주간 출석부 (1~11반)</option>
+                    <option value="moving">이동수업 출석부 (1~12반 교실)</option>
+                  </select>
+                </div>
               </div>
               <div class="modal-section">
-                <label class="modal-label">주차 및 요일 범위:</label>
+                <label class="modal-label" id="printModalPeriodLabel">주차 및 요일 범위:</label>
                 <div class="modal-row" style="margin-bottom: 8px;">
                   <select id="printModalWeekSelect" class="styled-select"></select>
                 </div>
                 <div class="modal-row day-checkboxes-row" id="printModalDayCheckboxes"></div>
+                <div id="printModalHomeroomDayNote" style="display: none; font-size: 12px; color: #64748b; padding: 4px 2px;">
+                  ℹ️ 원적학급 주간 출석부는 선택한 주차의 월~금(5일간) 전 교시가 1장에 통합 인쇄됩니다.
+                </div>
               </div>
               <div class="modal-section">
                 <div class="modal-section-header">
