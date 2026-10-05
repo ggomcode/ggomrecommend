@@ -221,15 +221,58 @@
 
       <!-- 본문 스크롤 영역 -->
       <div class="flex-1 overflow-x-auto overflow-y-auto bg-slate-50 relative min-w-0">
-        <!-- 초보 교사용 직관 퀵 팁 가이드 -->
-        <div class="quick-tip-card no-print" style="margin: 12px 16px 0;">
-          <div class="tip-icon">💡</div>
-          <div class="tip-content">
-            <div class="tip-title">출결 관리 및 결석계 연동 안내</div>
-            <div class="tip-desc">
-              • <strong>출결 입력</strong>: 학생 셀을 <strong>좌클릭</strong>하면 [빈칸(출석) → 병 → 인(생리) → 인(체험) → 인(경조사) → 인(전염병) → 미 → 기] 순으로 순환 변경됩니다. (Shift+클릭 시 역순)<br>
-              • <strong>결석계 인쇄</strong>: 셀 <strong>우클릭</strong> 후 [📑 출석부 기반 결석계 인쇄 / 확인]을 누르면 날짜와 사유가 자동 분석된 결석계 인쇄 모달이 열립니다.<br>
-              • <strong>전교시 일괄 적용</strong>: 셀 <strong>우클릭</strong> 후 [⚡ 오늘 전 교시 일괄 적용]을 누르면 해당 학생의 오늘 전 교시 상태가 한 번에 변경됩니다.
+        <!-- 초보 교사용 직관 퀵 팁 가이드 (1줄 헤더 + 클릭 시 펼침/접힘) -->
+        <div class="no-print mx-4 mt-2.5 mb-1 bg-white border border-slate-200/90 rounded-xl shadow-2xs overflow-hidden transition-all duration-200">
+          <button
+            type="button"
+            @click="isHelpOpen = !isHelpOpen"
+            class="w-full flex items-center justify-between px-3.5 py-1.5 text-left bg-slate-50/70 hover:bg-slate-100/70 transition-colors cursor-pointer border-none"
+            :title="isHelpOpen ? '도움말 닫기' : '도움말 펼치기 (클릭)'"
+          >
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-sm shrink-0">💡</span>
+              <span class="text-xs font-bold text-slate-800 truncate">출결 관리 및 결석계 연동 안내</span>
+              <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 border border-teal-200/60 shrink-0">
+                {{ isHelpOpen ? '도움말 접기 ▲' : '도움말 펼치기 ▼' }}
+              </span>
+            </div>
+            <ChevronDown
+              :size="15"
+              class="text-slate-400 shrink-0 transition-transform duration-200"
+              :class="{ 'rotate-180': isHelpOpen }"
+            />
+          </button>
+
+          <div
+            v-show="isHelpOpen"
+            class="px-4 py-2.5 text-xs text-slate-700 bg-white border-t border-slate-100 leading-relaxed space-y-1.5"
+          >
+            <div class="flex items-start gap-1.5">
+              <span class="text-teal-600 font-bold shrink-0">•</span>
+              <div>
+                <strong class="text-slate-900 font-semibold">출결 입력:</strong>
+                학생 셀을 <strong class="text-teal-700 font-semibold">좌클릭</strong>하면
+                <span class="inline-flex items-center font-mono text-[11px] bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-medium">[빈칸(출석) → 병 → 인(생리) → 인(체험) → 인(경조사) → 인(전염병) → 미 → 기]</span>
+                순으로 순환 변경됩니다. (<span class="text-slate-500 font-medium">Shift+클릭 시 역순</span>)
+              </div>
+            </div>
+            <div class="flex items-start gap-1.5">
+              <span class="text-teal-600 font-bold shrink-0">•</span>
+              <div>
+                <strong class="text-slate-900 font-semibold">결석계 인쇄:</strong>
+                셀 <strong class="text-teal-700 font-semibold">우클릭</strong> 후
+                <span class="inline-flex items-center text-[11px] bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-medium">[📑 출석부 기반 결석계 인쇄 / 확인]</span>을
+                누르면 날짜와 사유가 자동 분석된 결석계 인쇄 모달이 열립니다.
+              </div>
+            </div>
+            <div class="flex items-start gap-1.5">
+              <span class="text-teal-600 font-bold shrink-0">•</span>
+              <div>
+                <strong class="text-slate-900 font-semibold">전교시 일괄 적용:</strong>
+                셀 <strong class="text-teal-700 font-semibold">우클릭</strong> 후
+                <span class="inline-flex items-center text-[11px] bg-slate-100 px-1 py-0.5 rounded text-slate-700 font-medium">[⚡ 오늘 전 교시 일괄 적용]</span>을
+                누르면 해당 학생의 오늘 전 교시 상태가 한 번에 변경됩니다.
+              </div>
             </div>
           </div>
         </div>
@@ -522,7 +565,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
-import { BookOpen, ChevronRight, Menu, Home, LogOut, User } from 'lucide-vue-next'
+import { BookOpen, ChevronRight, ChevronDown, Menu, Home, LogOut, User } from 'lucide-vue-next'
 import { SheetAPI } from '../rollbook/api.js'
 import App from '../rollbook/app.js'
 import '../rollbook/rollbook.css'
@@ -531,6 +574,7 @@ const router = useRouter()
 const auth = useAuthStore()
 const rollbookContainer = ref(null)
 const collapsed = ref(false)
+const isHelpOpen = ref(false)
 const activeView = ref('homeroom')
 let appInstance = null
 const printSheetUrl = computed(() => SheetAPI.getPrintSheetUrl())
