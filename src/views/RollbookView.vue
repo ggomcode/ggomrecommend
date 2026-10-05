@@ -45,8 +45,8 @@
               :class="[
                 'nav-btn rb-sidebar-nav-btn w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-150 cursor-pointer border-none text-left',
                 activeView === item.key
-                  ? 'bg-teal-50 text-teal-700 font-bold shadow-2xs'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium',
+                  ? 'active bg-teal-600 text-white font-bold shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium',
                 collapsed ? 'justify-center px-0' : 'justify-start'
               ]"
             >
@@ -56,7 +56,9 @@
                 v-if="!collapsed && item.sub"
                 :class="[
                   'text-[10px] font-semibold px-1.5 py-0.5 rounded',
-                  item.highlight ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500'
+                  activeView === item.key
+                    ? 'bg-teal-700/80 text-teal-100'
+                    : (item.highlight ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500')
                 ]"
               >
                 {{ item.sub }}
@@ -81,8 +83,8 @@
               :class="[
                 'nav-btn rb-sidebar-nav-btn w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-150 cursor-pointer border-none text-left',
                 activeView === item.key
-                  ? 'bg-teal-50 text-teal-700 font-bold shadow-2xs'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium',
+                  ? 'active bg-teal-600 text-white font-bold shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium',
                 collapsed ? 'justify-center px-0' : 'justify-start'
               ]"
             >
@@ -92,7 +94,9 @@
                 v-if="!collapsed && item.sub"
                 :class="[
                   'text-[10px] font-semibold px-1.5 py-0.5 rounded',
-                  item.highlight ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500'
+                  activeView === item.key
+                    ? 'bg-teal-700/80 text-teal-100'
+                    : (item.highlight ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500')
                 ]"
               >
                 {{ item.sub }}
@@ -110,12 +114,12 @@
             <!-- 출석부 인쇄 버튼 -->
             <button
               id="printBtn"
-              class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 transition-all cursor-pointer border-none shadow-2xs"
+              class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-teal-50 hover:text-teal-700 hover:border-teal-300 border border-slate-200 transition-all cursor-pointer shadow-2xs text-left"
               :class="collapsed ? 'justify-center px-0' : 'justify-start'"
               title="A4 가로 정밀 인쇄 (Ctrl+P)"
             >
               <span class="text-sm">🖨️</span>
-              <span v-if="!collapsed" class="truncate">출석부 인쇄 (Ctrl+P)</span>
+              <span v-if="!collapsed" class="truncate font-medium">출석부 인쇄 (Ctrl+P)</span>
             </button>
 
             <!-- NEIS 마감 집계 버튼 -->
@@ -216,7 +220,7 @@
       </header>
 
       <!-- 본문 스크롤 영역 -->
-      <div class="flex-1 overflow-y-auto bg-slate-50 relative">
+      <div class="flex-1 overflow-x-auto overflow-y-auto bg-slate-50 relative min-w-0">
         <!-- 초보 교사용 직관 퀵 팁 가이드 -->
         <div class="quick-tip-card no-print" style="margin: 12px 16px 0;">
           <div class="tip-icon">💡</div>
@@ -665,10 +669,14 @@ onUnmounted(() => {
   color: #0f172a !important;
 }
 .rb-sidebar-nav-btn.active {
-  background-color: #f0fdfa !important;
-  color: #0f766e !important;
-  border-left: 3px solid #0d9488 !important;
+  background-color: #0d9488 !important;
+  color: #ffffff !important;
   font-weight: 700 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1) !important;
+}
+.rb-sidebar-nav-btn.active:hover {
+  background-color: #0f766e !important;
+  color: #ffffff !important;
 }
 
 /* rollbook-root 레이아웃 */

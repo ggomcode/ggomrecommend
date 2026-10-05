@@ -1,4 +1,4 @@
-/**
+﻿/**
  * HomeroomRollbookView - 원적학급(담임용) 주간 출석부 렌더링 뷰
  * 담임교사가 자신의 학급 학생 전체의 주간 출결(조례~종례)을 한눈에 조회·수정합니다.
  *
@@ -75,7 +75,7 @@ export const HomeroomRollbookView = {
       return {
         day: d.dayOfWeek,
         dateStr: d.dateStr,
-        label: d.label,
+        label: d.displayDate || d.label || (d.dateStr ? d.dateStr.slice(5) : ''),
         periods
       };
     });

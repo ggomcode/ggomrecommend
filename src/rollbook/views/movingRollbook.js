@@ -1,4 +1,4 @@
-/**
+﻿/**
  * MovingRollbookView - 이동수업 출석부 렌더링 뷰
  * 선택교과 교실별 학생 명단을 교시별 열(Column) 형태로 렌더링합니다.
  *
@@ -45,7 +45,7 @@ export const MovingRollbookView = {
     // Collect all period columns for this room across all target days
     const columnsHtml = targetDays.map(dayInfo => {
       const dayOfWeek = dayInfo.dayOfWeek;
-      const periods = AcademicConfig.getPeriodsForDay(dayOfWeek);
+      const periods = (typeof AcademicConfig.getPeriodsForDay === 'function' ? AcademicConfig.getPeriodsForDay(dayOfWeek) : (AcademicConfig.periodsPerDay ? [1,2,3,4,5,6].slice(0, AcademicConfig.periodsPerDay[dayOfWeek] || 6) : [1,2,3,4,5,6]));
 
       return periods.map(periodNum => {
         const roster = RollbookModel.getRoomPeriodRoster(
@@ -68,7 +68,7 @@ export const MovingRollbookView = {
     let sampleTeacher = '';
 
     for (const dayInfo of targetDays) {
-      const periods = AcademicConfig.getPeriodsForDay(dayInfo.dayOfWeek);
+      const periods = (typeof AcademicConfig.getPeriodsForDay === 'function' ? AcademicConfig.getPeriodsForDay(dayInfo.dayOfWeek) : (AcademicConfig.periodsPerDay ? [1,2,3,4,5,6].slice(0, AcademicConfig.periodsPerDay[dayInfo.dayOfWeek] || 6) : [1,2,3,4,5,6]));
       for (const p of periods) {
         const roster = RollbookModel.getRoomPeriodRoster(
           allStudents,
@@ -89,9 +89,11 @@ export const MovingRollbookView = {
       if (totalAssigned > 0) break;
     }
 
+    const startDayLabel = targetDays[0].label || targetDays[0].displayDate || (targetDays[0].dateStr ? targetDays[0].dateStr.slice(5) : '');
+    const endDayLabel = targetDays[targetDays.length - 1].label || targetDays[targetDays.length - 1].displayDate || (targetDays[targetDays.length - 1].dateStr ? targetDays[targetDays.length - 1].dateStr.slice(5) : '');
     const dateRangeStr = targetDays.length === 1
-      ? `${targetDays[0].label} (${targetDays[0].dayOfWeek})`
-      : `${targetDays[0].label} ~ ${targetDays[targetDays.length - 1].label}`;
+      ? `${startDayLabel} (${targetDays[0].dayOfWeek})`
+      : `${startDayLabel} ~ ${endDayLabel}`;
 
     return `
       <div class="rollbook-sheet" data-room="${escapeHtml(roomName)}">
@@ -122,7 +124,7 @@ export const MovingRollbookView = {
 
     // Period Column Header
     const periodLabel = `${roster.periodNum}교시`;
-    const dayLabel = `${dayInfo.label}(${dayInfo.dayOfWeek})`;
+    const dayLabel = `${dayInfo.label || dayInfo.displayDate || (dayInfo.dateStr ? dayInfo.dateStr.slice(5) : '')}(${dayInfo.dayOfWeek})`;
     const isSwapBadge = roster.isSwap ? `<span class="badge-swap" title="${roster.scheduleKey} 수업">${roster.scheduleKey}</span>` : '';
 
     if (roster.status === 'holiday') {

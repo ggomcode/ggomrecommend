@@ -14,6 +14,18 @@ export const AcademicConfig = {
   allRooms: ['3-1','3-2','3-3','3-4','3-5','3-6','3-7','3-8','3-9','3-10','3-11','3-12'],
   allBans: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
   periodsPerDay: { '월': 6, '화': 7, '수': 6, '목': 7, '금': 6 },
+  getPeriodsForDay(dayOfWeek) {
+    const max = this.periodsPerDay[dayOfWeek] || 6;
+    const arr = [];
+    for (let p = 1; p <= max; p++) arr.push(p);
+    return arr;
+  },
+  getDayOfWeek(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    return dayNames[d.getDay()] || '';
+  },
   // 급식 미운영 키워드 (fullDayEvent에 포함 시 급식 제외)
   noLunchKeywords: ['추석', '공휴일', '한글날', '수능', '휴업', '성탄절', '신정', '대체공휴일', '정기시험'],
   // 급식 운영 행사 (fullDayEvent이지만 급식 운영 — 여기 포함되면 급식 카운트)
@@ -272,10 +284,12 @@ export const RollbookModel = {
         days.push({
           dateStr: `${yyyy}-${mm}-${dd}`,
           displayDate: `${mm}.${dd}`,
+          label: `${mm}.${dd}`,
           fullDisplayDate: `${yyyy}년 ${parseInt(mm, 10)}월 ${parseInt(dd, 10)}일`,
           dayOfWeek: dayName,
           dateObj: date
         });
+
       }
 
       const isCurrent = (w === curWeek);
