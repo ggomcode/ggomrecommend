@@ -750,9 +750,15 @@ onUnmounted(() => {
   border: 1px solid transparent;
 }
 .rollbook-app .status-today {
-  background-color: #f1f5f9;
-  color: #334155;
-  border-color: #e2e8f0;
+  background-color: #eff6ff;
+  color: #1e3a8a;
+  border-color: #bfdbfe;
+}
+.rollbook-app .status-today .badge-sub {
+  font-size: 11.5px;
+  color: #1d4ed8;
+  font-weight: 700;
+  margin-left: 4px;
 }
 .rollbook-app .status-live {
   background-color: #ecfdf5;
