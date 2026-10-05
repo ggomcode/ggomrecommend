@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Main Application Controller for ggomrollbook
  */
 
@@ -520,7 +520,7 @@ class App {
     if (modal) modal.style.display = 'none';
 
     const { view, allStudents, holidaysMap, weeks, showSpecialStudents, attendanceOverrides } = this.state;
-    const container = document.getElementById('appOutput');
+    const container = document.getElementById('appOutput') || document.getElementById('contentContainer');
     if (!container) return;
 
     const weekSelect = document.getElementById('printModalWeekSelect');
@@ -852,7 +852,7 @@ class App {
   printNeisReport() {
     if (!this._lastNeisReport) return;
     const r = this._lastNeisReport;
-    const container = document.getElementById('appOutput');
+    const container = document.getElementById('appOutput') || document.getElementById('contentContainer');
     const tableContainer = document.getElementById('neisTableContainer');
     const modal = document.getElementById('neisReportModal');
     if (!container || !tableContainer || !modal) return;
@@ -896,7 +896,7 @@ class App {
 
   // ── Attendance Interactive Cells (Click, Right-Click, Undo) ──────────────
   setupAttendanceInteractionListeners() {
-    const container = document.getElementById('appOutput');
+    const container = document.getElementById('appOutput') || document.getElementById('contentContainer');
     if (!container) return;
 
     // 1. Left Click: Cycle Attendance Status or Mark All Present Button
@@ -2193,7 +2193,7 @@ class App {
   }
 
   renderContent() {
-    const container = document.getElementById('appOutput');
+    const container = document.getElementById('appOutput') || document.getElementById('contentContainer');
     if (!container) return;
 
     const { view, allStudents, holidaysMap, weeks, currentWeekNum, selectedDayIdx, selectedRooms, selectedBans, selectedLunchYear, selectedLunchMonth, finderQuery, showSpecialStudents } = this.state;

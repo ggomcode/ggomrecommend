@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="flex h-screen overflow-hidden bg-slate-100 font-sans rollbook-root">
 
     <!-- 1. 좌측 사이드바 (전체 앱 테마와 일치, 인쇄 시 자동 숨김) -->
@@ -231,9 +231,14 @@
         </div>
 
         <!-- Main Content Area -->
-        <div class="content-area" id="contentContainer">
+                <!-- Dynamic Control Toolbar -->
+        <section class="app-toolbar no-print" id="toolbarControls"></section>
+
+        <!-- Main Output Area -->
+        <main class="content-area" id="appOutput" role="main">
           <div class="empty-state">출석부 데이터를 불러오는 중입니다...</div>
-        </div>
+        </main>
+
 
         <!-- Print Modal Dialog -->
         <div class="modal-backdrop no-print" id="printModal" style="display: none;">
