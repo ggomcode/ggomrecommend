@@ -1,175 +1,162 @@
 ﻿/**
- * MovingRollbookView - 이동수업 출석부 렌더링 뷰
- * 선택교과 교실별 학생 명단을 교시별 열(Column) 형태로 렌더링합니다.
- *
- * 지원 기능:
- * - 교실별 학생 명단 학번순 정렬 (최대 35명)
- * - 재적, 출석, 결석 인원 실시간 계산
- * - 행사/휴일 및 단축수업(취소) 상태 표시
- * - 교과명 및 담당교사 정보 표시
- * - 학생별 비고란(특이사항) 표시
- * - 출결 상태(병, 생, 체, 경, 전, 미, 기) 50% 진한 음영 표시
- * - 출결 순환: [빈값] -> 병 -> 인(생리) -> 인(체험) -> 인(경조사) -> 인(전염병) -> 미 -> 기 -> [빈값]
+ * Moving Class Rollbook View Generator (이동수업 출석부 1~12반)
+ * Generates 2 pages per day on A4 Landscape (15mm margins).
+ * Page 1: 1~4 Periods (4 Columns)
+ * Page 2: 5~7 Periods (2 or 3 Columns)
  */
 
 import { RollbookModel, AcademicConfig, escapeHtml } from '../models.js';
 
+// 대한민국 공식 규격 태극기 SVG 아이콘
+const TAEGEUKGI_SVG = `
+  <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 640 480" width="34" height="26" style="display: inline-block; vertical-align: middle; border: 1px solid #cbd5e1; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <defs>
+      <clipPath id="kr-flag-clip">
+        <path fill-opacity=".7" d="M-95.8-.4h682.7v512H-95.8z"/>
+      </clipPath>
+    </defs>
+    <g fill-rule="evenodd" clip-path="url(#kr-flag-clip)" transform="translate(89.8 .4)scale(.9375)">
+      <path fill="#fff" d="M-95.8-.4H587v512H-95.8Z"/>
+      <g transform="rotate(-56.3 361.6 -101.3)scale(10.66667)">
+        <g id="kr-c">
+          <path id="kr-b" fill="#000001" d="M-6-26H6v2H-6Zm0 3H6v2H-6Zm0 3H6v2H-6Z"/>
+          <use xlink:href="#kr-b" width="100%" height="100%" y="44"/>
+        </g>
+        <path stroke="#fff" d="M0 17v10"/>
+        <path fill="#cd2e3a" d="M0-12a12 12 0 0 1 0 24Z"/>
+        <path fill="#0047a0" d="M0-12a12 12 0 0 0 0 24A6 6 0 0 0 0 0Z"/>
+        <circle cy="-6" r="6" fill="#cd2e3a"/>
+      </g>
+      <g transform="rotate(-123.7 191.2 62.2)scale(10.66667)">
+        <use xlink:href="#kr-c" width="100%" height="100%"/>
+        <path stroke="#fff" d="M0-23.5v3M0 17v3.5m0 3v3"/>
+      </g>
+    </g>
+  </svg>
+`.trim();
+
 export const MovingRollbookView = {
-
-  render(allStudents, holidaysMap, selectedRooms, targetDays, options = {}) {
-    if (!selectedRooms || selectedRooms.length === 0) {
-      return `
-        <div class="empty-state">
-          <div class="empty-icon">🏃</div>
-          <div class="empty-title">선택된 교실이 없습니다.</div>
-          <div class="empty-desc">상단 교실 필터에서 조회할 교실을 선택해주세요.</div>
-        </div>
-      `;
+  /**
+   * Render HTML for moving class rollbook
+   * @param {Array} allStudents
+   * @param {Object} holidaysMap
+   * @param {Array} selectedRooms e.g. ['3-1', '3-2']
+   * @param {Array} selectedDays e.g. [{ dateStr, dayOfWeek, displayDate, fullDisplayDate }]
+   * @param {Object} options e.g. { showSpecialStudents: false }
+   */
+  render(allStudents, holidaysMap, selectedRooms, selectedDays, options = {}) {
+    if (!selectedRooms || selectedRooms.length === 0 || !selectedDays || selectedDays.length === 0) {
+      return `<div class="empty-state">선택된 학급 또는 날짜가 없습니다.</div>`;
     }
 
-    if (!targetDays || targetDays.length === 0) {
-      return `
-        <div class="empty-state">
-          <div class="empty-icon">📅</div>
-          <div class="empty-title">선택된 날짜가 없습니다.</div>
-        </div>
-      `;
-    }
+    const pages = [];
 
-    return selectedRooms.map(roomName => {
-      return this._renderRoomSheet(roomName, allStudents, holidaysMap, targetDays, options);
-    }).join('\n');
+    selectedRooms.forEach(roomName => {
+      selectedDays.forEach(dayInfo => {
+        // Page 1: Periods 1 to 4 (4 columns)
+        const p1Rosters = [1, 2, 3, 4].map(p =>
+          RollbookModel.getRoomPeriodRoster(allStudents, roomName, dayInfo.dateStr, dayInfo.dayOfWeek, p, holidaysMap, options.overridesMap)
+        );
+        pages.push(this.renderPage(roomName, dayInfo, p1Rosters, '오전 (1~4교시)', 4, options));
+
+        // Determine max periods for the day from config
+        const maxPeriods = (AcademicConfig.periodsPerDay && AcademicConfig.periodsPerDay[dayInfo.dayOfWeek]) || 6;
+        const p2Start = 5;
+        const p2Periods = [];
+        for (let p = p2Start; p <= maxPeriods; p++) p2Periods.push(p);
+
+        const p2Rosters = p2Periods.map(p =>
+          RollbookModel.getRoomPeriodRoster(allStudents, roomName, dayInfo.dateStr, dayInfo.dayOfWeek, p, holidaysMap, options.overridesMap)
+        );
+        pages.push(this.renderPage(roomName, dayInfo, p2Rosters, `오후 (5~${maxPeriods}교시)`, p2Periods.length, options));
+      });
+    });
+
+    return pages.join('\n');
   },
 
-  _renderRoomSheet(roomName, allStudents, holidaysMap, targetDays, options = {}) {
-    // Collect all period columns for this room across all target days
-    const columnsHtml = targetDays.map(dayInfo => {
-      const dayOfWeek = dayInfo.dayOfWeek;
-      const periods = (typeof AcademicConfig.getPeriodsForDay === 'function' ? AcademicConfig.getPeriodsForDay(dayOfWeek) : (AcademicConfig.periodsPerDay ? [1,2,3,4,5,6].slice(0, AcademicConfig.periodsPerDay[dayOfWeek] || 6) : [1,2,3,4,5,6]));
+  /**
+   * Render a single A4 Landscape page containing multiple period columns
+   */
+  renderPage(roomName, dayInfo, rosters, periodLabel, colCount, options = {}) {
+    // Room display title: e.g. "이동 1반 (3-1교실)"
+    const roomNum = roomName.replace('3-', '');
+    const dateText = dayInfo.fullDisplayDate || (dayInfo.dateStr ? dayInfo.dateStr.replace(/-/g, '.') : '');
+    const titleText = `[이동 ${roomNum}반 / ${escapeHtml(roomName)}교실]  ${escapeHtml(dateText)} (${dayInfo.dayOfWeek}요일) 출석부`;
 
-      return periods.map(periodNum => {
-        const roster = RollbookModel.getRoomPeriodRoster(
-          allStudents,
-          roomName,
-          dayInfo.dateStr,
-          dayOfWeek,
-          periodNum,
-          holidaysMap,
-          options.overridesMap || null
-        );
+    // Determine maximum student count on this page to set a uniform row height for all columns
+    const maxStudentsOnPage = Math.max(
+      ...rosters.map(r => (r.students ? r.students.length : 0)),
+      1
+    );
 
-        return this._renderPeriodColumn(roster, dayInfo, options);
-      }).join('\n');
-    }).join('\n');
+    // Guaranteed 1-page fit on both screen and print (fits up to 40+ students without clipping):
+    // 140.0mm available height for tbody rows / targetMax ensures all rows fit completely
+    const targetMax = Math.max(maxStudentsOnPage, 25);
+    const rowHeightMm = (140.0 / targetMax).toFixed(2);
 
-    // Calculate total expected attendance across rendered columns
-    let totalAssigned = 0;
-    let sampleSubj = '';
-    let sampleTeacher = '';
-
-    for (const dayInfo of targetDays) {
-      const periods = (typeof AcademicConfig.getPeriodsForDay === 'function' ? AcademicConfig.getPeriodsForDay(dayInfo.dayOfWeek) : (AcademicConfig.periodsPerDay ? [1,2,3,4,5,6].slice(0, AcademicConfig.periodsPerDay[dayInfo.dayOfWeek] || 6) : [1,2,3,4,5,6]));
-      for (const p of periods) {
-        const roster = RollbookModel.getRoomPeriodRoster(
-          allStudents,
-          roomName,
-          dayInfo.dateStr,
-          dayInfo.dayOfWeek,
-          p,
-          holidaysMap,
-          options.overridesMap || null
-        );
-        if (roster.status === 'normal' && roster.students.length > 0) {
-          totalAssigned = roster.students.length;
-          sampleSubj = roster.subject;
-          sampleTeacher = roster.teacher;
-          break;
-        }
-      }
-      if (totalAssigned > 0) break;
-    }
-
-    const startDayLabel = targetDays[0].label || targetDays[0].displayDate || (targetDays[0].dateStr ? targetDays[0].dateStr.slice(5) : '');
-    const endDayLabel = targetDays[targetDays.length - 1].label || targetDays[targetDays.length - 1].displayDate || (targetDays[targetDays.length - 1].dateStr ? targetDays[targetDays.length - 1].dateStr.slice(5) : '');
-    const dateRangeStr = targetDays.length === 1
-      ? `${startDayLabel} (${targetDays[0].dayOfWeek})`
-      : `${startDayLabel} ~ ${endDayLabel}`;
+    const columnsHtml = rosters.map(roster => this.renderPeriodColumn(roster, dayInfo, options)).join('');
 
     return `
-      <div class="rollbook-sheet" data-room="${escapeHtml(roomName)}">
-        <div class="sheet-header">
-          <div class="sheet-title-group">
-            <h2 class="sheet-title">${escapeHtml(roomName)} 이동수업 출석부</h2>
-            <div class="sheet-subtitle">
-              <span class="sheet-badge">${escapeHtml(sampleSubj || '-')}</span>
-              <span class="sheet-teacher">담당: <strong>${escapeHtml(sampleTeacher || '-')}</strong></span>
-              <span class="sheet-period-info">${dateRangeStr}</span>
-            </div>
+      <div class="print-page a4-landscape moving-page col-${colCount}" style="--row-height: ${rowHeightMm}mm;">
+        <div class="page-header">
+          <div class="page-title-group">
+            <h2 class="page-title">${titleText}</h2>
+            <span class="page-period-tag">${periodLabel}</span>
           </div>
-          <div class="sheet-meta">
-            <span class="meta-item">재적: <strong>${totalAssigned}명</strong></span>
-            <span class="meta-item print-timestamp" data-timestamp=""></span>
+          <div class="page-meta">
+            <span class="meta-item">3학년 출석부</span>
+            <span class="meta-item print-timestamp"></span>
           </div>
         </div>
 
-        <div class="columns-container">
+        <div class="period-columns-container">
           ${columnsHtml}
         </div>
       </div>
     `;
   },
 
-  _renderPeriodColumn(roster, dayInfo, options = {}) {
+  /**
+   * Render a single period column (단)
+   */
+  renderPeriodColumn(roster, dayInfo, options = {}) {
+    const isWednesdayChangche = (dayInfo.dayOfWeek === '수' && (roster.periodNum === 5 || roster.periodNum === 6));
+    const isHoliday = roster.status === 'holiday';
+    const isCancelled = roster.status === 'cancelled';
+    const isActivity = roster.status === 'activity';
     const showSpecialStudents = !!options.showSpecialStudents;
 
-    // Period Column Header
-    const periodLabel = `${roster.periodNum}교시`;
-    const dayLabel = `${dayInfo.label || dayInfo.displayDate || (dayInfo.dateStr ? dayInfo.dateStr.slice(5) : '')}(${dayInfo.dayOfWeek})`;
-    const isSwapBadge = roster.isSwap ? `<span class="badge-swap" title="${roster.scheduleKey} 수업">${roster.scheduleKey}</span>` : '';
+    // Header title
+    let headerTitle = `${roster.periodNum}교시`;
+    let subTitle = `${escapeHtml(roster.subject || '-')} (${escapeHtml(roster.teacher || '-')}T)`;
 
-    if (roster.status === 'holiday') {
-      return `
-        <div class="period-column column-holiday" data-date="${escapeHtml(dayInfo.dateStr)}" data-period="${roster.periodNum}" data-room="${escapeHtml(roster.room || '')}">
-          <div class="period-col-header">
-            <div class="col-header-day">${dayLabel} ${periodLabel}</div>
-            <div class="col-header-subj">${escapeHtml(roster.title)}</div>
-          </div>
-          <div class="column-special-message">
-            <div class="special-icon">🏖️</div>
-            <div class="special-title">${escapeHtml(roster.title)}</div>
-            <div class="special-desc">전일 행사 / 공휴일</div>
-          </div>
-        </div>
-      `;
+    if (roster.isSwap) {
+      headerTitle += ` [${escapeHtml(roster.scheduleKey || '')} 수업]`;
     }
 
-    if (roster.status === 'cancelled') {
-      return `
-        <div class="period-column column-cancelled" data-date="${escapeHtml(dayInfo.dateStr)}" data-period="${roster.periodNum}" data-room="${escapeHtml(roster.room || '')}">
-          <div class="period-col-header">
-            <div class="col-header-day">${dayLabel} ${periodLabel}</div>
-            <div class="col-header-subj">${escapeHtml(roster.title)}</div>
-          </div>
-          <div class="column-special-message">
-            <div class="special-icon">⏱️</div>
-            <div class="special-title">${escapeHtml(roster.title)}</div>
-            <div class="special-desc">단축 수업으로 진행되지 않음</div>
-          </div>
-        </div>
-      `;
+    if (isWednesdayChangche) {
+      subTitle = '창의적 체험활동 (원적학급)';
+    } else if (isHoliday) {
+      subTitle = `공휴일/행사: ${escapeHtml(roster.title || '')}`;
+    } else if (isCancelled) {
+      subTitle = escapeHtml(roster.title || '단축/휴강');
+    } else if (isActivity) {
+      subTitle = escapeHtml(roster.title || '행사');
     }
 
-    if (roster.status === 'activity') {
+    // If holiday or cancelled, display shaded notification banner
+    if (isHoliday || isCancelled) {
       return `
-        <div class="period-column column-activity" data-date="${escapeHtml(dayInfo.dateStr)}" data-period="${roster.periodNum}" data-room="${escapeHtml(roster.room || '')}">
+        <div class="period-column special-column">
           <div class="period-col-header">
-            <div class="col-header-day">${dayLabel} ${periodLabel}</div>
-            <div class="col-header-subj">${escapeHtml(roster.title)}</div>
+            <div class="period-col-title">${headerTitle}</div>
+            <div class="period-col-sub">${subTitle}</div>
           </div>
-          <div class="column-special-message">
-            <div class="special-icon">📌</div>
-            <div class="special-title">${escapeHtml(roster.title)}</div>
-            <div class="special-desc">특별 활동 시간</div>
+          <div class="special-period-message">
+            <div class="special-icon">${isHoliday ? TAEGEUKGI_SVG : '⏱️'}</div>
+            <div class="special-text">${subTitle}</div>
+            <div class="special-subtext">출석 체크 대상 수업이 없습니다.</div>
           </div>
         </div>
       `;
@@ -196,22 +183,27 @@ export const MovingRollbookView = {
       const rawStatusValue = status.rawStatus || currentStatusText;
       const originalStatusText = origStatus.text || '';
 
-      const cellBadge = status.hasConflict
-        ? `<span class="cell-conflict-badge" title="상충: 현장기록(${escapeHtml(status.conflictOverrideStatus || '')})">⚡</span>`
-        : (status.isRegistryPriority ? `<span class="cell-registry-badge" title="대장 공식 결석계 승인">📑</span>` : '');
+      const hasConflict = status && status.hasConflict;
+      const isRegistryPriority = status && status.isRegistryPriority;
+      const conflictClass = hasConflict ? 'has-conflict' : '';
+      const registryClass = isRegistryPriority ? 'is-registry-approved' : '';
+      let cellBadge = '';
+      let cellTitle = '좌클릭: 출결 순환 | Shift+클릭: 역순환 | 우클릭: 직접 선택/전교시 일괄';
 
-      const cellTitle = status.hasConflict
-        ? `[공식 결석계 우선 적용: ${status.fullStatus || currentStatusText}] 현장 기록(${status.conflictOverrideStatus})과 상충 | 클릭 시 변경 확인`
-        : (status.isRegistryPriority
-            ? `[공식 결석계 승인: ${status.fullStatus || currentStatusText}] 증빙서류 확인 완료 | 클릭 시 변경 확인`
-            : '좌클릭: 출결 순환 | Shift+클릭: 역순환 | 우클릭: 직접 선택/전교시 일괄');
+      if (hasConflict) {
+        cellBadge = `<span class="cell-conflict-badge" title="상충: 현장기록(${escapeHtml(status.conflictOverrideStatus || '')})">⚡</span>`;
+        cellTitle = `[공식 결석계 우선 적용: ${status.fullStatus || currentStatusText}] 현장 기록(${status.conflictOverrideStatus})과 상충 | 클릭 시 변경 확인`;
+      } else if (isRegistryPriority) {
+        cellBadge = `<span class="cell-registry-badge" title="대장 공식 결석계 승인">📑</span>`;
+        cellTitle = `[공식 결석계 승인: ${status.fullStatus || currentStatusText}] 증빙서류 확인 완료 | 클릭 시 변경 확인`;
+      }
 
       return `
         <tr class="student-row ${is50Dark}">
           <td class="col-seq">${idx + 1}</td>
           <td class="col-id">${escapeHtml(st.studentId)}</td>
           <td class="col-name">${escapeHtml(st.name)}</td>
-          <td class="col-check interactive-cell ${is10Tint} ${isOverriddenClass} ${isDocSubmitted} ${status.isRegistryPriority ? 'is-registry-approved' : ''} ${status.hasConflict ? 'has-conflict' : ''}"
+          <td class="col-check interactive-cell ${is10Tint} ${isOverriddenClass} ${isDocSubmitted} ${registryClass} ${conflictClass}"
               data-action="attendance-cell"
               data-student-id="${escapeHtml(st.studentId)}"
               data-date="${escapeHtml(dayInfo.dateStr)}"
@@ -222,9 +214,9 @@ export const MovingRollbookView = {
               data-room="${escapeHtml(roster.room || '')}"
               data-original-status="${escapeHtml(originalStatusText)}"
               data-current-status="${escapeHtml(rawStatusValue)}"
-              data-is-registry="${status.isRegistryPriority ? '1' : '0'}"
-              data-has-conflict="${status.hasConflict ? '1' : '0'}"
-              data-conflict-override="${escapeHtml(status.conflictOverrideStatus || '')}"
+              data-is-registry="${isRegistryPriority ? '1' : '0'}"
+              data-has-conflict="${hasConflict ? '1' : '0'}"
+              data-conflict-override="${escapeHtml((status && status.conflictOverrideStatus) || '')}"
               title="${cellTitle}">
             ${escapeHtml(status.text) || '<span class="check-box"></span>'}${cellBadge}
           </td>
@@ -236,50 +228,69 @@ export const MovingRollbookView = {
     return `
       <div class="period-column" data-date="${escapeHtml(dayInfo.dateStr)}" data-period="${roster.periodNum}" data-room="${escapeHtml(roster.room || '')}">
         <div class="period-col-header">
-          <div class="col-header-day">${dayLabel} ${periodLabel} ${isSwapBadge}</div>
-          <div class="col-header-subj">${escapeHtml(roster.subject || '-')}</div>
-          <div class="col-header-teacher">${escapeHtml(roster.teacher || '-')}</div>
-        </div>
-
-        <div class="period-col-stats">
-          <div class="stat-badge stat-present">
-            출석: <strong>${roster.expectedAttendance}</strong>/${roster.totalAssigned}
+          <div class="period-col-top">
+            <span class="period-badge">${headerTitle}</span>
+            <button class="btn-all-present no-print" type="button" title="이 교시 모든 학생을 출석으로 일괄 처리">전원 출석</button>
+            <span class="signature-box">서명: _______</span>
           </div>
-          ${this._renderAbsenceBadges(roster.stats)}
+          <div class="period-col-sub" title="${subTitle}">${subTitle}</div>
         </div>
 
-        <div class="table-container">
-          <table class="rollbook-table">
+        <div class="table-wrapper">
+          <table class="roster-table">
             <thead>
               <tr>
-                <th class="col-seq">No</th>
+                <th class="col-seq">연번</th>
                 <th class="col-id">학번</th>
-                <th class="col-name">성명</th>
-                <th class="col-check">출결</th>
+                <th class="col-name">이름</th>
+                <th class="col-check">체크</th>
                 <th class="col-remark">비고</th>
               </tr>
             </thead>
             <tbody>
-              ${rowsHtml}
+              ${rowsHtml || `<tr><td colspan="5" class="no-students">수강 학생 없음</td></tr>`}
             </tbody>
           </table>
         </div>
+
+        <div class="period-col-footer">
+          <div class="footer-stat">
+            <span class="stat-label">예상 출석:</span>
+            <span class="stat-val highlight expected-count">${roster.expectedAttendance}명</span>
+            <span class="stat-total">/ 배정 <span class="assigned-count">${roster.totalAssigned}</span>명</span>
+          </div>
+          <div class="footer-stats-grid">
+            <div class="stat-grid-item ${roster.stats?.saenggyeol ? 'has-count' : ''}" data-stat-key="saenggyeol">
+              <span class="sg-label">출석인정(생리):</span>
+              <span class="sg-val">${roster.stats ? roster.stats.saenggyeol : 0}명</span>
+            </div>
+            <div class="stat-grid-item ${roster.stats?.cheheom ? 'has-count' : ''}" data-stat-key="cheheom">
+              <span class="sg-label">출석인정(체험):</span>
+              <span class="sg-val">${roster.stats ? roster.stats.cheheom : 0}명</span>
+            </div>
+            <div class="stat-grid-item ${roster.stats?.gyeongjosa ? 'has-count' : ''}" data-stat-key="gyeongjosa">
+              <span class="sg-label">출석인정(경조사):</span>
+              <span class="sg-val">${roster.stats ? roster.stats.gyeongjosa : 0}명</span>
+            </div>
+            <div class="stat-grid-item ${roster.stats?.jeonyeom ? 'has-count' : ''}" data-stat-key="jeonyeom">
+              <span class="sg-label">출석인정(전염병):</span>
+              <span class="sg-val">${roster.stats ? roster.stats.jeonyeom : 0}명</span>
+            </div>
+            <div class="stat-grid-item ${roster.stats?.jilbyeong ? 'has-count' : ''}" data-stat-key="jilbyeong">
+              <span class="sg-label">질병:</span>
+              <span class="sg-val">${roster.stats ? roster.stats.jilbyeong : 0}명</span>
+            </div>
+            <div class="stat-grid-item ${roster.stats?.gita ? 'has-count' : ''}" data-stat-key="gita">
+              <span class="sg-label">기타:</span>
+              <span class="sg-val">${roster.stats ? roster.stats.gita : 0}명</span>
+            </div>
+            <div class="stat-grid-item ${roster.stats?.miinjeong ? 'has-count' : ''}" data-stat-key="miinjeong">
+              <span class="sg-label">미인정:</span>
+              <span class="sg-val">${roster.stats ? roster.stats.miinjeong : 0}명</span>
+            </div>
+          </div>
+        </div>
       </div>
     `;
-  },
-
-  _renderAbsenceBadges(stats) {
-    if (!stats) return '';
-    const badges = [];
-
-    if (stats.jilbyeong > 0) badges.push(`<span class="badge-mini badge-ill">병:${stats.jilbyeong}</span>`);
-    if (stats.saenggyeol > 0) badges.push(`<span class="badge-mini badge-rec">생:${stats.saenggyeol}</span>`);
-    if (stats.cheheom > 0) badges.push(`<span class="badge-mini badge-rec">체:${stats.cheheom}</span>`);
-    if (stats.gyeongjosa > 0) badges.push(`<span class="badge-mini badge-rec">경:${stats.gyeongjosa}</span>`);
-    if (stats.jeonyeom > 0) badges.push(`<span class="badge-mini badge-rec">전:${stats.jeonyeom}</span>`);
-    if (stats.miinjeong > 0) badges.push(`<span class="badge-mini badge-unrec">미:${stats.miinjeong}</span>`);
-    if (stats.gita > 0) badges.push(`<span class="badge-mini badge-etc">기:${stats.gita}</span>`);
-
-    return badges.join(' ');
   }
 };
