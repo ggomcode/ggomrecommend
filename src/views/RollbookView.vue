@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="flex h-screen overflow-hidden bg-slate-100 font-sans rollbook-root">
 
     <!-- 1. 좌측 사이드바 (전체 앱 테마와 일치, 인쇄 시 자동 숨김) -->
@@ -736,6 +736,20 @@ onUnmounted(() => {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+}
+
+@media print {
+  .rollbook-root,
+  .rollbook-app,
+  .rollbook-app > div {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    width: 100% !important;
+    overflow: visible !important;
+    display: block !important;
+    position: static !important;
+  }
 }
 
 /* 상단 헤더 내 상태 뱃지 라이트 테마 조율 */

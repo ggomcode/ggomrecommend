@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Main Application Controller for ggomrollbook
  */
 
@@ -591,20 +591,24 @@ class App {
 
     // Trigger print dialog
     setTimeout(() => {
-      window.print();
-
       // Cleanly restore screen view after print dialog closes
+      let restored = false;
       const restoreScreen = () => {
+        if (restored) return;
+        restored = true;
         if (this._cachedViewBeforePrint) {
           container.innerHTML = this._cachedViewBeforePrint;
           this._cachedViewBeforePrint = null;
         }
+        window.removeEventListener('afterprint', restoreScreen);
       };
 
       window.addEventListener('afterprint', restoreScreen, { once: true });
-      // Fallback timer if afterprint doesn't fire
-      setTimeout(restoreScreen, 1500);
-    }, 150);
+      // Generous fallback timer (60s) in case afterprint does not fire, preventing premature truncation
+      setTimeout(restoreScreen, 60000);
+
+      window.print();
+    }, 250);
   }
 
   // ── GAS Web App Settings Modal ──────────────────────────────────────────
@@ -910,16 +914,21 @@ class App {
     `;
 
     setTimeout(() => {
-      window.print();
+      let restored = false;
       const restore = () => {
+        if (restored) return;
+        restored = true;
         if (this._cachedViewBeforePrint) {
           container.innerHTML = this._cachedViewBeforePrint;
           this._cachedViewBeforePrint = null;
         }
+        window.removeEventListener('afterprint', restore);
       };
       window.addEventListener('afterprint', restore, { once: true });
-      setTimeout(restore, 1500);
-    }, 150);
+      setTimeout(restore, 60000);
+
+      window.print();
+    }, 250);
   }
 
   closeAllModals() {
