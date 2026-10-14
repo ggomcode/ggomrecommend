@@ -3,6 +3,7 @@ import { useAuthStore } from '../stores/auth'
 import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
 import { checkExamIntentSystemEnabled } from '../api/examIntentApi.js'
 import { checkJuniorCollegeSystemEnabled } from '../api/juniorCollegeApi.js'
+import { isKcueStatSystemEnabled } from '../api/statApi.js'
 
 const routes = [
   { path: '/', redirect: '/login' },
@@ -106,6 +107,11 @@ router.beforeEach(async to => {
   // Teacher 권한 격리: teacher는 출석관리(/rollbook) 및 포털(/select-system)만 접근 가능
   if (auth.isTeacher && to.path !== '/rollbook' && to.path !== '/stat' && to.path !== '/select-system' && to.path !== '/login') {
     return '/select-system'
+  }
+
+  if (to.path === '/stat') {
+    const isEnabled = await isKcueStatSystemEnabled()
+    if (!isEnabled) return '/select-system'
   }
 
   if (to.path === '/rural') {

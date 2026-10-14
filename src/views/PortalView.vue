@@ -357,7 +357,7 @@
 
         <!-- 카드 6: 선택교과 출석관리 시스템 (교사, 관리자 전용) -->
         <div
-          v-if="auth.isAdmin || auth.isTeacher"
+          v-if="(auth.isAdmin || auth.isTeacher) && isStatSystemEnabled"
           @click="enterRollbookSystem"
           class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-teal-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
         >
@@ -459,6 +459,7 @@ import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { checkRuralSystemOpenStatus, getRuralEligibilityList } from '../api/ruralApi'
 import { checkExamIntentSystemEnabled } from '../api/examIntentApi'
 import { checkJuniorCollegeSystemEnabled } from '../api/juniorCollegeApi'
+import { isKcueStatSystemEnabled } from '../api/statApi'
 import { supabase } from '../utils/supabaseClient'
 import { fetchRoundSchedulesMap, computeRoundDisplayStatus, parseKstDate } from '../utils/roundSchedule'
 import { dialog } from '../components/common/dialog'
@@ -546,7 +547,15 @@ const portalGridClass = computed(() => {
   return 'grid-cols-1 max-w-xl'
 })
 
-function enterStatSystem() {
+async function enterStatSystem() {
+  if (!isStatSystemEnabled.value) {
+    await dialog.alert({
+      title: '자료 미등록 안내',
+      message: '대교협 수시 지원 원자료 구글 시트 ID가 아직 등록되지 않았습니다. 관리자 시스템 설정에서 시트 ID를 먼저 입력해 주세요.',
+      level: 'warn'
+    })
+    return
+  }
   router.push('/stat')
 }
 

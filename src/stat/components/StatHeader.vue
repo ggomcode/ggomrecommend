@@ -74,7 +74,7 @@
             </button>
             <div class="absolute right-0 mt-1 w-60 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
               <a 
-                href="https://docs.google.com/spreadsheets/d/1U5Vnx2x8gnXQlI3N4deyaurKxj-naZP0cRBb3lQnT4o/edit?gid=1103195680#gid=1103195680" 
+                :href="`https://docs.google.com/spreadsheets/d/${kcueSheetId}/edit?gid=1103195680#gid=1103195680`" 
                 target="_blank" 
                 class="flex items-center px-3.5 py-2 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
               >
@@ -85,7 +85,7 @@
                 </div>
               </a>
               <a 
-                href="https://docs.google.com/spreadsheets/d/1U5Vnx2x8gnXQlI3N4deyaurKxj-naZP0cRBb3lQnT4o/edit?gid=1269753392#gid=1269753392" 
+                :href="`https://docs.google.com/spreadsheets/d/${kcueSheetId}/edit?gid=1269753392#gid=1269753392`" 
                 target="_blank" 
                 class="flex items-center px-3.5 py-2 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors border-t border-slate-100"
               >
@@ -146,13 +146,21 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStatData } from '../composables/useStatData'
 import { schoolName } from '../../utils/schoolConfig'
+import { getKcueSheetId } from '../../api/statApi'
 
 const router = useRouter()
 const { auth, adminMaskToggle, isPrivacyMasked, exportToExcel } = useStatData()
 const window = globalThis.window
+
+const kcueSheetId = ref('')
+
+onMounted(async () => {
+  kcueSheetId.value = (await getKcueSheetId()) || '1U5Vnx2x8gnXQlI3N4deyaurKxj-naZP0cRBb3lQnT4o'
+})
 
 const handleLogout = async () => {
   await auth.logout()
