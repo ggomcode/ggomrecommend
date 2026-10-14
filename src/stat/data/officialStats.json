@@ -1,0 +1,154 @@
+{
+  "academicYear": 2027,
+  "schoolName": "포곡고등학교",
+  "target": "재학생",
+  "totalStudents": 334,
+  "applicantStudents": 246,
+  "applicantRate": 73.7,
+  "totalApplications": 1376,
+  "avgApplicationsPerStudent": 5.6,
+  "recommendation": {
+    "students": 65,
+    "studentRate": 26.4,
+    "applications": 195,
+    "applicationRate": 14.2
+  },
+  "rural": {
+    "eligibleStudents": 220,
+    "eligibleRate": 65.9,
+    "applicantStudents": 123,
+    "applicantRate": 50,
+    "applications": 276,
+    "avgPerStudent": 2.2,
+    "note": "기회균형, 고른기회 농어촌 포함"
+  },
+  "metroBreakdown": {
+    "metro": {
+      "count": 845,
+      "rate": 61.4
+    },
+    "nonMetro": {
+      "count": 531,
+      "rate": 38.6
+    },
+    "total": 1376
+  },
+  "regionalBreakdown": [
+    {
+      "region": "경기",
+      "count": 528,
+      "rate": 38.37,
+      "metro": true
+    },
+    {
+      "region": "서울",
+      "count": 288,
+      "rate": 20.93,
+      "metro": true
+    },
+    {
+      "region": "충남",
+      "count": 181,
+      "rate": 13.15,
+      "metro": false
+    },
+    {
+      "region": "강원",
+      "count": 81,
+      "rate": 5.89,
+      "metro": false
+    },
+    {
+      "region": "충북",
+      "count": 76,
+      "rate": 5.52,
+      "metro": false
+    },
+    {
+      "region": "대전",
+      "count": 60,
+      "rate": 4.36,
+      "metro": false
+    },
+    {
+      "region": "전북",
+      "count": 31,
+      "rate": 2.25,
+      "metro": false
+    },
+    {
+      "region": "인천",
+      "count": 29,
+      "rate": 2.11,
+      "metro": true
+    },
+    {
+      "region": "경북",
+      "count": 18,
+      "rate": 1.31,
+      "metro": false
+    },
+    {
+      "region": "세종",
+      "count": 17,
+      "rate": 1.24,
+      "metro": false
+    },
+    {
+      "region": "대구",
+      "count": 16,
+      "rate": 1.16,
+      "metro": false
+    },
+    {
+      "region": "울산",
+      "count": 15,
+      "rate": 1.09,
+      "metro": false
+    },
+    {
+      "region": "광주",
+      "count": 13,
+      "rate": 0.94,
+      "metro": false
+    },
+    {
+      "region": "경남",
+      "count": 9,
+      "rate": 0.65,
+      "metro": false
+    },
+    {
+      "region": "전남",
+      "count": 9,
+      "rate": 0.65,
+      "metro": false
+    },
+    {
+      "region": "부산",
+      "count": 4,
+      "rate": 0.29,
+      "metro": false
+    },
+    {
+      "region": "제주",
+      "count": 1,
+      "rate": 0.07,
+      "metro": false
+    }
+  ],
+  "specialGroups": {
+    "medical": {
+      "orientalMedicine": 1,
+      "medicine": 0,
+      "dentistry": 0,
+      "pharmacy": 0,
+      "veterinary": 0,
+      "total": 1
+    },
+    "topTierSkyTech": {
+      "count": 101,
+      "label": "설포연고서성한이 / 과학기술원"
+    }
+  }
+}

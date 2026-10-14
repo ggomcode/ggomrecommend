@@ -396,6 +396,50 @@
             </svg>
           </div>
         </div>
+
+        <!-- 카드 7: 수시 지원 통계 분석 (교사, 관리자 전용 / 학생 미노출) -->
+        <div
+          v-if="auth.isAdmin || auth.isTeacher"
+          @click="enterStatSystem"
+          class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-indigo-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
+        >
+          <div class="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
+
+          <div>
+            <div class="flex items-center justify-between gap-3 mb-6">
+              <div class="w-13 h-13 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-xs border border-indigo-100">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="20" x2="18" y2="10"></line>
+                  <line x1="12" y1="20" x2="12" y2="4"></line>
+                  <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+              </div>
+              <span class="-mr-6 sm:-mr-7 pl-3.5 pr-5 sm:pr-6 py-1.5 rounded-l-full rounded-r-none text-xs font-bold shadow-xs whitespace-nowrap shrink-0 bg-indigo-100 text-indigo-800 border-y border-l border-r-0 border-indigo-200">
+                대교협 원자료 분석
+              </span>
+            </div>
+
+            <div class="inline-block px-2.5 py-1 rounded-md text-xs font-extrabold bg-indigo-100 text-indigo-700 mb-3">
+              진학 통계 대시보드
+            </div>
+
+            <h3 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors mb-3">
+              수시 지원 통계 분석
+            </h3>
+            
+            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              2027학년도 대입 수시 지원 현황(1,376건), 대학별·성적대별 출원 경향, 면접·대학별고사 일정 및 학생별 6장 지원 카드를 다각도로 분석합니다.
+            </p>
+          </div>
+
+          <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-indigo-600">
+            <span>통계 대시보드 바로가기</span>
+            <svg class="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </div>
+        </div>
+
       </div>
     </main>
 
@@ -486,7 +530,7 @@ const showExamIntentCard = computed(() => {
 // 그리드 레이아웃 클래스 (카드 수에 따라 동적 조정)
 const portalGridClass = computed(() => {
   if (auth.isTeacher) {
-    return 'grid-cols-1 max-w-xl'
+    return 'grid-cols-1 md:grid-cols-2 max-w-4xl'
   }
   let cardCount = 1
   if (isRuralSystemEnabled.value) cardCount++
@@ -501,6 +545,10 @@ const portalGridClass = computed(() => {
   if (cardCount === 2) return 'grid-cols-1 md:grid-cols-2 max-w-4xl'
   return 'grid-cols-1 max-w-xl'
 })
+
+function enterStatSystem() {
+  router.push('/stat')
+}
 
 function enterRollbookSystem() {
   router.push('/rollbook')

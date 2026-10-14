@@ -72,7 +72,12 @@ const routes = [
     component: () => import('../views/JuniorCollegeView.vue'),
     meta: { requiresAuth: true },
   },
-  {
+    {
+    path: '/stat',
+    component: () => import('../views/StatView.vue'),
+    meta: { requiresTeacherOrAdmin: true },
+  },
+{
     path: '/:pathMatch(.*)*',
     redirect: '/login',
   },
@@ -99,7 +104,7 @@ router.beforeEach(async to => {
   }
 
   // Teacher 권한 격리: teacher는 출석관리(/rollbook) 및 포털(/select-system)만 접근 가능
-  if (auth.isTeacher && to.path !== '/rollbook' && to.path !== '/select-system' && to.path !== '/login') {
+  if (auth.isTeacher && to.path !== '/rollbook' && to.path !== '/stat' && to.path !== '/select-system' && to.path !== '/login') {
     return '/select-system'
   }
 
@@ -143,5 +148,3 @@ router.onError((error, to) => {
 })
 
 export default router
-
-
