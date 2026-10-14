@@ -357,7 +357,7 @@
 
         <!-- 카드 6: 선택교과 출석관리 시스템 (교사, 관리자 전용) -->
         <div
-          v-if="(auth.isAdmin || auth.isTeacher) && isStatSystemEnabled"
+          v-if="auth.isAdmin || auth.isTeacher"
           @click="enterRollbookSystem"
           class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-teal-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
         >
@@ -479,6 +479,7 @@ const isRuralSystemOpen = ref(true)
 const isRuralSystemEnabled = ref(false)
 const isExamIntentSystemEnabled = ref(localStorage.getItem('pcm_enable_exam_intent_system') !== 'false')
 const isJuniorCollegeSystemEnabled = ref(localStorage.getItem('pcm_enable_junior_college_system') !== 'false')
+const isStatSystemEnabled = ref(false)
 const activeRuralTerm = ref('수시')
 const ruralClosedReason = ref('')
 const ruralPeriodState = ref('open')
@@ -537,7 +538,7 @@ const portalGridClass = computed(() => {
   if (isRuralSystemEnabled.value) cardCount++
   if (showExamIntentCard.value) cardCount++
   if (isJuniorCollegeSystemEnabled.value) cardCount++
-  if (auth.isAdmin) cardCount += 2 // Settings + Rollbook
+  if (auth.isAdmin) cardCount += 3 // Settings + Rollbook + Stat
 
   if (cardCount >= 6) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-7xl'
   if (cardCount === 5) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 max-w-7xl'
@@ -732,6 +733,9 @@ onMounted(async () => {
       })(),
       (async () => {
         isExamIntentSystemEnabled.value = await checkExamIntentSystemEnabled()
+      })(),
+      (async () => {
+        isStatSystemEnabled.value = await isKcueStatSystemEnabled()
       })(),
       (async () => {
         const status = await checkRuralSystemOpenStatus()

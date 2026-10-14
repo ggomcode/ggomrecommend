@@ -353,6 +353,41 @@
               </button>
             </div>
           </div>
+
+          <!-- 3. 대교협 수시 지원 원자료 구글 시트 ID (꼼스탯 통계) -->
+          <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-700 space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                3) 대교협 수시 지원 원자료 구글 시트 ID (수시 지원 통계 분석 시스템)
+              </label>
+              <a
+                v-if="realGoogleSheetKcueId"
+                :href="`https://docs.google.com/spreadsheets/d/${realGoogleSheetKcueId}/edit`"
+                target="_blank"
+                class="text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 font-semibold flex items-center gap-1 hover:underline"
+              >
+                <span>🔗 시트 바로 열기</span>
+              </a>
+            </div>
+            <p class="text-[11px] text-slate-500 m-0">
+              시트 ID 또는 전체 URL을 입력하면 자동으로 ID만 추출하여 안전하게 저장됩니다. (등록 시 교사/관리자 포털의 통계 메뉴가 활성화됩니다)
+            </p>
+            <div class="flex gap-2">
+              <input
+                v-model="googleSheetKcueId"
+                type="text"
+                :placeholder="hasGoogleSheetKcueId ? '저장된 ID (마스킹됨)' : 'ID 또는 전체 시트 URL 입력 (예: 1U5Vnx2x8gn...)'"
+                class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-slate-800 dark:text-white"
+              />
+              <button
+                @click="saveGoogleSheetKcueId"
+                :disabled="googleSheetKcueLoading"
+                class="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap"
+              >
+                {{ googleSheetKcueLoading ? '저장 중…' : 'ID 저장' }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -573,6 +608,10 @@ const hasOpenAIKey = ref(false)
 
 const hasGoogleSheetPrincipalId = ref(false)
 const hasGoogleSheetRuralId = ref(false)
+const googleSheetKcueId = ref('')
+const realGoogleSheetKcueId = ref('')
+const googleSheetKcueLoading = ref(false)
+const hasGoogleSheetKcueId = ref(false)
 
 const allowAreaEdit = ref(false)
 const areaEditLoading = ref(false)
@@ -669,6 +708,11 @@ async function loadConfig() {
     realGoogleSheetRuralId.value = dbRuralId
     hasGoogleSheetRuralId.value = !!dbRuralId
     googleSheetRuralId.value = dbRuralId ? maskGoogleSheetId(dbRuralId) : ''
+
+    const dbKcueId = configMap[KCUE_SHEET_KEY] || ''
+    realGoogleSheetKcueId.value = dbKcueId
+    hasGoogleSheetKcueId.value = !!dbKcueId
+    googleSheetKcueId.value = dbKcueId ? maskGoogleSheetId(dbKcueId) : ''
 
     if (configMap['allow_area_edit']) {
       allowAreaEdit.value = configMap['allow_area_edit'] === 'true'
@@ -777,6 +821,31 @@ async function syncGoogleSheetPrincipal() {
     alert(`구글 시트 동기화 실패: ${e.message}`)
   } finally {
     syncPrincipalLoading.value = false
+  }
+}
+
+async function saveGoogleSheetKcueId() {
+  googleSheetKcueLoading.value = true
+  try {
+    const inputVal = googleSheetKcueId.value.trim()
+    let targetVal = inputVal
+    if (inputVal.includes('•')) {
+      targetVal = realGoogleSheetKcueId.value
+    } else {
+      targetVal = extractSheetId(inputVal)
+      realGoogleSheetKcueId.value = targetVal
+    }
+
+    await saveKcueSheetId(targetVal)
+
+    hasGoogleSheetKcueId.value = !!targetVal
+    googleSheetKcueId.value = targetVal ? maskGoogleSheetId(targetVal) : ''
+    alert(targetVal ? '대교협 수시 지원 원자료 구글 스프레드시트 ID가 저장되었습니다.' : '대교협 시트 ID가 삭제되었습니다.')
+  } catch (e) {
+    console.error(e)
+    alert('대교협 시트 ID 저장 중 오류가 발생했습니다.')
+  } finally {
+    googleSheetKcueLoading.value = false
   }
 }
 
