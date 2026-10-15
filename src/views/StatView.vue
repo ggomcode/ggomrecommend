@@ -50,7 +50,7 @@
         <div>
           <span class="font-bold text-slate-700">{{ schoolName }}</span>
           <span class="mx-1.5">•</span>
-          <span>2027학년도 대입 수시 지원 통계 분석 시스템 (꼼스탯)</span>
+          <span>{{ selectedAcademicYear }}학년도 대입 수시 지원 통계 분석 시스템 (꼼스탯)</span>
         </div>
         <div class="text-slate-400">
           <span>대교협 수시 원서접수 자료 연계</span>
@@ -65,6 +65,8 @@ import { ref, computed } from 'vue'
 import StatHeader from '../stat/components/StatHeader.vue'
 import StatFilterBar from '../stat/components/StatFilterBar.vue'
 import OverviewTab from '../stat/components/tabs/OverviewTab.vue'
+import MultiYearTab from '../stat/components/tabs/MultiYearTab.vue'
+import { useStatData } from '../stat/composables/useStatData'
 import UniversityTab from '../stat/components/tabs/UniversityTab.vue'
 import GradeTab from '../stat/components/tabs/GradeTab.vue'
 import CalendarTab from '../stat/components/tabs/CalendarTab.vue'
@@ -75,8 +77,11 @@ import { schoolName } from '../utils/schoolConfig'
 
 const currentTab = ref('overview')
 
+const { selectedAcademicYear } = useStatData()
+
 const tabs = [
   { id: 'overview', name: '종합 통계', icon: '📊' },
+  { id: 'multiYear', name: '5개년 비교 분석', icon: '📈', badge: 'NEW' },
   { id: 'university', name: '대학별 분석', icon: '🏫' },
   { id: 'grade', name: '성적대별 경향', icon: '📈' },
   { id: 'calendar', name: '면접·고사 캘린더', icon: '🗓️' },
@@ -88,6 +93,7 @@ const tabs = [
 const activeTabComponent = computed(() => {
   switch (currentTab.value) {
     case 'overview': return OverviewTab
+    case 'multiYear': return MultiYearTab
     case 'university': return UniversityTab
     case 'grade': return GradeTab
     case 'calendar': return CalendarTab

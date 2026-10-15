@@ -1,12 +1,64 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import rawAppsData from '../data/applications.json'
+import { MULTI_YEAR_STATS } from '../data/multiYearStats.js'
+import { getKcueYearSheets, DEFAULT_KCUE_YEAR_SHEETS } from '../../api/statApi.js'
 import officialStatsData from '../data/officialStats.json'
 import * as XLSX from 'xlsx'
 
 // Global state
 const applications = ref(rawAppsData)
 const officialStats = ref(officialStatsData)
+
+// Academic Year State & Multi-Year Sheet Management
+const selectedAcademicYear = ref(localStorage.getItem('pcm_stat_selected_year') || '2027')
+const availableAcademicYears = ref(['2027', '2026', '2025', '2024', '2023'])
+const kcueYearSheets = ref({ ...DEFAULT_KCUE_YEAR_SHEETS })
+
+async function initYearSheets() {
+  try {
+    const sheets = await getKcueYearSheets()
+    if (sheets && typeof sheets === 'object') {
+      kcueYearSheets.value = sheets
+      const years = Object.keys(sheets).sort((a, b) => Number(b) - Number(a))
+      if (years.length > 0) {
+        availableAcademicYears.value = years
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load KCUE year sheets in useStatData:', e)
+  }
+}
+initYearSheets()
+
+function setAcademicYear(year) {
+  const strYear = String(year)
+  selectedAcademicYear.value = strYear
+  localStorage.setItem('pcm_stat_selected_year', strYear)
+
+  if (strYear === '2027') {
+    applications.value = rawAppsData
+    officialStats.value = officialStatsData
+  } else {
+    const yData = MULTI_YEAR_STATS.byYear[strYear]
+    if (yData) {
+      officialStats.value = {
+        ...officialStatsData,
+        academicYear: Number(strYear),
+        totalStudents: yData.totalStudents,
+        applicantStudents: yData.applicantStudents,
+        applicantRate: yData.applicantRate,
+        totalApplications: yData.totalApplications,
+        avgApplicationsPerStudent: yData.avgAppsPerStudent,
+        metroBreakdown: {
+          metro: { count: Math.round(yData.totalApplications * (yData.metroRate / 100)), rate: yData.metroRate },
+          nonMetro: { count: Math.round(yData.totalApplications * (yData.nonMetroRate / 100)), rate: yData.nonMetroRate },
+          total: yData.totalApplications
+        }
+      }
+    }
+  }
+}
 
 // Filters
 const selectedClass = ref('ALL') // ALL, ENROLLED, 1..11, 졸업생
@@ -377,7 +429,13 @@ export function useStatData() {
     exportToExcel,
     loadCustomData,
     maskName,
-    formatGrade
+    formatGrade,
+    selectedAcademicYear,
+    availableAcademicYears,
+    kcueYearSheets,
+    setAcademicYear,
+    refreshYearSheets: initYearSheets,
+    multiYearStats: MULTI_YEAR_STATS
   }
 }
 

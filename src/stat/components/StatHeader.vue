@@ -14,9 +14,21 @@
           <div class="flex flex-col leading-tight">
             <div class="flex items-center space-x-2">
               <span class="text-xs font-extrabold text-indigo-600 tracking-tight">{{ schoolName }}</span>
-              <span class="text-[11px] font-semibold px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
-                2027학년도 대입
-              </span>
+              <div class="relative inline-flex items-center">
+                <select
+                  :value="selectedAcademicYear"
+                  @change="e => handleYearChange(e.target.value)"
+                  class="appearance-none pl-2.5 pr-6 py-0.5 rounded-md text-[11px] font-black bg-gradient-to-r from-amber-50 to-orange-50 text-amber-900 border border-amber-300 shadow-2xs hover:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 cursor-pointer"
+                  title="분석 대상 학년도 전환"
+                >
+                  <option v-for="y in availableAcademicYears" :key="y" :value="y">
+                    {{ y }}학년도 대입
+                  </option>
+                </select>
+                <svg class="w-3 h-3 text-amber-700 pointer-events-none absolute right-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </div>
             <h1 class="text-base font-bold text-slate-900 tracking-tight m-0">
               수시 지원 통계 분석 시스템 <span class="text-xs font-semibold text-slate-400 font-mono ml-1">ggomstat</span>
@@ -95,6 +107,17 @@
                   <div class="text-[10px] text-slate-400">재학생 공식 집계 요약</div>
                 </div>
               </a>
+              <button
+                type="button"
+                @click="isYearSheetModalOpen = true"
+                class="w-full text-left flex items-center px-3.5 py-2 text-xs text-indigo-700 font-bold bg-indigo-50/70 hover:bg-indigo-100 transition-colors border-t border-slate-200 cursor-pointer border-none"
+              >
+                <span class="mr-2 text-sm leading-none">⚙️</span>
+                <div class="truncate">
+                  <div>연도별 대교협 시트 ID 관리</div>
+                  <div class="text-[10px] text-indigo-500 font-normal">2023~2027 각 학년도별 시트 연동</div>
+                </div>
+              </button>
             </div>
           </div>
 
@@ -144,18 +167,45 @@
         </div>
       </div>
     </div>
+    <!-- 학년도별 대교협 시트 ID 관리 모달 -->
+    <KcueYearSheetModal
+      :isOpen="isYearSheetModalOpen"
+      :activeCurrentYear="selectedAcademicYear"
+      @close="isYearSheetModalOpen = false"
+      @saved="handleSheetsSaved"
+    />
   </header>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import KcueYearSheetModal from './KcueYearSheetModal.vue'
 import { useRouter } from 'vue-router'
 import { useStatData } from '../composables/useStatData'
 import { schoolName } from '../../utils/schoolConfig'
 import { getKcueSheetId } from '../../api/statApi'
 
 const router = useRouter()
-const { auth, adminMaskToggle, isPrivacyMasked, exportToExcel } = useStatData()
+const { 
+  auth, 
+  adminMaskToggle, 
+  isPrivacyMasked, 
+  exportToExcel, 
+  selectedAcademicYear, 
+  availableAcademicYears, 
+  setAcademicYear, 
+  refreshYearSheets 
+} = useStatData()
+
+const isYearSheetModalOpen = ref(false)
+
+function handleYearChange(year) {
+  setAcademicYear(year)
+}
+
+function handleSheetsSaved() {
+  refreshYearSheets()
+}
 const window = globalThis.window
 
 const kcueSheetId = ref('')
