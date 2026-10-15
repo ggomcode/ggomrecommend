@@ -33,6 +33,60 @@
         </form>
       </div>
 
+      <!-- 0-2. 로그인 화면 시스템 명칭 설정 -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+        <div class="flex items-center justify-between gap-3 mb-2">
+          <h2 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 m-0">
+            <span class="w-1 h-3 bg-blue-600 rounded-full"></span>
+            로그인 화면 시스템 명칭 설정
+          </h2>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+            대문 타이틀 연동
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 mb-3">
+          처음 로그인 화면 중앙에 표시될 통합 시스템 명칭을 지정합니다. (기존의 길게 나열되던 개별 시스템명 대신 통일된 명칭으로 표시됩니다.)
+        </p>
+
+        <!-- 추천 이름 퀵 버튼들 -->
+        <div class="flex flex-wrap items-center gap-1.5 mb-3">
+          <span class="text-xs font-bold text-slate-500 mr-1">💡 추천 이름:</span>
+          <button
+            v-for="name in recommendedNames"
+            :key="name"
+            type="button"
+            @click="applyRecommendedName(name)"
+            class="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-100 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
+            :class="{ 'bg-blue-600 text-white font-bold border-blue-600 hover:bg-blue-600 hover:text-white': inputLoginSystemName === name }"
+          >
+            {{ name }}
+          </button>
+        </div>
+
+        <form @submit.prevent="handleSaveLoginSystemName" class="flex gap-3 w-full">
+          <input
+            v-model="inputLoginSystemName"
+            type="text"
+            required
+            placeholder="예: 3학년 통합 학년업무 시스템"
+            class="flex-1 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white font-semibold"
+          />
+          <button
+            type="submit"
+            :disabled="loginSystemNameLoading"
+            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-5 py-2.5 cursor-pointer transition-colors whitespace-nowrap shrink-0"
+          >
+            {{ loginSystemNameLoading ? '저장 중…' : '시스템 명칭 저장' }}
+          </button>
+        </form>
+
+        <div class="mt-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 flex items-center gap-2">
+          <span class="font-bold text-blue-600">미리보기:</span>
+          <span class="font-extrabold text-blue-700">[{{ inputSchoolName || '우리고등학교' }}]</span>
+          <span class="font-black text-slate-900 dark:text-white text-sm">{{ inputLoginSystemName || '3학년 통합 학년업무 시스템' }}</span>
+        </div>
+      </div>
+
       <!-- 1. 학급 수 설정 (디폴트 11반) -->
       <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
         <h2 class="text-base font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
@@ -418,84 +472,179 @@
         </div>
       </div>
 
-      <!-- 4-2. 농어촌 전형 시스템 활성화 -->
-      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
-        <div class="flex items-center justify-between gap-4">
+      <!-- 4-2. 포털 대문 서비스 모듈 관리 (박스 형태 카드 모음) -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-2xl p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-4 border-b border-slate-100 dark:border-slate-700">
           <div>
-            <h2 class="text-base font-bold text-slate-800 dark:text-white mb-1 flex items-center gap-2">
-              <span class="w-1 h-3 bg-emerald-600 rounded-full"></span>
-              농어촌 전형 시스템 활성화
+            <h2 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+              포털 대문 서비스 모듈 관리 (ggomsuite 통합 관리)
             </h2>
-            <p class="text-xs text-slate-400">
-              농어촌 전형 및 기회균형 전형 학생 선발을 위한 전용 시스템과 메뉴를 활성화합니다.
+            <p class="text-xs text-slate-400 mt-1">
+              각 기능의 포털 대문(카드) 노출 여부와 서비스별 운영 기간(시작일시~종료일시)을 박스 카드로 한눈에 관리합니다.
             </p>
           </div>
-          <button
-            type="button"
-            @click="toggleEnableRuralSystem"
-            :disabled="ruralSystemLoading"
-            class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-            :class="enableRuralSystem ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'"
-          >
-            <span
-              class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-              :class="enableRuralSystem ? 'translate-x-5' : 'translate-x-0'"
-            />
-          </button>
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              @click="showSqlGuide = !showSqlGuide"
+              class="text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg border border-slate-200 transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <Sparkles :size="13" class="text-indigo-600" />
+              <span>{{ showSqlGuide ? 'SQL 안내 접기' : 'DB 스키마 (SQL)' }}</span>
+            </button>
+            <button
+              type="button"
+              :disabled="saveModulesLoading"
+              @click="handleSaveSuiteModules"
+              class="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 px-4 py-2 rounded-lg transition-colors cursor-pointer border-none shadow-xs flex items-center gap-1.5"
+            >
+              <span>{{ saveModulesLoading ? '저장 중…' : '💾 대문 설정 및 일정 저장' }}</span>
+            </button>
+          </div>
         </div>
-      </div>
 
-      <!-- 4-3. 수능응시 · 수시/정시 원서접수계획 등록 시스템 활성화 -->
-      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
-        <div class="flex items-center justify-between gap-4">
-          <div>
-            <h2 class="text-base font-bold text-slate-800 dark:text-white mb-1 flex items-center gap-2">
-              <span class="w-1 h-3 bg-violet-600 rounded-full"></span>
-              수능응시 · 수시/정시 원서접수계획 등록 시스템 활성화
-            </h2>
-            <p class="text-xs text-slate-400">
-              재학생 대상 수능 응시 여부 및 대학 수시·정시 원서접수 계획 파악, 확인서 출력, 수능 접수대장 대조 시스템을 활성화합니다.
-            </p>
+        <!-- SQL 스키마 안내 아코디언 -->
+        <div v-if="showSqlGuide" class="mb-5 p-4 rounded-xl bg-slate-900 text-slate-100 text-xs border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-indigo-400 flex items-center gap-1.5">
+              <span>🛠️ Supabase DDL: public.system_modules 테이블</span>
+            </span>
+            <button
+              type="button"
+              @click="copySqlScript"
+              class="px-2.5 py-1 text-[11px] font-bold rounded bg-indigo-600 hover:bg-indigo-700 text-white border-none cursor-pointer flex items-center gap-1"
+            >
+              <Copy :size="12" />
+              <span>{{ sqlCopied ? '복사 완료!' : 'SQL 복사' }}</span>
+            </button>
           </div>
-          <button
-            type="button"
-            @click="toggleEnableExamIntentSystem"
-            :disabled="examIntentSystemLoading"
-            class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-            :class="enableExamIntentSystem ? 'bg-violet-600' : 'bg-slate-300 dark:bg-slate-700'"
-          >
-            <span
-              class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-              :class="enableExamIntentSystem ? 'translate-x-5' : 'translate-x-0'"
-            />
-          </button>
+          <p class="text-[11px] text-slate-400 m-0">
+            Supabase SQL Editor에서 실행하시면 향후 다양한 모듈을 DB 테이블 단위로 영구 확장(ggomsuite)하실 수 있습니다. (테이블이 없어도 config 테이블 및 로컬 캐시로 자동 대체 동작합니다.)
+          </p>
+          <pre class="bg-black/40 p-3 rounded-lg overflow-x-auto text-[11px] font-mono text-slate-300 leading-relaxed border border-slate-800 max-h-48">{{ ddlSqlText }}</pre>
         </div>
-      </div>
 
-      <!-- 4-4. 전문대학 학교장 추천 시스템 활성화 -->
-      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
-        <div class="flex items-center justify-between gap-4">
-          <div>
-            <h2 class="text-base font-bold text-slate-800 dark:text-white mb-1 flex items-center gap-2">
-              <span class="w-1 h-3 bg-indigo-600 rounded-full"></span>
-              전문대학 학교장 추천 시스템 활성화
-            </h2>
-            <p class="text-xs text-slate-400">
-              전문대학 학교장 추천전형 지원을 위한 대학/학과/전형 직접 입력 및 학교장 직인 날인용 추천서 발급 메뉴를 활성화합니다.
-            </p>
-          </div>
-          <button
-            type="button"
-            @click="toggleEnableJuniorCollegeSystem"
-            :disabled="juniorCollegeSystemLoading"
-            class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-            :class="enableJuniorCollegeSystem ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'"
+        <!-- 모듈 박스 카드 그리드 (2열) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div
+            v-for="m in suiteModules"
+            :key="m.id"
+            :class="[
+              'rounded-xl border p-4.5 flex flex-col justify-between transition-all duration-200 shadow-2xs',
+              m.isEnabled
+                ? 'bg-white dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 hover:border-indigo-300'
+                : 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-200/60 opacity-60'
+            ]"
           >
-            <span
-              class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-              :class="enableJuniorCollegeSystem ? 'translate-x-5' : 'translate-x-0'"
-            />
-          </button>
+            <div>
+              <!-- 상단 헤더: 카테고리 + 아이콘 + 타이틀 + 토글 -->
+              <div class="flex items-center justify-between gap-2 mb-3">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <div
+                    class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0"
+                    :class="getModuleThemeClasses(m).iconBox"
+                  >
+                    <component :is="iconMap[m.id] || Grid" :size="17" />
+                  </div>
+                  <div class="min-w-0">
+                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded" :class="getModuleThemeClasses(m).categoryBadge">
+                      {{ m.category }}
+                    </span>
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white m-0 leading-tight mt-0.5 truncate">
+                      {{ m.name }}
+                    </h3>
+                  </div>
+                </div>
+
+                <!-- 대문 노출 토글 스위치 -->
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span class="text-[11px] font-bold" :class="m.isEnabled ? 'text-indigo-600' : 'text-slate-400'">
+                    {{ m.isEnabled ? '노출' : '숨김' }}
+                  </span>
+                  <button
+                    type="button"
+                    @click="m.isEnabled = !m.isEnabled"
+                    class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                    :class="m.isEnabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'"
+                  >
+                    <span
+                      class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                      :class="m.isEnabled ? 'translate-x-4' : 'translate-x-0'"
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <!-- 서비스 설명 -->
+              <p class="text-xs text-slate-500 dark:text-slate-400 mb-3 line-clamp-2 leading-relaxed">
+                {{ m.description }}
+              </p>
+
+              <!-- 대상 사용자 그룹 선택 (5개 그룹: 학생, 졸업생, 학부모, 교사, 관리자) -->
+              <div class="mb-3 p-2.5 rounded-lg bg-slate-50/70 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800">
+                <div class="text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                  <span>👥 대문 표시 대상 그룹:</span>
+                  <span class="text-[10px] text-slate-400 font-normal">선택된 그룹에만 노출</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <button
+                    v-for="grp in targetGroupOptions"
+                    :key="grp.key"
+                    type="button"
+                    :disabled="grp.disabled"
+                    @click="toggleModuleGroup(m, grp.key)"
+                    :title="grp.disabled ? (grp.tooltip || '준비 중') : ''"
+                    class="text-[11px] px-2 py-0.5 rounded-md font-semibold transition-all border flex items-center gap-1 cursor-pointer"
+                    :class="[
+                      grp.disabled
+                        ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 border-slate-200 select-none'
+                        : (m.targetRoles && m.targetRoles.includes(grp.key)
+                            ? 'bg-indigo-50 border-indigo-300 text-indigo-700 font-bold shadow-2xs'
+                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700')
+                    ]"
+                  >
+                    <span v-if="m.targetRoles && m.targetRoles.includes(grp.key) && !grp.disabled" class="text-indigo-600">✓</span>
+                    <span>{{ grp.label }}</span>
+                    <span v-if="grp.disabled" class="text-[9px] bg-slate-200 text-slate-500 px-1 rounded font-normal">준비중</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 일정 스케줄 설정 박스 -->
+              <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800 space-y-2.5">
+                <div class="flex items-center justify-between">
+                  <label class="flex items-center gap-1.5 cursor-pointer select-none text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <input type="checkbox" v-model="m.alwaysOpen" class="rounded text-indigo-600" />
+                    <span>상시 운영 (기간 제한 없음)</span>
+                  </label>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border" :class="getModuleStatusInfo(m).badgeClass">
+                    {{ getModuleStatusInfo(m).label }}
+                  </span>
+                </div>
+
+                <!-- 시작일시 / 종료일시 (상시 운영이 아닐 때만 노출) -->
+                <div v-if="!m.alwaysOpen" class="space-y-1.5 pt-2 border-t border-slate-200/60 dark:border-slate-800">
+                  <div class="flex items-center gap-2">
+                    <span class="text-[11px] font-medium text-slate-500 w-12 shrink-0">시작일시:</span>
+                    <input
+                      type="datetime-local"
+                      v-model="m.startAt"
+                      class="flex-1 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    />
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-[11px] font-medium text-slate-500 w-12 shrink-0">종료일시:</span>
+                    <input
+                      type="datetime-local"
+                      v-model="m.endAt"
+                      class="flex-1 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -561,6 +710,26 @@ import { getKcueSheetId, extractSheetId, saveKcueSheetId, KCUE_SHEET_KEY } from 
 import { dialog } from '../common/dialog.js'
 import { useAuthStore } from '../../stores/auth'
 import { clearAllApplicationStorage, clearAllRuralStorage } from '../../utils/storageUtils'
+import {
+  fetchLoginSystemName,
+  saveLoginSystemName,
+  fetchSuiteModules,
+  saveSuiteModules,
+  getModuleStatus,
+  RECOMMENDED_SYSTEM_NAMES,
+  SUITE_TARGET_GROUPS
+} from '../../api/suiteModulesApi.js'
+import {
+  GraduationCap,
+  ShieldCheck,
+  ClipboardList,
+  School,
+  BookOpen,
+  BarChart3,
+  Sparkles,
+  Copy,
+  Grid
+} from 'lucide-vue-next'
 
 const auth = useAuthStore()
 
@@ -625,6 +794,142 @@ const examIntentSystemLoading = ref(false)
 const enableJuniorCollegeSystem = ref(localStorage.getItem('pcm_enable_junior_college_system') !== 'false')
 const juniorCollegeSystemLoading = ref(false)
 
+// ── ggomsuite 로그인 명칭 및 모듈 관리 상태 ───────────────────────────
+const inputLoginSystemName = ref('')
+const loginSystemNameLoading = ref(false)
+const recommendedNames = RECOMMENDED_SYSTEM_NAMES
+const targetGroupOptions = SUITE_TARGET_GROUPS
+
+function toggleModuleGroup(m, groupKey) {
+  if (!m.targetRoles) m.targetRoles = []
+  const idx = m.targetRoles.indexOf(groupKey)
+  if (idx > -1) {
+    m.targetRoles.splice(idx, 1)
+  } else {
+    m.targetRoles.push(groupKey)
+  }
+}
+const suiteModules = ref([])
+const saveModulesLoading = ref(false)
+const showSqlGuide = ref(false)
+const sqlCopied = ref(false)
+
+const iconMap = {
+  principal: GraduationCap,
+  rural: ShieldCheck,
+  exam_intent: ClipboardList,
+  junior_college: School,
+  rollbook: BookOpen,
+  stat: BarChart3
+}
+
+const ddlSqlText = `CREATE TABLE IF NOT EXISTS public.system_modules (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    category TEXT,
+    badge TEXT,
+    description TEXT,
+    icon TEXT,
+    is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    always_open BOOLEAN NOT NULL DEFAULT TRUE,
+    start_at TIMESTAMP WITH TIME ZONE,
+    end_at TIMESTAMP WITH TIME ZONE,
+    target_roles TEXT[] DEFAULT '{"student", "teacher", "admin"}',
+    sort_order INTEGER DEFAULT 0,
+    extra_config JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);`;
+
+function getModuleThemeClasses(m) {
+  switch (m.id) {
+    case 'principal':
+      return { iconBox: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', categoryBadge: 'bg-blue-50 text-blue-700' }
+    case 'rural':
+      return { iconBox: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400', categoryBadge: 'bg-emerald-50 text-emerald-700' }
+    case 'exam_intent':
+      return { iconBox: 'bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400', categoryBadge: 'bg-violet-50 text-violet-700' }
+    case 'junior_college':
+      return { iconBox: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400', categoryBadge: 'bg-indigo-50 text-indigo-700' }
+    case 'rollbook':
+      return { iconBox: 'bg-teal-50 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400', categoryBadge: 'bg-teal-50 text-teal-700' }
+    case 'stat':
+      return { iconBox: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300', categoryBadge: 'bg-slate-100 text-slate-700' }
+    default:
+      return { iconBox: 'bg-slate-100 text-slate-700', categoryBadge: 'bg-slate-100 text-slate-700' }
+  }
+}
+
+function getModuleStatusInfo(m) {
+  const status = getModuleStatus(m)
+  let badgeClass = 'bg-slate-100 text-slate-600 border-slate-200'
+  if (!m.isEnabled) {
+    badgeClass = 'bg-slate-100 text-slate-500 border-slate-200'
+  } else if (status.code === 'ALWAYS_OPEN' || status.code === 'RUNNING') {
+    badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 font-bold'
+  } else if (status.code === 'BEFORE') {
+    badgeClass = 'bg-amber-50 text-amber-700 border-amber-200 font-bold'
+  } else if (status.code === 'ENDED') {
+    badgeClass = 'bg-rose-50 text-rose-700 border-rose-200 font-bold'
+  }
+  return { ...status, badgeClass }
+}
+
+function applyRecommendedName(name) {
+  inputLoginSystemName.value = name
+}
+
+async function handleSaveLoginSystemName() {
+  loginSystemNameLoading.value = true
+  try {
+    await saveLoginSystemName(inputLoginSystemName.value)
+    await dialog.alert({
+      title: '시스템 명칭 저장 완료',
+      message: `로그인 화면 시스템 명칭이 '${inputLoginSystemName.value}'(으)로 저장되었습니다.`
+    })
+  } catch (e) {
+    await dialog.alert({
+      title: '저장 실패',
+      message: e.message || '저장 중 오류가 발생했습니다.',
+      level: 'error'
+    })
+  } finally {
+    loginSystemNameLoading.value = false
+  }
+}
+
+async function handleSaveSuiteModules() {
+  saveModulesLoading.value = true
+  try {
+    const res = await saveSuiteModules(suiteModules.value)
+    const rural = suiteModules.value.find(m => m.id === 'rural')
+    if (rural) enableRuralSystem.value = rural.isEnabled
+    const examIntent = suiteModules.value.find(m => m.id === 'exam_intent')
+    if (examIntent) enableExamIntentSystem.value = examIntent.isEnabled
+    const jc = suiteModules.value.find(m => m.id === 'junior_college')
+    if (jc) enableJuniorCollegeSystem.value = jc.isEnabled
+
+    await dialog.alert({
+      title: '대문 설정 및 일정 저장 완료',
+      message: '각 기능의 대문 노출 여부 및 운영 일정이 저장되었습니다.' + (res.dbSaved ? '\n(DB system_modules 테이블에 반영됨)' : '')
+    })
+  } catch (e) {
+    await dialog.alert({
+      title: '저장 실패',
+      message: e.message || '저장 중 오류가 발생했습니다.',
+      level: 'error'
+    })
+  } finally {
+    saveModulesLoading.value = false
+  }
+}
+
+function copySqlScript() {
+  navigator.clipboard.writeText(ddlSqlText)
+  sqlCopied.value = true
+  setTimeout(() => { sqlCopied.value = false }, 3000)
+}
+
 const susiApplyStartDate = ref('')
 const susiApplyEndDate = ref('')
 const susiPeriodLoading = ref(false)
@@ -661,6 +966,8 @@ const isSusiPeriodActive = computed(() => susiPeriodStatus.value === 'ACTIVE')
 
 async function loadConfig() {
   inputSchoolName.value = await fetchSchoolName()
+  inputLoginSystemName.value = await fetchLoginSystemName()
+  suiteModules.value = await fetchSuiteModules()
   const localEdit = localStorage.getItem('pcm_allow_area_edit') === 'true'
   allowAreaEdit.value = localEdit
   disclosureCount.value = await getDisclosureCount()

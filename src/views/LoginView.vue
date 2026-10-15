@@ -31,24 +31,28 @@
           <School v-else-if="activeTab === 'graduate'" class="w-7 h-7" />
           <UserCheck v-else class="w-7 h-7" />
         </div>
-        <p class="text-xs font-extrabold text-blue-600 mb-1.5 tracking-wide">{{ schoolName }}</p>
-        <h1 class="text-slate-900 m-0 flex flex-col items-center justify-center gap-1 font-extrabold tracking-tight leading-snug">
-          <span class="text-[15px] text-slate-900">학교장 추천자 선발 시스템</span>
-          <template v-if="isRuralSystemEnabled && isExamIntentSystemEnabled">
-            <span class="text-xs text-blue-600 font-bold leading-none my-0.5">및</span>
-            <span class="text-[15px] text-slate-900">농어촌(기회균형) 전형 추천 등록 시스템</span>
-            <span class="text-xs text-blue-600 font-bold leading-none my-0.5">및</span>
-            <span class="text-[15px] text-slate-900">수능응시 · 수시/정시 원서접수계획 등록 시스템</span>
-          </template>
-          <template v-else-if="isRuralSystemEnabled">
-            <span class="text-xs text-blue-600 font-bold leading-none my-0.5">및</span>
-            <span class="text-[15px] text-slate-900">농어촌(기회균형) 전형 추천 등록 시스템</span>
-          </template>
-          <template v-else-if="isExamIntentSystemEnabled">
-            <span class="text-xs text-blue-600 font-bold leading-none my-0.5">및</span>
-            <span class="text-[15px] text-slate-900">수능응시 · 수시/정시 원서접수계획 등록 시스템</span>
-          </template>
+
+        <!-- 학교명 배지 -->
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-xs font-extrabold mb-2.5 shadow-2xs">
+          <span>🏫</span>
+          <span>{{ schoolName }}</span>
+        </div>
+
+        <!-- 통합 시스템 명칭 (관리자 설정값 연동) -->
+        <h1 class="text-slate-900 m-0 text-xl sm:text-2xl font-black tracking-tight leading-snug">
+          {{ displaySystemName }}
         </h1>
+
+        <!-- 지원 기능 요약 배지 리스트 -->
+        <div class="flex flex-wrap items-center justify-center gap-1.5 mt-3 max-w-md mx-auto">
+          <span
+            v-for="badge in activeModuleBadges"
+            :key="badge"
+            class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200/80"
+          >
+            {{ badge }}
+          </span>
+        </div>
       </div>
 
       <!-- 3가지 역할 구분 탭 (재학생 / 졸업생 / 교사) -->
@@ -547,6 +551,7 @@ import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
 import { checkExamIntentSystemEnabled } from '../api/examIntentApi.js'
+import { fetchLoginSystemName, loginSystemName, fetchSuiteModules } from '../api/suiteModulesApi.js'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -590,11 +595,37 @@ const cleanPhoneInput = computed(() => {
   return signupPhone.value.replace(/\D/g, '')
 })
 
+const suiteModules = ref([])
+const displaySystemName = computed(() => loginSystemName.value || '3학년 통합 학년업무 시스템')
+
+const activeModuleBadges = computed(() => {
+  if (suiteModules.value && suiteModules.value.length > 0) {
+    return suiteModules.value
+      .filter(m => m.isEnabled)
+      .map(m => m.name.replace(' 시스템', ''))
+  }
+  const badges = ['학교장 추천자 선발']
+  if (isRuralSystemEnabled.value) badges.push('농어촌·기회균형')
+  if (isExamIntentSystemEnabled.value) badges.push('수능·원서접수계획')
+  badges.push('선택교과 출석관리')
+  return badges
+})
+
 onMounted(async () => {
   fetchSchoolName()
   loginId.value = ''
   loginStudentCode.value = ''
   loginPassword.value = ''
+
+  await fetchLoginSystemName()
+
+  try {
+    const mods = await fetchSuiteModules()
+    if (mods && mods.length > 0) {
+      suiteModules.value = mods
+    }
+  } catch (e) {}
+
   try {
     const status = await checkRuralSystemOpenStatus()
     isRuralSystemEnabled.value = status.isEnabled === true

@@ -48,14 +48,16 @@
     <!-- 자격 점검 완료 후 메인 콘텐츠 전체 일괄 표출 -->
     <main v-else class="max-w-5xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center items-center">
       <div class="text-center max-w-2xl mb-12">
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-bold mb-3 border border-blue-200">
-          <span>{{ auth.isTeacher ? '선택교과 출석관리' : (isRuralSystemEnabled ? '통합 추천자 관리 시스템' : '학교장 추천자 선발 시스템') }}</span>
+        <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-extrabold mb-3 border border-blue-200 shadow-2xs">
+          <span>🏫 {{ schoolName }}</span>
+          <span class="text-slate-300">|</span>
+          <span>{{ displaySystemName }}</span>
         </div>
-        <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-3">
-          {{ schoolName }} {{ auth.isTeacher ? '출석관리 포털' : '추천 시스템 포털' }}
+        <h2 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-3">
+          {{ displaySystemName }}
         </h2>
         <p class="text-base text-slate-600 leading-relaxed">
-          {{ auth.isTeacher ? '선택교과 이동수업 및 원적학급 출석관리 시스템을 이용해 주세요.' : '이용하실 추천 시스템을 아래에서 선택해 주세요.' }}
+          {{ auth.isTeacher ? '선택교과 출석부 관리 및 담당 학급 진학 업무 시스템을 선택해 주세요.' : '이용하실 서비스를 아래에서 선택해 주세요.' }}
         </p>
       </div>
 
@@ -64,7 +66,7 @@
         
         <!-- 카드 1: 학교장 추천자 선발 시스템 (교사는 미노출) -->
         <div
-          v-if="!auth.isTeacher"
+          v-if="isModuleVisible('principal')"
           @click="enterPrincipalSystem"
           :class="[
             'group relative bg-white rounded-3xl p-6 sm:p-7 border shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden',
@@ -157,7 +159,7 @@
 
         <!-- 카드 2: 농어촌 전형 추천자 관리 시스템 (교사는 미노출) -->
         <div
-          v-if="isRuralSystemEnabled && !auth.isTeacher"
+          v-if="isModuleVisible('rural')"
           @click="enterRuralSystem"
           :class="[
             'group relative bg-white rounded-3xl p-6 sm:p-7 border shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer',
@@ -231,7 +233,7 @@
 
         <!-- 카드 3: 수능 미응시 및 수시 미접수 등록 시스템 (재학생/관리자만 표시, 교사/졸업생 미노출) -->
         <div
-          v-if="showExamIntentCard && !auth.isTeacher"
+          v-if="isModuleVisible('exam_intent')"
           @click="enterExamIntentSystem"
           class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-violet-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
         >
@@ -273,7 +275,7 @@
 
         <!-- 카드 4: 전문대학 학교장 추천 시스템 (교사는 미노출) -->
         <div
-          v-if="isJuniorCollegeSystemEnabled && !auth.isTeacher"
+          v-if="isModuleVisible('junior_college')"
           @click="enterJuniorCollegeSystem"
           class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-indigo-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
         >
@@ -357,7 +359,7 @@
 
         <!-- 카드 6: 선택교과 출석관리 시스템 (교사, 관리자 전용) -->
         <div
-          v-if="auth.isAdmin || auth.isTeacher"
+          v-if="isModuleVisible('rollbook')"
           @click="enterRollbookSystem"
           class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-teal-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
         >
@@ -399,7 +401,7 @@
 
         <!-- 카드 7: 수시 지원 통계 분석 (교사, 관리자 전용 / 학생 미노출) -->
         <div
-          v-if="auth.isAdmin || auth.isTeacher"
+          v-if="isModuleVisible('stat')"
           @click="enterStatSystem"
           class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-indigo-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
         >
@@ -463,6 +465,13 @@ import { isKcueStatSystemEnabled } from '../api/statApi'
 import { supabase } from '../utils/supabaseClient'
 import { fetchRoundSchedulesMap, computeRoundDisplayStatus, parseKstDate } from '../utils/roundSchedule'
 import { dialog } from '../components/common/dialog'
+import {
+  fetchLoginSystemName,
+  loginSystemName,
+  fetchSuiteModules,
+  getModuleStatus,
+  DEFAULT_SUITE_MODULES
+} from '../api/suiteModulesApi.js'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -480,6 +489,35 @@ const isRuralSystemEnabled = ref(false)
 const isExamIntentSystemEnabled = ref(localStorage.getItem('pcm_enable_exam_intent_system') !== 'false')
 const isJuniorCollegeSystemEnabled = ref(localStorage.getItem('pcm_enable_junior_college_system') !== 'false')
 const isStatSystemEnabled = ref(false)
+const isPrincipalSystemEnabled = ref(true)
+const isRollbookSystemEnabled = ref(true)
+const suiteModules = ref(DEFAULT_SUITE_MODULES.map(m => ({ ...m })))
+
+const displaySystemName = computed(() => loginSystemName.value || '3학년 통합 학년업무 시스템')
+
+function checkModuleScheduleAccess(moduleId) {
+  if (auth.isAdmin) return true
+  const mod = suiteModules.value.find(m => m.id === moduleId)
+  if (!mod || mod.alwaysOpen) return true
+  const status = getModuleStatus(mod)
+  if (status.code === 'BEFORE') {
+    dialog.alert({
+      title: '오픈 예정 안내',
+      message: `[${mod.name}]은(는) 아직 오픈 전입니다.\n\n운영 기간: ${mod.startAt ? mod.startAt.replace('T', ' ') : ''} ~ ${mod.endAt ? mod.endAt.replace('T', ' ') : ''}`,
+      level: 'warn'
+    })
+    return false
+  }
+  if (status.code === 'ENDED') {
+    dialog.alert({
+      title: '일정 마감 안내',
+      message: `[${mod.name}]의 운영 일정이 마감되었습니다.\n\n마감 일시: ${mod.endAt ? mod.endAt.replace('T', ' ') : ''}`,
+      level: 'warn'
+    })
+    return false
+  }
+  return true
+}
 const activeRuralTerm = ref('수시')
 const ruralClosedReason = ref('')
 const ruralPeriodState = ref('open')
@@ -529,16 +567,56 @@ const showExamIntentCard = computed(() => {
   return false
 })
 
-// 그리드 레이아웃 클래스 (카드 수에 따라 동적 조정)
-const portalGridClass = computed(() => {
-  if (auth.isTeacher) {
-    return 'grid-cols-1 md:grid-cols-2 max-w-4xl'
+// 현재 접속 사용자의 그룹 식별 ('admin' | 'teacher' | 'student' | 'graduate')
+const currentUserGroup = computed(() => {
+  if (auth.isAdmin) return 'admin'
+  if (auth.isTeacher) return 'teacher'
+  if (auth.isStudent) {
+    return auth.isEnrolled ? 'student' : 'graduate'
   }
-  let cardCount = 1
-  if (isRuralSystemEnabled.value) cardCount++
-  if (showExamIntentCard.value) cardCount++
-  if (isJuniorCollegeSystemEnabled.value) cardCount++
-  if (auth.isAdmin) cardCount += 3 // Settings + Rollbook + Stat
+  return 'student'
+})
+
+// 각 대문 카드가 현재 사용자 그룹에게 노출되는지 여부 판별
+function isModuleVisible(moduleId) {
+  const mod = suiteModules.value.find(m => m.id === moduleId)
+  const isEnabled = mod ? mod.isEnabled : true
+  if (!isEnabled) return false
+
+  // 대상 그룹 권한 점검
+  if (mod && Array.isArray(mod.targetRoles) && mod.targetRoles.length > 0) {
+    if (!mod.targetRoles.includes(currentUserGroup.value)) {
+      return false
+    }
+  } else {
+    // 레거시 권한 규칙 fallback
+    if (moduleId === 'principal' && auth.isTeacher) return false
+    if (moduleId === 'rural' && auth.isTeacher) return false
+    if (moduleId === 'exam_intent' && auth.isStudent && !auth.isEnrolled) return false
+    if (moduleId === 'junior_college' && auth.isTeacher) return false
+    if (moduleId === 'rollbook' && !auth.isAdmin && !auth.isTeacher) return false
+    if (moduleId === 'stat' && !auth.isAdmin && !auth.isTeacher) return false
+  }
+
+  // 레거시 개별 비활성화 상태 추가 점검
+  if (moduleId === 'rural' && !isRuralSystemEnabled.value) return false
+  if (moduleId === 'exam_intent' && !isExamIntentSystemEnabled.value) return false
+  if (moduleId === 'junior_college' && !isJuniorCollegeSystemEnabled.value) return false
+  if (moduleId === 'stat' && !isStatSystemEnabled.value) return false
+
+  return true
+}
+
+// 그리드 레이아웃 클래스 (실제 노출되는 카드 수에 따라 동적 그리드 조정)
+const portalGridClass = computed(() => {
+  let cardCount = 0
+  if (isModuleVisible('principal')) cardCount++
+  if (isModuleVisible('rural')) cardCount++
+  if (isModuleVisible('exam_intent')) cardCount++
+  if (isModuleVisible('junior_college')) cardCount++
+  if (auth.isAdmin) cardCount++ // 설정 카드
+  if (isModuleVisible('rollbook')) cardCount++
+  if (isModuleVisible('stat')) cardCount++
 
   if (cardCount >= 6) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-7xl'
   if (cardCount === 5) return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 max-w-7xl'
@@ -549,6 +627,7 @@ const portalGridClass = computed(() => {
 })
 
 async function enterStatSystem() {
+  if (!checkModuleScheduleAccess("stat")) return
   if (!isStatSystemEnabled.value) {
     await dialog.alert({
       title: '자료 미등록 안내',
@@ -561,10 +640,12 @@ async function enterStatSystem() {
 }
 
 function enterRollbookSystem() {
+  if (!checkModuleScheduleAccess("rollbook")) return
   router.push('/rollbook')
 }
 
 async function enterPrincipalSystem() {
+  if (!checkModuleScheduleAccess("principal")) return
   if (isStudentPrincipalLocked.value) {
     await dialog.alert({
       title: '선발일정 종료 안내',
@@ -584,6 +665,7 @@ function enterSystemSettings() {
 }
 
 async function enterJuniorCollegeSystem() {
+  if (!checkModuleScheduleAccess("junior_college")) return
   if (isPortalLoading.value) return
   if (!isJuniorCollegeSystemEnabled.value) {
     await dialog.alert({ title: '시스템 이용 제한', message: '전문대학 학교장 추천 시스템이 현재 비활성화되어 있습니다.' })
@@ -593,6 +675,7 @@ async function enterJuniorCollegeSystem() {
 }
 
 async function enterExamIntentSystem() {
+  if (!checkModuleScheduleAccess("exam_intent")) return
   if (isPortalLoading.value) return
   if (!isExamIntentSystemEnabled.value) {
     await dialog.alert({ title: '시스템 이용 제한', message: '수능응시 · 수시/정시 원서접수계획 등록 시스템이 현재 비활성화되어 있습니다.' })
@@ -603,6 +686,7 @@ async function enterExamIntentSystem() {
 }
 
 async function enterRuralSystem() {
+  if (!checkModuleScheduleAccess("rural")) return
   if (isPortalLoading.value) return
   if (!isRuralSystemEnabled.value) {
     await dialog.alert({ title: '시스템 이용 제한', message: '농어촌 전형 추천자 관리 시스템이 현재 비활성화되어 있습니다.' })
@@ -723,6 +807,25 @@ async function loadPrincipalStatus() {
 }
 
 onMounted(async () => {
+  await fetchLoginSystemName()
+  try {
+    const mods = await fetchSuiteModules()
+    if (mods && mods.length > 0) {
+      suiteModules.value = mods
+      const mPrincipal = mods.find(m => m.id === 'principal')
+      if (mPrincipal) isPrincipalSystemEnabled.value = mPrincipal.isEnabled
+      const mRural = mods.find(m => m.id === 'rural')
+      if (mRural) isRuralSystemEnabled.value = mRural.isEnabled
+      const mExam = mods.find(m => m.id === 'exam_intent')
+      if (mExam) isExamIntentSystemEnabled.value = mExam.isEnabled
+      const mJc = mods.find(m => m.id === 'junior_college')
+      if (mJc) isJuniorCollegeSystemEnabled.value = mJc.isEnabled
+      const mRollbook = mods.find(m => m.id === 'rollbook')
+      if (mRollbook) isRollbookSystemEnabled.value = mRollbook.isEnabled
+      const mStat = mods.find(m => m.id === 'stat')
+      if (mStat) isStatSystemEnabled.value = mStat.isEnabled
+    }
+  } catch (e) {}
   fetchSchoolName()
   isPortalLoading.value = true
   try {

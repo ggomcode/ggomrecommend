@@ -1942,14 +1942,21 @@ class App {
         `).join('')}
       `;
 
-      // 3. Room selector
-      const allSelected = this.state.selectedRooms.length === this.allRooms.length;
-      const roomCheckboxes = this.allRooms.map(r => `
-        <label class="check-label">
-          <input type="checkbox" class="room-cb" value="${r}" ${this.state.selectedRooms.includes(r) ? 'checked' : ''} />
-          ${r}
-        </label>
-      `).join('');
+      // 3. Room selector (학급/교실 드롭다운)
+      const isCustomRoomMulti = this.state.selectedRooms.length > 1 && this.state.selectedRooms.length < this.allRooms.length;
+      const currentRoomVal = (this.state.selectedRooms.length === 1 && this.allRooms.includes(this.state.selectedRooms[0]))
+        ? this.state.selectedRooms[0]
+        : (isCustomRoomMulti ? 'multi' : 'all');
+
+      let roomOptions = '';
+      if (isCustomRoomMulti) {
+        roomOptions += `<option value="multi" disabled selected>선택된 학급 (${this.state.selectedRooms.length}개)</option>`;
+      }
+      roomOptions += `<option value="all" ${currentRoomVal === 'all' ? 'selected' : ''}>전체 학급 (3-1~3-12)</option>`;
+      roomOptions += this.allRooms.map(r => {
+        const banNum = r.replace('3-', '');
+        return `<option value="${r}" ${currentRoomVal === r ? 'selected' : ''}>${r} (${banNum}반)</option>`;
+      }).join('');
 
       const specialToggleHtml = `
         <div class="control-group toggle-group special-toggle-group">
@@ -1982,16 +1989,11 @@ class App {
           <div class="pill-group" id="dayPillGroup">${dayPills}</div>
         </div>
 
-        <div class="control-group filter-dropdown-group">
-          <button class="filter-dropdown-btn" id="roomFilterToggle">
-            교실 필터 (${this.state.selectedRooms.length}개 선택) ▾
-          </button>
-          <div class="filter-dropdown-menu" id="roomFilterMenu" style="display: none;">
-            <div class="filter-header">
-              <label><input type="checkbox" id="selectAllRooms" ${allSelected ? 'checked' : ''} /> 전체 선택</label>
-            </div>
-            <div class="filter-grid">${roomCheckboxes}</div>
-          </div>
+        <div class="control-group">
+          <label class="control-label" for="roomSelect">학급 선택:</label>
+          <select id="roomSelect" class="styled-select">
+            ${roomOptions}
+          </select>
         </div>
 
         ${specialToggleHtml}
@@ -2002,14 +2004,20 @@ class App {
         `<option value="${w.weekNum}" ${w.weekNum === currentWeekNum ? 'selected' : ''}>${escapeHtml(w.label)}</option>`
       ).join('');
 
-      // Ban selector
-      const allSelected = this.state.selectedBans.length === this.allBans.length;
-      const banCheckboxes = this.allBans.map(b => `
-        <label class="check-label">
-          <input type="checkbox" class="ban-cb" value="${b}" ${this.state.selectedBans.includes(b) ? 'checked' : ''} />
-          ${b}반
-        </label>
-      `).join('');
+      // Ban selector (학급 드롭다운)
+      const isCustomBanMulti = this.state.selectedBans.length > 1 && this.state.selectedBans.length < this.allBans.length;
+      const currentBanVal = (this.state.selectedBans.length === 1 && this.allBans.includes(this.state.selectedBans[0]))
+        ? String(this.state.selectedBans[0])
+        : (isCustomBanMulti ? 'multi' : 'all');
+
+      let banOptions = '';
+      if (isCustomBanMulti) {
+        banOptions += `<option value="multi" disabled selected>선택된 학급 (${this.state.selectedBans.length}개)</option>`;
+      }
+      banOptions += `<option value="all" ${currentBanVal === 'all' ? 'selected' : ''}>전체 학급 (1~11반)</option>`;
+      banOptions += this.allBans.map(b =>
+        `<option value="${b}" ${currentBanVal === String(b) ? 'selected' : ''}>${b}반</option>`
+      ).join('');
 
       const specialToggleHtml = `
         <div class="control-group toggle-group special-toggle-group">
@@ -2037,16 +2045,11 @@ class App {
           </div>
         </div>
 
-        <div class="control-group filter-dropdown-group">
-          <button class="filter-dropdown-btn" id="banFilterToggle">
-            학급 선택 (${this.state.selectedBans.length}개 선택) ▾
-          </button>
-          <div class="filter-dropdown-menu" id="banFilterMenu" style="display: none;">
-            <div class="filter-header">
-              <label><input type="checkbox" id="selectAllBans" ${allSelected ? 'checked' : ''} /> 전체 선택</label>
-            </div>
-            <div class="filter-grid">${banCheckboxes}</div>
-          </div>
+        <div class="control-group">
+          <label class="control-label" for="banSelect">학급 선택:</label>
+          <select id="banSelect" class="styled-select">
+            ${banOptions}
+          </select>
         </div>
 
         ${specialToggleHtml}
@@ -2138,77 +2141,28 @@ class App {
       }, { signal });
     }
 
-    // Room filter dropdown
-    const roomToggle = document.getElementById('roomFilterToggle');
-    const roomMenu = document.getElementById('roomFilterMenu');
-    if (roomToggle && roomMenu) {
-      roomToggle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        roomMenu.style.display = roomMenu.style.display === 'none' ? 'block' : 'none';
+    // Room select (이동수업 학급 드롭다운)
+    const roomSelect = document.getElementById('roomSelect');
+    if (roomSelect) {
+      roomSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        this.state.selectedRooms = (val === 'all') ? [...this.allRooms] : [val];
+        this.pushHashState();
+        this.renderControls();
+        this.renderContent();
       }, { signal });
-
-      // Use signal-based listener to avoid leak
-      document.addEventListener('click', (e) => {
-        if (!roomMenu.contains(e.target) && e.target !== roomToggle) {
-          roomMenu.style.display = 'none';
-        }
-      }, { signal });
-
-      const selectAll = document.getElementById('selectAllRooms');
-      if (selectAll) {
-        selectAll.addEventListener('change', (e) => {
-          this.state.selectedRooms = e.target.checked ? [...this.allRooms] : [];
-          this.pushHashState();
-          this.renderControls();
-          this.renderContent();
-        }, { signal });
-      }
-
-      document.querySelectorAll('.room-cb').forEach(cb => {
-        cb.addEventListener('change', () => {
-          const checked = Array.from(document.querySelectorAll('.room-cb:checked')).map(el => el.value);
-          this.state.selectedRooms = checked;
-          this.pushHashState();
-          this.renderControls();
-          this.renderContent();
-        }, { signal });
-      });
     }
 
-    // Ban filter dropdown
-    const banToggle = document.getElementById('banFilterToggle');
-    const banMenu = document.getElementById('banFilterMenu');
-    if (banToggle && banMenu) {
-      banToggle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        banMenu.style.display = banMenu.style.display === 'none' ? 'block' : 'none';
+    // Ban select (원적학급 학급 드롭다운)
+    const banSelect = document.getElementById('banSelect');
+    if (banSelect) {
+      banSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        this.state.selectedBans = (val === 'all') ? [...this.allBans] : [parseInt(val, 10)];
+        this.pushHashState();
+        this.renderControls();
+        this.renderContent();
       }, { signal });
-
-      document.addEventListener('click', (e) => {
-        if (!banMenu.contains(e.target) && e.target !== banToggle) {
-          banMenu.style.display = 'none';
-        }
-      }, { signal });
-
-      const selectAll = document.getElementById('selectAllBans');
-      if (selectAll) {
-        selectAll.addEventListener('change', (e) => {
-          this.state.selectedBans = e.target.checked ? [...this.allBans] : [];
-          this.pushHashState();
-          this.renderControls();
-          this.renderContent();
-        }, { signal });
-      }
-
-      document.querySelectorAll('.ban-cb').forEach(cb => {
-        cb.addEventListener('change', () => {
-          const checked = Array.from(document.querySelectorAll('.ban-cb:checked')).map(el => parseInt(el.value, 10));
-          this.state.selectedBans = checked;
-          this.pushHashState();
-          this.renderControls();
-          this.renderContent();
-        }, { signal });
-      });
     }
 
     // Special student toggle
