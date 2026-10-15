@@ -252,6 +252,7 @@ export async function saveSuiteModules(modulesList) {
   // 로컬 및 레거시 플래그 동기화
   localStorage.setItem(CONFIG_KEY_MODULES_CACHE, JSON.stringify(modulesList))
   syncLegacyLocalStorageFlags(modulesList)
+  syncLegacyDatabaseFlags(modulesList)
 
   if (!supabase) return { success: true }
 
@@ -268,8 +269,8 @@ export async function saveSuiteModules(modulesList) {
       icon: m.icon,
       is_enabled: !!m.isEnabled,
       always_open: !!m.alwaysOpen,
-      start_at: m.startAt ? new Date(m.startAt).toISOString() : null,
-      end_at: m.endAt ? new Date(m.endAt).toISOString() : null,
+      start_at: (m.startAt && String(m.startAt).trim()) ? new Date(m.startAt).toISOString() : null,
+      end_at: (m.endAt && String(m.endAt).trim()) ? new Date(m.endAt).toISOString() : null,
       sort_order: m.sortOrder || 0,
       target_roles: m.targetRoles || ['student', 'teacher', 'admin'],
       extra_config: m.extraConfig || {},
@@ -342,6 +343,26 @@ function syncLegacyLocalStorageFlags(modules) {
   const jc = modules.find(m => m.id === 'junior_college')
   if (jc) {
     localStorage.setItem('pcm_enable_junior_college_system', String(jc.isEnabled))
+  }
+}
+
+async function syncLegacyDatabaseFlags(modules) {
+  if (!supabase) return
+  const rural = modules.find(m => m.id === 'rural')
+  const examIntent = modules.find(m => m.id === 'exam_intent')
+  const jc = modules.find(m => m.id === 'junior_college')
+
+  const upserts = []
+  if (rural) upserts.push({ key: 'enable_rural_system', value: String(rural.isEnabled) })
+  if (examIntent) upserts.push({ key: 'enable_exam_intent_system', value: String(examIntent.isEnabled) })
+  if (jc) upserts.push({ key: 'enable_junior_college_system', value: String(jc.isEnabled) })
+
+  for (const item of upserts) {
+    try {
+      await supabase.from('config').upsert(item, { onConflict: 'key' })
+    } catch (e) {
+      console.warn('Failed to sync legacy config key:', item.key, e)
+    }
   }
 }
 

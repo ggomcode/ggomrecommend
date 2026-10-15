@@ -556,11 +556,13 @@ const currentUserGroup = computed(() => {
 // 각 대문 카드가 현재 사용자 그룹에게 노출되는지 여부 판별
 function isModuleVisible(moduleId) {
   const mod = suiteModules.value.find(m => m.id === moduleId)
-  const isEnabled = mod ? mod.isEnabled : true
-  if (!isEnabled) return false
+  // 관리자 설정에서 숨김(isEnabled === false) 처리된 모듈은 관리자를 포함한 모든 사용자에게 미노출
+  if (!mod || mod.isEnabled === false || mod.isEnabled === 'false') {
+    return false
+  }
 
-  // 대상 그룹 권한 점검
-  if (mod && Array.isArray(mod.targetRoles) && mod.targetRoles.length > 0) {
+  // 대상 그룹 권한 점검 (활성화된 모듈에 한해 현재 사용자 그룹에 노출 허용 여부 점검)
+  if (Array.isArray(mod.targetRoles) && mod.targetRoles.length > 0) {
     if (!mod.targetRoles.includes(currentUserGroup.value)) {
       return false
     }
@@ -807,17 +809,24 @@ onMounted(async () => {
     await Promise.all([
       loadPrincipalStatus(),
       (async () => {
-        isJuniorCollegeSystemEnabled.value = await checkJuniorCollegeSystemEnabled()
+        const jcEnabled = await checkJuniorCollegeSystemEnabled()
+        const mJc = suiteModules.value.find(m => m.id === 'junior_college')
+        isJuniorCollegeSystemEnabled.value = mJc ? mJc.isEnabled : jcEnabled
       })(),
       (async () => {
-        isExamIntentSystemEnabled.value = await checkExamIntentSystemEnabled()
+        const examEnabled = await checkExamIntentSystemEnabled()
+        const mExam = suiteModules.value.find(m => m.id === 'exam_intent')
+        isExamIntentSystemEnabled.value = mExam ? mExam.isEnabled : examEnabled
       })(),
       (async () => {
-        isStatSystemEnabled.value = await isKcueStatSystemEnabled()
+        const statEnabled = await isKcueStatSystemEnabled()
+        const mStat = suiteModules.value.find(m => m.id === 'stat')
+        isStatSystemEnabled.value = mStat ? mStat.isEnabled : statEnabled
       })(),
       (async () => {
         const status = await checkRuralSystemOpenStatus()
-        isRuralSystemEnabled.value = status.isEnabled === true
+        const mRural = suiteModules.value.find(m => m.id === 'rural')
+        isRuralSystemEnabled.value = mRural ? mRural.isEnabled : (status.isEnabled === true)
         isRuralSystemOpen.value = status.isOpen
         activeRuralTerm.value = status.activeTerm
         ruralClosedReason.value = status.reason
