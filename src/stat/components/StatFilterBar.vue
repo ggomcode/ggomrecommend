@@ -1,6 +1,6 @@
 <template>
-  <div class="bg-white border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-3.5 no-print shadow-2xs">
-    <div class="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+  <div class="bg-white border-b border-slate-200/80 py-3.5 no-print shadow-2xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
       <!-- Filter Selectors -->
       <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
         <!-- Class Selector -->

@@ -5,17 +5,17 @@
       <!-- 1. Enrolled Students -->
       <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
         <div class="flex items-center justify-between text-slate-400 mb-2">
-          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">3학년 재학생</span>
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">{{ enrolledLabel }}</span>
           <span class="p-1.5 rounded-lg bg-slate-50 text-slate-500">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
           </span>
         </div>
         <div class="text-2xl font-bold text-slate-800">
-          {{ officialStats.totalStudents }}<span class="text-xs font-normal text-slate-500 ml-1">명</span>
+          {{ currentTargetTotalStudents }}<span class="text-xs font-normal text-slate-500 ml-1">명</span>
         </div>
         <div class="mt-1 text-[11px] text-slate-500 flex items-center">
           <span class="inline-block w-1.5 h-1.5 rounded-full bg-slate-400 mr-1.5"></span>
-          포곡고 3학년 총원
+          {{ enrolledSubText }}
         </div>
       </div>
 
@@ -32,7 +32,7 @@
         </div>
         <div class="mt-1 text-[11px] text-indigo-700 font-medium flex items-center">
           <span class="inline-block w-1.5 h-1.5 rounded-full bg-indigo-500 mr-1.5"></span>
-          지원율 {{ officialStats.applicantRate }}%
+          지원율 {{ currentApplicantRate }}%
         </div>
       </div>
 
@@ -79,11 +79,11 @@
           </span>
         </div>
         <div class="text-2xl font-bold text-purple-600">
-          {{ officialStats.recommendation.applications }}<span class="text-xs font-normal text-slate-500 ml-1">건</span>
+          {{ currentStats.recApps }}<span class="text-xs font-normal text-slate-500 ml-1">건</span>
         </div>
         <div class="mt-1 text-[11px] text-slate-500 flex items-center">
           <span class="inline-block w-1.5 h-1.5 rounded-full bg-purple-400 mr-1.5"></span>
-          65명 배정 (14.2%)
+          {{ currentStats.recStudents }}명 지원 ({{ currentStats.recRate }}%)
         </div>
       </div>
 
@@ -96,11 +96,11 @@
           </span>
         </div>
         <div class="text-2xl font-bold text-amber-600">
-          {{ officialStats.rural.applications }}<span class="text-xs font-normal text-slate-500 ml-1">건</span>
+          {{ currentStats.ruralApps }}<span class="text-xs font-normal text-slate-500 ml-1">건</span>
         </div>
         <div class="mt-1 text-[11px] text-slate-500 flex items-center">
           <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 mr-1.5"></span>
-          123명 접수 (50.0%)
+          {{ currentStats.ruralStudents }}명 접수 ({{ currentStats.ruralStudentRate }}%)
         </div>
       </div>
 
@@ -113,11 +113,12 @@
           </span>
         </div>
         <div class="text-2xl font-bold text-rose-600">
-          {{ officialStats.specialGroups.topTierSkyTech.count }}<span class="text-xs font-normal text-slate-500 ml-1">건</span>
+          {{ currentStats.topTierApps }}<span class="text-xs font-normal text-slate-500 ml-1">건</span>
         </div>
         <div class="mt-1 text-[11px] text-slate-500 flex items-center">
           <span class="inline-block w-1.5 h-1.5 rounded-full bg-rose-400 mr-1.5"></span>
-          설포연고서성한이/과기원
+          <span v-if="currentStats.topTierStudents > 0">{{ currentStats.topTierStudents }}명 (설포연고/과기원)</span>
+          <span v-else>설포연고서성한이/과기원</span>
         </div>
       </div>
     </div>
@@ -169,11 +170,13 @@
         <div class="flex items-center justify-between mb-4">
           <div>
             <h2 class="text-sm font-bold text-slate-800">지역별 수시 지원 분포</h2>
-            <p class="text-xs text-slate-400">수도권 845건 (61.4%) / 비수도권 531건 (38.6%)</p>
+            <p class="text-xs text-slate-400">
+              수도권 {{ currentStats.metroApps }}건 ({{ currentStats.metroRate }}%) / 비수도권 {{ currentStats.nonMetroApps }}건 ({{ currentStats.nonMetroRate }}%)
+            </p>
           </div>
           <div class="flex items-center space-x-2 text-xs">
             <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium text-[11px]">
-              수도권 (경기 528 / 서울 288 / 인천 29)
+              수도권 (경기 {{ currentStats.gyeonggiApps }} / 서울 {{ currentStats.seoulApps }} / 인천 {{ currentStats.incheonApps }})
             </span>
           </div>
         </div>
@@ -185,7 +188,7 @@
         <!-- Regional Quick Badges -->
         <div class="mt-4 flex flex-wrap gap-1.5 pt-3 border-t border-slate-100">
           <span 
-            v-for="r in officialStats.regionalBreakdown.slice(0, 8)" 
+            v-for="r in currentRegionalBadges" 
             :key="r.region"
             :class="[
               'inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium border',
@@ -211,8 +214,8 @@
             <h2 class="text-sm font-bold text-slate-800">학급별(1반~11반) 수시 지원 현황</h2>
             <p class="text-xs text-slate-400">학급별 총 지원 건수 및 원서 접수 학생 수</p>
           </div>
-          <span class="text-xs font-medium text-slate-500">
-            평균 125.1건 / 학급
+          <span class="text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200/60 px-2.5 py-1 rounded-lg">
+            {{ classSummaryText }}
           </span>
         </div>
 
@@ -274,7 +277,12 @@
             <span class="mr-1">💡</span> 2027학년도 대입 포인트
           </div>
           <div class="mt-1 text-amber-700 leading-relaxed">
-            포곡고 농어촌 대상자 220명 중 123명(50%)이 실제 농어촌/기회균형 전형(276건)에 적극 출원하였습니다.
+            <span v-if="selectedClass !== 'ALL' && selectedClass !== 'ENROLLED'">
+              {{ enrolledLabel }} 수시 지원 총 {{ currentStats.totalApps }}건 ({{ currentStats.totalStudents }}명) 중 수도권 {{ currentStats.metroRate }}%, 학교장추천 {{ currentStats.recApps }}건, 농어촌 {{ currentStats.ruralApps }}건 출원.
+            </span>
+            <span v-else>
+              포곡고 농어촌 대상자 220명 중 123명(50%)이 실제 농어촌/기회균형 전형(276건)에 적극 출원하였습니다.
+            </span>
           </div>
         </div>
       </div>
@@ -287,7 +295,21 @@ import { computed } from 'vue'
 import { Doughnut, Bar } from 'vue-chartjs'
 import { useData } from '../../composables/useStatData'
 
-const { officialStats, currentStats, filteredApplications } = useData()
+const { 
+  applications,
+  officialStats, 
+  currentStats, 
+  filteredApplications,
+  selectedClass,
+  selectedField,
+  selectedType,
+  selectedRegion,
+  searchKeyword,
+  currentTargetTotalStudents,
+  enrolledLabel,
+  enrolledSubText,
+  currentApplicantRate
+} = useData()
 
 const getPercentage = (count) => {
   const total = currentStats.value.totalApps
@@ -311,9 +333,16 @@ const typeChartData = computed(() => {
   }
 })
 
+// Dynamic Regional Badges (top regions sorted by count)
+const currentRegionalBadges = computed(() => {
+  const list = currentStats.value.regionalBreakdown.filter(r => r.count > 0)
+  list.sort((a, b) => b.count - a.count)
+  return list.slice(0, 8)
+})
+
 // Chart 2: Regional Distribution Bar
 const regionChartData = computed(() => {
-  const regions = officialStats.value.regionalBreakdown
+  const regions = currentStats.value.regionalBreakdown
   return {
     labels: regions.map(r => r.region),
     datasets: [
@@ -327,6 +356,47 @@ const regionChartData = computed(() => {
   }
 })
 
+// Filtered applications ignoring only class filter (for class comparison across field/type/region/search filters)
+const classComparisonApps = computed(() => {
+  return applications.value.filter(app => {
+    // Field filter
+    if (selectedField.value !== 'ALL' && app.field !== selectedField.value) {
+      return false
+    }
+    // Admission type filter
+    if (selectedType.value !== 'ALL') {
+      if (!app.admissionType.includes(selectedType.value)) return false
+    }
+    // Region filter
+    if (selectedRegion.value === 'METRO') {
+      if (!app.isMetro) return false
+    } else if (selectedRegion.value === 'NON_METRO') {
+      if (app.isMetro) return false
+    } else if (selectedRegion.value !== 'ALL') {
+      if (app.region !== selectedRegion.value) return false
+    }
+    // Search keyword
+    if (searchKeyword.value.trim()) {
+      const kw = searchKeyword.value.trim().toLowerCase()
+      const text = `${app.name} ${app.univName} ${app.dept} ${app.admissionMajorType} ${app.admissionDetailType} ${app.classNum}반`.toLowerCase()
+      if (!text.includes(kw)) return false
+    }
+    return true
+  })
+})
+
+const classSummaryText = computed(() => {
+  const cls = Number(selectedClass.value)
+  if (!isNaN(cls) && cls >= 1 && cls <= 11) {
+    return `${cls}반: 지원 ${currentStats.value.totalApps}건 (${currentStats.value.totalStudents}명)`
+  }
+  if (selectedClass.value === '졸업생' || selectedClass.value === 'GRADUATE') {
+    return `졸업생: 지원 ${currentStats.value.totalApps}건 (${currentStats.value.totalStudents}명)`
+  }
+  const avg = (currentStats.value.totalApps / 11).toFixed(1)
+  return `평균 ${avg}건 / 학급`
+})
+
 // Chart 3: Class by Class Bar
 const classChartData = computed(() => {
   const classCounts = Array(11).fill(0)
@@ -334,7 +404,7 @@ const classChartData = computed(() => {
   let gradCount = 0
   const gradStudents = new Set()
 
-  filteredApplications.value.forEach(app => {
+  classComparisonApps.value.forEach(app => {
     if (app.isGraduate || app.classNum === '졸업생') {
       gradCount++
       gradStudents.add(app.studentKey)
@@ -348,11 +418,35 @@ const classChartData = computed(() => {
   const countData = [...classCounts]
   const studentData = classStudents.map(s => s.size)
 
-  if (gradCount > 0) {
+  if (gradCount > 0 || selectedClass.value === '졸업생') {
     labels.push('졸업생')
     countData.push(gradCount)
     studentData.push(gradStudents.size)
   }
+
+  // Highlight selected class
+  const selectedClsNum = Number(selectedClass.value)
+  const isSelected = (index, isGrad = false) => {
+    if (isGrad) return selectedClass.value === '졸업생' || selectedClass.value === 'GRADUATE'
+    if (selectedClass.value === 'ALL' || selectedClass.value === 'ENROLLED') return true
+    return selectedClsNum === index + 1
+  }
+
+  const barColors = countData.map((_, i) => {
+    const isGrad = i === 11
+    if (isSelected(i, isGrad)) {
+      return '#4f46e5'
+    }
+    return '#cbd5e1'
+  })
+
+  const studentBarColors = studentData.map((_, i) => {
+    const isGrad = i === 11
+    if (isSelected(i, isGrad)) {
+      return '#0284c7'
+    }
+    return '#e2e8f0'
+  })
 
   return {
     labels,
@@ -360,13 +454,13 @@ const classChartData = computed(() => {
       {
         label: '지원 건수',
         data: countData,
-        backgroundColor: '#6366f1',
+        backgroundColor: barColors,
         borderRadius: 6
       },
       {
         label: '지원 학생 수',
         data: studentData,
-        backgroundColor: '#38bdf8',
+        backgroundColor: studentBarColors,
         borderRadius: 6
       }
     ]

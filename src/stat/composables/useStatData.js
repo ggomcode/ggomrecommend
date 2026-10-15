@@ -38,6 +38,30 @@ export function formatGrade(val) {
   return Number(val).toFixed(2)
 }
 
+export const TOP_TIER_TARGET_UNIVS = [
+  '서울대학교(서울)', '포항공과대학교(포항)', '연세대학교(서울)', '고려대학교(서울)',
+  '서강대학교(서울)', '성균관대학교(서울)', '성균관대학교(수원)', '한양대학교(서울)',
+  '이화여자대학교(서울)', '한국과학기술원', '울산과학기술원', '대구경북과학기술원',
+  '광주과학기술원', '한국에너지공과대학교'
+]
+
+export const CLASS_STUDENT_COUNTS = {
+  1: 31,
+  2: 31,
+  3: 29,
+  4: 30,
+  5: 31,
+  6: 26,
+  7: 27,
+  8: 29,
+  9: 30,
+  10: 28,
+  11: 31
+}
+
+export const REGION_ORDER = ['경기', '서울', '충남', '강원', '충북', '대전', '전북', '인천', '경북', '세종', '대구', '울산', '광주', '경남', '전남', '부산', '제주']
+export const METRO_REGIONS = new Set(['경기', '서울', '인천'])
+
 // Composable
 export function useStatData() {
   const auth = useAuthStore()
@@ -96,6 +120,52 @@ export function useStatData() {
     })
   })
 
+  // Target total student count for current selection (Class-specific or overall)
+  const currentTargetTotalStudents = computed(() => {
+    const cls = Number(selectedClass.value)
+    if (!isNaN(cls) && cls >= 1 && cls <= 11) {
+      return CLASS_STUDENT_COUNTS[cls] || 30
+    }
+    if (selectedClass.value === '졸업생' || selectedClass.value === 'GRADUATE') {
+      return currentStats.value.totalStudents
+    }
+    return officialStats.value.totalStudents || 334
+  })
+
+  // Dynamic label for enrolled card
+  const enrolledLabel = computed(() => {
+    const cls = Number(selectedClass.value)
+    if (!isNaN(cls) && cls >= 1 && cls <= 11) {
+      return `${cls}반 재학생`
+    }
+    if (selectedClass.value === 'ENROLLED') {
+      return '3학년 재학생 (1~11반)'
+    }
+    if (selectedClass.value === '졸업생' || selectedClass.value === 'GRADUATE') {
+      return '졸업생 지원자'
+    }
+    return '3학년 재학생'
+  })
+
+  // Dynamic subtitle for enrolled card
+  const enrolledSubText = computed(() => {
+    const cls = Number(selectedClass.value)
+    if (!isNaN(cls) && cls >= 1 && cls <= 11) {
+      return `포곡고 3학년 ${cls}반 총원`
+    }
+    if (selectedClass.value === '졸업생' || selectedClass.value === 'GRADUATE') {
+      return '수시 지원 졸업생 총원'
+    }
+    return '포곡고 3학년 총원'
+  })
+
+  // Dynamic applicant rate (based on current target students)
+  const currentApplicantRate = computed(() => {
+    const target = currentTargetTotalStudents.value
+    if (!target || target === 0) return '0.0'
+    return ((currentStats.value.totalStudents / target) * 100).toFixed(1)
+  })
+
   // Dynamic statistics based on filtered data
   const currentStats = computed(() => {
     const list = filteredApplications.value
@@ -106,19 +176,54 @@ export function useStatData() {
     const totalStudents = studentKeys.size
 
     // Average applications per student
-    const avgApps = totalStudents > 0 ? (totalApps / totalStudents).toFixed(1) : 0
+    const avgApps = totalStudents > 0 ? (totalApps / totalStudents).toFixed(1) : '0.0'
 
     // Metropolitan count
     const metroApps = list.filter(a => a.isMetro).length
-    const metroRate = totalApps > 0 ? ((metroApps / totalApps) * 100).toFixed(1) : 0
+    const metroRate = totalApps > 0 ? ((metroApps / totalApps) * 100).toFixed(1) : '0.0'
+    const nonMetroApps = totalApps - metroApps
+    const nonMetroRate = totalApps > 0 ? ((nonMetroApps / totalApps) * 100).toFixed(1) : '0.0'
+
+    // Specific metro regions
+    const gyeonggiApps = list.filter(a => a.region === '경기').length
+    const seoulApps = list.filter(a => a.region === '서울').length
+    const incheonApps = list.filter(a => a.region === '인천').length
 
     // Recommendation count
     const recApps = list.filter(a => a.isRecommendation).length
-    const recRate = totalApps > 0 ? ((recApps / totalApps) * 100).toFixed(1) : 0
+    const recRate = totalApps > 0 ? ((recApps / totalApps) * 100).toFixed(1) : '0.0'
+    const recStudents = new Set(list.filter(a => a.isRecommendation).map(a => a.studentKey)).size
+    const recStudentRate = totalStudents > 0 ? ((recStudents / totalStudents) * 100).toFixed(1) : '0.0'
 
     // Rural count
     const ruralApps = list.filter(a => a.isRural).length
-    const ruralRate = totalApps > 0 ? ((ruralApps / totalApps) * 100).toFixed(1) : 0
+    const ruralRate = totalApps > 0 ? ((ruralApps / totalApps) * 100).toFixed(1) : '0.0'
+    const ruralStudents = new Set(list.filter(a => a.isRural).map(a => a.studentKey)).size
+    const ruralStudentRate = totalStudents > 0 ? ((ruralStudents / totalStudents) * 100).toFixed(1) : '0.0'
+
+    // Top tier Sky & Tech
+    const topTierAppsList = list.filter(a => TOP_TIER_TARGET_UNIVS.some(u => a.univName.includes(u) || a.univName === u))
+    const topTierApps = topTierAppsList.length
+    const topTierStudents = new Set(topTierAppsList.map(a => a.studentKey)).size
+    const topTierRate = totalApps > 0 ? ((topTierApps / totalApps) * 100).toFixed(1) : '0.0'
+
+    // Dynamic Regional Breakdown
+    const regionCountsMap = {}
+    list.forEach(a => {
+      if (a.region) {
+        regionCountsMap[a.region] = (regionCountsMap[a.region] || 0) + 1
+      }
+    })
+    const regionalBreakdown = REGION_ORDER.map(region => {
+      const count = regionCountsMap[region] || 0
+      const rate = totalApps > 0 ? Number(((count / totalApps) * 100).toFixed(1)) : 0
+      return {
+        region,
+        count,
+        rate,
+        metro: METRO_REGIONS.has(region)
+      }
+    })
 
     // Type counts
     const typeCounts = {
@@ -149,12 +254,25 @@ export function useStatData() {
       avgApps,
       metroApps,
       metroRate,
+      nonMetroApps,
+      nonMetroRate,
+      gyeonggiApps,
+      seoulApps,
+      incheonApps,
       recApps,
       recRate,
+      recStudents,
+      recStudentRate,
       ruralApps,
       ruralRate,
+      ruralStudents,
+      ruralStudentRate,
+      topTierApps,
+      topTierStudents,
+      topTierRate,
       typeCounts,
       fieldCounts,
+      regionalBreakdown,
       avgGrade
     }
   })
@@ -218,6 +336,10 @@ export function useStatData() {
     isPrivacyMasked,
     filteredApplications,
     currentStats,
+    currentTargetTotalStudents,
+    enrolledLabel,
+    enrolledSubText,
+    currentApplicantRate,
     resetFilters,
     exportToExcel,
     loadCustomData,
