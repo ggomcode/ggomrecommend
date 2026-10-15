@@ -42,34 +42,13 @@
         </div>
       </div>
 
-      <!-- D-Day 주요 마일스톤 칩 모음 -->
-      <div class="mt-6 pt-5 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        <div
-          v-for="m in keyMilestones"
-          :key="m.title"
-          class="bg-white/10 hover:bg-white/15 backdrop-blur-md rounded-2xl p-3 border border-white/10 transition-all flex flex-col justify-between"
-        >
-          <div class="flex items-center justify-between gap-1 mb-1">
-            <span class="text-[11px] font-bold text-slate-300 truncate">{{ m.title }}</span>
-            <span
-              :class="[
-                'text-[10px] font-black px-1.5 py-0.5 rounded-md whitespace-nowrap',
-                m.dDay < 0 ? 'bg-slate-700 text-slate-400' : (m.dDay === 0 ? 'bg-rose-500 text-white animate-pulse' : 'bg-blue-500 text-white')
-              ]"
-            >
-              {{ m.dDayText }}
-            </span>
-          </div>
-          <span class="text-xs font-extrabold text-white tracking-tight">{{ m.dateDisplay }}</span>
-        </div>
-      </div>
     </div>
 
-    <!-- 1. 오늘의 입시일정 & 2. 주간 입시일정 (2열 그리드 배치) -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- 1. 오늘의 입시일정 & 2. 주요 입시일정 (1:1 대칭 2열 그리드 배치) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-      <!-- 1. 오늘의 입시일정 카드 (4 cols) -->
-      <div class="lg:col-span-5 bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 flex flex-col">
+      <!-- 1. 오늘의 입시일정 카드 (1/2 폭) -->
+      <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 flex flex-col">
         <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
           <div class="flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
@@ -235,128 +214,123 @@
         </div>
       </div>
 
-      <!-- 2. 주간 입시일정 카드 (7 cols) -->
-      <div class="lg:col-span-7 bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 flex flex-col">
+      <!-- 2. 주요 입시일정 카드 (1/2 폭, 1:1 대칭 배치) -->
+      <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 flex flex-col">
         <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
           <div class="flex items-center gap-2">
-            <span class="text-base">📆</span>
-            <h3 class="text-base font-bold text-slate-900 m-0">주간 입시일정</h3>
-            <span class="text-xs font-semibold text-slate-500">
-              ({{ currentWeekDays[0]?.formattedShort }} ~ {{ currentWeekDays[6]?.formattedShort }})
+            <span class="text-base">📌</span>
+            <h3 class="text-base font-bold text-slate-900 m-0">주요 입시일정</h3>
+            <span class="text-xs font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/60">
+              전체 {{ allMajorScheduleList.length }}건
             </span>
           </div>
 
-          <!-- 주 이동 버튼 -->
-          <div class="flex items-center gap-1">
+          <!-- 상태별 필터 탭 -->
+          <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold text-slate-600">
             <button
-              @click="moveWeek(-1)"
-              class="w-7 h-7 rounded-lg border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600 cursor-pointer"
-              title="지난 주"
+              type="button"
+              @click="majorFilter = 'all'"
+              :class="[
+                'px-2.5 py-1 rounded-lg transition-all cursor-pointer border-none text-[11px] font-bold',
+                majorFilter === 'all' ? 'bg-white text-slate-900 shadow-2xs font-black' : 'text-slate-500 hover:text-slate-800 bg-transparent'
+              ]"
             >
-              ‹
+              전체 ({{ allMajorScheduleList.length }})
             </button>
             <button
-              @click="resetWeekToToday"
-              class="px-2 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 text-[11px] font-bold text-slate-700 cursor-pointer"
+              type="button"
+              @click="majorFilter = 'active'"
+              :class="[
+                'px-2.5 py-1 rounded-lg transition-all cursor-pointer border-none text-[11px] font-bold',
+                majorFilter === 'active' ? 'bg-white text-blue-700 shadow-2xs font-black' : 'text-slate-500 hover:text-slate-800 bg-transparent'
+              ]"
             >
-              이번주
+              진행·예정 ({{ majorActiveCount }})
             </button>
             <button
-              @click="moveWeek(1)"
-              class="w-7 h-7 rounded-lg border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600 cursor-pointer"
-              title="다음 주"
+              type="button"
+              @click="majorFilter = 'past'"
+              :class="[
+                'px-2.5 py-1 rounded-lg transition-all cursor-pointer border-none text-[11px] font-bold',
+                majorFilter === 'past' ? 'bg-white text-slate-700 shadow-2xs font-black' : 'text-slate-500 hover:text-slate-800 bg-transparent'
+              ]"
             >
-              ›
+              종료 ({{ majorPastCount }})
             </button>
           </div>
         </div>
 
-        <!-- 7일간의 주간 요약 카드 리스트 -->
-        <div class="flex-1 grid grid-cols-7 gap-1.5 sm:gap-2">
+        <!-- 주요 입시일정 전체 리스트 (스크롤) -->
+        <div class="flex-1 space-y-2.5 overflow-y-auto max-h-[360px] pr-1.5">
           <div
-            v-for="day in currentWeekDays"
-            :key="day.dateStr"
-            @click="openModalForDate(day.dateStr)"
+            v-for="ev in filteredMajorScheduleList"
+            :key="ev.id"
+            @click="jumpToScheduleMonth(ev)"
             :class="[
-              'rounded-2xl p-2 sm:p-2.5 flex flex-col justify-between transition-all cursor-pointer border text-center relative overflow-hidden',
-              day.isToday
-                ? 'bg-blue-50/90 border-blue-400 ring-2 ring-blue-400/30 shadow-sm'
-                : 'bg-slate-50/70 hover:bg-slate-100/90 border-slate-200/80'
+              'p-3 sm:p-3.5 rounded-2xl border transition-all cursor-pointer text-xs space-y-1.5 relative group',
+              ev.isOngoing
+                ? 'bg-emerald-50/90 border-emerald-300 ring-2 ring-emerald-400/20 shadow-2xs'
+                : (ev.isUpcoming
+                  ? 'bg-white hover:bg-blue-50/50 border-slate-200/90 hover:border-blue-300 shadow-2xs'
+                  : 'bg-slate-50/70 border-slate-200/70 text-slate-500 opacity-80 hover:opacity-100')
             ]"
+            title="클릭 시 해당 월 달력으로 이동 및 상세 보기"
           >
-            <!-- 오늘 표시 배지 -->
-            <div v-if="day.isToday" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-600"></div>
+            <!-- 1행: 구분 태그 + 일정 명칭 + D-Day 배지 -->
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <span
+                  :class="[
+                    'text-[10px] font-black px-1.5 py-0.5 rounded-md shrink-0',
+                    ev.group === '일반대' ? 'bg-indigo-100 text-indigo-800' : (ev.group === '전문대' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200/80 text-slate-700')
+                  ]"
+                >
+                  {{ ev.group }}
+                </span>
+                <span
+                  :class="[
+                    'font-black truncate text-xs sm:text-sm',
+                    ev.isOngoing ? 'text-emerald-950 font-black' : (ev.isUpcoming ? 'text-slate-900' : 'text-slate-600')
+                  ]"
+                >
+                  {{ ev.title }}
+                </span>
+              </div>
 
-            <div>
+              <!-- D-Day 배지 -->
               <span
                 :class="[
-                  'text-[10px] font-black block',
-                  day.dayOfWeek === 0 ? 'text-rose-500' : (day.dayOfWeek === 6 ? 'text-blue-500' : 'text-slate-500')
+                  'text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 shadow-2xs whitespace-nowrap',
+                  ev.isOngoing
+                    ? 'bg-emerald-600 text-white animate-pulse'
+                    : (ev.isUpcoming ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600')
                 ]"
               >
-                {{ day.dayName }}
-              </span>
-              <span
-                :class="[
-                  'text-xs sm:text-sm font-black block mt-0.5',
-                  day.isToday ? 'text-blue-700' : 'text-slate-800'
-                ]"
-              >
-                {{ day.dayNum }}
+                {{ ev.dDayText }}
               </span>
             </div>
 
-            <!-- 요약 칩 모음 -->
-            <div class="space-y-1 mt-2">
-              <!-- 학사일정 칩 -->
-              <div
-                v-if="day.academicList && day.academicList.length > 0"
-                class="w-full py-0.5 rounded text-[9px] font-black bg-sky-100 text-sky-900 border border-sky-200 truncate px-1"
-                :title="day.academicList.map(a => a.content).join(', ')"
-              >
-                🏫 {{ day.academicList[0].content.split('\n')[0] }}
+            <!-- 2행: 기간 및 시간 / 비고 / 달력 바로가기 안내 -->
+            <div class="flex items-center justify-between gap-2 pt-0.5 text-[11px]">
+              <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <span :class="ev.isOngoing ? 'text-emerald-800 font-bold' : (ev.isUpcoming ? 'text-slate-700 font-bold' : 'text-slate-400')">
+                  📅 {{ ev.dateDisplay }} {{ ev.time ? `(${ev.time})` : '' }}
+                </span>
+                <span v-if="ev.note" :class="ev.isOngoing ? 'text-emerald-700/90' : 'text-slate-500'">
+                  • {{ ev.note }}
+                </span>
               </div>
-
-              <!-- 주요일정 바 -->
-              <div
-                v-if="day.majorCount > 0"
-                class="w-full py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 truncate px-1"
-                :title="day.majorTitles.join(', ')"
-              >
-                {{ day.majorTitles[0] || '주요일정' }}
-              </div>
-
-              <!-- 원서마감 배지 -->
-              <div
-                v-if="day.deadlinesCount > 0"
-                class="w-full py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 truncate px-1"
-              >
-                마감 {{ day.deadlinesCount }}개교
-              </div>
-
-              <!-- 4년제 일정 집계 -->
-              <div
-                v-if="day.fourYearCount > 0"
-                class="w-full py-0.5 rounded text-[9px] font-bold bg-indigo-100 text-indigo-700 truncate px-1"
-              >
-                4년제 {{ day.fourYearCount }}건
-              </div>
-
-              <!-- 전문대 일정 집계 -->
-              <div
-                v-if="day.juniorCount > 0"
-                class="w-full py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 truncate px-1"
-              >
-                전문대 {{ day.juniorCount }}건
-              </div>
-
-              <div
-                v-if="day.majorCount === 0 && day.deadlinesCount === 0 && day.fourYearCount === 0 && day.juniorCount === 0"
-                class="py-2 text-[9px] text-slate-300"
-              >
-                -
-              </div>
+              <span class="text-[10px] font-bold text-slate-400 group-hover:text-blue-600 transition-colors shrink-0">
+                달력 이동 ↗
+              </span>
             </div>
+          </div>
+
+          <div
+            v-if="filteredMajorScheduleList.length === 0"
+            class="p-8 text-center text-xs text-slate-400 rounded-2xl bg-slate-50 border border-dashed border-slate-200"
+          >
+            해당 조건의 주요 입시일정이 없습니다.
           </div>
         </div>
       </div>
@@ -808,8 +782,6 @@ const initMonth = (now.getFullYear() === 2026 || now.getFullYear() === 2027) ? (
 const currentYear = ref(initYear)
 const currentMonth = ref(initMonth)
 
-// 주간 일정 네비게이션용 기준일 (Date 객체)
-const currentWeekBaseDate = ref(new Date())
 
 // 오늘 날짜 문자열
 const todayStr = computed(() => {
@@ -880,49 +852,95 @@ function jumpToToday() {
   const d = new Date()
   currentYear.value = d.getFullYear()
   currentMonth.value = d.getMonth() + 1
-  currentWeekBaseDate.value = new Date()
 }
 
-function moveWeek(deltaWeeks) {
-  const next = new Date(currentWeekBaseDate.value)
-  next.setDate(next.getDate() + deltaWeeks * 7)
-  currentWeekBaseDate.value = next
-}
 
-function resetWeekToToday() {
-  currentWeekBaseDate.value = new Date()
-}
 
-// ── D-Day 주요 마일스톤 계산 ──────────────────────────────────
-const keyMilestones = computed(() => {
-  const milestones = [
-    { title: '수시 원서접수 마감', targetDate: '2026-09-11' },
-    { title: '수능 시험일 (2027)', targetDate: '2026-11-19' },
-    { title: '수시 합격자 발표', targetDate: '2026-12-18' },
-    { title: '정시 원서접수 마감', targetDate: '2027-01-07' },
-  ]
+// ── 주요 입시일정 (한눈에 전체 보기 & 필터 & 달력 연동) ───────
+const majorFilter = ref('all')
 
-  const today = new Date(todayStr.value)
+const allMajorScheduleList = computed(() => {
+  if (!rawData.value?.majorList) return []
+  const today = todayStr.value
+  const todayDate = new Date(today)
 
-  return milestones.map(m => {
-    const target = new Date(m.targetDate)
-    const diffTime = target.getTime() - today.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return rawData.value.majorList.map((item) => {
+    const isOngoing = item.startDate <= today && today <= item.endDate
+    const isUpcoming = today < item.startDate
+    const isPast = today > item.endDate
 
     let dDayText = ''
-    if (diffDays > 0) dDayText = `D-${diffDays}`
-    else if (diffDays === 0) dDayText = 'D-DAY'
-    else dDayText = `종료 (D+${Math.abs(diffDays)})`
+    let dDayNumber = 0
+    let status = 'upcoming'
+
+    if (isOngoing) {
+      status = 'ongoing'
+      const endD = new Date(item.endDate)
+      const diffToEnd = Math.ceil((endD.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24))
+      if (diffToEnd === 0) {
+        dDayText = '오늘 마감'
+      } else {
+        dDayText = `진행중 (마감 D-${diffToEnd})`
+      }
+    } else if (isUpcoming) {
+      status = 'upcoming'
+      const startD = new Date(item.startDate)
+      dDayNumber = Math.ceil((startD.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24))
+      dDayText = dDayNumber === 0 ? 'D-DAY' : `D-${dDayNumber}`
+    } else {
+      status = 'past'
+      const endD = new Date(item.endDate)
+      const diffPast = Math.ceil((todayDate.getTime() - endD.getTime()) / (1000 * 60 * 60 * 24))
+      dDayText = `종료 (D+${diffPast})`
+    }
+
+    let dateDisplay = ''
+    if (item.startDate === item.endDate) {
+      dateDisplay = item.startDate.replace(/-/g, '.')
+    } else {
+      dateDisplay = `${item.startDate.replace(/-/g, '.')} ~ ${item.endDate.replace(/-/g, '.')}`
+    }
 
     return {
-      title: m.title,
-      targetDate: m.targetDate,
-      dateDisplay: m.targetDate.replace(/-/g, '.'),
-      dDay: diffDays,
-      dDayText
+      ...item,
+      status,
+      isOngoing,
+      isUpcoming,
+      isPast,
+      dDayText,
+      dateDisplay
     }
   })
 })
+
+const filteredMajorScheduleList = computed(() => {
+  const list = allMajorScheduleList.value
+  if (majorFilter.value === 'active') {
+    return list.filter(item => item.isOngoing || item.isUpcoming)
+  }
+  if (majorFilter.value === 'past') {
+    return list.filter(item => item.isPast)
+  }
+  return list
+})
+
+const majorActiveCount = computed(() => {
+  return allMajorScheduleList.value.filter(item => item.isOngoing || item.isUpcoming).length
+})
+
+const majorPastCount = computed(() => {
+  return allMajorScheduleList.value.filter(item => item.isPast).length
+})
+
+function jumpToScheduleMonth(item) {
+  if (!item.startDate) return
+  const parts = item.startDate.split('-')
+  if (parts.length >= 2) {
+    currentYear.value = parseInt(parts[0], 10)
+    currentMonth.value = parseInt(parts[1], 10)
+    openModalForDate(item.startDate)
+  }
+}
 
 // ── 오늘의 입시일정 계산 ──────────────────────────────────────
 const todayAcademic = computed(() => {
@@ -956,65 +974,6 @@ const todayFourYear = computed(() => {
 const todayJunior = computed(() => {
   if (!rawData.value?.juniorByDate) return null
   return rawData.value.juniorByDate[todayStr.value] || null
-})
-
-// ── 주간 입시일정 계산 (월~일 7일) ────────────────────────────
-const currentWeekDays = computed(() => {
-  const base = new Date(currentWeekBaseDate.value)
-  // 이번 주 월요일 구하기
-  const dayOfWeek = base.getDay() // 0(일) ~ 6(토)
-  const distanceToMonday = (dayOfWeek + 6) % 7
-  const monday = new Date(base)
-  monday.setDate(base.getDate() - distanceToMonday)
-
-  const days = []
-  const dayNames = ['월', '화', '수', '목', '금', '토', '일']
-
-  for (let i = 0; i < 7; i++) {
-    const cur = new Date(monday)
-    cur.setDate(monday.getDate() + i)
-    const y = cur.getFullYear()
-    const m = String(cur.getMonth() + 1).padStart(2, '0')
-    const d = String(cur.getDate()).padStart(2, '0')
-    const dateStr = `${y}-${m}-${d}`
-
-    const isToday = dateStr === todayStr.value
-    const dayOfWeekActual = cur.getDay() // 0(일) ~ 6(토)
-
-    // 학사일정 추출
-    const academicList = rawData.value?.academicByDate?.[dateStr] || []
-
-    // 주요 일정 추출
-    const majorTitles = (rawData.value?.majorList || [])
-      .filter(ev => ev.startDate <= dateStr && dateStr <= ev.endDate)
-      .map(ev => ev.title)
-
-    // 마감 대학 수
-    const deadlinesCount = (rawData.value?.deadlineByDate?.[dateStr] || []).length
-
-    // 4년제 일정 건수
-    const fourYearCount = rawData.value?.fourYearByDate?.[dateStr]?.items?.length || 0
-
-    // 전문대 일정 건수
-    const juniorCount = rawData.value?.juniorByDate?.[dateStr]?.items?.length || 0
-
-    days.push({
-      dateStr,
-      dayNum: cur.getDate(),
-      dayName: dayNames[i],
-      dayOfWeek: dayOfWeekActual,
-      formattedShort: `${cur.getMonth() + 1}/${cur.getDate()}`,
-      isToday,
-      academicList,
-      majorCount: majorTitles.length,
-      majorTitles,
-      deadlinesCount,
-      fourYearCount,
-      juniorCount
-    })
-  }
-
-  return days
 })
 
 // ── 월간 캘린더 그리드 셀 계산 (일 ~ 토) ──────────────────────
