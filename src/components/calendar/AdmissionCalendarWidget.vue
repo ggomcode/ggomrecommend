@@ -364,7 +364,7 @@
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-bold text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
           <div class="flex items-center gap-1.5">
             <span class="w-3 h-3 rounded-sm bg-sky-500 shrink-0"></span>
-            <span>🏫 학사일정 (시험·모평·행사)</span>
+            <span>🏫 학사일정</span>
           </div>
           <div class="flex items-center gap-1.5">
             <span class="w-3 h-3 rounded-sm bg-emerald-400 shrink-0"></span>
@@ -372,7 +372,7 @@
           </div>
           <div class="flex items-center gap-1.5">
             <span class="w-3 h-3 rounded-sm bg-indigo-500 shrink-0"></span>
-            <span>2단: 4년제 (대학별 고사)</span>
+            <span>2단: 4년제 (실기·면접·논술)</span>
           </div>
           <div class="flex items-center gap-1.5">
             <span class="w-3 h-3 rounded-sm bg-amber-500 shrink-0"></span>
@@ -402,16 +402,17 @@
           :key="cell.dateStr"
           @click="openModalForDate(cell.dateStr)"
           :class="[
-            'min-h-[115px] sm:min-h-[135px] p-1.5 sm:p-2 bg-white flex flex-col justify-between transition-colors relative cursor-pointer select-none group',
+            'p-1 sm:p-1.5 bg-white flex flex-col justify-start transition-colors relative cursor-pointer select-none group',
             !cell.isCurrentMonth ? 'bg-slate-50/60 text-slate-400' : 'hover:bg-blue-50/40',
             cell.isToday ? 'bg-blue-50/30' : ''
           ]"
+          style="min-height: 184px;"
         >
-          <!-- 날짜 셀 상단: 날짜 번호 + 뱃지 -->
-          <div class="flex items-center justify-between mb-1">
+          <!-- [Row 0] 날짜 번호 + 마감 배지 (고정 높이 22px) -->
+          <div class="h-[22px] flex items-center justify-between mb-1 shrink-0 px-0.5">
             <span
               :class="[
-                'text-xs sm:text-sm font-extrabold w-6 h-6 flex items-center justify-center rounded-full',
+                'text-xs sm:text-sm font-extrabold w-6 h-6 flex items-center justify-center rounded-full leading-none',
                 cell.isToday ? 'bg-blue-600 text-white shadow-xs font-black' : '',
                 !cell.isToday && cell.dayOfWeek === 0 ? 'text-rose-600' : '',
                 !cell.isToday && cell.dayOfWeek === 6 ? 'text-blue-600' : '',
@@ -431,97 +432,123 @@
             </span>
           </div>
 
-          <!-- 학교 학사일정 배지 (지필평가, 모의평가, 개학식/방학식 등) -->
-          <div
-            v-if="cell.academicList && cell.academicList.length > 0"
-            class="mb-1 py-0.5 px-1.5 rounded text-[10px] sm:text-[11px] font-bold truncate flex items-center gap-1 border shadow-2xs"
-            :class="cell.academicBadgeClass"
-            :title="cell.academicSummary"
-          >
-            <span>{{ cell.academicIcon }}</span>
-            <span class="truncate">{{ cell.academicMainText }}</span>
-            <span v-if="cell.academicList.length > 1" class="text-[9px] opacity-75 shrink-0">
-              +{{ cell.academicList.length - 1 }}
-            </span>
+          <!-- ── 1. 학사일정 트랙 (항상 첫 번째 줄, 고정 높이 22px) ── -->
+          <div class="h-[22px] mb-1 shrink-0 flex items-center overflow-hidden">
+            <div
+              v-if="cell.academicList && cell.academicList.length > 0"
+              class="w-full h-full py-0.5 px-1.5 rounded text-[10px] sm:text-[11px] font-bold truncate flex items-center gap-1 border shadow-2xs"
+              :class="cell.academicBadgeClass"
+              :title="cell.academicSummary"
+            >
+              <span class="shrink-0">{{ cell.academicIcon }}</span>
+              <span class="truncate">{{ cell.academicMainText }}</span>
+              <span v-if="cell.academicList.length > 1" class="text-[9px] opacity-75 shrink-0">
+                +{{ cell.academicList.length - 1 }}
+              </span>
+            </div>
+            <div v-else class="w-full h-full"></div>
           </div>
 
-          <!-- 3단 고정 트랙 영역 (Track 1, Track 2, Track 3) -->
-          <div class="flex-1 flex flex-col justify-start space-y-1 overflow-hidden">
-
-            <!-- ── Track 1: 주요일정 (Line 1) ── -->
-            <div class="min-h-[22px] flex items-center">
-              <template v-if="cell.majorRange">
-                <!-- 기간 일정 바: 형광 하이라이트 -->
-                <div
-                  :class="[
-                    'w-full py-0.5 text-[10px] sm:text-[11px] leading-tight font-extrabold flex items-center justify-between border-y transition-all',
-                    cell.majorRange.isStart ? 'rounded-l-md border-l pl-1.5' : '',
-                    cell.majorRange.isEnd ? 'rounded-r-md border-r pr-1.5' : '',
-                    !cell.majorRange.isStart && !cell.majorRange.isEnd ? 'rounded-none' : ''
-                  ]"
-                  :style="{
-                    backgroundColor: cell.majorRange.isStart || cell.majorRange.isEnd ? cell.majorRange.palette.bg : `${cell.majorRange.palette.bar}25`,
-                    borderColor: cell.majorRange.palette.border,
-                    color: cell.majorRange.palette.text
-                  }"
-                  :title="`${cell.majorRange.title} (${cell.majorRange.startDate} ~ ${cell.majorRange.endDate})`"
-                >
-                  <!-- 시작일인 경우에만 텍스트 표시 -->
-                  <span v-if="cell.majorRange.isStart" class="truncate font-black">
-                    🟢 [시작] {{ cell.majorRange.title }}
-                  </span>
-                  <!-- 마감일인 경우에만 텍스트 표시 -->
-                  <span v-else-if="cell.majorRange.isEnd" class="truncate font-black">
-                    🔒 [마감] {{ cell.majorRange.title }} {{ cell.majorRange.time ? `(~${cell.majorRange.time})` : '' }}
-                  </span>
-                  <!-- 중간 날짜는 텍스트 없이 형광 바만 연결됨 -->
-                  <span v-else class="h-1.5 w-full block opacity-0">.</span>
-                </div>
-              </template>
-              <template v-else-if="cell.singleMajorEvent">
-                <!-- 단일일 주요일정 (수능 등) -->
-                <div
-                  class="w-full py-0.5 px-1.5 rounded-md text-[10px] sm:text-[11px] font-black bg-blue-100 text-blue-900 border border-blue-300 truncate"
-                  :title="cell.singleMajorEvent.title"
-                >
-                  🎯 {{ cell.singleMajorEvent.title }}
-                </div>
-              </template>
-            </div>
-
-            <!-- ── Track 2: 4년제일정 (Line 2) ── -->
-            <div class="min-h-[20px] flex items-center">
+          <!-- ── 2. 주요일정 트랙 (항상 두 번째 줄, 고정 높이 22px) ── -->
+          <div class="h-[22px] mb-1 shrink-0 flex items-center overflow-hidden">
+            <template v-if="cell.majorRange">
+              <!-- 기간 일정 바: 형광 하이라이트 -->
               <div
-                v-if="cell.fourYearData && cell.fourYearData.items.length > 0"
-                class="w-full py-0.5 px-1.5 rounded-md text-[10px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 truncate flex items-center justify-between"
-                :title="cell.fourYearData.summaryTitle"
+                :class="[
+                  'w-full h-full py-0.5 text-[10px] sm:text-[11px] leading-tight font-extrabold flex items-center justify-between border-y transition-all',
+                  cell.majorRange.isStart ? 'rounded-l-md border-l pl-1.5' : '',
+                  cell.majorRange.isEnd ? 'rounded-r-md border-r pr-1.5' : '',
+                  !cell.majorRange.isStart && !cell.majorRange.isEnd ? 'rounded-none' : ''
+                ]"
+                :style="{
+                  backgroundColor: cell.majorRange.isStart || cell.majorRange.isEnd ? cell.majorRange.palette.bg : `${cell.majorRange.palette.bar}25`,
+                  borderColor: cell.majorRange.palette.border,
+                  color: cell.majorRange.palette.text
+                }"
+                :title="`${cell.majorRange.title} (${cell.majorRange.startDate} ~ ${cell.majorRange.endDate})`"
               >
-                <span class="truncate">🟣 {{ cell.fourYearData.compactSummary }}</span>
-                <span class="text-[9px] font-black text-indigo-700 shrink-0 ml-1">
-                  {{ cell.fourYearData.items.length }}건
+                <!-- 시작일 텍스트 -->
+                <span v-if="cell.majorRange.isStart" class="truncate font-black">
+                  🟢 [시작] {{ cell.majorRange.title }}
                 </span>
+                <!-- 마감일 텍스트 -->
+                <span v-else-if="cell.majorRange.isEnd" class="truncate font-black">
+                  🔒 [마감] {{ cell.majorRange.title }} {{ cell.majorRange.time ? `(~${cell.majorRange.time})` : '' }}
+                </span>
+                <!-- 중간 날짜는 바만 표시 -->
+                <span v-else class="h-1.5 w-full block opacity-0">.</span>
               </div>
-            </div>
-
-            <!-- ── Track 3: 전문대일정 (Line 3) ── -->
-            <div class="min-h-[20px] flex items-center">
+            </template>
+            <template v-else-if="cell.singleMajorEvent">
+              <!-- 단일일 주요일정 (수능 등) -->
               <div
-                v-if="cell.juniorData && cell.juniorData.items.length > 0"
-                class="w-full py-0.5 px-1.5 rounded-md text-[10px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 truncate flex items-center justify-between"
-                :title="cell.juniorData.summaryTitle"
+                class="w-full h-full py-0.5 px-1.5 rounded-md text-[10px] sm:text-[11px] font-black bg-blue-100 text-blue-900 border border-blue-300 truncate flex items-center"
+                :title="cell.singleMajorEvent.title"
               >
-                <span class="truncate">🟠 {{ cell.juniorData.compactSummary }}</span>
-                <span class="text-[9px] font-black text-amber-700 shrink-0 ml-1">
-                  {{ cell.juniorData.items.length }}건
-                </span>
+                🎯 {{ cell.singleMajorEvent.title }}
               </div>
-            </div>
-
+            </template>
+            <div v-else class="w-full h-full"></div>
           </div>
 
-          <!-- 호버 시 상세 안내 힌트 -->
-          <div class="text-[9px] text-slate-400 group-hover:text-blue-600 transition-colors text-right pt-0.5 opacity-0 group-hover:opacity-100">
-            상세보기 +
+          <!-- ── 3. 4년제일정 [실기] 트랙 (항상 세 번째 줄, 고정 높이 20px) ── -->
+          <div class="h-[20px] mb-1 shrink-0 flex items-center overflow-hidden">
+            <div
+              v-if="cell.fourYearData && cell.fourYearData.practicalCount > 0"
+              class="w-full h-full py-0.5 px-1.5 rounded-md text-[10px] font-bold bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 truncate flex items-center justify-between"
+              :title="`4년제 실기고사 총 ${cell.fourYearData.practicalCount}건`"
+            >
+              <span class="truncate">🟣 실기</span>
+              <span class="text-[9px] font-black text-purple-700 shrink-0 ml-1">
+                {{ cell.fourYearData.practicalCount }}건
+              </span>
+            </div>
+            <div v-else class="w-full h-full"></div>
+          </div>
+
+          <!-- ── 4. 4년제일정 [면접] 트랙 (항상 네 번째 줄, 고정 높이 20px) ── -->
+          <div class="h-[20px] mb-1 shrink-0 flex items-center overflow-hidden">
+            <div
+              v-if="cell.fourYearData && cell.fourYearData.interviewCount > 0"
+              class="w-full h-full py-0.5 px-1.5 rounded-md text-[10px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 truncate flex items-center justify-between"
+              :title="`4년제 면접고사 총 ${cell.fourYearData.interviewCount}건`"
+            >
+              <span class="truncate">🟣 면접</span>
+              <span class="text-[9px] font-black text-indigo-700 shrink-0 ml-1">
+                {{ cell.fourYearData.interviewCount }}건
+              </span>
+            </div>
+            <div v-else class="w-full h-full"></div>
+          </div>
+
+          <!-- ── 5. 4년제일정 [기타/논술/합격] 트랙 (항상 다섯 번째 줄, 고정 높이 20px) ── -->
+          <div class="h-[20px] mb-1 shrink-0 flex items-center overflow-hidden">
+            <div
+              v-if="cell.fourYearData && cell.fourYearData.otherCount > 0"
+              class="w-full h-full py-0.5 px-1.5 rounded-md text-[10px] font-bold bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-900 border border-fuchsia-200 truncate flex items-center justify-between"
+              :title="cell.fourYearData.otherTitle"
+            >
+              <span class="truncate">🟣 {{ cell.fourYearData.otherLabel }}</span>
+              <span class="text-[9px] font-black text-fuchsia-700 shrink-0 ml-1">
+                {{ cell.fourYearData.otherCount }}건
+              </span>
+            </div>
+            <div v-else class="w-full h-full"></div>
+          </div>
+
+          <!-- ── 6. 전문대일정 트랙 (항상 여섯 번째 줄, 고정 높이 22px) ── -->
+          <div class="h-[22px] shrink-0 flex items-center overflow-hidden">
+            <div
+              v-if="cell.juniorData && cell.juniorData.items.length > 0"
+              class="w-full h-full py-0.5 px-1.5 rounded-md text-[10px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 truncate flex items-center justify-between"
+              :title="cell.juniorData.summaryTitle"
+            >
+              <span class="truncate">🟠 {{ cell.juniorData.compactSummary }}</span>
+              <span class="text-[9px] font-black text-amber-700 shrink-0 ml-1">
+                {{ cell.juniorData.items.length }}건
+              </span>
+            </div>
+            <div v-else class="w-full h-full"></div>
           </div>
         </div>
       </div>
@@ -1051,21 +1078,33 @@ function createCalendarCell(dateObj, isCurrentMonth) {
   // 원서접수 마감 대학 수
   const deadlineList = rawData.value?.deadlineByDate?.[dateStr] || []
 
-  // Track 2: 4년제 일정 데이터
+  // Track 2: 4년제 일정 데이터 (실기 / 면접 / 기타 별도 분리)
   let fourYearData = null
   const fy = rawData.value?.fourYearByDate?.[dateStr]
   if (fy && fy.items.length > 0) {
-    // 유형별 요약 문자열 생성
-    const topTypes = Object.entries(fy.typeCounts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([type, cnt]) => `${type} ${cnt}`)
-      .slice(0, 2)
-      .join(' · ')
+    const practicalCount = fy.typeCounts['실기'] || 0
+    const interviewCount = fy.typeCounts['면접'] || 0
+
+    // 실기, 면접 외의 기타 유형들 (논술, 1단계합격, 최종합격 등)
+    const otherEntries = Object.entries(fy.typeCounts).filter(
+      ([type]) => type !== '실기' && type !== '면접'
+    )
+    const otherCount = otherEntries.reduce((sum, [, cnt]) => sum + cnt, 0)
+    const otherLabel = otherEntries.map(([type, cnt]) => `${type} ${cnt}`).slice(0, 2).join(' · ')
+    const otherTitle = fy.items
+      .filter(it => it.type !== '실기' && it.type !== '면접')
+      .map(it => `${it.university}(${it.type})`)
+      .slice(0, 8)
+      .join(', ')
 
     fourYearData = {
       items: fy.items,
       typeCounts: fy.typeCounts,
-      compactSummary: topTypes,
+      practicalCount,
+      interviewCount,
+      otherCount,
+      otherLabel: otherLabel || '기타',
+      otherTitle,
       summaryTitle: fy.items.map(it => `${it.university}(${it.type})`).slice(0, 8).join(', ')
     }
   }
