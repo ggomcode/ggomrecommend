@@ -587,7 +587,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { GraduationCap, School, UserCheck, CheckCircle } from 'lucide-vue-next'
 import AdmissionCalendarWidget from '../components/calendar/AdmissionCalendarWidget.vue'
 import { useAuthStore } from '../stores/auth'
@@ -602,11 +602,11 @@ const auth = useAuthStore()
 
 // 화면 모드: 'login' (기본 로그인 카드) | 'calendar' (입시 캘린더 화면)
 // URL 경로가 /calendar 이거나 ?view=calendar 인 경우 캘린더 화면으로 다이렉트 진입
-const viewMode = ref((route.path === '/calendar' || route.query.view === 'calendar') ? 'calendar' : 'login')
+const viewMode = ref((route.path.startsWith('/calendar') || route.query.view === 'calendar') ? 'calendar' : 'login')
 
 function openCalendarView() {
   viewMode.value = 'calendar'
-  if (route.path !== '/calendar') {
+  if (!route.path.startsWith('/calendar')) {
     router.push('/calendar')
   }
 }
@@ -619,7 +619,7 @@ function openLoginView() {
 }
 
 watch(() => route.path, (newPath) => {
-  if (newPath === '/calendar') {
+  if (newPath.startsWith('/calendar')) {
     viewMode.value = 'calendar'
   } else if (newPath === '/login') {
     viewMode.value = 'login'
