@@ -11,15 +11,15 @@
         <div>
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold mb-2">
             <span>📅</span>
-            <span>2027 대입 전형 공식 연동</span>
+            <span>2026학년도 학사일정 & 2027 대입 전형 연동</span>
             <span class="w-1 h-1 rounded-full bg-blue-400"></span>
             <span>실시간 구글 시트 동기화</span>
           </div>
           <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5 m-0">
-            <span>2027 대입 종합 입시일정 캘린더</span>
+            <span>2026학년도 & 2027대입 캘린더</span>
           </h2>
           <p class="text-xs sm:text-sm text-slate-300 mt-1.5 max-w-2xl leading-relaxed m-0">
-            주요일정, 4년제 대학별 고사(면접·실기·논술), 전문대 모집일정을 3단 그룹형 트랙으로 한눈에 확인하세요.
+            학사일정(지필평가·학평·모평·수능 등), 주요일정, 4년제 대학별 고사(면접·실기·논술), 전문대 모집일정을 4단 그룹형 트랙으로 한눈에 확인하세요.
           </p>
         </div>
 

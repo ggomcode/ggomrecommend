@@ -21,8 +21,7 @@
           class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
         >
           <span>📅</span>
-          <span>입시 캘린더</span>
-          <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-800 font-black">2027</span>
+          <span>2026학년도 & 2027대입 캘린더</span>
         </button>
 
         <button
