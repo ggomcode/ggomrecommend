@@ -219,14 +219,57 @@ function checkIsTopTier(univName) {
 
 function isMedicalDept(dept) {
   if (!dept) return false
-  // 의·치·한·수
-  if (dept.includes('의예') || dept.includes('치의') || dept.includes('한의') || dept.includes('수의')) {
+
+  // 1. 비면허/자연과학/유사 전공 배제 (약과학, 한약학, 창의, 바이오, 신약, 스포츠의학, 식물의학, 공학, 의료행정, 치료 등)
+  if (
+    dept.includes('약과학') ||
+    dept.includes('한약학') ||
+    dept.includes('창의') ||
+    dept.includes('바이오') ||
+    dept.includes('신약') ||
+    dept.includes('스포츠') ||
+    dept.includes('식물') ||
+    dept.includes('공학') ||
+    dept.includes('융합') ||
+    dept.includes('보건') ||
+    dept.includes('행정') ||
+    dept.includes('의료') ||
+    dept.includes('치료') ||
+    dept.includes('치위생') ||
+    dept.includes('치기공') ||
+    dept.includes('임상') ||
+    dept.includes('의류')
+  ) {
+    return false
+  }
+
+  // 2. 의예·의학, 치의예·치의학, 한의예·한의학, 수의예·수의학
+  if (
+    dept.includes('의예') ||
+    dept === '의학과' ||
+    dept.startsWith('의학과') ||
+    dept.includes('치의예') ||
+    dept.includes('치의학') ||
+    dept.includes('한의예') ||
+    dept.includes('한의학') ||
+    dept.includes('수의예') ||
+    dept.includes('수의학')
+  ) {
     return true
   }
-  // 약학 (바이오의약, 신약, 제약공학 등 비면허 학과 제외)
-  if ((dept.includes('약학') || dept.includes('제약학')) && !dept.includes('바이오') && !dept.includes('신약') && !dept.includes('공학')) {
+
+  // 3. 약학과, 약학부, 제약학과 (6년제 정규 약학대학 면허 과정)
+  if (
+    dept === '약학과' ||
+    dept.startsWith('약학과') ||
+    dept === '약학부' ||
+    dept.startsWith('약학부') ||
+    dept === '제약학과' ||
+    dept.startsWith('제약학과')
+  ) {
     return true
   }
+
   return false
 }
 
