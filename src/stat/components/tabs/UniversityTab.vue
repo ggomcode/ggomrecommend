@@ -220,10 +220,9 @@ function checkIsTopTier(univName) {
 function isMedicalDept(dept) {
   if (!dept) return false
 
-  // 1. 비면허/자연과학/유사 전공 배제 (약과학, 한약학, 창의, 바이오, 신약, 스포츠의학, 식물의학, 공학, 의료행정, 치료 등)
+  // 1. 비면허/자연과학/유사 전공 배제 (약과학, 창의, 바이오, 신약, 스포츠의학, 식물의학, 공학, 의료행정, 치료 등)
   if (
     dept.includes('약과학') ||
-    dept.includes('한약학') ||
     dept.includes('창의') ||
     dept.includes('바이오') ||
     dept.includes('신약') ||
@@ -258,14 +257,17 @@ function isMedicalDept(dept) {
     return true
   }
 
-  // 3. 약학과, 약학부, 제약학과 (6년제 정규 약학대학 면허 과정)
+  // 3. 약학과, 약학부, 제약학과, 한약학과 (약사 및 한약사 보건의료인 면허 과정)
   if (
     dept === '약학과' ||
     dept.startsWith('약학과') ||
     dept === '약학부' ||
     dept.startsWith('약학부') ||
     dept === '제약학과' ||
-    dept.startsWith('제약학과')
+    dept.startsWith('제약학과') ||
+    dept === '한약학과' ||
+    dept.startsWith('한약학과') ||
+    dept.includes('한약학과')
   ) {
     return true
   }
