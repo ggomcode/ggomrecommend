@@ -1,8 +1,8 @@
 import { supabase } from '../utils/supabaseClient.js'
 
 export const DEFAULT_ADMISSION_SHEET_ID = '1hoiLXSv7B3_7hWYnSlv60AIRKhkERj8wQAFGCgmhJ2k'
-const CACHE_KEY = 'pcm_admission_calendar_cache_v4'
-const CACHE_TIME_KEY = 'pcm_admission_calendar_cache_time_v4'
+const CACHE_KEY = 'pcm_admission_calendar_cache_v6'
+const CACHE_TIME_KEY = 'pcm_admission_calendar_cache_time_v6'
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000 // 6시간 캐시
 
 /**
@@ -509,28 +509,25 @@ function processAdmissionSheets({ csvMajor, csvDeadline, csvFourYear, csvJunior,
     }
 
     let currentMonth = 3
-    let lastDayNum = 0
 
     // 3) 전체 행 순회 (학기 구분이나 행 개수 변화에 완전 유동적)
     for (let r = 1; r < rows.length; r++) {
       const row = rows[r]
       if (!row || row.length < 3) continue
 
-      // 월 컬럼 탐색: 앞쪽 3개 컬럼 중 1~12 단독 숫자 감지
-      for (let c = 0; c <= 2; c++) {
-        const val = row[c]?.trim()
-        if (val && !isNaN(parseInt(val, 10))) {
-          const m = parseInt(val, 10)
-          if (m >= 1 && m <= 12 && val.length <= 2) {
-            currentMonth = m
-            lastDayNum = 0
-            break
-          }
+      // 월(Month)은 오직 0번째 컬럼에만 기록되어 있으며, 월이 바뀔 때만 값이 들어있습니다. (1열은 '주차' 번호이므로 혼동 방지)
+      const mCol = row[0]?.trim()
+      if (mCol && !isNaN(parseInt(mCol, 10))) {
+        const parsedM = parseInt(mCol, 10)
+        if (parsedM >= 1 && parsedM <= 12) {
+          currentMonth = parsedM
         }
       }
 
-      // 연도 결정: 3~12월은 baseYear, 1~2월은 baseYear + 1
-      const currentYear = currentMonth <= 2 ? baseYear + 1 : baseYear
+      // 3~12월은 baseYear (예: 2026), 1~2월은 baseYear + 1 (예: 2027)
+      const rowYear = currentMonth <= 2 ? baseYear + 1 : baseYear
+      let weekPrevDay = 0
+      let rowMonthOffset = 0 // 한 주(Row) 안에서 월말(31일) -> 월초(1일)로 넘어갈 때 +1
 
       for (const dInfo of dynamicDaysInfo) {
         const dStr = row[dInfo.dayIdx]?.trim()
@@ -541,17 +538,18 @@ function processAdmissionSheets({ csvMajor, csvDeadline, csvFourYear, csvJunior,
         const dayNum = parseInt(dStr, 10)
         if (dayNum < 1 || dayNum > 31) continue
 
-        // 월 경계 전환 처리 (예: 월말 28/30/31일 후 같은 주에 월초 1/2일 시작)
-        let eventMonth = currentMonth
-        let eventYear = currentYear
-        if (lastDayNum > 20 && dayNum < 10) {
-          eventMonth = currentMonth + 1
-          if (eventMonth > 12) {
-            eventMonth = 1
-            eventYear = baseYear + 1
-          }
+        // 동일한 행 안에서 날짜가 20 이상에서 10 이하로 떨어지면 다음 달로 진입 (예: 3월 31일 화 -> 4월 1일 수)
+        if (weekPrevDay > 20 && dayNum < 10) {
+          rowMonthOffset = 1
         }
-        lastDayNum = dayNum
+        weekPrevDay = dayNum
+
+        let eventMonth = currentMonth + rowMonthOffset
+        let eventYear = rowYear
+        if (eventMonth > 12) {
+          eventMonth = 1
+          eventYear = baseYear + 1
+        }
 
         if (content) {
           const mStr = String(eventMonth).padStart(2, '0')
