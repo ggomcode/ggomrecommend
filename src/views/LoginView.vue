@@ -1,9 +1,51 @@
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-start py-10 px-4 sm:px-6 bg-slate-100 font-sans transition-colors duration-300">
-    <div
-      class="w-full bg-white shadow-xl border border-slate-200/80 transition-all duration-300 relative overflow-hidden shrink-0"
-      style="max-width: 460px; border-radius: 28px; padding: 2.25rem 2.25rem 2.5rem;"
+  <div class="min-h-screen bg-slate-100 font-sans transition-colors duration-300 flex flex-col justify-between">
+    <!-- 상단 헤더 바 (입시 캘린더 토글 버튼) -->
+    <header class="w-full max-w-6xl mx-auto px-4 sm:px-6 pt-5 pb-2 flex items-center justify-between shrink-0">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 border border-slate-200/80 text-blue-700 text-xs font-extrabold shadow-2xs">
+          <span>🏫</span>
+          <span>{{ schoolName }}</span>
+        </span>
+        <span v-if="viewMode === 'calendar'" class="text-xs font-bold text-slate-500 hidden sm:inline">
+          {{ displaySystemName }}
+        </span>
+      </div>
+
+      <!-- 우측 액션 버튼: 로그인 모드일 때는 '입시 캘린더', 캘린더 모드일 때는 '로그인 창으로 돌아가기' -->
+      <div>
+        <button
+          v-if="viewMode === 'login'"
+          type="button"
+          @click="viewMode = 'calendar'"
+          class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
+        >
+          <span>📅</span>
+          <span>입시 캘린더</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-800 font-black">2027</span>
+        </button>
+
+        <button
+          v-else
+          type="button"
+          @click="viewMode = 'login'"
+          class="px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-white bg-slate-900 hover:bg-slate-800 shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer border-none"
+        >
+          <span>🔐</span>
+          <span>로그인 창으로 돌아가기</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 1. 로그인 폼 카드 (viewMode === 'login') -->
+    <main
+      v-if="viewMode === 'login'"
+      class="flex-1 flex items-center justify-center p-6"
     >
+      <div
+        class="w-full bg-white shadow-xl border border-slate-200/80 transition-all duration-300 relative overflow-hidden"
+        style="max-width: 460px; border-radius: 28px; padding: 2.25rem 2.25rem 2.5rem;"
+      >
       <!-- Decorative background blur -->
       <div
         :class="[
@@ -516,12 +558,28 @@
         </button>
       </div>
       <p v-if="success" class="text-sm font-semibold text-center mt-4 text-emerald-600 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200">{{ success }}</p>
-    </div>
+      </div>
+    </main>
 
-    <!-- 대입 종합 일정 섹션 (오늘의 일정 / 주간 일정 / 3단 그룹형 월간 캘린더) -->
-    <div class="w-full max-w-6xl mt-12 pb-16">
+    <!-- 2. 대입 종합 일정 캘린더 화면 (viewMode === 'calendar') -->
+    <main
+      v-else
+      class="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 pt-2 pb-16 animate-in fade-in duration-200"
+    >
+      <div class="mb-4 flex items-center justify-between">
+        <button
+          type="button"
+          @click="viewMode = 'login'"
+          class="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer bg-transparent border-none p-0"
+        >
+          <span>←</span>
+          <span>로그인 화면으로 돌아가기</span>
+        </button>
+      </div>
       <AdmissionCalendarWidget />
-    </div>
+    </main>
+
+    <div v-if="viewMode === 'login'" class="py-2"></div>
   </div>
 </template>
 
@@ -538,6 +596,9 @@ import { fetchLoginSystemName, loginSystemName, fetchSuiteModules } from '../api
 
 const router = useRouter()
 const auth = useAuthStore()
+
+// 화면 모드: 'login' (기본 로그인 카드) | 'calendar' (입시 캘린더 화면)
+const viewMode = ref('login')
 
 // 활성화된 역할 탭: 'student' (재학생), 'graduate' (졸업생), 'teacher' (교사/관리자)
 const activeTab = ref('student')
