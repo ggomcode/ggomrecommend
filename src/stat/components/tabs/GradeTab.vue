@@ -16,19 +16,19 @@
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-5 border-t border-white/10">
         <div>
           <div class="text-[11px] text-slate-400">지원자 전체 평균 내신</div>
-          <div class="text-lg font-bold text-amber-300">{{ overallAvgGrade }} 등급</div>
+          <div class="text-lg font-bold text-amber-300">{{ overallAvgGrade !== '-' ? `${overallAvgGrade} 등급` : '-' }}</div>
         </div>
         <div>
           <div class="text-[11px] text-slate-400">1~2등급대 주요 타겟</div>
-          <div class="text-lg font-bold text-sky-300">인서울 & 과기원</div>
+          <div class="text-lg font-bold text-sky-300">{{ filteredApplications.length > 0 ? '인서울 & 과기원' : '-' }}</div>
         </div>
         <div>
           <div class="text-[11px] text-slate-400">3~4등급대 주요 타겟</div>
-          <div class="text-lg font-bold text-indigo-300">경기/수도권 & 지거국</div>
+          <div class="text-lg font-bold text-indigo-300">{{ filteredApplications.length > 0 ? '경기/수도권 & 지거국' : '-' }}</div>
         </div>
         <div>
           <div class="text-[11px] text-slate-400">5등급대 이후 주요 타겟</div>
-          <div class="text-lg font-bold text-purple-300">충청권 4년제 & 전문대/실기</div>
+          <div class="text-lg font-bold text-purple-300">{{ filteredApplications.length > 0 ? '충청권 4년제 & 전문대/실기' : '-' }}</div>
         </div>
       </div>
     </div>

@@ -53,8 +53,11 @@
           <h2 class="text-sm font-bold text-slate-800">최다 지원 TOP 15 대학교</h2>
           <p class="text-xs text-slate-400">포곡고 학생들이 가장 많이 지원한 상위 15개 대학</p>
         </div>
-        <span class="text-xs font-medium text-slate-500">
-          1위 한경국립대 (56건)
+        <span v-if="top1" class="text-xs font-medium text-slate-500">
+          1위 {{ top1.name }} ({{ top1.count }}건)
+        </span>
+        <span v-else class="text-xs font-medium text-slate-400">
+          -
         </span>
       </div>
       <div class="h-64">
@@ -378,6 +381,11 @@ const filteredUnivList = computed(() => {
 })
 
 // Top 15 Chart
+const top1 = computed(() => {
+  const sorted = [...aggregatedUnivs.value].sort((a, b) => b.count - a.count)
+  return sorted.length > 0 ? sorted[0] : null
+})
+
 const topUnivChartData = computed(() => {
   const top15 = [...aggregatedUnivs.value].sort((a, b) => b.count - a.count).slice(0, 15)
   return {

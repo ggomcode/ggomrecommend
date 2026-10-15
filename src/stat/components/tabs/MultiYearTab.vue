@@ -20,7 +20,7 @@
             최근 5개년 수시 지원 및 입결 종합 비교 분석
           </h2>
           <p class="text-xs sm:text-sm text-slate-300 mt-2 max-w-2xl leading-relaxed m-0">
-            대교협 수시 원서접수 자료를 바탕으로 학년도별 지원자 규모, 전과목 평균 내신 추이, 주요 대학 및 의·약학 지원 경향, 합불 성과를 프레젠테이션용으로 시각화하여 비교합니다.
+            대교협 수시 원서접수 자료를 바탕으로 학년도별 지원자 규모, 전과목 평균 내신 추이, 주요 대학 및 의·약학 지원 경향, 합불 성과를 프레젠테이션용으로 시각화하여 비교합니다. (데이터 미등록 연도는 '-' 표시)
           </p>
         </div>
 
@@ -55,13 +55,18 @@
         </div>
         <div>
           <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            {{ total5YearApps.toLocaleString() }}<span class="text-xs font-semibold text-slate-400 ml-1">건</span>
+            {{ total5YearApps > 0 ? total5YearApps.toLocaleString() : '-' }}<span v-if="total5YearApps > 0" class="text-xs font-semibold text-slate-400 ml-1">건</span>
           </div>
           <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-            <span class="text-emerald-600 font-bold flex items-center">
-              <span>▲</span> 9.7%
-            </span>
-            <span>5개년 지속 증가 추세</span>
+            <template v-if="hasMultiYearComparison">
+              <span class="text-emerald-600 font-bold flex items-center">
+                <span>▲</span> 9.7%
+              </span>
+              <span>5개년 지속 증가 추세</span>
+            </template>
+            <template v-else>
+              <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
+            </template>
           </div>
         </div>
       </div>
@@ -74,13 +79,18 @@
         </div>
         <div>
           <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            {{ latestYearData.applicantRate }}<span class="text-xs font-semibold text-slate-400 ml-1">%</span>
+            {{ latestYearData?.applicantRate != null ? latestYearData.applicantRate : '-' }}<span v-if="latestYearData?.applicantRate != null" class="text-xs font-semibold text-slate-400 ml-1">%</span>
           </div>
           <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-            <span class="text-emerald-600 font-bold flex items-center">
-              <span>▲</span> +2.0%p
-            </span>
-            <span>(23년 71.7% → 27년 73.7%)</span>
+            <template v-if="hasMultiYearComparison">
+              <span class="text-emerald-600 font-bold flex items-center">
+                <span>▲</span> +2.0%p
+              </span>
+              <span>(23년 71.7% → 27년 73.7%)</span>
+            </template>
+            <template v-else>
+              <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
+            </template>
           </div>
         </div>
       </div>
@@ -93,13 +103,18 @@
         </div>
         <div>
           <div class="text-2xl sm:text-3xl font-black text-indigo-600 tracking-tight">
-            {{ latestYearData.avgGrade.toFixed(2) }}<span class="text-xs font-semibold text-slate-400 ml-1">등급</span>
+            {{ latestYearData?.avgGrade != null ? latestYearData.avgGrade.toFixed(2) : '-' }}<span v-if="latestYearData?.avgGrade != null" class="text-xs font-semibold text-slate-400 ml-1">등급</span>
           </div>
           <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-            <span class="text-indigo-600 font-bold flex items-center">
-              <span>▲</span> +0.12등급
-            </span>
-            <span>지원자 평균 성적 상승</span>
+            <template v-if="hasMultiYearComparison">
+              <span class="text-indigo-600 font-bold flex items-center">
+                <span>▲</span> +0.12등급
+              </span>
+              <span>지원자 평균 성적 상승</span>
+            </template>
+            <template v-else>
+              <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
+            </template>
           </div>
         </div>
       </div>
@@ -112,13 +127,18 @@
         </div>
         <div>
           <div class="text-2xl sm:text-3xl font-black text-amber-600 tracking-tight">
-            {{ latestYearData.topTierApps }}<span class="text-xs font-semibold text-slate-400 ml-1">건</span>
+            {{ latestYearData?.topTierApps != null ? latestYearData.topTierApps : '-' }}<span v-if="latestYearData?.topTierApps != null" class="text-xs font-semibold text-slate-400 ml-1">건</span>
           </div>
           <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-            <span class="text-amber-600 font-bold flex items-center">
-              <span>▲</span> +61.1%
-            </span>
-            <span>(23년 54건 → 27년 87건)</span>
+            <template v-if="hasMultiYearComparison">
+              <span class="text-amber-600 font-bold flex items-center">
+                <span>▲</span> +61.1%
+              </span>
+              <span>(23년 54건 → 27년 87건)</span>
+            </template>
+            <template v-else>
+              <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
+            </template>
           </div>
         </div>
       </div>
@@ -219,7 +239,7 @@
             <span>주요 목표 대학군별 5개년 지원 현황 및 평균 성적</span>
           </h3>
           <p class="text-xs text-slate-400 mt-1 m-0">
-            설·포·연·고, 서·성·한·이, 5대 과기원, 의·치·한·약·수 및 수도권 주요 대학별 5개년 지원 건수와 지원자 평균 내신
+            설·포·연·고, 서·성·한·이, 5대 과기원, 의·치·한·약·수 및 수도권 주요 대학별 지원 건수와 지원자 평균 내신 (미등록 연도는 '-' 표시)
           </p>
         </div>
         <span class="text-xs text-slate-500 font-semibold">
@@ -255,21 +275,33 @@
                 {{ target.note }}
               </td>
               <td v-for="y in years" :key="y" class="py-3.5 px-3 text-center whitespace-nowrap">
-                <div class="font-bold text-slate-900">{{ target.data[y] }}건</div>
-                <div class="text-[10px] text-slate-400 font-mono">평균 {{ target.avgGrade[y].toFixed(2) }}</div>
+                <template v-if="target.data[y] != null">
+                  <div class="font-bold text-slate-900">{{ target.data[y] }}건</div>
+                  <div v-if="target.avgGrade[y] != null" class="text-[10px] text-slate-400 font-mono">
+                    평균 {{ target.avgGrade[y].toFixed(2) }}
+                  </div>
+                </template>
+                <template v-else>
+                  <span class="text-slate-300 font-bold">-</span>
+                </template>
               </td>
               <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                <span 
-                  :class="[
-                    'inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-xs font-bold',
-                    target.data['2027'] >= target.data['2023'] 
-                      ? 'bg-rose-50 text-rose-700' 
-                      : 'bg-blue-50 text-blue-700'
-                  ]"
-                >
-                  {{ target.data['2027'] >= target.data['2023'] ? '▲ +' : '▼ -' }}
-                  {{ Math.abs(target.data['2027'] - target.data['2023']) }}건
-                </span>
+                <template v-if="target.data['2027'] != null && target.data['2023'] != null">
+                  <span 
+                    :class="[
+                      'inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-xs font-bold',
+                      target.data['2027'] >= target.data['2023'] 
+                        ? 'bg-rose-50 text-rose-700' 
+                        : 'bg-blue-50 text-blue-700'
+                    ]"
+                  >
+                    {{ target.data['2027'] >= target.data['2023'] ? '▲ +' : '▼ -' }}
+                    {{ Math.abs(target.data['2027'] - target.data['2023']) }}건
+                  </span>
+                </template>
+                <template v-else>
+                  <span class="text-slate-300 font-bold">-</span>
+                </template>
               </td>
             </tr>
           </tbody>
@@ -286,7 +318,7 @@
             <span>최근 5개년 수시 핵심 지표 종합 비교표</span>
           </h3>
           <p class="text-xs text-slate-400 mt-1 m-0">
-            학년도별 수시 지원 규모, 성적대, 권역 및 입결 합격률 변화 종합
+            학년도별 수시 지원 규모, 성적대, 권역 및 입결 합격률 변화 종합 (데이터가 없는 항목은 허수 없이 '-' 표시)
           </p>
         </div>
       </div>
@@ -320,32 +352,46 @@
               <td class="py-3.5 px-4 font-extrabold text-slate-900 whitespace-nowrap flex items-center gap-1.5">
                 <span>{{ y }}학년도</span>
                 <span v-if="y === '2027'" class="px-1.5 py-0.2 rounded text-[10px] bg-amber-200 text-amber-900">기준</span>
+                <span v-else-if="!byYear[y]?.hasData" class="px-1.5 py-0.2 rounded text-[10px] bg-slate-100 text-slate-400 font-normal">미등록</span>
               </td>
-              <td class="py-3.5 px-3 text-center whitespace-nowrap">{{ byYear[y].totalStudents }}명</td>
-              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-indigo-600">
-                {{ byYear[y].applicantStudents }}명 ({{ byYear[y].applicantRate }}%)
-              </td>
-              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold">{{ byYear[y].totalApplications.toLocaleString() }}건</td>
-              <td class="py-3.5 px-3 text-center whitespace-nowrap">{{ byYear[y].avgAppsPerStudent.toFixed(2) }}장</td>
               <td class="py-3.5 px-3 text-center whitespace-nowrap">
-                <span class="px-2 py-0.5 rounded font-bold bg-indigo-50 text-indigo-700">
+                {{ byYear[y]?.totalStudents != null ? `${byYear[y].totalStudents}명` : '-' }}
+              </td>
+              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-indigo-600">
+                <template v-if="byYear[y]?.applicantStudents != null">
+                  {{ byYear[y].applicantStudents }}명 ({{ byYear[y].applicantRate }}%)
+                </template>
+                <template v-else>-</template>
+              </td>
+              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold">
+                {{ byYear[y]?.totalApplications != null ? `${byYear[y].totalApplications.toLocaleString()}건` : '-' }}
+              </td>
+              <td class="py-3.5 px-3 text-center whitespace-nowrap">
+                {{ byYear[y]?.avgAppsPerStudent != null ? `${byYear[y].avgAppsPerStudent.toFixed(2)}장` : '-' }}
+              </td>
+              <td class="py-3.5 px-3 text-center whitespace-nowrap">
+                <span v-if="byYear[y]?.avgGrade != null" class="px-2 py-0.5 rounded font-bold bg-indigo-50 text-indigo-700">
                   {{ byYear[y].avgGrade.toFixed(2) }}
                 </span>
+                <span v-else class="text-slate-300 font-bold">-</span>
               </td>
               <td class="py-3.5 px-3 text-center whitespace-nowrap font-mono text-[11px] text-slate-500">
-                {{ byYear[y].bestGrade }} ~ {{ byYear[y].worstGrade }}
+                <template v-if="byYear[y]?.bestGrade != null && byYear[y]?.worstGrade != null">
+                  {{ byYear[y].bestGrade }} ~ {{ byYear[y].worstGrade }}
+                </template>
+                <template v-else>-</template>
               </td>
               <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-sky-700">
-                {{ byYear[y].metroRate }}%
+                {{ byYear[y]?.metroRate != null ? `${byYear[y].metroRate}%` : '-' }}
               </td>
               <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-amber-700">
-                {{ byYear[y].topTierApps }}건
+                {{ byYear[y]?.topTierApps != null ? `${byYear[y].topTierApps}건` : '-' }}
               </td>
               <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-rose-700">
-                {{ byYear[y].medicalApps }}건
+                {{ byYear[y]?.medicalApps != null ? `${byYear[y].medicalApps}건` : '-' }}
               </td>
               <td class="py-3.5 px-4 text-center whitespace-nowrap font-bold text-emerald-700">
-                {{ byYear[y].finalPassRate }}%
+                {{ byYear[y]?.finalPassRate != null ? `${byYear[y].finalPassRate}%` : '-' }}
               </td>
             </tr>
           </tbody>
@@ -370,6 +416,13 @@ const byYear = multiYearStats.byYear
 const targetUnivComparison = multiYearStats.targetUnivComparison
 
 const latestYearData = computed(() => byYear['2027'] || byYear[years[years.length - 1]])
+
+// 실제 등록된 연도가 2개 이상일 때만 과거 대비 증감 비교를 표시 (허수 방지)
+const hasMultiYearComparison = computed(() => {
+  const registeredCount = years.filter(y => byYear[y]?.hasData).length
+  return registeredCount >= 2
+})
+
 const total5YearApps = computed(() => {
   return years.reduce((acc, y) => acc + (byYear[y]?.totalApplications || 0), 0)
 })
@@ -381,7 +434,7 @@ const volumeChartData = computed(() => ({
     {
       type: 'bar',
       label: '총 지원 건수 (건)',
-      data: years.map(y => byYear[y].totalApplications),
+      data: years.map(y => byYear[y]?.totalApplications ?? null),
       backgroundColor: 'rgba(99, 102, 241, 0.85)', // indigo
       borderRadius: 8,
       yAxisID: 'y'
@@ -389,12 +442,13 @@ const volumeChartData = computed(() => ({
     {
       type: 'line',
       label: '수시 지원 인원 (명)',
-      data: years.map(y => byYear[y].applicantStudents),
+      data: years.map(y => byYear[y]?.applicantStudents ?? null),
       borderColor: '#f59e0b', // amber
       backgroundColor: '#f59e0b',
       borderWidth: 3,
       pointRadius: 5,
       pointHoverRadius: 7,
+      spanGaps: false,
       yAxisID: 'y1'
     }
   ]
@@ -411,16 +465,14 @@ const volumeChartOptions = {
     y: {
       type: 'linear',
       position: 'left',
-      min: 1000,
-      max: 1500,
+      beginAtZero: true,
       grid: { color: 'rgba(226, 232, 240, 0.6)' },
       ticks: { font: { size: 10 } }
     },
     y1: {
       type: 'linear',
       position: 'right',
-      min: 200,
-      max: 270,
+      beginAtZero: true,
       grid: { drawOnChartArea: false },
       ticks: { font: { size: 10 } }
     },
@@ -437,7 +489,7 @@ const gradeTrendChartData = computed(() => ({
   datasets: [
     {
       label: '지원자 전과목 평균 내신 (등급, 역순)',
-      data: years.map(y => byYear[y].avgGrade),
+      data: years.map(y => byYear[y]?.avgGrade ?? null),
       borderColor: '#4f46e5',
       backgroundColor: 'rgba(79, 70, 229, 0.1)',
       borderWidth: 3,
@@ -445,12 +497,13 @@ const gradeTrendChartData = computed(() => ({
       tension: 0.3,
       pointRadius: 6,
       pointBackgroundColor: '#4f46e5',
+      spanGaps: false,
       yAxisID: 'yGrade'
     },
     {
       type: 'bar',
       label: '1인당 평균 지원 카드 수 (장)',
-      data: years.map(y => byYear[y].avgAppsPerStudent),
+      data: years.map(y => byYear[y]?.avgAppsPerStudent ?? null),
       backgroundColor: 'rgba(16, 185, 129, 0.6)',
       borderRadius: 6,
       yAxisID: 'yCard'
@@ -470,16 +523,16 @@ const gradeTrendChartOptions = {
       type: 'linear',
       position: 'left',
       reverse: true, // 내신 등급은 1등급이 높으므로 역순 정렬
-      min: 4.2,
-      max: 4.7,
+      min: 1.0,
+      max: 9.0,
       grid: { color: 'rgba(226, 232, 240, 0.6)' },
       ticks: { font: { size: 10 } }
     },
     yCard: {
       type: 'linear',
       position: 'right',
-      min: 5.0,
-      max: 6.0,
+      beginAtZero: true,
+      max: 6.5,
       grid: { drawOnChartArea: false },
       ticks: { font: { size: 10 } }
     },
@@ -506,7 +559,7 @@ const gradeDistributionChartData = computed(() => {
     labels: years.map(y => `${y}학년도`),
     datasets: bands.map((band, idx) => ({
       label: band,
-      data: years.map(y => byYear[y].gradeDistribution[band] || 0),
+      data: years.map(y => byYear[y]?.gradeDistribution ? byYear[y].gradeDistribution[band] : null),
       backgroundColor: colors[idx],
       stack: 'grades'
     }))
@@ -522,7 +575,7 @@ const admissionTypeChartData = computed(() => {
     labels: years.map(y => `${y}학년도`),
     datasets: types.map((type, idx) => ({
       label: type,
-      data: years.map(y => byYear[y].admissionTypes[type] || 0),
+      data: years.map(y => byYear[y]?.admissionTypes ? byYear[y].admissionTypes[type] : null),
       backgroundColor: colors[idx],
       stack: 'types'
     }))
@@ -541,33 +594,33 @@ const stackedChartOptions = {
   }
 }
 
-// 엑셀 내보내기
+// 엑셀 내보내기 (데이터 없는 항목은 '-' 처리)
 function exportMultiYearExcel() {
   const summaryRows = years.map(y => ({
     '학년도': `${y}학년도`,
-    '전체 재학생(명)': byYear[y].totalStudents,
-    '수시 지원자(명)': byYear[y].applicantStudents,
-    '수시 지원율(%)': byYear[y].applicantRate,
-    '총 지원 건수(건)': byYear[y].totalApplications,
-    '1인당 지원 건수(장)': byYear[y].avgAppsPerStudent,
-    '지원자 평균 내신(등급)': byYear[y].avgGrade,
-    '최고 내신': byYear[y].bestGrade,
-    '최저 내신': byYear[y].worstGrade,
-    '수도권 대학 비율(%)': byYear[y].metroRate,
-    '주요대 지원 건수': byYear[y].topTierApps,
-    '의약학 지원 건수': byYear[y].medicalApps,
-    '최종 합격률(%)': byYear[y].finalPassRate
+    '전체 재학생(명)': byYear[y]?.totalStudents != null ? byYear[y].totalStudents : '-',
+    '수시 지원자(명)': byYear[y]?.applicantStudents != null ? byYear[y].applicantStudents : '-',
+    '수시 지원율(%)': byYear[y]?.applicantRate != null ? byYear[y].applicantRate : '-',
+    '총 지원 건수(건)': byYear[y]?.totalApplications != null ? byYear[y].totalApplications : '-',
+    '1인당 지원 건수(장)': byYear[y]?.avgAppsPerStudent != null ? byYear[y].avgAppsPerStudent : '-',
+    '지원자 평균 내신(등급)': byYear[y]?.avgGrade != null ? byYear[y].avgGrade : '-',
+    '최고 내신': byYear[y]?.bestGrade != null ? byYear[y].bestGrade : '-',
+    '최저 내신': byYear[y]?.worstGrade != null ? byYear[y].worstGrade : '-',
+    '수도권 대학 비율(%)': byYear[y]?.metroRate != null ? byYear[y].metroRate : '-',
+    '주요대 지원 건수': byYear[y]?.topTierApps != null ? byYear[y].topTierApps : '-',
+    '의약학 지원 건수': byYear[y]?.medicalApps != null ? byYear[y].medicalApps : '-',
+    '최종 합격률(%)': byYear[y]?.finalPassRate != null ? byYear[y].finalPassRate : '-'
   }))
 
   const targetRows = targetUnivComparison.map(t => ({
     '대학군': t.groupName,
     '대상 대학': t.note,
-    '2023 지원건수': t.data['2023'],
-    '2024 지원건수': t.data['2024'],
-    '2025 지원건수': t.data['2025'],
-    '2026 지원건수': t.data['2026'],
-    '2027 지원건수': t.data['2027'],
-    '5개년 증감': t.data['2027'] - t.data['2023']
+    '2023 지원건수': t.data['2023'] != null ? t.data['2023'] : '-',
+    '2024 지원건수': t.data['2024'] != null ? t.data['2024'] : '-',
+    '2025 지원건수': t.data['2025'] != null ? t.data['2025'] : '-',
+    '2026 지원건수': t.data['2026'] != null ? t.data['2026'] : '-',
+    '2027 지원건수': t.data['2027'] != null ? t.data['2027'] : '-',
+    '5개년 증감': (t.data['2027'] != null && t.data['2023'] != null) ? (t.data['2027'] - t.data['2023']) : '-'
   }))
 
   const wb = XLSX.utils.book_new()

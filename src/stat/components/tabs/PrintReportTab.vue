@@ -24,10 +24,10 @@
       <div class="text-center pb-6 border-b-2 border-slate-900">
         <div class="text-xs text-slate-500 font-semibold tracking-wider">포곡고등학교 진로진학상담부</div>
         <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1 text-slate-900">
-          2027학년도 대입 수시모집 지원 통계 보고서
+          {{ selectedAcademicYear }}학년도 대입 수시모집 지원 통계 보고서
         </h1>
         <div class="text-xs text-slate-600 mt-2 flex items-center justify-center space-x-4">
-          <span><strong>대상:</strong> 3학년 재학생 (총 {{ officialStats.totalStudents }}명)</span>
+          <span><strong>대상:</strong> 3학년 재학생 (총 {{ officialStats?.totalStudents != null ? officialStats.totalStudents + '명' : '-' }})</span>
           <span>•</span>
           <span><strong>기준일:</strong> 2026년 대교협 수시 원서접수 마감</span>
           <span>•</span>
@@ -55,18 +55,24 @@
           </thead>
           <tbody class="text-center">
             <tr>
-              <td class="border border-slate-300 p-2.5 font-bold">{{ officialStats.totalStudents }}명</td>
-              <td class="border border-slate-300 p-2.5 font-bold text-indigo-700">{{ officialStats.applicantStudents }}명</td>
-              <td class="border border-slate-300 p-2.5 font-bold text-indigo-700">{{ officialStats.applicantRate }}%</td>
-              <td class="border border-slate-300 p-2.5 font-bold text-sky-700">{{ officialStats.totalApplications }}건</td>
-              <td class="border border-slate-300 p-2.5 font-bold">{{ officialStats.avgApplicationsPerStudent }}건</td>
+              <td class="border border-slate-300 p-2.5 font-bold">{{ officialStats?.totalStudents != null ? officialStats.totalStudents + '명' : '-' }}</td>
+              <td class="border border-slate-300 p-2.5 font-bold text-indigo-700">{{ officialStats?.applicantStudents != null ? officialStats.applicantStudents + '명' : '-' }}</td>
+              <td class="border border-slate-300 p-2.5 font-bold text-indigo-700">{{ officialStats?.applicantRate != null ? officialStats.applicantRate + '%' : '-' }}</td>
+              <td class="border border-slate-300 p-2.5 font-bold text-sky-700">{{ officialStats?.totalApplications != null ? officialStats.totalApplications.toLocaleString() + '건' : '-' }}</td>
+              <td class="border border-slate-300 p-2.5 font-bold">{{ officialStats?.avgApplicationsPerStudent != null ? officialStats.avgApplicationsPerStudent + '건' : '-' }}</td>
               <td class="border border-slate-300 p-2.5">
-                {{ officialStats.recommendation.applications }}건
-                <span class="text-[10px] text-slate-500 block">({{ officialStats.recommendation.students }}명 / {{ officialStats.recommendation.studentRate }}%)</span>
+                <template v-if="officialStats?.recommendation?.applications != null">
+                  {{ officialStats.recommendation.applications }}건
+                  <span class="text-[10px] text-slate-500 block">({{ officialStats.recommendation.students }}명 / {{ officialStats.recommendation.studentRate }}%)</span>
+                </template>
+                <template v-else>-</template>
               </td>
               <td class="border border-slate-300 p-2.5">
-                {{ officialStats.rural.applications }}건
-                <span class="text-[10px] text-slate-500 block">({{ officialStats.rural.applicantStudents }}명 / {{ officialStats.rural.applicantRate }}%)</span>
+                <template v-if="officialStats?.rural?.applications != null">
+                  {{ officialStats.rural.applications }}건
+                  <span class="text-[10px] text-slate-500 block">({{ officialStats.rural.applicantStudents }}명 / {{ officialStats.rural.applicantRate }}%)</span>
+                </template>
+                <template v-else>-</template>
               </td>
             </tr>
           </tbody>
@@ -81,24 +87,24 @@
         </h2>
         <div class="grid grid-cols-2 gap-4 mb-2 text-xs">
           <div class="p-2.5 bg-slate-50 border border-slate-300 rounded text-center">
-            수도권 (서울/경기/인천): <strong class="text-indigo-800">{{ officialStats.metroBreakdown.metro.count }}건</strong> ({{ officialStats.metroBreakdown.metro.rate }}%)
+            수도권 (서울/경기/인천): <strong class="text-indigo-800">{{ officialStats?.metroBreakdown?.metro?.count != null ? officialStats.metroBreakdown.metro.count + '건' : '-' }}</strong> ({{ officialStats?.metroBreakdown?.metro?.rate != null ? officialStats.metroBreakdown.metro.rate + '%' : '-' }})
           </div>
           <div class="p-2.5 bg-slate-50 border border-slate-300 rounded text-center">
-            비수도권 지역: <strong class="text-slate-800">{{ officialStats.metroBreakdown.nonMetro.count }}건</strong> ({{ officialStats.metroBreakdown.nonMetro.rate }}%)
+            비수도권 지역: <strong class="text-slate-800">{{ officialStats?.metroBreakdown?.nonMetro?.count != null ? officialStats.metroBreakdown.nonMetro.count + '건' : '-' }}</strong> ({{ officialStats?.metroBreakdown?.nonMetro?.rate != null ? officialStats.metroBreakdown.nonMetro.rate + '%' : '-' }})
           </div>
         </div>
 
         <table class="w-full border-collapse border border-slate-400 text-xs">
           <thead>
             <tr class="bg-slate-100 text-center font-bold text-slate-800">
-              <th v-for="r in officialStats.regionalBreakdown.slice(0, 9)" :key="r.region" class="border border-slate-300 p-1.5">
+              <th v-for="r in (officialStats?.regionalBreakdown || []).slice(0, 9)" :key="r.region" class="border border-slate-300 p-1.5">
                 {{ r.region }}
               </th>
             </tr>
           </thead>
           <tbody class="text-center">
             <tr>
-              <td v-for="r in officialStats.regionalBreakdown.slice(0, 9)" :key="r.region" class="border border-slate-300 p-2 font-medium">
+              <td v-for="r in (officialStats?.regionalBreakdown || []).slice(0, 9)" :key="r.region" class="border border-slate-300 p-2 font-medium">
                 <div>{{ r.count }}건</div>
                 <div class="text-[10px] text-slate-500">({{ r.rate }}%)</div>
               </td>
@@ -109,7 +115,7 @@
         <table class="w-full border-collapse border border-slate-400 text-xs mt-1">
           <thead>
             <tr class="bg-slate-100 text-center font-bold text-slate-800">
-              <th v-for="r in officialStats.regionalBreakdown.slice(9)" :key="r.region" class="border border-slate-300 p-1.5">
+              <th v-for="r in (officialStats?.regionalBreakdown || []).slice(9)" :key="r.region" class="border border-slate-300 p-1.5">
                 {{ r.region }}
               </th>
               <th class="border border-slate-300 p-1.5 bg-slate-200">총계</th>
@@ -117,12 +123,12 @@
           </thead>
           <tbody class="text-center">
             <tr>
-              <td v-for="r in officialStats.regionalBreakdown.slice(9)" :key="r.region" class="border border-slate-300 p-2 font-medium">
+              <td v-for="r in (officialStats?.regionalBreakdown || []).slice(9)" :key="r.region" class="border border-slate-300 p-2 font-medium">
                 <div>{{ r.count }}건</div>
                 <div class="text-[10px] text-slate-500">({{ r.rate }}%)</div>
               </td>
               <td class="border border-slate-300 p-2 font-bold bg-slate-100">
-                1,376건 (100%)
+                {{ officialStats?.totalApplications != null ? officialStats.totalApplications.toLocaleString() + '건 (100%)' : '-' }}
               </td>
             </tr>
           </tbody>
@@ -224,7 +230,7 @@
 import { computed } from 'vue'
 import { useData } from '../../composables/useStatData'
 
-const { officialStats, applications } = useData()
+const { officialStats, applications, selectedAcademicYear } = useData()
 const window = globalThis.window
 
 const hasGraduates = computed(() => {

@@ -41,7 +41,7 @@ function setAcademicYear(year) {
     officialStats.value = officialStatsData
   } else {
     const yData = MULTI_YEAR_STATS.byYear[strYear]
-    if (yData) {
+    if (yData && yData.hasData) {
       officialStats.value = {
         ...officialStatsData,
         academicYear: Number(strYear),
@@ -56,6 +56,10 @@ function setAcademicYear(year) {
           total: yData.totalApplications
         }
       }
+    } else {
+      // 미등록 연도는 허수 데이터를 주입하지 않고 빈 배열 처리
+      applications.value = []
+      officialStats.value = null
     }
   }
 }
@@ -213,7 +217,7 @@ export function useStatData() {
     if (selectedClass.value === '졸업생' || selectedClass.value === 'GRADUATE') {
       return currentStats.value.totalStudents
     }
-    return officialStats.value.totalStudents || 334
+    return officialStats.value?.totalStudents || (applications.value.length > 0 ? 334 : 0)
   })
 
   // Dynamic label for enrolled card
@@ -246,7 +250,8 @@ export function useStatData() {
   // Dynamic applicant rate (based on current target students)
   const currentApplicantRate = computed(() => {
     const target = currentTargetTotalStudents.value
-    if (!target || target === 0) return '0.0'
+    if (!target || target === 0) return '-'
+    if (currentStats.value.totalStudents === 0) return '0.0'
     return ((currentStats.value.totalStudents / target) * 100).toFixed(1)
   })
 
