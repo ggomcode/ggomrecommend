@@ -82,6 +82,25 @@
 
         <!-- 오늘 일정 목록 -->
         <div class="flex-1 space-y-3 overflow-y-auto max-h-[360px] pr-1">
+          <!-- 0) 오늘의 학교 학사일정 -->
+          <div v-if="todayAcademic.length > 0" class="space-y-1.5">
+            <p class="text-[11px] font-bold text-sky-700 m-0 flex items-center gap-1">
+              <span>🏫</span> 오늘 학교 학사일정 ({{ todayAcademic.length }}건)
+            </p>
+            <div
+              v-for="(ac, idx) in todayAcademic"
+              :key="idx"
+              class="p-3 rounded-2xl bg-sky-50/90 border border-sky-200 text-xs text-sky-950 space-y-1"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-extrabold text-sky-950 text-xs whitespace-pre-line leading-relaxed">{{ ac.content }}</span>
+                <span v-if="ac.hours" class="px-2 py-0.5 rounded-md bg-sky-200 text-sky-900 font-bold text-[10px] shrink-0">
+                  {{ ac.hours }}시수
+                </span>
+              </div>
+            </div>
+          </div>
+
           <!-- 1) 오늘 진행 중인 주요일정 -->
           <div v-if="todayMajorEvents.length > 0" class="space-y-2">
             <p class="text-[11px] font-bold text-slate-600 m-0 flex items-center gap-1">
@@ -289,6 +308,15 @@
 
             <!-- 요약 칩 모음 -->
             <div class="space-y-1 mt-2">
+              <!-- 학사일정 칩 -->
+              <div
+                v-if="day.academicList && day.academicList.length > 0"
+                class="w-full py-0.5 rounded text-[9px] font-black bg-sky-100 text-sky-900 border border-sky-200 truncate px-1"
+                :title="day.academicList.map(a => a.content).join(', ')"
+              >
+                🏫 {{ day.academicList[0].content.split('\n')[0] }}
+              </div>
+
               <!-- 주요일정 바 -->
               <div
                 v-if="day.majorCount > 0"
@@ -387,9 +415,13 @@
           </button>
         </div>
 
-        <!-- 3단 트랙 범례 안내 -->
+        <!-- 3단 트랙 및 학사일정 범례 안내 -->
         <div class="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
-          <span class="text-[11px] text-slate-400">라인 구분:</span>
+          <span class="text-[11px] text-slate-400">구분:</span>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-sm bg-sky-500"></span>
+            <span>🏫 학사일정 (시험·모평·행사)</span>
+          </div>
           <div class="flex items-center gap-1.5">
             <span class="w-3 h-3 rounded-sm bg-emerald-400"></span>
             <span>1단: 주요일정 (공통·원서)</span>
@@ -452,6 +484,20 @@
               title="원서접수 마감 대학"
             >
               마감 {{ cell.deadlineCount }}개교
+            </span>
+          </div>
+
+          <!-- 학교 학사일정 배지 (지필평가, 모의평가, 개학식/방학식 등) -->
+          <div
+            v-if="cell.academicList && cell.academicList.length > 0"
+            class="mb-1 py-0.5 px-1.5 rounded text-[10px] sm:text-[11px] font-bold truncate flex items-center gap-1 border shadow-2xs"
+            :class="cell.academicBadgeClass"
+            :title="cell.academicSummary"
+          >
+            <span>{{ cell.academicIcon }}</span>
+            <span class="truncate">{{ cell.academicMainText }}</span>
+            <span v-if="cell.academicList.length > 1" class="text-[9px] opacity-75 shrink-0">
+              +{{ cell.academicList.length - 1 }}
             </span>
           </div>
 
@@ -565,6 +611,28 @@
 
         <!-- 모달 본문 (스크롤) -->
         <div class="p-6 space-y-6 overflow-y-auto flex-1">
+
+          <!-- 0) 학교 학사일정 섹션 -->
+          <div v-if="selectedDateModal.academicItems && selectedDateModal.academicItems.length > 0">
+            <h4 class="text-sm font-extrabold text-sky-900 mb-2 flex items-center gap-1.5">
+              <span class="w-1.5 h-3.5 bg-sky-500 rounded-full"></span>
+              학교 학사일정 (총 {{ selectedDateModal.academicItems.length }}건)
+            </h4>
+            <div class="space-y-2">
+              <div
+                v-for="(ac, idx) in selectedDateModal.academicItems"
+                :key="idx"
+                class="p-3.5 rounded-2xl bg-sky-50/90 border border-sky-200 text-xs text-sky-950 space-y-1.5"
+              >
+                <div class="flex items-center justify-between gap-2">
+                  <span class="font-bold text-sm text-sky-950 whitespace-pre-line leading-relaxed">{{ ac.content }}</span>
+                  <span v-if="ac.hours" class="px-2.5 py-0.5 rounded-md bg-sky-200 text-sky-900 font-extrabold text-[11px] shrink-0">
+                    {{ ac.hours }}시간 수업
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- 1) 주요일정 섹션 -->
           <div v-if="selectedDateModal.majorEvents.length > 0">
@@ -760,12 +828,16 @@ const todayFormatted = computed(() => {
 
 // 2027 대입 핵심 월 퀵점프 리스트
 const quickMonths = [
-  { key: '2026-09', year: 2026, month: 9, label: '26년 9월', desc: '수시 원서' },
-  { key: '2026-10', year: 2026, month: 10, label: '26년 10월', desc: '면접·실기' },
-  { key: '2026-11', year: 2026, month: 11, label: '26년 11월', desc: '수능·원서2차' },
-  { key: '2026-12', year: 2026, month: 12, label: '26년 12월', desc: '합격발표·등록' },
-  { key: '2027-01', year: 2027, month: 1, label: '27년 1월', desc: '정시 원서·전형' },
-  { key: '2027-02', year: 2027, month: 2, label: '27년 2월', desc: '정시발표·추가' },
+  { key: '2026-03', year: 2026, month: 3, label: '26년 3월', desc: '개학·학평' },
+  { key: '2026-04', year: 2026, month: 4, label: '26년 4월', desc: '1차지필' },
+  { key: '2026-06', year: 2026, month: 6, label: '26년 6월', desc: '모평·2차' },
+  { key: '2026-07', year: 2026, month: 7, label: '26년 7월', desc: '방학식' },
+  { key: '2026-09', year: 2026, month: 9, label: '26년 9월', desc: '수시원서·모평' },
+  { key: '2026-10', year: 2026, month: 10, label: '26년 10월', desc: '면접·1차' },
+  { key: '2026-11', year: 2026, month: 11, label: '26년 11월', desc: '수능·2차원서' },
+  { key: '2026-12', year: 2026, month: 12, label: '26년 12월', desc: '합격·등록' },
+  { key: '2027-01', year: 2027, month: 1, label: '27년 1월', desc: '정시·졸업' },
+  { key: '2027-02', year: 2027, month: 2, label: '27년 2월', desc: '정시발표·등록' },
 ]
 
 const currentYearMonthLabel = computed(() => {
@@ -853,6 +925,11 @@ const keyMilestones = computed(() => {
 })
 
 // ── 오늘의 입시일정 계산 ──────────────────────────────────────
+const todayAcademic = computed(() => {
+  if (!rawData.value?.academicByDate) return []
+  return rawData.value.academicByDate[todayStr.value] || []
+})
+
 const todayMajorEvents = computed(() => {
   if (!rawData.value?.majorList) return []
   const t = todayStr.value
@@ -904,6 +981,9 @@ const currentWeekDays = computed(() => {
     const isToday = dateStr === todayStr.value
     const dayOfWeekActual = cur.getDay() // 0(일) ~ 6(토)
 
+    // 학사일정 추출
+    const academicList = rawData.value?.academicByDate?.[dateStr] || []
+
     // 주요 일정 추출
     const majorTitles = (rawData.value?.majorList || [])
       .filter(ev => ev.startDate <= dateStr && dateStr <= ev.endDate)
@@ -925,6 +1005,7 @@ const currentWeekDays = computed(() => {
       dayOfWeek: dayOfWeekActual,
       formattedShort: `${cur.getMonth() + 1}/${cur.getDate()}`,
       isToday,
+      academicList,
       majorCount: majorTitles.length,
       majorTitles,
       deadlinesCount,
@@ -984,6 +1065,33 @@ function createCalendarCell(dateObj, isCurrentMonth) {
 
   const isToday = dateStr === todayStr.value
   const dayOfWeek = dateObj.getDay()
+
+  // 학사일정 추출 및 배지 스타일 계산
+  const academicList = rawData.value?.academicByDate?.[dateStr] || []
+  let academicBadgeClass = 'bg-sky-100 text-sky-900 border-sky-300'
+  let academicIcon = '🏫'
+  let academicMainText = ''
+  let academicSummary = ''
+
+  if (academicList.length > 0) {
+    const first = academicList[0]
+    academicMainText = first.content.split('\n')[0]
+    academicSummary = academicList.map(a => `${a.content}${a.hours ? ` (${a.hours}시수)` : ''}`).join('\n')
+
+    if (academicList.some(a => a.isExam)) {
+      academicBadgeClass = 'bg-rose-100 text-rose-900 border-rose-300 font-black'
+      academicIcon = '📝'
+    } else if (academicList.some(a => a.isMockExam)) {
+      academicBadgeClass = 'bg-purple-100 text-purple-900 border-purple-300 font-black'
+      academicIcon = '📊'
+    } else if (academicList.some(a => a.isHoliday)) {
+      academicBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300'
+      academicIcon = '🚩'
+    } else if (academicList.some(a => a.isMilestone)) {
+      academicBadgeClass = 'bg-emerald-100 text-emerald-950 border-emerald-300 font-black'
+      academicIcon = '🎓'
+    }
+  }
 
   // Track 1: 기간 주요일정 연결 여부 파악
   let majorRange = null
@@ -1057,6 +1165,11 @@ function createCalendarCell(dateObj, isCurrentMonth) {
     dayOfWeek,
     isToday,
     isCurrentMonth,
+    academicList,
+    academicBadgeClass,
+    academicIcon,
+    academicMainText,
+    academicSummary,
     majorRange,
     singleMajorEvent,
     deadlineCount: deadlineList.length,
@@ -1076,6 +1189,9 @@ function openModalForDate(dateStr) {
   const days = ['일', '월', '화', '수', '목', '금', '토']
   const formattedLong = `${parts[0]}년 ${parseInt(parts[1], 10)}월 ${parseInt(parts[2], 10)}일 (${days[d.getDay()]}요일)`
 
+  // 해당 날짜 학사일정
+  const academicItems = rawData.value?.academicByDate?.[dateStr] || []
+
   // 해당 날짜 주요일정
   const majorEvents = (rawData.value?.majorList || []).filter(
     ev => ev.startDate <= dateStr && dateStr <= ev.endDate
@@ -1094,6 +1210,7 @@ function openModalForDate(dateStr) {
   selectedDateModal.value = {
     dateStr,
     formattedLong,
+    academicItems,
     majorEvents,
     deadlines,
     fourYearItems,

@@ -459,7 +459,7 @@
               </a>
             </div>
             <p class="text-[11px] text-slate-500 m-0">
-              주요일정, 원서접수마감, 4년제일정, 전문대일정 4개 시트가 포함된 시트 ID를 등록합니다. (기본값: {{ DEFAULT_ADMISSION_SHEET_ID }})
+              주요일정, 원서접수마감, 4년제일정, 전문대일정, 학사일정 총 5개 시트가 포함된 시트 ID를 등록합니다. (기본값: {{ DEFAULT_ADMISSION_SHEET_ID }})
             </p>
             <div class="flex gap-2">
               <input

@@ -1,8 +1,8 @@
 import { supabase } from '../utils/supabaseClient.js'
 
 export const DEFAULT_ADMISSION_SHEET_ID = '1hoiLXSv7B3_7hWYnSlv60AIRKhkERj8wQAFGCgmhJ2k'
-const CACHE_KEY = 'pcm_admission_calendar_cache_v2'
-const CACHE_TIME_KEY = 'pcm_admission_calendar_cache_time_v2'
+const CACHE_KEY = 'pcm_admission_calendar_cache_v4'
+const CACHE_TIME_KEY = 'pcm_admission_calendar_cache_time_v4'
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000 // 6시간 캐시
 
 /**
@@ -209,19 +209,21 @@ export async function fetchAdmissionCalendarData({ forceRefresh = false } = {}) 
   const sheetId = await getAdmissionSheetId()
 
   try {
-    // 4개 시트 병렬 호출
-    const [csvMajor, csvDeadline, csvFourYear, csvJunior] = await Promise.all([
+    // 5개 시트 병렬 호출
+    const [csvMajor, csvDeadline, csvFourYear, csvJunior, csvAcademic] = await Promise.all([
       fetchSheetCSV(sheetId, '주요일정').catch(e => { console.warn('주요일정 fetch 실패', e); return null }),
       fetchSheetCSV(sheetId, '원서접수마감').catch(e => { console.warn('원서접수마감 fetch 실패', e); return null }),
       fetchSheetCSV(sheetId, '4년제일정').catch(e => { console.warn('4년제일정 fetch 실패', e); return null }),
       fetchSheetCSV(sheetId, '전문대일정').catch(e => { console.warn('전문대일정 fetch 실패', e); return null }),
+      fetchSheetCSV(sheetId, '학사일정').catch(e => { console.warn('학사일정 fetch 실패', e); return null }),
     ])
 
     const parsedData = processAdmissionSheets({
       csvMajor,
       csvDeadline,
       csvFourYear,
-      csvJunior
+      csvJunior,
+      csvAcademic
     })
 
     // 캐시 저장
@@ -242,7 +244,7 @@ export async function fetchAdmissionCalendarData({ forceRefresh = false } = {}) 
 /**
  * 파싱된 시트 로우들을 3단 트랙 캘린더용 데이터 모델로 가공
  */
-function processAdmissionSheets({ csvMajor, csvDeadline, csvFourYear, csvJunior }) {
+function processAdmissionSheets({ csvMajor, csvDeadline, csvFourYear, csvJunior, csvAcademic }) {
   // ─────────────────────────────────────────────────────────────
   // 1. 주요일정 & 원서접수 마감
   // ─────────────────────────────────────────────────────────────
@@ -450,11 +452,94 @@ function processAdmissionSheets({ csvMajor, csvDeadline, csvFourYear, csvJunior 
     }
   })
 
+  // ─────────────────────────────────────────────────────────────
+  // 5. 학사일정 (학교 지필평가, 모의평가, 개학식/방학식, 휴업일 등)
+  // ─────────────────────────────────────────────────────────────
+  const academicByDate = {}
+  const academicEvents = []
+
+  if (csvAcademic) {
+    const rows = parseCSV(csvAcademic)
+    let currentMonth = 3
+    let currentYear = 2026
+    let lastDayNum = 0
+
+    const daysInfo = [
+      { dayIdx: 2, hoursIdx: 3, contentIdx: 4, name: '월' },
+      { dayIdx: 5, hoursIdx: 6, contentIdx: 7, name: '화' },
+      { dayIdx: 8, hoursIdx: 9, contentIdx: 10, name: '수' },
+      { dayIdx: 11, hoursIdx: 12, contentIdx: 13, name: '목' },
+      { dayIdx: 14, hoursIdx: 15, contentIdx: 16, name: '금' },
+    ]
+
+    for (let r = 1; r < rows.length; r++) {
+      const row = rows[r]
+      if (!row || row.length < 5) continue
+
+      const mCol = row[0]?.trim()
+      if (mCol && !isNaN(parseInt(mCol, 10))) {
+        currentMonth = parseInt(mCol, 10)
+        currentYear = currentMonth <= 2 ? 2027 : 2026
+        lastDayNum = 0
+      }
+
+      for (const dInfo of daysInfo) {
+        const dStr = row[dInfo.dayIdx]?.trim()
+        const content = row[dInfo.contentIdx]?.trim()
+        const hours = row[dInfo.hoursIdx]?.trim()
+
+        if (!dStr || isNaN(parseInt(dStr, 10))) continue
+        const dayNum = parseInt(dStr, 10)
+
+        // 월 경계 처리 (예: 31일 이후 1일이 같은 행에 나오는 경우)
+        if (lastDayNum > 20 && dayNum < 10) {
+          currentMonth++
+          if (currentMonth > 12) {
+            currentMonth = 1
+            currentYear = 2027
+          }
+        }
+        lastDayNum = dayNum
+
+        if (content) {
+          const mStr = String(currentMonth).padStart(2, '0')
+          const dayFormatted = String(dayNum).padStart(2, '0')
+          const dateStr = `${currentYear}-${mStr}-${dayFormatted}`
+
+          // 이벤트 유형 분류
+          const isExam = content.includes('시험') || content.includes('지필')
+          const isMockExam = content.includes('모의') || content.includes('연합') || content.includes('평가')
+          const isHoliday = content.includes('휴업') || content.includes('공휴일') || content.includes('방학') || content.includes('신정') || content.includes('추석') || content.includes('한글날') || content.includes('성탄절')
+          const isMilestone = content.includes('입학') || content.includes('개학') || content.includes('졸업') || content.includes('종업') || content.includes('수능')
+
+          const item = {
+            dateStr,
+            dayOfWeek: dInfo.name,
+            content,
+            hours,
+            isExam,
+            isMockExam,
+            isHoliday,
+            isMilestone
+          }
+
+          if (!academicByDate[dateStr]) {
+            academicByDate[dateStr] = []
+          }
+          academicByDate[dateStr].push(item)
+          academicEvents.push(item)
+        }
+      }
+    }
+  }
+
   return {
     majorList,
     deadlineByDate,
     fourYearByDate,
     juniorByDate,
+    academicByDate,
+    academicEvents,
     rangeEvents,
     lastUpdated: new Date().toISOString()
   }
@@ -468,6 +553,7 @@ function buildFallbackData() {
     csvMajor: null,
     csvDeadline: null,
     csvFourYear: null,
-    csvJunior: null
+    csvJunior: null,
+    csvAcademic: null
   })
 }
