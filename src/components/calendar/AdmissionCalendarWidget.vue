@@ -1,47 +1,17 @@
 <template>
   <div class="w-full space-y-8 no-print text-slate-800">
 
-    <!-- 0. 대입 일정 섹션 상단 헤더 & 컨트롤 -->
-    <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden border border-slate-700/50">
+    <!-- 0. 대입 일정 섹션 상단 헤더 -->
+    <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden border border-slate-700/50">
       <!-- 배경 장식 글로우 -->
       <div class="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-blue-500/20 blur-3xl pointer-events-none"></div>
       <div class="absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none"></div>
 
-      <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold mb-2">
-            <span>📅</span>
-            <span>2026학년도 학사일정 & 2027 대입 전형 연동</span>
-            <span class="w-1 h-1 rounded-full bg-blue-400"></span>
-            <span>실시간 구글 시트 동기화</span>
-          </div>
-          <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5 m-0">
-            <span>2026학년도 & 2027대입 캘린더</span>
-          </h2>
-          <p class="text-xs sm:text-sm text-slate-300 mt-1.5 max-w-2xl leading-relaxed m-0">
-            학사일정(지필평가·학평·모평·수능 등), 주요일정, 4년제 대학별 고사(면접·실기·논술), 전문대 모집일정을 4단 그룹형 트랙으로 한눈에 확인하세요.
-          </p>
-        </div>
-
-        <div class="flex items-center gap-2.5 self-start md:self-auto">
-          <button
-            @click="refreshData(true)"
-            :disabled="loading"
-            class="px-3.5 py-2 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all flex items-center gap-1.5 cursor-pointer backdrop-blur-xs disabled:opacity-50"
-            title="구글 시트 최신 일정 새로고침"
-          >
-            <span :class="{ 'animate-spin': loading }">🔄</span>
-            <span>{{ loading ? '동기화 중…' : '일정 새로고침' }}</span>
-          </button>
-          <button
-            @click="jumpToToday"
-            class="px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white border border-blue-400 transition-all cursor-pointer shadow-sm"
-          >
-            오늘 일정 보기
-          </button>
-        </div>
+      <div class="relative z-10 flex items-center justify-between">
+        <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5 m-0">
+          <span>2026학년도 & 2027대입 캘린더</span>
+        </h2>
       </div>
-
     </div>
 
     <!-- 1. 오늘의 입시일정 & 2. 주요 입시일정 (1:1 대칭 2열 그리드 배치) -->
@@ -1188,6 +1158,11 @@ const filteredFourYearItems = computed(() => {
     it.track.toLowerCase().includes(q) ||
     (it.note && it.note.toLowerCase().includes(q))
   )
+})
+
+defineExpose({
+  refreshData,
+  loading
 })
 
 onMounted(() => {

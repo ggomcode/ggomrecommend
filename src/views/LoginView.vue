@@ -12,7 +12,7 @@
         </span>
       </div>
 
-      <!-- 우측 액션 버튼: 로그인 모드일 때는 '입시 캘린더', 캘린더 모드일 때는 '로그인 창으로 돌아가기' -->
+      <!-- 우측 액션 버튼: 로그인 모드일 때는 '입시 캘린더', 캘린더 모드일 때는 '일정 새로고침' + '로그인 창으로 돌아가기' -->
       <div>
         <button
           v-if="viewMode === 'login'"
@@ -24,15 +24,28 @@
           <span>2026학년도 & 2027대입 캘린더</span>
         </button>
 
-        <button
-          v-else
-          type="button"
-          @click="viewMode = 'login'"
-          class="px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-white bg-slate-900 hover:bg-slate-800 shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer border-none"
-        >
-          <span>🔐</span>
-          <span>로그인 창으로 돌아가기</span>
-        </button>
+        <div v-else class="flex items-center gap-2">
+          <!-- 일정 새로고침 버튼 (캘린더 모드) -->
+          <button
+            type="button"
+            @click="handleCalendarRefresh"
+            :disabled="calendarLoading"
+            class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            title="구글 시트 최신 일정 새로고침"
+          >
+            <span :class="{ 'animate-spin': calendarLoading }">🔄</span>
+            <span>{{ calendarLoading ? '동기화 중…' : '일정 새로고침' }}</span>
+          </button>
+
+          <button
+            type="button"
+            @click="viewMode = 'login'"
+            class="px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-white bg-slate-900 hover:bg-slate-800 shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer border-none"
+          >
+            <span>🔐</span>
+            <span>로그인 창으로 돌아가기</span>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -565,17 +578,7 @@
       v-else
       class="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 pt-2 pb-16 animate-in fade-in duration-200"
     >
-      <div class="mb-4 flex items-center justify-between">
-        <button
-          type="button"
-          @click="viewMode = 'login'"
-          class="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 cursor-pointer bg-transparent border-none p-0"
-        >
-          <span>←</span>
-          <span>로그인 화면으로 돌아가기</span>
-        </button>
-      </div>
-      <AdmissionCalendarWidget />
+      <AdmissionCalendarWidget ref="calendarWidgetRef" />
     </main>
 
     <div v-if="viewMode === 'login'" class="py-2"></div>
@@ -598,6 +601,12 @@ const auth = useAuthStore()
 
 // 화면 모드: 'login' (기본 로그인 카드) | 'calendar' (입시 캘린더 화면)
 const viewMode = ref('login')
+const calendarWidgetRef = ref(null)
+const calendarLoading = computed(() => calendarWidgetRef.value?.loading || false)
+
+function handleCalendarRefresh() {
+  calendarWidgetRef.value?.refreshData(true)
+}
 
 // 활성화된 역할 탭: 'student' (재학생), 'graduate' (졸업생), 'teacher' (교사/관리자)
 const activeTab = ref('student')
