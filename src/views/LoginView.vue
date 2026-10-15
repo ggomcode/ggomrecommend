@@ -20,20 +20,8 @@
 
       <!-- 헤더 -->
       <div class="text-center mb-6 relative">
-        <div
-          :class="[
-            'inline-flex items-center justify-center rounded-2xl mb-3 shadow-xs border transition-all duration-300',
-            activeTab === 'student' ? 'bg-blue-50 text-blue-600 border-blue-100' : (activeTab === 'graduate' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100')
-          ]"
-          style="width: 56px; height: 56px;"
-        >
-          <GraduationCap v-if="activeTab === 'student'" class="w-7 h-7" />
-          <School v-else-if="activeTab === 'graduate'" class="w-7 h-7" />
-          <UserCheck v-else class="w-7 h-7" />
-        </div>
-
         <!-- 학교명 배지 -->
-        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-700 text-xs font-extrabold mb-2.5 shadow-2xs">
+        <div class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 text-xs font-extrabold mb-2.5 shadow-2xs">
           <span>🏫</span>
           <span>{{ schoolName }}</span>
         </div>
@@ -42,17 +30,6 @@
         <h1 class="text-slate-900 m-0 text-xl sm:text-2xl font-black tracking-tight leading-snug">
           {{ displaySystemName }}
         </h1>
-
-        <!-- 지원 기능 요약 배지 리스트 -->
-        <div class="flex flex-wrap items-center justify-center gap-1.5 mt-3 max-w-md mx-auto">
-          <span
-            v-for="badge in activeModuleBadges"
-            :key="badge"
-            class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200/80"
-          >
-            {{ badge }}
-          </span>
-        </div>
       </div>
 
       <!-- 3가지 역할 구분 탭 (재학생 / 졸업생 / 교사) -->

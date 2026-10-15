@@ -13,7 +13,7 @@
           </div>
           <div class="flex flex-col leading-tight">
             <span class="text-xs font-bold text-blue-600 tracking-wide">{{ schoolName }}</span>
-            <h1 class="text-base font-bold text-slate-900 m-0">추천자 관리 포털</h1>
+            <h1 class="text-base font-bold text-slate-900 m-0">{{ displaySystemName }}</h1>
           </div>
         </div>
 
@@ -27,6 +27,17 @@
             </p>
             <p v-if="userSubInfo" class="text-xs text-slate-500 font-semibold m-0 mt-0.5">{{ userSubInfo }}</p>
           </div>
+          <button
+            v-if="auth.isAdmin"
+            @click="enterSystemSettings"
+            class="text-xs font-bold text-slate-700 hover:text-white bg-slate-100 hover:bg-slate-800 px-3 py-2 rounded-lg transition-all cursor-pointer border border-slate-300 flex items-center gap-1.5 shadow-2xs"
+          >
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <span>관리자 설정</span>
+          </button>
           <button
             @click="handleLogout"
             class="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer border border-slate-200"
@@ -61,12 +72,13 @@
         </p>
       </div>
 
-      <!-- 시스템 선택 카드 뷰 -->
+      <!-- 시스템 선택 카드 뷰 (관리자 설정 순서 연동) -->
       <div :class="['grid gap-6 sm:gap-7 w-full max-w-7xl', portalGridClass]">
+        <template v-for="mod in sortedSuiteModules" :key="mod.id">
         
         <!-- 카드 1: 학교장 추천자 선발 시스템 (교사는 미노출) -->
         <div
-          v-if="isModuleVisible('principal')"
+          v-if="mod.id === 'principal' && isModuleVisible('principal')"
           @click="enterPrincipalSystem"
           :class="[
             'group relative bg-white rounded-3xl p-6 sm:p-7 border shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden',
@@ -159,7 +171,7 @@
 
         <!-- 카드 2: 농어촌 전형 추천자 관리 시스템 (교사는 미노출) -->
         <div
-          v-if="isModuleVisible('rural')"
+          v-else-if="mod.id === 'rural' && isModuleVisible('rural')"
           @click="enterRuralSystem"
           :class="[
             'group relative bg-white rounded-3xl p-6 sm:p-7 border shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer',
@@ -233,7 +245,7 @@
 
         <!-- 카드 3: 수능 미응시 및 수시 미접수 등록 시스템 (재학생/관리자만 표시, 교사/졸업생 미노출) -->
         <div
-          v-if="isModuleVisible('exam_intent')"
+          v-else-if="mod.id === 'exam_intent' && isModuleVisible('exam_intent')"
           @click="enterExamIntentSystem"
           class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-violet-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
         >
@@ -275,7 +287,7 @@
 
         <!-- 카드 4: 전문대학 학교장 추천 시스템 (교사는 미노출) -->
         <div
-          v-if="isModuleVisible('junior_college')"
+          v-else-if="mod.id === 'junior_college' && isModuleVisible('junior_college')"
           @click="enterJuniorCollegeSystem"
           class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-indigo-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
         >
@@ -315,51 +327,9 @@
           </div>
         </div>
 
-        <!-- 카드 5: 설정 (관리자 전용) -->
-        <div
-          v-if="auth.isAdmin"
-          @click="enterSystemSettings"
-          class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-slate-800 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
-        >
-          <div class="absolute -top-20 -right-20 w-40 h-40 bg-slate-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
-
-          <div>
-            <div class="flex items-center justify-between gap-3 mb-6">
-              <div class="w-13 h-13 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 group-hover:bg-slate-900 group-hover:text-white transition-all duration-300 shadow-xs border border-slate-200">
-                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-              </div>
-              <span class="-mr-6 sm:-mr-7 pl-3.5 pr-5 sm:pr-6 py-1.5 rounded-l-full rounded-r-none text-xs font-bold shadow-xs whitespace-nowrap shrink-0 bg-slate-100 text-slate-800 border-y border-l border-r-0 border-slate-200">
-                관리자 전용
-              </span>
-            </div>
-
-            <div class="inline-block px-2.5 py-1 rounded-md text-xs font-extrabold bg-slate-100 text-slate-800 mb-3">
-              통합 관리
-            </div>
-
-            <h3 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-slate-800 transition-colors mb-3">
-              설정
-            </h3>
-            
-            <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              학생 가입 승인, 재학생/졸업생 명단 및 학생 관리, 학교 기본 정보 및 가입코드 등 시스템 환경 설정을 통합 관리합니다.
-            </p>
-          </div>
-
-          <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-slate-700">
-            <span>설정 바로가기</span>
-            <svg class="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </div>
-        </div>
-
         <!-- 카드 6: 선택교과 출석관리 시스템 (교사, 관리자 전용) -->
         <div
-          v-if="isModuleVisible('rollbook')"
+          v-else-if="mod.id === 'rollbook' && isModuleVisible('rollbook')"
           @click="enterRollbookSystem"
           class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-teal-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
         >
@@ -401,7 +371,7 @@
 
         <!-- 카드 7: 수시 지원 통계 분석 (교사, 관리자 전용 / 학생 미노출) -->
         <div
-          v-if="isModuleVisible('stat')"
+          v-else-if="mod.id === 'stat' && isModuleVisible('stat')"
           @click="enterStatSystem"
           class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-indigo-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
         >
@@ -442,12 +412,13 @@
           </div>
         </div>
 
+        </template>
       </div>
     </main>
 
     <!-- 하단 푸터 -->
     <footer class="py-6 border-t border-slate-200 bg-white text-center text-xs text-slate-500">
-      <p>© {{ new Date().getFullYear() }} {{ schoolName }} 대입 추천 관리 포털</p>
+      <p>© {{ new Date().getFullYear() }} {{ schoolName }} {{ displaySystemName }}</p>
     </footer>
 
   </div>
@@ -567,6 +538,11 @@ const showExamIntentCard = computed(() => {
   return false
 })
 
+// 관리자 설정에서 지정된 순서대로 정렬된 모듈 목록
+const sortedSuiteModules = computed(() => {
+  return [...suiteModules.value].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+})
+
 // 현재 접속 사용자의 그룹 식별 ('admin' | 'teacher' | 'student' | 'graduate')
 const currentUserGroup = computed(() => {
   if (auth.isAdmin) return 'admin'
@@ -614,7 +590,6 @@ const portalGridClass = computed(() => {
   if (isModuleVisible('rural')) cardCount++
   if (isModuleVisible('exam_intent')) cardCount++
   if (isModuleVisible('junior_college')) cardCount++
-  if (auth.isAdmin) cardCount++ // 설정 카드
   if (isModuleVisible('rollbook')) cardCount++
   if (isModuleVisible('stat')) cardCount++
 

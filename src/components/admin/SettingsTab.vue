@@ -525,22 +525,45 @@
           <pre class="bg-black/40 p-3 rounded-lg overflow-x-auto text-[11px] font-mono text-slate-300 leading-relaxed border border-slate-800 max-h-48">{{ ddlSqlText }}</pre>
         </div>
 
-        <!-- 모듈 박스 카드 그리드 (2열) -->
+        <!-- 드래그앤드롭 안내 -->
+        <div class="mb-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40 px-3.5 py-2 rounded-xl border border-slate-200/70 dark:border-slate-800">
+          <span class="flex items-center gap-1.5 font-medium">
+            <GripVertical :size="14" class="text-indigo-500" />
+            <span><strong>순서 변경:</strong> 카드를 마우스로 드래그앤드롭하여 원하는 순서로 재배치할 수 있으며, 대문 화면에 동일한 순서로 즉시 반영됩니다.</span>
+          </span>
+          <span class="text-[11px] text-slate-400 font-semibold shrink-0 ml-2">총 {{ suiteModules.length }}개 모듈</span>
+        </div>
+
+        <!-- 모듈 박스 카드 그리드 (2열 드래그앤드롭) -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div
-            v-for="m in suiteModules"
+            v-for="(m, index) in suiteModules"
             :key="m.id"
+            draggable="true"
+            @dragstart="onModuleDragStart($event, index)"
+            @dragover="onModuleDragOver($event, index)"
+            @dragleave="onModuleDragLeave($event, index)"
+            @drop="onModuleDrop($event, index)"
+            @dragend="onModuleDragEnd"
             :class="[
-              'rounded-xl border p-4.5 flex flex-col justify-between transition-all duration-200 shadow-2xs',
+              'rounded-xl border p-4.5 flex flex-col justify-between transition-all duration-200 shadow-2xs select-none cursor-grab active:cursor-grabbing',
+              draggedModuleIndex === index ? 'opacity-35 scale-[0.98] border-indigo-400 ring-2 ring-indigo-200 dark:ring-indigo-900' : '',
+              dragOverModuleIndex === index && draggedModuleIndex !== index ? 'border-indigo-500 ring-2 ring-indigo-400 bg-indigo-50/30 dark:bg-indigo-950/20' : '',
               m.isEnabled
                 ? 'bg-white dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 hover:border-indigo-300'
                 : 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-200/60 opacity-60'
             ]"
           >
             <div>
-              <!-- 상단 헤더: 카테고리 + 아이콘 + 타이틀 + 토글 -->
+              <!-- 상단 헤더: 드래그 핸들 + 순서 배지 + 카테고리 + 아이콘 + 타이틀 + 토글 -->
               <div class="flex items-center justify-between gap-2 mb-3">
-                <div class="flex items-center gap-2.5 min-w-0">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div
+                    class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-0.5 rounded transition-colors"
+                    title="드래그하여 순서 변경"
+                  >
+                    <GripVertical :size="16" />
+                  </div>
                   <div
                     class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0"
                     :class="getModuleThemeClasses(m).iconBox"
@@ -548,9 +571,14 @@
                     <component :is="iconMap[m.id] || Grid" :size="17" />
                   </div>
                   <div class="min-w-0">
-                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded" :class="getModuleThemeClasses(m).categoryBadge">
-                      {{ m.category }}
-                    </span>
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-[10px] font-black px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/70 dark:border-indigo-800">
+                        #{{ index + 1 }}
+                      </span>
+                      <span class="text-[10px] font-bold px-1.5 py-0.5 rounded" :class="getModuleThemeClasses(m).categoryBadge">
+                        {{ m.category }}
+                      </span>
+                    </div>
                     <h3 class="text-sm font-bold text-slate-900 dark:text-white m-0 leading-tight mt-0.5 truncate">
                       {{ m.name }}
                     </h3>
@@ -728,6 +756,7 @@ import {
   BarChart3,
   Sparkles,
   Copy,
+  GripVertical,
   Grid
 } from 'lucide-vue-next'
 
@@ -809,6 +838,54 @@ function toggleModuleGroup(m, groupKey) {
     m.targetRoles.push(groupKey)
   }
 }
+const draggedModuleIndex = ref(null)
+const dragOverModuleIndex = ref(null)
+
+function onModuleDragStart(e, idx) {
+  draggedModuleIndex.value = idx
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', String(idx))
+}
+
+function onModuleDragOver(e, idx) {
+  e.preventDefault()
+  e.dataTransfer.dropEffect = 'move'
+  if (dragOverModuleIndex.value !== idx) {
+    dragOverModuleIndex.value = idx
+  }
+}
+
+function onModuleDragLeave(e, idx) {
+  if (dragOverModuleIndex.value === idx) {
+    dragOverModuleIndex.value = null
+  }
+}
+
+function onModuleDrop(e, targetIdx) {
+  e.preventDefault()
+  const fromIdx = draggedModuleIndex.value !== null
+    ? draggedModuleIndex.value
+    : parseInt(e.dataTransfer.getData('text/plain'), 10)
+
+  if (fromIdx !== null && !isNaN(fromIdx) && fromIdx !== targetIdx) {
+    const item = suiteModules.value.splice(fromIdx, 1)[0]
+    suiteModules.value.splice(targetIdx, 0, item)
+    suiteModules.value.forEach((m, idx) => {
+      m.sortOrder = idx + 1
+    })
+    try {
+      localStorage.setItem('suite_modules_cache', JSON.stringify(suiteModules.value))
+    } catch {}
+  }
+  draggedModuleIndex.value = null
+  dragOverModuleIndex.value = null
+}
+
+function onModuleDragEnd() {
+  draggedModuleIndex.value = null
+  dragOverModuleIndex.value = null
+}
+
 const suiteModules = ref([])
 const saveModulesLoading = ref(false)
 const showSqlGuide = ref(false)
@@ -899,6 +976,9 @@ async function handleSaveLoginSystemName() {
 }
 
 async function handleSaveSuiteModules() {
+  suiteModules.value.forEach((m, idx) => {
+    m.sortOrder = idx + 1
+  })
   saveModulesLoading.value = true
   try {
     const res = await saveSuiteModules(suiteModules.value)
