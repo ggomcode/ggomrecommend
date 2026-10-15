@@ -20,6 +20,9 @@
                 <span v-if="univ.isTopTier" class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-400/20 text-amber-300 border border-amber-400/30">
                   주요대/과기원
                 </span>
+                <span v-if="univ.isMedical" class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-400/20 text-rose-300 border border-rose-400/30" title="의·치·한·약·수 지원 건 포함">
+                  의·약학 지원
+                </span>
               </div>
               <p class="text-xs text-slate-300 mt-0.5">
                 총 <span class="font-bold text-white">{{ univ.apps.length }}건</span> 지원 ({{ univ.uniqueStudents }}명) | 

@@ -111,8 +111,8 @@
                   <span v-if="u.isTopTier" class="px-1.5 py-0.2 rounded text-[10px] bg-amber-50 text-amber-700 border border-amber-200/60">
                     주요대
                   </span>
-                  <span v-if="u.isMedical" class="px-1.5 py-0.2 rounded text-[10px] bg-rose-50 text-rose-700 border border-rose-200/60">
-                    메디컬
+                  <span v-if="u.isMedical" class="px-1.5 py-0.2 rounded text-[10px] bg-rose-50 text-rose-700 border border-rose-200/60 font-semibold" title="의·치·한·약·수 지원 건 포함">
+                    의·약학
                   </span>
                 </div>
               </td>
@@ -198,11 +198,37 @@ const presets = [
   { id: 'metro', label: '🏙️ 수도권 대학' }
 ]
 
-const topTierNames = [
-  '서울대학교', '연세대학교', '고려대학교', '서강대학교', '성균관대학교', '한양대학교',
-  '이화여자대학교', '포항공과대학교', '한국과학기술원', '울산과학기술원', '대구경북과학기술원',
+const topTierTargetUnivs = [
+  '서울대학교(서울)', '포항공과대학교(포항)', '연세대학교(서울)', '고려대학교(서울)',
+  '서강대학교(서울)', '성균관대학교(서울)', '성균관대학교(수원)', '한양대학교(서울)',
+  '이화여자대학교(서울)', '한국과학기술원', '울산과학기술원', '대구경북과학기술원',
   '광주과학기술원', '한국에너지공과대학교'
 ]
+
+function checkIsTopTier(univName) {
+  if (!univName) return false
+  if (topTierTargetUnivs.includes(univName)) return true
+  const baseNames = ['서울대학교', '포항공과대학교', '서강대학교', '이화여자대학교', '한국과학기술원', '울산과학기술원', '대구경북과학기술원', '광주과학기술원', '한국에너지공과대학교']
+  if (baseNames.some(b => univName.startsWith(b))) return true
+  if (univName.startsWith('연세대학교') && !univName.includes('미래') && !univName.includes('원주')) return true
+  if (univName.startsWith('고려대학교') && !univName.includes('세종')) return true
+  if (univName.startsWith('한양대학교') && !univName.includes('ERICA')) return true
+  if (univName.startsWith('성균관대학교')) return true
+  return false
+}
+
+function isMedicalDept(dept) {
+  if (!dept) return false
+  // 의·치·한·수
+  if (dept.includes('의예') || dept.includes('치의') || dept.includes('한의') || dept.includes('수의')) {
+    return true
+  }
+  // 약학 (바이오의약, 신약, 제약공학 등 비면허 학과 제외)
+  if ((dept.includes('약학') || dept.includes('제약학')) && !dept.includes('바이오') && !dept.includes('신약') && !dept.includes('공학')) {
+    return true
+  }
+  return false
+}
 
 const flagshipNames = [
   '강원대학교', '충북대학교', '충남대학교', '경북대학교', '부산대학교',
@@ -224,7 +250,7 @@ const aggregatedUnivs = computed(() => {
         uniqueStudentsSet: new Set(),
         recCount: 0,
         ruralCount: 0,
-        isTopTier: topTierNames.some(t => name.includes(t.replace('대학교', ''))),
+        isTopTier: checkIsTopTier(name),
         isMedical: false
       })
     }
@@ -233,7 +259,7 @@ const aggregatedUnivs = computed(() => {
     item.uniqueStudentsSet.add(app.studentKey)
     if (app.isRecommendation) item.recCount++
     if (app.isRural) item.ruralCount++
-    if (app.dept.includes('의예') || app.dept.includes('치의') || app.dept.includes('한의') || app.dept.includes('약학') || app.dept.includes('수의')) {
+    if (isMedicalDept(app.dept)) {
       item.isMedical = true
     }
   })
