@@ -454,59 +454,111 @@ function processAdmissionSheets({ csvMajor, csvDeadline, csvFourYear, csvJunior,
 
   // ─────────────────────────────────────────────────────────────
   // 5. 학사일정 (학교 지필평가, 모의평가, 개학식/방학식, 휴업일 등)
+  //   - 학년도 자동 감지 (2026, 2027, 2028 등 내년 변경 자동 수용)
+  //   - 헤더 컬럼 위치(월~금, 시수, 행사내용) 동적 탐색
+  //   - 학기별 행 개수 증감 무관 유동적 파싱
   // ─────────────────────────────────────────────────────────────
   const academicByDate = {}
   const academicEvents = []
 
   if (csvAcademic) {
     const rows = parseCSV(csvAcademic)
+
+    // 1) 학년도 자동 감지 (예: 2026학년도 -> 2026, 2027학년도 -> 2027)
+    const yearMatch = csvAcademic.match(/(\d{4})\s*학년도/)
+    const baseYear = yearMatch ? parseInt(yearMatch[1], 10) : new Date().getFullYear()
+
+    // 2) 헤더 행에서 요일 컬럼 위치 동적 탐색
+    const headerRow = rows[0] || []
+    const dayNames = ['월', '화', '수', '목', '금', '토']
+    let dynamicDaysInfo = []
+
+    for (let c = 0; c < headerRow.length; c++) {
+      const colName = headerRow[c]?.trim() || ''
+      for (const dName of dayNames) {
+        if (colName.includes(`${dName}요일`) || colName === `${dName} 일자` || colName === dName) {
+          if (!dynamicDaysInfo.some(d => d.name === dName)) {
+            let hoursIdx = -1
+            let contentIdx = -1
+            for (let offset = 1; offset <= 3; offset++) {
+              const nextCol = headerRow[c + offset] || ''
+              if (nextCol.includes('시수') && hoursIdx === -1) hoursIdx = c + offset
+              if ((nextCol.includes('행사') || nextCol.includes('내용') || nextCol.includes('일정')) && contentIdx === -1) {
+                contentIdx = c + offset
+              }
+            }
+            dynamicDaysInfo.push({
+              name: dName,
+              dayIdx: c,
+              hoursIdx: hoursIdx !== -1 ? hoursIdx : c + 1,
+              contentIdx: contentIdx !== -1 ? contentIdx : c + 2
+            })
+          }
+        }
+      }
+    }
+
+    if (dynamicDaysInfo.length === 0) {
+      dynamicDaysInfo = [
+        { dayIdx: 2, hoursIdx: 3, contentIdx: 4, name: '월' },
+        { dayIdx: 5, hoursIdx: 6, contentIdx: 7, name: '화' },
+        { dayIdx: 8, hoursIdx: 9, contentIdx: 10, name: '수' },
+        { dayIdx: 11, hoursIdx: 12, contentIdx: 13, name: '목' },
+        { dayIdx: 14, hoursIdx: 15, contentIdx: 16, name: '금' },
+      ]
+    }
+
     let currentMonth = 3
-    let currentYear = 2026
     let lastDayNum = 0
 
-    const daysInfo = [
-      { dayIdx: 2, hoursIdx: 3, contentIdx: 4, name: '월' },
-      { dayIdx: 5, hoursIdx: 6, contentIdx: 7, name: '화' },
-      { dayIdx: 8, hoursIdx: 9, contentIdx: 10, name: '수' },
-      { dayIdx: 11, hoursIdx: 12, contentIdx: 13, name: '목' },
-      { dayIdx: 14, hoursIdx: 15, contentIdx: 16, name: '금' },
-    ]
-
+    // 3) 전체 행 순회 (학기 구분이나 행 개수 변화에 완전 유동적)
     for (let r = 1; r < rows.length; r++) {
       const row = rows[r]
-      if (!row || row.length < 5) continue
+      if (!row || row.length < 3) continue
 
-      const mCol = row[0]?.trim()
-      if (mCol && !isNaN(parseInt(mCol, 10))) {
-        currentMonth = parseInt(mCol, 10)
-        currentYear = currentMonth <= 2 ? 2027 : 2026
-        lastDayNum = 0
+      // 월 컬럼 탐색: 앞쪽 3개 컬럼 중 1~12 단독 숫자 감지
+      for (let c = 0; c <= 2; c++) {
+        const val = row[c]?.trim()
+        if (val && !isNaN(parseInt(val, 10))) {
+          const m = parseInt(val, 10)
+          if (m >= 1 && m <= 12 && val.length <= 2) {
+            currentMonth = m
+            lastDayNum = 0
+            break
+          }
+        }
       }
 
-      for (const dInfo of daysInfo) {
+      // 연도 결정: 3~12월은 baseYear, 1~2월은 baseYear + 1
+      const currentYear = currentMonth <= 2 ? baseYear + 1 : baseYear
+
+      for (const dInfo of dynamicDaysInfo) {
         const dStr = row[dInfo.dayIdx]?.trim()
         const content = row[dInfo.contentIdx]?.trim()
         const hours = row[dInfo.hoursIdx]?.trim()
 
         if (!dStr || isNaN(parseInt(dStr, 10))) continue
         const dayNum = parseInt(dStr, 10)
+        if (dayNum < 1 || dayNum > 31) continue
 
-        // 월 경계 처리 (예: 31일 이후 1일이 같은 행에 나오는 경우)
+        // 월 경계 전환 처리 (예: 월말 28/30/31일 후 같은 주에 월초 1/2일 시작)
+        let eventMonth = currentMonth
+        let eventYear = currentYear
         if (lastDayNum > 20 && dayNum < 10) {
-          currentMonth++
-          if (currentMonth > 12) {
-            currentMonth = 1
-            currentYear = 2027
+          eventMonth = currentMonth + 1
+          if (eventMonth > 12) {
+            eventMonth = 1
+            eventYear = baseYear + 1
           }
         }
         lastDayNum = dayNum
 
         if (content) {
-          const mStr = String(currentMonth).padStart(2, '0')
+          const mStr = String(eventMonth).padStart(2, '0')
           const dayFormatted = String(dayNum).padStart(2, '0')
-          const dateStr = `${currentYear}-${mStr}-${dayFormatted}`
+          const dateStr = `${eventYear}-${mStr}-${dayFormatted}`
 
-          // 이벤트 유형 분류
+          // 이벤트 유형 자동 분류
           const isExam = content.includes('시험') || content.includes('지필')
           const isMockExam = content.includes('모의') || content.includes('연합') || content.includes('평가')
           const isHoliday = content.includes('휴업') || content.includes('공휴일') || content.includes('방학') || content.includes('신정') || content.includes('추석') || content.includes('한글날') || content.includes('성탄절')
