@@ -1,40 +1,43 @@
 <template>
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs no-print select-none">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between h-16">
-        <!-- Brand & School Logo (Consistent with ggomrecommend) -->
-        <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-500 flex items-center justify-center text-white shadow-xs">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <line x1="18" y1="20" x2="18" y2="10" stroke-width="2.2" stroke-linecap="round"></line>
-              <line x1="12" y1="20" x2="12" y2="4" stroke-width="2.2" stroke-linecap="round"></line>
-              <line x1="6" y1="20" x2="6" y2="14" stroke-width="2.2" stroke-linecap="round"></line>
-            </svg>
-          </div>
-          <div class="flex flex-col leading-tight">
-            <div class="flex items-center space-x-2">
-              <span class="text-xs font-extrabold text-indigo-600 tracking-tight">{{ schoolName }}</span>
-              <div class="relative inline-flex items-center">
-                <select
-                  :value="selectedAcademicYear"
-                  @change="e => handleYearChange(e.target.value)"
-                  class="appearance-none pl-2.5 pr-6 py-0.5 rounded-md text-[11px] font-black bg-gradient-to-r from-amber-50 to-orange-50 text-amber-900 border border-amber-300 shadow-2xs hover:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 cursor-pointer"
-                  title="분석 대상 학년도 전환"
-                >
-                  <option v-for="y in availableAcademicYears" :key="y" :value="y">
-                    {{ y }}학년도 대입
-                  </option>
-                </select>
-                <svg class="w-3 h-3 text-amber-700 pointer-events-none absolute right-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
-            <h1 class="text-base font-bold text-slate-900 tracking-tight m-0">
-              수시 지원 통계 분석 시스템 <span class="text-xs font-semibold text-slate-400 font-mono ml-1">ggomstat</span>
-            </h1>
-          </div>
-        </div>
+  <header class="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between shrink-0 shadow-2xs no-print select-none">
+    <!-- Left: Current Active Tab Title & Year Selector -->
+    <div class="flex items-center space-x-3">
+      <div class="flex items-center gap-2">
+        <component 
+          v-if="currentTabItem?.iconComponent" 
+          :is="currentTabItem.iconComponent" 
+          class="w-5 h-5 text-blue-600 shrink-0" 
+        />
+        <h1 class="text-base sm:text-lg font-bold text-slate-900 m-0 leading-none">
+          {{ currentTabItem?.name || '수시 지원 통계' }}
+        </h1>
+        <span 
+          v-if="currentTabItem?.badge" 
+          class="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-blue-100 text-blue-800 border border-blue-200"
+        >
+          {{ currentTabItem.badge }}
+        </span>
+      </div>
+
+      <div class="h-4 w-px bg-slate-200 hidden sm:block"></div>
+
+      <!-- 학년도 전환 드롭다운 -->
+      <div class="relative inline-flex items-center">
+        <select
+          :value="selectedAcademicYear"
+          @change="e => handleYearChange(e.target.value)"
+          class="appearance-none pl-2.5 pr-6 py-1 rounded-lg text-xs font-black bg-gradient-to-r from-amber-50 to-orange-50 text-amber-900 border border-amber-300 shadow-2xs hover:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 cursor-pointer"
+          title="분석 대상 학년도 전환"
+        >
+          <option v-for="y in availableAcademicYears" :key="y" :value="y">
+            {{ y }}학년도 대입
+          </option>
+        </select>
+        <svg class="w-3.5 h-3.5 text-amber-700 pointer-events-none absolute right-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+    </div>
 
         <!-- Right Action Controls -->
         <div class="flex items-center space-x-2 sm:space-x-2.5">
@@ -164,8 +167,6 @@
           >
             로그아웃
           </button>
-        </div>
-      </div>
     </div>
     <!-- 학년도별 대교협 시트 ID 관리 모달 -->
     <KcueYearSheetModal
@@ -179,6 +180,13 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+
+const props = defineProps({
+  currentTabItem: {
+    type: Object,
+    default: () => ({ name: '종합 통계' })
+  }
+})
 import KcueYearSheetModal from './KcueYearSheetModal.vue'
 import { useRouter } from 'vue-router'
 import { useStatData } from '../composables/useStatData'
