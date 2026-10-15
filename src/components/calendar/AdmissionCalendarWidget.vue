@@ -402,25 +402,36 @@
           :key="cell.dateStr"
           @click="openModalForDate(cell.dateStr)"
           :class="[
-            'p-1 sm:p-1.5 bg-white flex flex-col justify-start transition-colors relative cursor-pointer select-none group',
-            !cell.isCurrentMonth ? 'bg-slate-50/60 text-slate-400' : 'hover:bg-blue-50/40',
-            cell.isToday ? 'bg-blue-50/30' : ''
+            'p-1 sm:p-1.5 flex flex-col justify-start transition-all relative cursor-pointer select-none group',
+            cell.isToday
+              ? 'bg-sky-50/95 ring-2 ring-sky-400 border-2 border-sky-400 shadow-md z-10'
+              : (cell.isCurrentMonth ? 'bg-white hover:bg-slate-50/80 border border-slate-200' : 'bg-slate-50/60 text-slate-400 border border-slate-200/70')
           ]"
-          style="min-height: 184px;"
+          style="min-height: 232px;"
         >
           <!-- [Row 0] 날짜 번호 + 마감 배지 (고정 높이 22px) -->
           <div class="h-[22px] flex items-center justify-between mb-1 shrink-0 px-0.5">
-            <span
-              :class="[
-                'text-xs sm:text-sm font-extrabold w-6 h-6 flex items-center justify-center rounded-full leading-none',
-                cell.isToday ? 'bg-blue-600 text-white shadow-xs font-black' : '',
-                !cell.isToday && cell.dayOfWeek === 0 ? 'text-rose-600' : '',
-                !cell.isToday && cell.dayOfWeek === 6 ? 'text-blue-600' : '',
-                !cell.isToday && cell.dayOfWeek !== 0 && cell.dayOfWeek !== 6 && cell.isCurrentMonth ? 'text-slate-800' : ''
-              ]"
-            >
-              {{ cell.dayNum }}
-            </span>
+            <div class="flex items-center gap-1.5">
+              <span
+                :class="[
+                  'text-xs sm:text-sm font-extrabold w-6 h-6 flex items-center justify-center rounded-full leading-none',
+                  cell.isToday ? 'bg-blue-600 text-white shadow-xs font-black' : '',
+                  !cell.isToday && cell.dayOfWeek === 0 ? 'text-rose-600' : '',
+                  !cell.isToday && cell.dayOfWeek === 6 ? 'text-blue-600' : '',
+                  !cell.isToday && cell.dayOfWeek !== 0 && cell.dayOfWeek !== 6 && cell.isCurrentMonth ? 'text-slate-800' : ''
+                ]"
+              >
+                {{ cell.dayNum }}
+              </span>
+
+              <!-- 오늘 태그 -->
+              <span
+                v-if="cell.isToday"
+                class="px-1.5 py-0.5 rounded text-[10px] font-black bg-blue-600 text-white leading-none shadow-2xs"
+              >
+                오늘
+              </span>
+            </div>
 
             <!-- 원서접수 마감 카운트 배지 -->
             <span
@@ -432,18 +443,46 @@
             </span>
           </div>
 
-          <!-- ── 1. 학사일정 트랙 (항상 첫 번째 줄, 고정 높이 22px) ── -->
-          <div class="h-[22px] mb-1 shrink-0 flex items-center overflow-hidden">
+          <!-- ── 1-A. 학사일정 1행 (고정 높이 20px) ── -->
+          <div class="h-[20px] mb-1 shrink-0 flex items-center overflow-hidden">
             <div
-              v-if="cell.academicList && cell.academicList.length > 0"
+              v-if="cell.academicLines && cell.academicLines[0]"
               class="w-full h-full py-0.5 px-1.5 rounded text-[10px] sm:text-[11px] font-bold truncate flex items-center gap-1 border shadow-2xs"
-              :class="cell.academicBadgeClass"
+              :class="cell.academicLines[0].badgeClass"
               :title="cell.academicSummary"
             >
-              <span class="shrink-0">{{ cell.academicIcon }}</span>
-              <span class="truncate">{{ cell.academicMainText }}</span>
-              <span v-if="cell.academicList.length > 1" class="text-[9px] opacity-75 shrink-0">
-                +{{ cell.academicList.length - 1 }}
+              <span class="shrink-0">{{ cell.academicLines[0].icon }}</span>
+              <span class="truncate">{{ cell.academicLines[0].text }}</span>
+            </div>
+            <div v-else class="w-full h-full"></div>
+          </div>
+
+          <!-- ── 1-B. 학사일정 2행 (고정 높이 20px) ── -->
+          <div class="h-[20px] mb-1 shrink-0 flex items-center overflow-hidden">
+            <div
+              v-if="cell.academicLines && cell.academicLines[1]"
+              class="w-full h-full py-0.5 px-1.5 rounded text-[10px] sm:text-[11px] font-bold truncate flex items-center gap-1 border shadow-2xs"
+              :class="cell.academicLines[1].badgeClass"
+              :title="cell.academicSummary"
+            >
+              <span class="shrink-0">{{ cell.academicLines[1].icon }}</span>
+              <span class="truncate">{{ cell.academicLines[1].text }}</span>
+            </div>
+            <div v-else class="w-full h-full"></div>
+          </div>
+
+          <!-- ── 1-C. 학사일정 3행 (고정 높이 20px) ── -->
+          <div class="h-[20px] mb-1 shrink-0 flex items-center overflow-hidden">
+            <div
+              v-if="cell.academicLines && cell.academicLines[2]"
+              class="w-full h-full py-0.5 px-1.5 rounded text-[10px] sm:text-[11px] font-bold truncate flex items-center gap-1 border shadow-2xs"
+              :class="cell.academicLines[2].badgeClass"
+              :title="cell.academicSummary"
+            >
+              <span class="shrink-0">{{ cell.academicLines[2].icon }}</span>
+              <span class="truncate">{{ cell.academicLines[2].text }}</span>
+              <span v-if="cell.academicLines.length > 3" class="text-[9px] opacity-75 shrink-0 ml-auto">
+                +{{ cell.academicLines.length - 3 }}
               </span>
             </div>
             <div v-else class="w-full h-full"></div>
@@ -1022,31 +1061,42 @@ function createCalendarCell(dateObj, isCurrentMonth) {
   const isToday = dateStr === todayStr.value
   const dayOfWeek = dateObj.getDay()
 
-  // 학사일정 추출 및 배지 스타일 계산
+  // 학사일정 추출 및 개별 라인별 분리 (3줄 시트 내용 각각 1줄씩 표시)
   const academicList = rawData.value?.academicByDate?.[dateStr] || []
-  let academicBadgeClass = 'bg-sky-100 text-sky-900 border-sky-300'
-  let academicIcon = '🏫'
-  let academicMainText = ''
+  const academicLines = []
   let academicSummary = ''
 
   if (academicList.length > 0) {
-    const first = academicList[0]
-    academicMainText = first.content.split('\n')[0]
     academicSummary = academicList.map(a => `${a.content}${a.hours ? ` (${a.hours}시수)` : ''}`).join('\n')
 
-    if (academicList.some(a => a.isExam)) {
-      academicBadgeClass = 'bg-rose-100 text-rose-900 border-rose-300 font-black'
-      academicIcon = '📝'
-    } else if (academicList.some(a => a.isMockExam)) {
-      academicBadgeClass = 'bg-purple-100 text-purple-900 border-purple-300 font-black'
-      academicIcon = '📊'
-    } else if (academicList.some(a => a.isHoliday)) {
-      academicBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300'
-      academicIcon = '🚩'
-    } else if (academicList.some(a => a.isMilestone)) {
-      academicBadgeClass = 'bg-emerald-100 text-emerald-950 border-emerald-300 font-black'
-      academicIcon = '🎓'
-    }
+    academicList.forEach(a => {
+      if (!a.content) return
+      const splitLines = a.content.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+      splitLines.forEach(line => {
+        let badgeClass = 'bg-sky-100/90 text-sky-950 border-sky-300 font-bold'
+        let icon = '🏫'
+
+        if (line.includes('시험') || line.includes('지필')) {
+          badgeClass = 'bg-rose-100 text-rose-950 border-rose-300 font-black'
+          icon = '📝'
+        } else if (line.includes('모의') || line.includes('연합') || line.includes('평가')) {
+          badgeClass = 'bg-purple-100 text-purple-950 border-purple-300 font-black'
+          icon = '📊'
+        } else if (line.includes('휴업') || line.includes('공휴일') || line.includes('방학') || line.includes('신정') || line.includes('추석') || line.includes('한글날') || line.includes('성탄절')) {
+          badgeClass = 'bg-amber-100 text-amber-950 border-amber-300 font-black'
+          icon = '🚩'
+        } else if (line.includes('입학') || line.includes('개학') || line.includes('졸업') || line.includes('종업') || line.includes('수능')) {
+          badgeClass = 'bg-emerald-100 text-emerald-950 border-emerald-300 font-black'
+          icon = '🎓'
+        }
+
+        academicLines.push({
+          text: line,
+          badgeClass,
+          icon
+        })
+      })
+    })
   }
 
   // Track 1: 기간 주요일정 연결 여부 파악
@@ -1134,9 +1184,7 @@ function createCalendarCell(dateObj, isCurrentMonth) {
     isToday,
     isCurrentMonth,
     academicList,
-    academicBadgeClass,
-    academicIcon,
-    academicMainText,
+    academicLines,
     academicSummary,
     majorRange,
     singleMajorEvent,
