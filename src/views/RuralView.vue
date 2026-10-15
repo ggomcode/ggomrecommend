@@ -291,7 +291,7 @@ const userName = computed(() => {
 
 const roleLabel = computed(() => {
   if (auth.isAdmin) return '시스템 관리자'
-  if (auth.isTeacher) return '담임 교사'
+  if (auth.isTeacher) return '교과 교사'
   if (auth.isStudent) return auth.isEnrolled ? '재학생' : '졸업생'
   return ''
 })

@@ -29,12 +29,12 @@
           <!-- Role Badge -->
           <div class="hidden md:flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-xs font-medium text-slate-700">
             <span>{{ auth.isAdmin ? '👑' : '👨‍🏫' }}</span>
-            <span class="font-bold">{{ auth.isAdmin ? '관리자' : (auth.user?.user_metadata?.name || '선생님') }}</span>
+            <span class="font-bold">{{ auth.isAdmin ? '관리자' : (auth.teacherName || auth.user?.user_metadata?.name || '교과 교사') }}</span>
             <span :class="[
               'text-[10px] font-bold px-1.5 py-0.2 rounded-full',
               auth.isAdmin ? 'bg-indigo-100 text-indigo-800' : 'bg-amber-100 text-amber-900'
             ]">
-              {{ auth.isAdmin ? '관리자 권한' : '교사 모드' }}
+              {{ auth.isAdmin ? '관리자 권한' : '교과 교사' }}
             </span>
           </div>
 
@@ -98,8 +98,9 @@
             </div>
           </div>
 
-          <!-- Excel Export -->
+          <!-- Excel Export (Admin ONLY) -->
           <button 
+            v-if="auth.isAdmin"
             @click="exportToExcel()"
             class="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors cursor-pointer shadow-2xs"
           >
@@ -109,8 +110,9 @@
             <span class="hidden sm:inline">엑셀</span>
           </button>
 
-          <!-- Print / PDF -->
+          <!-- Print / PDF (Admin ONLY) -->
           <button 
+            v-if="auth.isAdmin"
             @click="window.print()"
             class="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-xs shadow-indigo-600/30 transition-all cursor-pointer"
           >

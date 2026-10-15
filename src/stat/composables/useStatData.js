@@ -12,6 +12,7 @@ const officialStats = ref(officialStatsData)
 const selectedClass = ref('ALL') // ALL, ENROLLED, 1..11, 졸업생
 const selectedField = ref('ALL') // ALL, 인문, 자연, 예체능
 const selectedType = ref('ALL') // ALL, 교과, 종합, 실기, 논술
+const selectedMajorType = ref('ALL') // ALL, 일반학생, GROUP_RURAL, GROUP_OPP_NON_RURAL, or specific admissionMajorType
 const selectedRegion = ref('ALL') // ALL, METRO, NON_METRO, or specific region
 const searchKeyword = ref('')
 const adminMaskToggle = ref(false) // Admin toggleable
@@ -79,6 +80,7 @@ export function useStatData() {
     selectedClass.value = 'ALL'
     selectedField.value = 'ALL'
     selectedType.value = 'ALL'
+    selectedMajorType.value = 'ALL'
     selectedRegion.value = 'ALL'
     searchKeyword.value = ''
   }
@@ -101,6 +103,36 @@ export function useStatData() {
       // Admission type filter
       if (selectedType.value !== 'ALL') {
         if (!app.admissionType.includes(selectedType.value)) return false
+      }
+      // Major Type (전형명(대) - 대교협 구글시트 J열) filter
+      if (selectedMajorType.value !== 'ALL') {
+        if (selectedMajorType.value === 'GROUP_RURAL') {
+          // 농어촌 (기회균형 및 고른기회 포함)
+          if (!app.isRural && !app.admissionMajorType?.includes('농어촌') && !app.admissionDetailType?.includes('농어촌')) {
+            return false
+          }
+        } else if (selectedMajorType.value === 'GROUP_OPP_NON_RURAL') {
+          // 농어촌 외 기회균형 및 고른기회
+          const isRuralApp = app.isRural || app.admissionMajorType?.includes('농어촌') || app.admissionDetailType?.includes('농어촌')
+          const isOppApp = app.isOpportunity || 
+            app.admissionMajorType?.includes('기회균형') || 
+            app.admissionMajorType?.includes('고른기회') || 
+            app.admissionMajorType?.includes('사회배려') ||
+            app.admissionMajorType?.includes('수급자')
+          if (isRuralApp || !isOppApp) {
+            return false
+          }
+        } else if (selectedMajorType.value === 'GROUP_REC') {
+          // 지역균형/학교장추천
+          if (!app.isRecommendation && app.admissionMajorType !== '지역균형선발' && !app.admissionMajorType?.includes('추천')) {
+            return false
+          }
+        } else {
+          // Exact match with admissionMajorType
+          if (app.admissionMajorType !== selectedMajorType.value) {
+            return false
+          }
+        }
       }
       // Region filter
       if (selectedRegion.value === 'METRO') {
@@ -330,6 +362,7 @@ export function useStatData() {
     selectedClass,
     selectedField,
     selectedType,
+    selectedMajorType,
     selectedRegion,
     searchKeyword,
     adminMaskToggle,

@@ -141,7 +141,7 @@
           <!-- 사용자 정보 -->
           <div class="px-0.5">
             <p class="text-sm font-bold text-slate-900 m-0 leading-tight">
-              {{ auth.teacherName ? `${auth.teacherName} 선생님` : '담임교사 선생님' }}
+              {{ auth.teacherName ? `${auth.teacherName} 선생님` : '교과교사 선생님' }}
             </p>
             <p class="text-xs text-slate-500 font-medium m-0 mt-0.5">{{ roleLabel }}</p>
           </div>

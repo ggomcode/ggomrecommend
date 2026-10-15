@@ -303,6 +303,7 @@ const {
   selectedClass,
   selectedField,
   selectedType,
+  selectedMajorType,
   selectedRegion,
   searchKeyword,
   currentTargetTotalStudents,
@@ -356,7 +357,7 @@ const regionChartData = computed(() => {
   }
 })
 
-// Filtered applications ignoring only class filter (for class comparison across field/type/region/search filters)
+// Filtered applications ignoring only class filter (for class comparison across field/type/majorType/region/search filters)
 const classComparisonApps = computed(() => {
   return applications.value.filter(app => {
     // Field filter
@@ -366,6 +367,32 @@ const classComparisonApps = computed(() => {
     // Admission type filter
     if (selectedType.value !== 'ALL') {
       if (!app.admissionType.includes(selectedType.value)) return false
+    }
+    // Major Type (전형명(대) - J열) filter
+    if (selectedMajorType.value !== 'ALL') {
+      if (selectedMajorType.value === 'GROUP_RURAL') {
+        if (!app.isRural && !app.admissionMajorType?.includes('농어촌') && !app.admissionDetailType?.includes('농어촌')) {
+          return false
+        }
+      } else if (selectedMajorType.value === 'GROUP_OPP_NON_RURAL') {
+        const isRuralApp = app.isRural || app.admissionMajorType?.includes('농어촌') || app.admissionDetailType?.includes('농어촌')
+        const isOppApp = app.isOpportunity || 
+          app.admissionMajorType?.includes('기회균형') || 
+          app.admissionMajorType?.includes('고른기회') || 
+          app.admissionMajorType?.includes('사회배려') ||
+          app.admissionMajorType?.includes('수급자')
+        if (isRuralApp || !isOppApp) {
+          return false
+        }
+      } else if (selectedMajorType.value === 'GROUP_REC') {
+        if (!app.isRecommendation && app.admissionMajorType !== '지역균형선발' && !app.admissionMajorType?.includes('추천')) {
+          return false
+        }
+      } else {
+        if (app.admissionMajorType !== selectedMajorType.value) {
+          return false
+        }
+      }
     }
     // Region filter
     if (selectedRegion.value === 'METRO') {
