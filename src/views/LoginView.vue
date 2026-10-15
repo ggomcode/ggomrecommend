@@ -17,7 +17,7 @@
         <button
           v-if="viewMode === 'login'"
           type="button"
-          @click="viewMode = 'calendar'"
+          @click="openCalendarView"
           class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
         >
           <span>📅</span>
@@ -39,7 +39,7 @@
 
           <button
             type="button"
-            @click="viewMode = 'login'"
+            @click="openLoginView"
             class="px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-white bg-slate-900 hover:bg-slate-800 shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer border-none"
           >
             <span>🔐</span>
@@ -586,7 +586,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { GraduationCap, School, UserCheck, CheckCircle } from 'lucide-vue-next'
 import AdmissionCalendarWidget from '../components/calendar/AdmissionCalendarWidget.vue'
@@ -597,10 +597,34 @@ import { checkExamIntentSystemEnabled } from '../api/examIntentApi.js'
 import { fetchLoginSystemName, loginSystemName, fetchSuiteModules } from '../api/suiteModulesApi.js'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
 // 화면 모드: 'login' (기본 로그인 카드) | 'calendar' (입시 캘린더 화면)
-const viewMode = ref('login')
+// URL 경로가 /calendar 이거나 ?view=calendar 인 경우 캘린더 화면으로 다이렉트 진입
+const viewMode = ref((route.path === '/calendar' || route.query.view === 'calendar') ? 'calendar' : 'login')
+
+function openCalendarView() {
+  viewMode.value = 'calendar'
+  if (route.path !== '/calendar') {
+    router.push('/calendar')
+  }
+}
+
+function openLoginView() {
+  viewMode.value = 'login'
+  if (route.path !== '/login') {
+    router.push('/login')
+  }
+}
+
+watch(() => route.path, (newPath) => {
+  if (newPath === '/calendar') {
+    viewMode.value = 'calendar'
+  } else if (newPath === '/login') {
+    viewMode.value = 'login'
+  }
+})
 const calendarWidgetRef = ref(null)
 const calendarLoading = computed(() => calendarWidgetRef.value?.loading || false)
 

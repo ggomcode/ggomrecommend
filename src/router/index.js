@@ -24,6 +24,10 @@ const routes = [
     },
   },
   {
+    path: '/calendar',
+    component: () => import('../views/LoginView.vue'),
+  },
+  {
     path: '/select-system',
     component: () => import('../views/PortalView.vue'),
     meta: { requiresAuth: true },
@@ -90,7 +94,7 @@ const router = createRouter({
 })
 
 router.beforeEach(async to => {
-  if (to.path === '/server-error') return true
+  if (to.path === '/server-error' || to.path === '/calendar') return true
 
   const auth = useAuthStore()
 
