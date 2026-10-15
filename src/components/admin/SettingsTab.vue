@@ -442,6 +442,49 @@
               </button>
             </div>
           </div>
+
+          <!-- 4. 2027 대입 일정 구글 스프레드시트 ID (로그인 화면 캘린더 연동) -->
+          <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-700 space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                4) 2027 대입 일정 구글 스프레드시트 ID (로그인 화면 캘린더 연동)
+              </label>
+              <a
+                v-if="realAdmissionSheetId"
+                :href="`https://docs.google.com/spreadsheets/d/${realAdmissionSheetId}/edit`"
+                target="_blank"
+                class="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 font-semibold flex items-center gap-1 hover:underline"
+              >
+                <span>🔗 시트 바로 열기</span>
+              </a>
+            </div>
+            <p class="text-[11px] text-slate-500 m-0">
+              주요일정, 원서접수마감, 4년제일정, 전문대일정 4개 시트가 포함된 시트 ID를 등록합니다. (기본값: {{ DEFAULT_ADMISSION_SHEET_ID }})
+            </p>
+            <div class="flex gap-2">
+              <input
+                v-model="admissionSheetIdInput"
+                type="text"
+                :placeholder="hasAdmissionSheetId ? '저장된 ID (마스킹됨)' : 'ID 또는 전체 시트 URL 입력'"
+                class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white"
+              />
+              <button
+                @click="handleSaveAdmissionSheetId"
+                :disabled="admissionSheetLoading"
+                class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap"
+              >
+                {{ admissionSheetLoading ? '저장 중…' : 'ID 저장' }}
+              </button>
+              <button
+                @click="handleRefreshAdmissionData"
+                :disabled="admissionRefreshLoading"
+                class="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg px-3.5 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1"
+              >
+                <span>🔄</span>
+                <span>{{ admissionRefreshLoading ? '동기화 중…' : '캘린더 즉시 갱신' }}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -706,6 +749,7 @@ import { fetchSchoolName, setSchoolNameConfig } from '../../utils/schoolConfig'
 import { getDisclosureCount, setDisclosureCount, syncRegionalToUniversities, syncPrincipalUnivsFromGoogleSheet } from '../../api/admin.js'
 import { syncRuralTracksFromGoogleSheet } from '../../api/ruralApi.js'
 import { getKcueSheetId, extractSheetId, saveKcueSheetId, KCUE_SHEET_KEY } from '../../api/statApi.js'
+import { getAdmissionSheetId, saveAdmissionSheetId, DEFAULT_ADMISSION_SHEET_ID, fetchAdmissionCalendarData } from '../../services/admissionCalendarService.js'
 import { dialog } from '../common/dialog.js'
 import { useAuthStore } from '../../stores/auth'
 import { clearAllApplicationStorage, clearAllRuralStorage } from '../../utils/storageUtils'
@@ -779,6 +823,12 @@ const googleSheetKcueId = ref('')
 const realGoogleSheetKcueId = ref('')
 const googleSheetKcueLoading = ref(false)
 const hasGoogleSheetKcueId = ref(false)
+
+const admissionSheetIdInput = ref('')
+const realAdmissionSheetId = ref('')
+const hasAdmissionSheetId = ref(false)
+const admissionSheetLoading = ref(false)
+const admissionRefreshLoading = ref(false)
 
 const allowAreaEdit = ref(false)
 const areaEditLoading = ref(false)
@@ -1070,6 +1120,11 @@ async function loadConfig() {
     hasGoogleSheetKcueId.value = !!dbKcueId
     googleSheetKcueId.value = dbKcueId ? maskGoogleSheetId(dbKcueId) : ''
 
+    const dbAdmissionId = await getAdmissionSheetId()
+    realAdmissionSheetId.value = dbAdmissionId
+    hasAdmissionSheetId.value = !!dbAdmissionId
+    admissionSheetIdInput.value = dbAdmissionId ? maskGoogleSheetId(dbAdmissionId) : ''
+
     if (configMap['allow_area_edit']) {
       allowAreaEdit.value = configMap['allow_area_edit'] === 'true'
       localStorage.setItem('pcm_allow_area_edit', configMap['allow_area_edit'])
@@ -1202,6 +1257,43 @@ async function saveGoogleSheetKcueId() {
     alert('대교협 시트 ID 저장 중 오류가 발생했습니다.')
   } finally {
     googleSheetKcueLoading.value = false
+  }
+}
+
+async function handleSaveAdmissionSheetId() {
+  admissionSheetLoading.value = true
+  try {
+    const inputVal = admissionSheetIdInput.value.trim()
+    let targetVal = inputVal
+    if (inputVal.includes('•')) {
+      targetVal = realAdmissionSheetId.value
+    } else {
+      targetVal = extractSheetId(inputVal)
+      realAdmissionSheetId.value = targetVal
+    }
+
+    await saveAdmissionSheetId(targetVal)
+    hasAdmissionSheetId.value = !!targetVal
+    admissionSheetIdInput.value = targetVal ? maskGoogleSheetId(targetVal) : ''
+    alert(targetVal ? '2027 대입 일정 구글 스프레드시트 ID가 저장되었습니다.' : '기본 시트 ID로 초기화되었습니다.')
+  } catch (e) {
+    console.error(e)
+    alert('대입 일정 시트 ID 저장 중 오류가 발생했습니다.')
+  } finally {
+    admissionSheetLoading.value = false
+  }
+}
+
+async function handleRefreshAdmissionData() {
+  admissionRefreshLoading.value = true
+  try {
+    await fetchAdmissionCalendarData({ forceRefresh: true })
+    alert('2027 대입 일정 시트 데이터가 성공적으로 갱신되었습니다!')
+  } catch (e) {
+    console.error(e)
+    alert(`동기화 실패: ${e.message}`)
+  } finally {
+    admissionRefreshLoading.value = false
   }
 }
 

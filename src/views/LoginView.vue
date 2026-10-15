@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center p-6 bg-slate-100 font-sans transition-colors duration-300">
+  <div class="min-h-screen flex flex-col items-center justify-start py-10 px-4 sm:px-6 bg-slate-100 font-sans transition-colors duration-300">
     <div
-      class="w-full bg-white shadow-xl border border-slate-200/80 transition-all duration-300 relative overflow-hidden"
+      class="w-full bg-white shadow-xl border border-slate-200/80 transition-all duration-300 relative overflow-hidden shrink-0"
       style="max-width: 460px; border-radius: 28px; padding: 2.25rem 2.25rem 2.5rem;"
     >
       <!-- Decorative background blur -->
@@ -517,6 +517,11 @@
       </div>
       <p v-if="success" class="text-sm font-semibold text-center mt-4 text-emerald-600 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200">{{ success }}</p>
     </div>
+
+    <!-- 대입 종합 일정 섹션 (오늘의 일정 / 주간 일정 / 3단 그룹형 월간 캘린더) -->
+    <div class="w-full max-w-6xl mt-12 pb-16">
+      <AdmissionCalendarWidget />
+    </div>
   </div>
 </template>
 
@@ -524,6 +529,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { GraduationCap, School, UserCheck, CheckCircle } from 'lucide-vue-next'
+import AdmissionCalendarWidget from '../components/calendar/AdmissionCalendarWidget.vue'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
