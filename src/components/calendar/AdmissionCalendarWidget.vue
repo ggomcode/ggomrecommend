@@ -341,22 +341,23 @@
 
       <!-- 월간 헤더: 월 이동 + 퀵점프 탭 + 범례 -->
       <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200">
-        <!-- 네비게이션: < 2026년 9월 > + 오늘 -->
-        <div class="flex items-center gap-3">
+        <!-- 네비게이션: < 2026년 / 10월 > + 이번 달 -->
+        <div class="flex items-center gap-2 sm:gap-3">
           <div class="flex items-center gap-1">
             <button
               @click="moveMonth(-1)"
-              class="w-9 h-9 rounded-xl border border-slate-200 hover:bg-slate-100 flex items-center justify-center font-bold text-slate-700 transition-colors cursor-pointer"
+              class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-slate-200 hover:bg-slate-100 flex items-center justify-center font-bold text-slate-700 transition-colors cursor-pointer shrink-0"
               title="이전 달"
             >
               ‹
             </button>
-            <h3 class="text-xl sm:text-2xl font-black text-slate-900 m-0 px-2 min-w-[140px] text-center">
-              {{ currentYearMonthLabel }}
+            <h3 class="text-center min-w-[70px] sm:min-w-[80px] m-0 px-1.5 leading-tight flex flex-col items-center justify-center">
+              <span class="text-xs sm:text-sm font-bold text-slate-500 tracking-tight leading-none mb-1">{{ currentYear }}년</span>
+              <span class="text-lg sm:text-2xl font-black text-slate-900 leading-none">{{ currentMonth }}월</span>
             </h3>
             <button
               @click="moveMonth(1)"
-              class="w-9 h-9 rounded-xl border border-slate-200 hover:bg-slate-100 flex items-center justify-center font-bold text-slate-700 transition-colors cursor-pointer"
+              class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-slate-200 hover:bg-slate-100 flex items-center justify-center font-bold text-slate-700 transition-colors cursor-pointer shrink-0"
               title="다음 달"
             >
               ›
@@ -365,7 +366,7 @@
 
           <button
             @click="jumpToToday"
-            class="px-3 py-1.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
+            class="px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-700 transition-colors cursor-pointer whitespace-nowrap"
           >
             이번 달
           </button>
@@ -390,22 +391,21 @@
         </div>
 
         <!-- 3단 트랙 및 학사일정 범례 안내 -->
-        <div class="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
-          <span class="text-[11px] text-slate-400">구분:</span>
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-bold text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
           <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rounded-sm bg-sky-500"></span>
+            <span class="w-3 h-3 rounded-sm bg-sky-500 shrink-0"></span>
             <span>🏫 학사일정 (시험·모평·행사)</span>
           </div>
           <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rounded-sm bg-emerald-400"></span>
+            <span class="w-3 h-3 rounded-sm bg-emerald-400 shrink-0"></span>
             <span>1단: 주요일정 (공통·원서)</span>
           </div>
           <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rounded-sm bg-indigo-500"></span>
+            <span class="w-3 h-3 rounded-sm bg-indigo-500 shrink-0"></span>
             <span>2단: 4년제 (대학별 고사)</span>
           </div>
           <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rounded-sm bg-amber-500"></span>
+            <span class="w-3 h-3 rounded-sm bg-amber-500 shrink-0"></span>
             <span>3단: 전문대 일정</span>
           </div>
         </div>
