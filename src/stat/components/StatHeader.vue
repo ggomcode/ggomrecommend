@@ -9,7 +9,7 @@
           class="w-5 h-5 text-blue-600 shrink-0" 
         />
         <h1 class="text-base sm:text-lg font-bold text-slate-900 m-0 leading-none">
-          {{ currentTabItem?.name || '수시 지원 통계' }}
+          {{ currentTabItem?.name || '대입 통계 시스템' }}
         </h1>
         <span 
           v-if="currentTabItem?.badge" 
@@ -21,21 +21,64 @@
 
       <div class="h-4 w-px bg-slate-200 hidden sm:block"></div>
 
-      <!-- 학년도 전환 드롭다운 -->
-      <div class="relative inline-flex items-center">
-        <select
-          :value="selectedAcademicYear"
-          @change="e => handleYearChange(e.target.value)"
-          class="appearance-none pl-2.5 pr-6 py-1 rounded-lg text-xs font-black bg-gradient-to-r from-amber-50 to-orange-50 text-amber-900 border border-amber-300 shadow-2xs hover:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 cursor-pointer"
-          title="분석 대상 학년도 전환"
+      <!-- 학년도 전환 & 모집시기/대학구분 드롭다운 & 동기화 상태 -->
+      <div class="flex items-center gap-2">
+        <!-- 1. 학년도 선택 드롭다운 -->
+        <div class="relative inline-flex items-center">
+          <select
+            :value="selectedAcademicYear"
+            :disabled="isLoadingYearData"
+            @change="e => handleYearChange(e.target.value)"
+            class="appearance-none pl-2.5 pr-6 py-1 rounded-lg text-xs font-black bg-gradient-to-r from-amber-50 to-orange-50 text-amber-900 border border-amber-300 shadow-2xs hover:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 cursor-pointer disabled:opacity-60"
+            title="대입 학년도 선택"
+          >
+            <option v-for="y in availableAcademicYears" :key="y" :value="y">
+              {{ y }}학년도 대입
+            </option>
+          </select>
+          <svg class="w-3.5 h-3.5 text-amber-700 pointer-events-none absolute right-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+
+        <!-- 2. 모집시기 및 대학구분 드롭다운 (전체, 수시 전체, 정시 전체, 수시 일반대, 정시 일반대, 수시 전문대, 정시 전문대) -->
+        <div class="relative inline-flex items-center">
+          <select
+            :value="selectedScope"
+            :disabled="isLoadingYearData"
+            @change="e => handleScopeChange(e.target.value)"
+            class="appearance-none pl-2.5 pr-6 py-1 rounded-lg text-xs font-black bg-gradient-to-r from-blue-50 to-indigo-50 text-indigo-950 border border-indigo-200 shadow-2xs hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer disabled:opacity-60"
+            title="모집시기 및 대학구분 선택"
+          >
+            <option v-for="opt in scopeOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+          <svg class="w-3.5 h-3.5 text-indigo-700 pointer-events-none absolute right-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+
+        <!-- 로딩 스피너 -->
+        <div v-if="isLoadingYearData" class="flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 animate-pulse">
+          <svg class="animate-spin w-3 h-3 text-amber-600" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span class="hidden md:inline">{{ selectedAcademicYear }} {{ currentScopeLabel }} 연동 중…</span>
+        </div>
+
+        <!-- 구글 시트 탭 실시간 새로고침 버튼 -->
+        <button
+          v-else
+          @click="reloadCurrentYear"
+          title="구글 시트에서 최신 원자료 다시 불러오기"
+          class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-indigo-600 cursor-pointer transition-colors"
         >
-          <option v-for="y in availableAcademicYears" :key="y" :value="y">
-            {{ y }}학년도 대입
-          </option>
-        </select>
-        <svg class="w-3.5 h-3.5 text-amber-700 pointer-events-none absolute right-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-        </svg>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -168,12 +211,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 const props = defineProps({
   currentTabItem: {
     type: Object,
-    default: () => ({ name: '종합 통계' })
+    default: () => ({ name: '대입 통계 시스템' })
   }
 })
 import KcueYearSheetModal from './KcueYearSheetModal.vue'
@@ -190,14 +233,28 @@ const {
   exportToExcel, 
   selectedAcademicYear, 
   availableAcademicYears, 
+  selectedScope,
+  scopeOptions,
   setAcademicYear, 
-  refreshYearSheets 
+  setScope,
+  refreshYearSheets,
+  isLoadingYearData,
+  reloadCurrentYear
 } = useStatData()
 
 const isYearSheetModalOpen = ref(false)
 
+const currentScopeLabel = computed(() => {
+  const opt = scopeOptions.find(o => o.value === selectedScope.value)
+  return opt ? opt.label : '데이터'
+})
+
 function handleYearChange(year) {
   setAcademicYear(year)
+}
+
+function handleScopeChange(scope) {
+  setScope(scope)
 }
 
 function handleSheetsSaved() {

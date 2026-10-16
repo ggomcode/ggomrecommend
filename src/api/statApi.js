@@ -1,4 +1,5 @@
 import { supabase } from '../utils/supabaseClient'
+import * as XLSX from 'xlsx'
 
 export const KCUE_SHEET_KEY = 'google_sheet_kcue_id'
 export const DEFAULT_KCUE_SHEET_ID = '1U5Vnx2x8gnXQlI3N4deyaurKxj-naZP0cRBb3lQnT4o'
@@ -152,6 +153,143 @@ export async function testKcueSheetTabConnection(sheetId, tabName) {
   } catch (err) {
     return { success: false, message: err.message || '연결 실패 (탭 이름 또는 공유 권한 확인 필요)', rowCount: 0 }
   }
+}
+
+/**
+ * 대교협 구글 시트 CSV 원자료를 시스템 표준 applications 배열로 파싱
+ */
+export function parseKcueRows(csvText) {
+  if (!csvText || typeof csvText !== 'string') return []
+
+  const wb = XLSX.read(csvText, { type: 'string' })
+  if (!wb.SheetNames || wb.SheetNames.length === 0) return []
+
+  const ws = wb.Sheets[wb.SheetNames[0]]
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1 })
+  if (!rows || rows.length < 2) return []
+
+  const rawHeaders = rows[0] || []
+  const colMap = {}
+  rawHeaders.forEach((h, idx) => {
+    if (!h) return
+    const clean = String(h).replace(/[\r\n\s]+/g, '').trim()
+    colMap[clean] = idx
+  })
+
+  const getVal = (row, ...keys) => {
+    for (const k of keys) {
+      const cleanK = k.replace(/[\r\n\s]+/g, '')
+      if (colMap[cleanK] !== undefined) {
+        const val = row[colMap[cleanK]]
+        if (val !== undefined && val !== null && val !== '') return val
+      }
+    }
+    return ''
+  }
+
+  const getNum = (row, ...keys) => {
+    const v = getVal(row, ...keys)
+    if (v === '' || v === null || v === undefined) return null
+    const n = Number(v)
+    return isNaN(n) ? null : n
+  }
+
+  const result = []
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i]
+    if (!r || r.length === 0) continue
+    const name = String(getVal(r, '이름')).trim()
+    if (!name) continue
+
+    const grade = getNum(r, '학년') || 3
+    const classNum = getVal(r, '반') || ''
+    const studentNum = getNum(r, '번호') || ''
+    const univName = String(getVal(r, '대학명')).trim()
+    const region = String(getVal(r, '지역')).trim()
+    const admissionType = String(getVal(r, '전형유형')).trim()
+    const admissionMajorType = String(getVal(r, '전형명(대)')).trim()
+    const admissionDetailType = String(getVal(r, '세부유형')).trim()
+    const minScoreReq = String(getVal(r, '최저학력기준')).trim()
+
+    const isRecommendation = admissionMajorType.includes('추천') || 
+      admissionMajorType.includes('지역균형') || 
+      admissionDetailType.includes('추천') || 
+      admissionDetailType.includes('지역균형')
+
+    const isRural = admissionMajorType.includes('농어촌') || admissionDetailType.includes('농어촌')
+    const isOpportunity = admissionMajorType.includes('기회균형') || 
+      admissionMajorType.includes('고른기회') || 
+      admissionMajorType.includes('사회배려') || 
+      admissionMajorType.includes('수급자') ||
+      admissionDetailType.includes('기회균형') || 
+      admissionDetailType.includes('고른기회')
+
+    const isMetro = ['경기', '서울', '인천'].includes(region)
+    const isGraduate = String(classNum).includes('졸업') || grade !== 3
+    const studentKey = `${classNum}-${studentNum}_${name}`
+
+    result.push({
+      id: i,
+      grade,
+      classNum,
+      studentNum,
+      name,
+      studentKey,
+      isGraduate,
+      schoolType: String(getVal(r, '학교유형')).trim(),
+      region,
+      univName,
+      period: String(getVal(r, '모집시기')).trim() || '수시',
+      admissionType,
+      admissionMajorType,
+      admissionDetailType,
+      field: String(getVal(r, '계열')).trim(),
+      dept: String(getVal(r, '모집단위')).trim(),
+      quota: getNum(r, '모집인원'),
+      selectionMethod: String(getVal(r, '선발유형')).trim(),
+      minScoreReq,
+      hasMinScore: !!minScoreReq,
+      score9Grade: getNum(r, '(9등급)일반등급', '일반등급'),
+      univConvertedScore: getNum(r, '내점수(환산)', '대학환산점수'),
+      univConvertedGrade: getNum(r, '내등급(환산)', '대학환산등급'),
+      stage1: String(getVal(r, '1단계')).trim(),
+      finalStage: String(getVal(r, '최종단계')).trim(),
+      failReason: String(getVal(r, '불합격사유')).trim(),
+      candidateRank: String(getVal(r, '최초후보순위')).trim(),
+      registerStatus: String(getVal(r, '등록여부')).trim(),
+      note: String(getVal(r, '비고')).trim(),
+      interviewDate: String(getVal(r, '면접일자')).trim(),
+      practicalDate: String(getVal(r, '실기일자')).trim(),
+      essayDate: String(getVal(r, '논술일자')).trim(),
+      finalAnnounceDate: String(getVal(r, '최종발표일')).trim(),
+      korGrade: getNum(r, '국어'),
+      engGrade: getNum(r, '영어'),
+      mathGrade: getNum(r, '수학'),
+      socGrade: getNum(r, '사회'),
+      sciGrade: getNum(r, '과학'),
+      allSubjectGrade: getNum(r, '전교과(100)', '전교과'),
+      mainSubjectGrade: getNum(r, '국영수사/과(100)', '국영수사/과'),
+      koreanMathEnglish: getNum(r, '국영수'),
+      isRecommendation,
+      isRural,
+      isOpportunity,
+      isMetro
+    })
+  }
+
+  return result
+}
+
+/**
+ * 학년도 및 전형 시기별 시트 탭 데이터를 가져와 파싱된 배열로 반환
+ * @param {string} sheetId 
+ * @param {string} year 예: '2026', '2027'
+ * @param {string} type 예: '수시', '정시'
+ */
+export async function fetchAndParseKcueYearData(sheetId, year, type = '수시') {
+  const tabName = getKcueTabName(year, type)
+  const csv = await fetchKcueSheetTabCsv(sheetId, tabName)
+  return parseKcueRows(csv)
 }
 
 /**

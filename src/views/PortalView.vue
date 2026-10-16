@@ -396,11 +396,11 @@
             </div>
 
             <h3 class="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors mb-3">
-              수시 지원 통계 분석
+              대입 통계 시스템
             </h3>
             
             <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              2027학년도 대입 수시 지원 현황(1,376건), 대학별·성적대별 출원 경향, 면접·대학별고사 일정 및 학생별 6장 지원 카드를 다각도로 분석합니다.
+              대교협 원자료 기반 수시·정시 지원 현황, 대학별·성적대별 출원 경향, 면접·대학별고사 일정 및 학생별 지원 카드를 다각도로 분석합니다.
             </p>
           </div>
 

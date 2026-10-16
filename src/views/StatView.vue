@@ -30,7 +30,7 @@
           </div>
           <div class="flex flex-col leading-tight">
             <span class="text-[10px] font-extrabold text-blue-600 tracking-tight">{{ schoolName }}</span>
-            <span class="text-sm font-black text-slate-900 tracking-tight">수시 지원 통계 시스템</span>
+            <span class="text-sm font-black text-slate-900 tracking-tight">대입 통계 시스템</span>
           </div>
         </div>
 
@@ -154,7 +154,56 @@
       <!-- 스크롤 가능한 본문 영역 -->
       <div class="flex-1 min-h-0 flex flex-col overflow-y-auto" style="scrollbar-gutter: stable;">
         <div class="max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-          <Transition name="fade" mode="out-in">
+          <!-- 1. 구글 시트 탭 데이터 실시간 로딩 중 -->
+          <div v-if="isLoadingYearData" class="flex flex-col items-center justify-center py-24 text-center">
+            <div class="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-200/60 flex items-center justify-center mb-4 text-indigo-600 shadow-sm">
+              <svg class="animate-spin w-7 h-7" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+            </div>
+            <h3 class="text-base font-bold text-slate-800 m-0">
+              {{ selectedAcademicYear }}학년도 대교협 수시 원자료를 불러오는 중입니다
+            </h3>
+            <p class="text-xs text-slate-500 mt-1.5 m-0">
+              구글 스프레드시트의 <code class="px-1.5 py-0.5 bg-slate-200 rounded text-indigo-700 font-bold font-mono">{{ selectedAcademicYear }}수시</code> 탭에서 데이터를 실시간으로 동기화하고 있습니다.
+            </p>
+          </div>
+
+          <!-- 2. 데이터가 없는 경우 (미등록 연도 또는 탭 부재) -->
+          <div v-else-if="!applications || applications.length === 0" class="flex flex-col items-center justify-center py-20 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mb-4 text-2xl shadow-xs">
+              📂
+            </div>
+            <h3 class="text-base font-bold text-slate-800 m-0">
+              {{ selectedAcademicYear }}학년도 수시 지원 데이터가 등록되지 않았습니다
+            </h3>
+            <p class="text-xs text-slate-500 mt-2 max-w-md m-0 leading-relaxed">
+              {{ yearDataError || `구글 스프레드시트에 '${selectedAcademicYear}수시' 탭이 없거나 데이터가 비어 있습니다.` }}
+            </p>
+            <div class="mt-4 flex items-center gap-2">
+              <button
+                @click="reloadCurrentYear"
+                class="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg border-none shadow-xs cursor-pointer transition-colors"
+              >
+                🔄 데이터 다시 불러오기
+              </button>
+            </div>
+            <div class="mt-6 p-4 rounded-xl bg-white border border-slate-200 text-left text-xs text-slate-600 max-w-lg shadow-2xs space-y-1.5">
+              <div class="font-bold text-slate-800 flex items-center gap-1.5">
+                <span>💡</span>
+                <span>{{ selectedAcademicYear }}학년도 데이터 연동 방법</span>
+              </div>
+              <p class="text-[11px] text-slate-500 m-0 leading-normal">
+                1. 상단 우측 [구글 시트] 메뉴에서 대교협 스프레드시트를 엽니다.<br />
+                2. 하단에 <code class="bg-indigo-50 text-indigo-700 px-1 py-0.2 rounded font-mono font-bold">{{ selectedAcademicYear }}수시</code> 이름으로 새 시트 탭을 생성합니다.<br />
+                3. 대교협 수시 지원 원자료 엑셀의 내용을 A1 셀부터 그대로 붙여넣은 뒤 위의 <strong>[다시 불러오기]</strong> 버튼을 누르면 즉시 통계가 생성됩니다.
+              </p>
+            </div>
+          </div>
+
+          <!-- 3. 정상 데이터 탭 화면 -->
+          <Transition v-else name="fade" mode="out-in">
             <component :is="activeTabComponent" />
           </Transition>
         </div>
@@ -165,10 +214,10 @@
             <div>
               <span class="font-bold text-slate-700">{{ schoolName }}</span>
               <span class="mx-1.5">•</span>
-              <span>{{ selectedAcademicYear }}학년도 대입 수시 지원 통계 분석 시스템 (꼼스탯)</span>
+              <span>{{ selectedAcademicYear }}학년도 대입 통계 분석 시스템 (꼼스탯)</span>
             </div>
             <div class="text-slate-400">
-              <span>대교협 수시 원서접수 자료 연계</span>
+              <span>대교협 대입 원서접수 자료 연계</span>
             </div>
           </div>
         </footer>
@@ -211,25 +260,36 @@ import {
 
 const router = useRouter()
 const auth = useAuthStore()
-const { selectedAcademicYear } = useStatData()
+const { 
+  selectedAcademicYear, 
+  applications, 
+  isLoadingYearData, 
+  yearDataError, 
+  reloadCurrentYear 
+} = useStatData()
 
 // 사이드바 접기/펼치기 상태
 const collapsed = ref(false)
 const currentTab = ref('overview')
 
-const tabs = [
+const tabs = computed(() => [
   { id: 'overview', name: '종합 통계', iconComponent: BarChart3 },
   { id: 'multiYear', name: '5개년 비교 분석', iconComponent: TrendingUp, badge: 'NEW' },
   { id: 'university', name: '대학별 분석', iconComponent: Building2 },
   { id: 'grade', name: '성적대별 경향', iconComponent: Target },
   { id: 'calendar', name: '면접·고사 캘린더', iconComponent: CalendarDays },
   { id: 'student', name: '학생별 6장 카드', iconComponent: Users },
-  { id: 'data', name: '전체 데이터 탐색기', iconComponent: FileSpreadsheet, badge: '1,376' },
+  { 
+    id: 'data', 
+    name: '전체 데이터 탐색기', 
+    iconComponent: FileSpreadsheet, 
+    badge: applications.value?.length ? applications.value.length.toLocaleString() : '0' 
+  },
   { id: 'report', name: '공식 인쇄 보고서', iconComponent: Printer }
-]
+])
 
 const currentTabItem = computed(() => {
-  return tabs.find(t => t.id === currentTab.value) || tabs[0]
+  return tabs.value.find(t => t.id === currentTab.value) || tabs.value[0]
 })
 
 const activeTabComponent = computed(() => {

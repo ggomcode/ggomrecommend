@@ -2,18 +2,183 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import rawAppsData from '../data/applications.json'
 import { MULTI_YEAR_STATS } from '../data/multiYearStats.js'
-import { getKcueYearSheets, DEFAULT_KCUE_YEAR_SHEETS } from '../../api/statApi.js'
+import { 
+  getKcueSheetId, 
+  getKcueYearSheets, 
+  DEFAULT_KCUE_YEAR_SHEETS, 
+  fetchAndParseKcueYearData, 
+  STANDARD_KCUE_YEARS 
+} from '../../api/statApi.js'
 import officialStatsData from '../data/officialStats.json'
 import * as XLSX from 'xlsx'
+
+/**
+ * 대입 학년도 자동 계산 규칙:
+ * 오늘 날짜가 3월 1일 ~ 이듬해 2월 말일이면 다음 연도 대입학년도로 계산
+ * 예: 2026년 3월 1일 ~ 2027년 2월 28일 -> '2027'학년도 대입
+ */
+export function getCurrentAcademicYear(date = new Date()) {
+  const y = date.getFullYear()
+  const m = date.getMonth() + 1 // 1 ~ 12
+  return m >= 3 ? String(y + 1) : String(y)
+}
+
+/**
+ * 모집시기 및 대학구분 필터 옵션
+ */
+export const SCOPE_OPTIONS = [
+  { value: 'ALL', label: '전체(수시+정시)', period: 'ALL', schoolType: 'ALL' },
+  { value: 'SUSI_ALL', label: '수시 전체', period: '수시', schoolType: 'ALL' },
+  { value: 'JUNGSI_ALL', label: '정시 전체', period: '정시', schoolType: 'ALL' },
+  { value: 'SUSI_UNIV', label: '수시 일반대', period: '수시', schoolType: '일반대' },
+  { value: 'JUNGSI_UNIV', label: '정시 일반대', period: '정시', schoolType: '일반대' },
+  { value: 'SUSI_COLLEGE', label: '수시 전문대', period: '수시', schoolType: '전문대' },
+  { value: 'JUNGSI_COLLEGE', label: '정시 전문대', period: '정시', schoolType: '전문대' }
+]
 
 // Global state
 const applications = ref(rawAppsData)
 const officialStats = ref(officialStatsData)
 
 // Academic Year State & Multi-Year Sheet Management
-const selectedAcademicYear = ref(localStorage.getItem('pcm_stat_selected_year') || '2027')
-const availableAcademicYears = ref(['2027', '2026', '2025', '2024', '2023'])
+const defaultYear = getCurrentAcademicYear()
+const selectedAcademicYear = ref(localStorage.getItem('pcm_stat_selected_year') || defaultYear)
+const selectedScope = ref(localStorage.getItem('pcm_stat_selected_scope') || 'SUSI_ALL')
+const availableAcademicYears = ref([...STANDARD_KCUE_YEARS])
 const kcueYearSheets = ref({ ...DEFAULT_KCUE_YEAR_SHEETS })
+
+// 연도 및 시기별 인메모리 캐시 (예: '2027_수시', '2026_수시', '2027_정시')
+const yearlyApplicationsCache = ref({
+  '2027_수시': rawAppsData
+})
+const isLoadingYearData = ref(false)
+const yearDataError = ref(null)
+
+// 공식 통계 요약 헬퍼
+function updateOfficialStats(strYear, appsList) {
+  const yData = MULTI_YEAR_STATS.byYear[strYear]
+  if (yData && yData.hasData && selectedScope.value === 'SUSI_ALL') {
+    officialStats.value = {
+      ...officialStatsData,
+      academicYear: Number(strYear),
+      totalStudents: yData.totalStudents,
+      applicantStudents: yData.applicantStudents,
+      applicantRate: yData.applicantRate,
+      totalApplications: yData.totalApplications,
+      avgApplicationsPerStudent: yData.avgAppsPerStudent,
+      metroBreakdown: {
+        metro: { count: Math.round(yData.totalApplications * (yData.metroRate / 100)), rate: yData.metroRate },
+        nonMetro: { count: Math.round(yData.totalApplications * (yData.nonMetroRate / 100)), rate: yData.nonMetroRate },
+        total: yData.totalApplications
+      }
+    }
+  } else if (appsList && appsList.length > 0) {
+    const studentKeys = new Set(appsList.map(a => a.studentKey))
+    const totalApps = appsList.length
+    const totalStudents = studentKeys.size
+    const metroApps = appsList.filter(a => a.isMetro).length
+    const metroRate = totalApps > 0 ? Number(((metroApps / totalApps) * 100).toFixed(1)) : 0
+    officialStats.value = {
+      ...officialStatsData,
+      academicYear: Number(strYear),
+      totalStudents: totalStudents,
+      applicantStudents: totalStudents,
+      applicantRate: '100.0',
+      totalApplications: totalApps,
+      avgApplicationsPerStudent: totalStudents > 0 ? Number((totalApps / totalStudents).toFixed(1)) : 0,
+      metroBreakdown: {
+        metro: { count: metroApps, rate: metroRate },
+        nonMetro: { count: totalApps - metroApps, rate: Number((100 - metroRate).toFixed(1)) },
+        total: totalApps
+      }
+    }
+  } else {
+    officialStats.value = null
+  }
+}
+
+/**
+ * 특정 연도와 모집시기의 데이터 로드 (캐시 우선)
+ */
+async function loadPeriodData(year, period = '수시', forceReload = false) {
+  const strYear = String(year)
+  const cacheKey = `${strYear}_${period}`
+
+  if (!forceReload && yearlyApplicationsCache.value[cacheKey] && yearlyApplicationsCache.value[cacheKey].length > 0) {
+    return yearlyApplicationsCache.value[cacheKey]
+  }
+
+  // 2027 수시 기본값 fallback
+  if (strYear === '2027' && period === '수시' && !forceReload) {
+    yearlyApplicationsCache.value[cacheKey] = rawAppsData
+    return rawAppsData
+  }
+
+  const sheetId = await getKcueSheetId()
+  try {
+    const loaded = await fetchAndParseKcueYearData(sheetId, strYear, period)
+    if (loaded && loaded.length > 0) {
+      yearlyApplicationsCache.value[cacheKey] = loaded
+      return loaded
+    }
+    return []
+  } catch (e) {
+    console.warn(`[useStatData] Failed to load ${strYear}${period} tab:`, e)
+    if (strYear === '2027' && period === '수시') {
+      yearlyApplicationsCache.value[cacheKey] = rawAppsData
+      return rawAppsData
+    }
+    return []
+  }
+}
+
+/**
+ * 학년도 및 스코프(모집시기/대학구분) 동시 적용 및 데이터 갱신
+ */
+async function applyYearAndScope(year, scope, forceReload = false) {
+  const strYear = String(year)
+  selectedAcademicYear.value = strYear
+  selectedScope.value = scope
+  localStorage.setItem('pcm_stat_selected_year', strYear)
+  localStorage.setItem('pcm_stat_selected_scope', scope)
+  yearDataError.value = null
+
+  isLoadingYearData.value = true
+  try {
+    let combined = []
+    if (scope === 'ALL') {
+      const susiApps = await loadPeriodData(strYear, '수시', forceReload)
+      const jungsiApps = await loadPeriodData(strYear, '정시', forceReload)
+      combined = [...susiApps, ...jungsiApps]
+    } else if (scope.startsWith('JUNGSI')) {
+      combined = await loadPeriodData(strYear, '정시', forceReload)
+    } else {
+      // SUSI_*
+      combined = await loadPeriodData(strYear, '수시', forceReload)
+    }
+
+    applications.value = combined
+    updateOfficialStats(strYear, combined)
+
+    if (combined.length === 0) {
+      const periodLabel = scope.startsWith('JUNGSI') ? '정시' : '수시'
+      yearDataError.value = `구글 스프레드시트에 '${strYear}${periodLabel}' 탭이 없거나 데이터가 비어 있습니다.`
+    }
+  } catch (e) {
+    console.warn(`[useStatData] applyYearAndScope failed:`, e)
+    yearDataError.value = e.message || '데이터를 불러오는 중 오류가 발생했습니다.'
+  } finally {
+    isLoadingYearData.value = false
+  }
+}
+
+async function setAcademicYear(year, forceReload = false) {
+  await applyYearAndScope(year, selectedScope.value, forceReload)
+}
+
+async function setScope(scope) {
+  await applyYearAndScope(selectedAcademicYear.value, scope, false)
+}
 
 async function initYearSheets() {
   try {
@@ -25,44 +190,14 @@ async function initYearSheets() {
         availableAcademicYears.value = years
       }
     }
+    // 초기 로드 실행
+    await applyYearAndScope(selectedAcademicYear.value, selectedScope.value)
   } catch (e) {
     console.warn('Failed to load KCUE year sheets in useStatData:', e)
   }
 }
 initYearSheets()
 
-function setAcademicYear(year) {
-  const strYear = String(year)
-  selectedAcademicYear.value = strYear
-  localStorage.setItem('pcm_stat_selected_year', strYear)
-
-  if (strYear === '2027') {
-    applications.value = rawAppsData
-    officialStats.value = officialStatsData
-  } else {
-    const yData = MULTI_YEAR_STATS.byYear[strYear]
-    if (yData && yData.hasData) {
-      officialStats.value = {
-        ...officialStatsData,
-        academicYear: Number(strYear),
-        totalStudents: yData.totalStudents,
-        applicantStudents: yData.applicantStudents,
-        applicantRate: yData.applicantRate,
-        totalApplications: yData.totalApplications,
-        avgApplicationsPerStudent: yData.avgAppsPerStudent,
-        metroBreakdown: {
-          metro: { count: Math.round(yData.totalApplications * (yData.metroRate / 100)), rate: yData.metroRate },
-          nonMetro: { count: Math.round(yData.totalApplications * (yData.nonMetroRate / 100)), rate: yData.nonMetroRate },
-          total: yData.totalApplications
-        }
-      }
-    } else {
-      // 미등록 연도는 허수 데이터를 주입하지 않고 빈 배열 처리
-      applications.value = []
-      officialStats.value = null
-    }
-  }
-}
 
 // Filters
 const selectedClass = ref('ALL') // ALL, ENROLLED, 1..11, 졸업생
@@ -144,6 +279,25 @@ export function useStatData() {
   // Filtered applications
   const filteredApplications = computed(() => {
     return applications.value.filter(app => {
+      // Scope filter (모집시기 및 대학구분)
+      if (selectedScope.value === 'SUSI_ALL') {
+        if (app.period && app.period !== '수시') return false
+      } else if (selectedScope.value === 'JUNGSI_ALL') {
+        if (app.period && app.period !== '정시') return false
+      } else if (selectedScope.value === 'SUSI_UNIV') {
+        if (app.period && app.period !== '수시') return false
+        if (app.schoolType && app.schoolType !== '일반대') return false
+      } else if (selectedScope.value === 'JUNGSI_UNIV') {
+        if (app.period && app.period !== '정시') return false
+        if (app.schoolType && app.schoolType !== '일반대') return false
+      } else if (selectedScope.value === 'SUSI_COLLEGE') {
+        if (app.period && app.period !== '수시') return false
+        if (app.schoolType && app.schoolType !== '전문대') return false
+      } else if (selectedScope.value === 'JUNGSI_COLLEGE') {
+        if (app.period && app.period !== '정시') return false
+        if (app.schoolType && app.schoolType !== '전문대') return false
+      }
+
       // Class filter
       if (selectedClass.value === 'ENROLLED') {
         if (app.isGraduate || app.classNum === '졸업생') return false
@@ -437,10 +591,16 @@ export function useStatData() {
     formatGrade,
     selectedAcademicYear,
     availableAcademicYears,
-    kcueYearSheets,
+    selectedScope,
+    scopeOptions: SCOPE_OPTIONS,
     setAcademicYear,
+    setScope,
     refreshYearSheets: initYearSheets,
-    multiYearStats: MULTI_YEAR_STATS
+    isLoadingYearData,
+    yearDataError,
+    reloadCurrentYear: () => applyYearAndScope(selectedAcademicYear.value, selectedScope.value, true),
+    multiYearStats: MULTI_YEAR_STATS,
+    getCurrentAcademicYear
   }
 }
 
