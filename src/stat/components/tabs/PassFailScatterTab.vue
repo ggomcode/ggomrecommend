@@ -99,20 +99,20 @@
           >
             <option value="ALL">합불 전체</option>
             <option value="PASS">최종 합격만 (●)</option>
-            <option value="STAGE1">1차합격(최종불)만 (●)</option>
+            <option value="STAGE1">1차합격(최종불)만 (▲)</option>
             <option value="FAIL">불합격만 (✕)</option>
           </select>
 
-          <!-- Option Checkbox: 1차합격 표시 (주황색 원형점) -->
+          <!-- Option Checkbox: 1차합격 표시 (에메랄드 녹색 세모 ▲) -->
           <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 cursor-pointer transition-colors shadow-2xs select-none">
             <input
               type="checkbox"
               v-model="showStage1Pass"
-              class="rounded text-amber-500 focus:ring-amber-400 w-3.5 h-3.5 cursor-pointer"
+              class="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 cursor-pointer"
             />
             <span>1차합격 표시 (</span>
-            <span class="inline-flex items-center gap-1 font-bold text-amber-600">
-              <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> 주황 원
+            <span class="inline-flex items-center gap-1 font-bold text-emerald-600">
+              <span class="text-xs">▲</span> 녹색 세모
             </span>
             <span>)</span>
           </label>
@@ -136,10 +136,10 @@
             <span class="text-slate-300">|</span>
             <span 
               class="inline-flex items-center gap-1 font-bold transition-opacity"
-              :class="showStage1Pass ? 'text-amber-600' : 'text-slate-500'"
+              :class="showStage1Pass ? 'text-emerald-700' : 'text-slate-500'"
               title="1단계 합격 후 최종 불합격"
             >
-              <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> 1차합격 {{ totalStage1PassCount }}건
+              <span class="text-emerald-600 text-xs">▲</span> 1차합격 {{ totalStage1PassCount }}건
             </span>
             <span class="text-slate-300">|</span>
             <span class="inline-flex items-center gap-1 font-bold text-rose-600" title="최종 불합격">
@@ -292,7 +292,7 @@
           <span 
             :class="[
               'px-1.5 py-0.5 rounded text-[10px] font-black',
-              hoveredPoint.isPass ? 'bg-blue-500 text-white' : (hoveredPoint.isStage1Pass ? 'bg-amber-500 text-white' : 'bg-rose-500 text-white')
+              hoveredPoint.isPass ? 'bg-blue-500 text-white' : (hoveredPoint.isStage1Pass ? 'bg-emerald-600 text-white' : 'bg-rose-500 text-white')
             ]"
           >
             {{ hoveredPoint.resultBadge || hoveredPoint.resultText }}

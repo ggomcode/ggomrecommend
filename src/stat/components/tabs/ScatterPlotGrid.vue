@@ -88,8 +88,8 @@
             >
               <!-- Final Pass: Blue Filled Circle ● -->
               <span v-if="pt.markerType === 'pass'" class="dot-symbol pass-dot">●</span>
-              <!-- Stage 1 Pass (when enabled): Orange Filled Circle ● -->
-              <span v-else-if="pt.markerType === 'stage1'" class="dot-symbol stage1-dot">●</span>
+              <!-- Stage 1 Pass (when enabled): Emerald Green Filled Triangle ▲ -->
+              <span v-else-if="pt.markerType === 'stage1'" class="triangle-symbol stage1-triangle">▲</span>
               <!-- Fail: Red/Coral Cross ✕ -->
               <span v-else class="cross-symbol">✕</span>
             </div>
@@ -469,7 +469,7 @@ function handleMouseLeave() {
   z-index: 1;
 }
 
-/* Dots: Blue Filled Circle ● vs Orange Filled Circle ● */
+/* Dots: Blue Filled Circle ● */
 .dot-symbol {
   font-size: 13px;
   line-height: 1;
@@ -480,8 +480,15 @@ function handleMouseLeave() {
   color: #2563eb;
 }
 
-.stage1-dot {
-  color: #ea580c;
+/* Stage 1 Triangle: Emerald Green Filled Triangle ▲ */
+.triangle-symbol {
+  font-size: 11px;
+  line-height: 1;
+  text-shadow: 0 0 1px rgba(255, 255, 255, 0.9);
+}
+
+.stage1-triangle {
+  color: #059669;
 }
 
 /* Fail Cross: Red ✕ */
@@ -520,8 +527,8 @@ function handleMouseLeave() {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  .stage1-dot {
-    color: #ea580c !important;
+  .stage1-triangle {
+    color: #047857 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
