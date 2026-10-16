@@ -241,6 +241,7 @@ import CalendarTab from '../stat/components/tabs/CalendarTab.vue'
 import StudentTab from '../stat/components/tabs/StudentTab.vue'
 import DataExplorerTab from '../stat/components/tabs/DataExplorerTab.vue'
 import PrintReportTab from '../stat/components/tabs/PrintReportTab.vue'
+import PassFailScatterTab from '../stat/components/tabs/PassFailScatterTab.vue'
 import { useStatData } from '../stat/composables/useStatData'
 import { schoolName } from '../utils/schoolConfig'
 import {
@@ -255,7 +256,8 @@ import {
   ChevronRight,
   Menu,
   Home,
-  LogOut
+  LogOut,
+  ChartScatter
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -274,7 +276,8 @@ const currentTab = ref('overview')
 
 const tabs = computed(() => [
   { id: 'overview', name: '종합 통계', iconComponent: BarChart3 },
-  { id: 'multiYear', name: '5개년 비교 분석', iconComponent: TrendingUp, badge: 'NEW' },
+  { id: 'scatter', name: '대입 합불 산점도', iconComponent: ChartScatter, badge: 'NEW' },
+  { id: 'multiYear', name: '5개년 비교 분석', iconComponent: TrendingUp },
   { id: 'university', name: '대학별 분석', iconComponent: Building2 },
   { id: 'grade', name: '성적대별 경향', iconComponent: Target },
   { id: 'calendar', name: '면접·고사 캘린더', iconComponent: CalendarDays },
@@ -295,6 +298,7 @@ const currentTabItem = computed(() => {
 const activeTabComponent = computed(() => {
   switch (currentTab.value) {
     case 'overview': return OverviewTab
+    case 'scatter': return PassFailScatterTab
     case 'multiYear': return MultiYearTab
     case 'university': return UniversityTab
     case 'grade': return GradeTab
