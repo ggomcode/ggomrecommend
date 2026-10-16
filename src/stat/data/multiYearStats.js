@@ -178,20 +178,20 @@ export const MULTI_YEAR_STATS = {
     {
       groupName: '의·치·한·약·수',
       note: '의학·치의학·한의학·약학·수의학',
-      data: { '2023': null, '2024': null, '2025': null, '2026': 17, '2027': 13 },
-      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 1.38, '2027': 1.52 }
+      data: { '2023': null, '2024': null, '2025': null, '2026': 19, '2027': 2 },
+      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 1.59, '2027': 2.92 }
     },
     {
       groupName: '수도권 주요 15개대',
-      note: '중앙·경희·외대·시립·건국·동국·홍익 등',
-      data: { '2023': null, '2024': null, '2025': null, '2026': 308, '2027': 162 },
-      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 3.38, '2027': 2.86 }
+      note: '중앙·경희·외대·시립·건국·동국·홍익·국민·숭실·세종 등',
+      data: { '2023': null, '2024': null, '2025': null, '2026': 299, '2027': 213 },
+      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 3.35, '2027': 3.26 }
     },
     {
       groupName: '경기권 거점/선호대',
-      note: '아주대, 인하대, 경기대, 가천대, 단국대 등',
-      data: { '2023': null, '2024': null, '2025': null, '2026': 318, '2027': 345 },
-      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 4.07, '2027': 3.68 }
+      note: '아주·인하·경기·가천·강남·명지·수원·용인·평택 등',
+      data: { '2023': null, '2024': null, '2025': null, '2026': 408, '2027': 315 },
+      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 4.07, '2027': 3.85 }
     }
   ]
 }
@@ -217,7 +217,10 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
   const bands = { '1~2등급': 0, '2~3등급': 0, '3~4등급': 0, '4~5등급': 0, '5~6등급': 0, '6등급이하': 0 }
 
   const g5Univs = ['중앙대학교', '경희대학교', '한국외국어대학교', '서울시립대학교', '건국대학교', '동국대학교', '홍익대학교', '숙명여자대학교', '국민대학교', '숭실대학교', '세종대학교', '단국대학교']
-  const g6Univs = ['아주대학교', '인하대학교', '경기대학교', '가천대학교', '강남대학교', '명지대학교', '상명대학교', '수원대학교', '용인대학교']
+  const isG5 = u => g5Univs.some(name => u.includes(name)) && !u.includes('동국대학교(WISE)')
+
+  const g6Univs = ['아주대학교', '인하대학교', '경기대학교', '가천대학교', '강남대학교', '명지대학교', '상명대학교', '수원대학교', '용인대학교', '성결대학교', '안양대학교', '평택대학교', '한신대학교', '한국공학대학교', '한국항공대학교']
+  const isG6 = u => g6Univs.some(name => u.includes(name))
 
   const targetStats = {
     '설·포·연·고': { count: 0, grades: [] },
@@ -266,7 +269,10 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
     // Target university groups (정밀 본교 매칭)
     const u = String(r.univName || '').trim()
     const d = String(r.dept || '').trim()
-    const isMed = ['의예', '치의', '한의', '약학', '수의', '의학'].some(m => d.includes(m))
+    
+    // 의치한약수 엄격 필터링 (스포츠의학, 식물의학, 바이오의약 등 비의료계열 제외)
+    const isMed = !d.includes('스포츠의학') && !d.includes('식물의학') && !d.includes('바이오의약') &&
+                  ['의예', '치의', '한의', '약학', '수의', '의학'].some(m => d.includes(m))
 
     const isG1 = (u === '서울대학교' || u.startsWith('서울대학교(') ||
                   u === '포항공과대학교' || u.startsWith('포항공과대학교(') ||
@@ -281,8 +287,8 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
                  !u.includes('ERICA') && !u.includes('에리카') && !u.includes('한양여')
 
     const isG3 = ['한국과학기술원', 'KAIST', '울산과학기술원', 'UNIST', '대구경북과학기술원', 'DGIST', '광주과학기술원', 'GIST', '한국에너지공과대학교', 'KENTECH'].some(name => u.includes(name))
-    const isG5 = g5Univs.some(name => u.includes(name))
-    const isG6 = g6Univs.some(name => u.includes(name))
+    const isG5Val = isG5(u)
+    const isG6Val = isG6(u) && !isG5Val && !isG1 && !isG2
 
     const validG = (g !== null && !isNaN(g) && g > 0) ? g : null
 
@@ -305,11 +311,11 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
       targetStats['의·치·한·약·수'].count++
       if (validG) targetStats['의·치·한·약·수'].grades.push(validG)
     }
-    if (isG5) {
+    if (isG5Val) {
       targetStats['수도권 주요 15개대'].count++
       if (validG) targetStats['수도권 주요 15개대'].grades.push(validG)
     }
-    if (isG6) {
+    if (isG6Val) {
       targetStats['경기권 거점/선호대'].count++
       if (validG) targetStats['경기권 거점/선호대'].grades.push(validG)
     }
