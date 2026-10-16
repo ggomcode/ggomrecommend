@@ -1,15 +1,17 @@
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import rawAppsData from '../data/applications.json'
-import { MULTI_YEAR_STATS } from '../data/multiYearStats.js'
+import { MULTI_YEAR_STATS, computeYearMultiYearStats } from '../data/multiYearStats.js'
 import { 
   getKcueSheetId, 
   getKcueYearSheets, 
   DEFAULT_KCUE_YEAR_SHEETS, 
   fetchAndParseKcueYearData, 
   fetchBasicSchoolStats,
-  STANDARD_KCUE_YEARS 
+  STANDARD_KCUE_YEARS,
+  getActualGoogleSheetTabs
 } from '../../api/statApi.js'
+import { supabase } from '../../utils/supabaseClient'
 import officialStatsData from '../data/officialStats.json'
 import * as XLSX from 'xlsx'
 
@@ -43,9 +45,8 @@ const applications = ref(rawAppsData)
 const officialStats = ref(officialStatsData)
 
 // Academic Year State & Multi-Year Sheet Management
-// 저장된 연도가 2026 또는 2027이 아니라면 (예: 2025 등) 무조건 기본값 2027로 초기화
 const savedYear = localStorage.getItem('pcm_stat_selected_year')
-const initialYear = (savedYear === '2026' || savedYear === '2027') ? savedYear : '2027'
+const initialYear = STANDARD_KCUE_YEARS.includes(savedYear) ? savedYear : '2027'
 const selectedAcademicYear = ref(initialYear)
 if (savedYear !== initialYear) {
   localStorage.setItem('pcm_stat_selected_year', initialYear)
@@ -63,11 +64,94 @@ const isLoadingYearData = ref(false)
 const yearDataError = ref(null)
 const basicSchoolStats = ref({})
 
+// 5개년 반응형 통계 상태 및 사용자 동기화 영구 저장소
+const reactiveMultiYearStats = reactive(JSON.parse(JSON.stringify(MULTI_YEAR_STATS)))
+const LOCAL_STORAGE_MULTI_YEAR_KEY = 'pcm_multi_year_custom_stats'
+const SUPABASE_MULTI_YEAR_CONFIG_KEY = 'multi_year_custom_stats'
+
+function applyMultiYearMerge(parsed) {
+  if (!parsed || typeof parsed !== 'object') return
+  if (parsed.byYear) {
+    Object.keys(parsed.byYear).forEach(y => {
+      if (reactiveMultiYearStats.byYear[y]) {
+        reactiveMultiYearStats.byYear[y] = {
+          ...reactiveMultiYearStats.byYear[y],
+          ...parsed.byYear[y]
+        }
+      }
+    })
+  }
+  if (Array.isArray(parsed.targetUnivComparison)) {
+    parsed.targetUnivComparison.forEach(pTarget => {
+      const found = reactiveMultiYearStats.targetUnivComparison.find(t => t.groupName === pTarget.groupName)
+      if (found) {
+        found.data = { ...found.data, ...pTarget.data }
+        found.avgGrade = { ...found.avgGrade, ...pTarget.avgGrade }
+      }
+    })
+  }
+}
+
+// 로컬 스토리지에 캐시된 5개년 커스텀 통계 우선 로드
+try {
+  const localCached = localStorage.getItem(LOCAL_STORAGE_MULTI_YEAR_KEY)
+  if (localCached) {
+    applyMultiYearMerge(JSON.parse(localCached))
+  }
+} catch (e) {
+  console.warn('Failed to parse local multi-year stats:', e)
+}
+
+// Supabase config에 등록된 5개년 통계 로드
+async function loadRemoteMultiYearStats() {
+  if (!supabase) return
+  try {
+    const { data, error } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', SUPABASE_MULTI_YEAR_CONFIG_KEY)
+      .maybeSingle()
+    if (!error && data?.value) {
+      const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value
+      applyMultiYearMerge(parsed)
+      localStorage.setItem(LOCAL_STORAGE_MULTI_YEAR_KEY, JSON.stringify({
+        byYear: reactiveMultiYearStats.byYear,
+        targetUnivComparison: reactiveMultiYearStats.targetUnivComparison
+      }))
+    }
+  } catch (e) {
+    console.warn('Failed to load remote multi-year stats from Supabase:', e)
+  }
+}
+
+async function saveMultiYearStats() {
+  const payload = {
+    byYear: reactiveMultiYearStats.byYear,
+    targetUnivComparison: reactiveMultiYearStats.targetUnivComparison
+  }
+  const strPayload = JSON.stringify(payload)
+  try {
+    localStorage.setItem(LOCAL_STORAGE_MULTI_YEAR_KEY, strPayload)
+  } catch (e) {
+    console.warn('Failed to save to localStorage:', e)
+  }
+
+  if (supabase) {
+    try {
+      await supabase
+        .from('config')
+        .upsert({ key: SUPABASE_MULTI_YEAR_CONFIG_KEY, value: strPayload }, { onConflict: 'key' })
+    } catch (e) {
+      console.warn('Failed to save multi-year stats to Supabase:', e)
+    }
+  }
+}
+
 // 공식 통계 요약 헬퍼: 구글 시트 '기본통계' 탭의 3학년 학생 수를 우선 반영
 function updateOfficialStats(strYear, appsList) {
   const basic = basicSchoolStats.value?.[strYear]
-  const yData = MULTI_YEAR_STATS.byYear[strYear]
-  // 기본통계 시트 값 우선, 없으면 MULTI_YEAR_STATS 또는 기본값 334
+  const yData = reactiveMultiYearStats.byYear[strYear]
+  // 기본통계 시트 값 우선, 없으면 reactiveMultiYearStats 또는 기본값 334
   const baselineTotalStudents = basic?.totalStudents || yData?.totalStudents || 334
 
   if (appsList && appsList.length > 0) {
@@ -207,6 +291,9 @@ async function initYearSheets() {
         availableAcademicYears.value = years
       }
     }
+    // 원격 Supabase 및 캐시 5개년 통계 로드
+    await loadRemoteMultiYearStats()
+
     // 초기 로드 실행
     await applyYearAndScope(selectedAcademicYear.value, selectedScope.value)
   } catch (e) {
@@ -214,6 +301,123 @@ async function initYearSheets() {
   }
 }
 initYearSheets()
+
+/**
+ * 특정 학년도의 구글 시트 원자료를 읽어와 5개년 비교 통계에 자동 집계 및 등록
+ * @param {string|number} year 대상 학년도 (예: '2025')
+ * @param {boolean} forceReload 강제 재조회 여부
+ */
+async function generateMultiYearStatsForYear(year, forceReload = true) {
+  const strYear = String(year)
+  const sheetId = await getKcueSheetId()
+  if (!sheetId) {
+    throw new Error('대교협 구글 스프레드시트 ID가 설정되지 않았습니다.')
+  }
+
+  // 1. 구글 시트에 실제 탭이 존재하는지 확인
+  const actualTabs = await getActualGoogleSheetTabs(sheetId, forceReload)
+  const tabName = `${strYear}수시`
+  if (!actualTabs.includes(tabName)) {
+    throw new Error(`구글 스프레드시트에 '${tabName}' 탭이 등록되지 않았습니다. 시트에 탭을 먼저 생성해 주세요.`)
+  }
+
+  // 2. 기본통계 로드 (3학년 학생 수)
+  if (forceReload || Object.keys(basicSchoolStats.value).length === 0) {
+    const basic = await fetchBasicSchoolStats(sheetId, forceReload)
+    if (basic && typeof basic === 'object') {
+      basicSchoolStats.value = basic
+    }
+  }
+
+  // 3. 해당 연도 수시 원자료 가져오기
+  const rows = await fetchAndParseKcueYearData(sheetId, strYear, '수시')
+  if (!rows || rows.length === 0) {
+    throw new Error(`'${tabName}' 탭에서 유효한 수시 지원 원자료를 찾을 수 없습니다. (데이터 비어있음)`)
+  }
+
+  // 4. 통계 계산
+  const totalStudents = basicSchoolStats.value?.[strYear]?.totalStudents || null
+  const computedStats = computeYearMultiYearStats(strYear, rows, totalStudents)
+  if (!computedStats) {
+    throw new Error(`'${tabName}' 통계 계산에 실패했습니다.`)
+  }
+
+  // 5. reactiveMultiYearStats에 적용
+  reactiveMultiYearStats.byYear[strYear] = {
+    ...(reactiveMultiYearStats.byYear[strYear] || {}),
+    ...computedStats
+  }
+
+  // 대학군 비교 표 업데이트
+  reactiveMultiYearStats.targetUnivComparison.forEach(t => {
+    if (computedStats.targetUnivSummary && computedStats.targetUnivSummary[t.groupName]) {
+      t.data[strYear] = computedStats.targetUnivSummary[t.groupName].count
+      t.avgGrade[strYear] = computedStats.targetUnivSummary[t.groupName].avgGrade
+    }
+  })
+
+  // 6. 영구 저장
+  await saveMultiYearStats()
+
+  return {
+    success: true,
+    year: strYear,
+    totalApplications: computedStats.totalApplications,
+    applicantStudents: computedStats.applicantStudents,
+    avgGrade: computedStats.avgGrade
+  }
+}
+
+/**
+ * 구글 시트에 존재하는 모든 수시 탭을 자동 감지하여 5개년 통계에 일괄 생성/동기화
+ */
+async function syncAllAvailableSheetYears() {
+  const sheetId = await getKcueSheetId()
+  if (!sheetId) throw new Error('대교협 구글 스프레드시트 ID가 설정되지 않았습니다.')
+  const actualTabs = await getActualGoogleSheetTabs(sheetId, true)
+
+  const matchedYears = []
+  for (const tab of actualTabs) {
+    const m = tab.match(/^(\d{4})수시$/)
+    if (m && reactiveMultiYearStats.years.includes(m[1])) {
+      matchedYears.push(m[1])
+    }
+  }
+
+  if (matchedYears.length === 0) {
+    throw new Error('구글 시트에서 수시 원자료 탭(예: 2026수시, 2027수시)을 찾을 수 없습니다.')
+  }
+
+  const results = []
+  for (const y of matchedYears) {
+    try {
+      const res = await generateMultiYearStatsForYear(y, true)
+      results.push({ year: y, success: true, count: res.totalApplications, students: res.applicantStudents, avgGrade: res.avgGrade })
+    } catch (err) {
+      results.push({ year: y, success: false, error: err.message })
+    }
+  }
+  return results
+}
+
+/**
+ * 특정 연도의 5개년 통계를 초기화
+ */
+async function resetMultiYearStatsForYear(year) {
+  const strYear = String(year)
+  const defaultYear = MULTI_YEAR_STATS.byYear[strYear]
+  if (defaultYear) {
+    reactiveMultiYearStats.byYear[strYear] = JSON.parse(JSON.stringify(defaultYear))
+  } else {
+    reactiveMultiYearStats.byYear[strYear] = { hasData: false, totalApplications: null }
+  }
+  reactiveMultiYearStats.targetUnivComparison.forEach(t => {
+    const defaultTarget = MULTI_YEAR_STATS.targetUnivComparison.find(dt => dt.groupName === t.groupName)
+    t.data[strYear] = defaultTarget?.data[strYear] ?? null
+    t.avgGrade[strYear] = defaultTarget?.avgGrade[strYear] ?? null
+  })
+  await saveMultiYearStats()
+}
 
 
 // Filters
@@ -737,7 +941,10 @@ export function useStatData() {
     isLoadingYearData,
     yearDataError,
     reloadCurrentYear: () => applyYearAndScope(selectedAcademicYear.value, selectedScope.value, true),
-    multiYearStats: MULTI_YEAR_STATS,
+    multiYearStats: reactiveMultiYearStats,
+    generateMultiYearStatsForYear,
+    resetMultiYearStatsForYear,
+    syncAllAvailableSheetYears,
     getCurrentAcademicYear
   }
 }
