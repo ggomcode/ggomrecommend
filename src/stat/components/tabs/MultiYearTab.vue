@@ -45,65 +45,42 @@
       </div>
     </div>
 
-    <!-- 1.5. Multi-Year Statistics Generator & Sync Panel -->
-    <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
+    <!-- 1.5. Real-Time Dynamic Analysis Live Banner -->
+    <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 no-print border border-indigo-500/20">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-white flex items-center justify-center font-black text-lg shadow-sm shrink-0">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-black text-lg shrink-0">
           ⚡
         </div>
         <div>
-          <h3 class="text-sm sm:text-base font-extrabold text-slate-900 m-0 flex items-center gap-2">
-            <span>구글 시트 연도별 통계 생성 및 동기화</span>
-            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              실시간 자동 집계
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-extrabold text-white">구글 시트 100% 실시간 자동 분석 시스템</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-400 text-slate-950 flex items-center gap-1 shadow-2xs">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-950 animate-ping"></span>
+              실시간 동적 연동
             </span>
-          </h3>
-          <p class="text-xs text-slate-500 mt-0.5 m-0">
-            구글 시트에 '2025수시' 등 새 탭을 추가한 후, 아래에서 학년도를 선택하고 [통계 생성]을 누르면 즉시 5개년 비교표와 차트에 반영됩니다.
+          </div>
+          <p class="text-xs text-slate-300 mt-1 m-0">
+            구글 시트에 <span class="text-amber-300 font-bold">'2025수시'</span> 등 새 탭을 추가하거나 데이터를 수정하면, 수동 입력 없이 <strong>원자료로부터 실시간 자동 분석</strong>되어 5개년 표와 차트에 즉시 반영됩니다.
           </p>
         </div>
       </div>
 
-      <div class="flex flex-wrap items-center gap-2.5 shrink-0">
-        <!-- 학년도 선택 드롭다운 -->
-        <div class="relative inline-flex items-center">
-          <select
-            v-model="targetSyncYear"
-            :disabled="isGeneratingStats"
-            class="appearance-none pl-3 pr-8 py-2 rounded-xl text-xs font-black bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-300 shadow-2xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer disabled:opacity-60"
-          >
-            <option v-for="y in years" :key="y" :value="y">
-              {{ y }}학년도 {{ byYear[y]?.hasData ? '(등록됨)' : '(미등록 - 생성가능)' }}
-            </option>
-          </select>
-          <span class="pointer-events-none absolute right-2.5 text-slate-400 text-xs">▼</span>
-        </div>
-
-        <!-- 선택 학년도 통계 생성 버튼 -->
-        <button
-          type="button"
-          @click="handleGenerateStats"
-          :disabled="isGeneratingStats"
-          class="px-4 py-2 rounded-xl text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm border-none"
-        >
-          <svg v-if="isGeneratingStats" class="animate-spin w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24">
+      <div class="flex items-center gap-2.5 shrink-0">
+        <span v-if="isGeneratingStats" class="text-xs text-indigo-200 animate-pulse flex items-center gap-1.5 font-bold">
+          <svg class="animate-spin w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
           </svg>
-          <span v-else>📊</span>
-          <span>{{ isGeneratingStats ? '구글 시트 분석 중…' : '선택 학년도 통계 생성' }}</span>
-        </button>
-
-        <!-- 시트 전체 일괄 동기화 버튼 -->
+          구글 시트 실시간 분석 중…
+        </span>
         <button
           type="button"
           @click="handleSyncAll"
           :disabled="isGeneratingStats"
-          title="구글 시트의 모든 수시 탭을 자동으로 찾아 5개년 통계에 일괄 반영합니다."
-          class="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          class="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 active:bg-amber-500 transition-all flex items-center gap-1.5 cursor-pointer border-none shadow-sm disabled:opacity-50 font-black"
         >
           <span>🔄</span>
-          <span>시트 전체 일괄 동기화</span>
+          <span>구글 시트 최신 데이터 실시간 동기화</span>
         </button>
       </div>
     </div>
@@ -487,7 +464,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Bar, Line } from 'vue-chartjs'
 import * as XLSX from 'xlsx'
 import { useStatData } from '../../composables/useStatData'
@@ -504,30 +481,18 @@ const years = multiYearStats.years
 const byYear = multiYearStats.byYear
 const targetUnivComparison = multiYearStats.targetUnivComparison
 
-// 통계 생성 제어 상태
-const targetSyncYear = ref('2025')
+// 실시간 동기화 제어 상태
 const isGeneratingStats = ref(false)
 const syncFeedback = ref(null)
 
-async function handleGenerateStats() {
-  const y = targetSyncYear.value
-  isGeneratingStats.value = true
-  syncFeedback.value = null
+// 탭 진입 시 구글 시트에 존재하는 모든 학년도(2027수시, 2026수시, 2025수시 등)를 실시간 자동 감지하여 5개년 통계 자동 갱신
+onMounted(async () => {
   try {
-    const res = await generateMultiYearStatsForYear(y, true)
-    syncFeedback.value = {
-      type: 'success',
-      message: `${y}학년도 수시 통계 생성 완료! (지원 총 ${res.totalApplications.toLocaleString()}건, 지원자 ${res.applicantStudents}명, 평균 내신 ${res.avgGrade}등급) 5개년 비교표와 차트에 즉시 반영되었습니다.`
-    }
+    await syncAllAvailableSheetYears()
   } catch (err) {
-    syncFeedback.value = {
-      type: 'error',
-      message: err.message || `${y}학년도 통계 생성 중 오류가 발생했습니다.`
-    }
-  } finally {
-    isGeneratingStats.value = false
+    console.warn('[MultiYearTab] Real-time sheet sync on mount:', err.message)
   }
-}
+})
 
 async function handleSyncAll() {
   isGeneratingStats.value = true
@@ -538,15 +503,15 @@ async function handleSyncAll() {
     const failList = results.filter(r => !r.success)
 
     if (successList.length > 0) {
-      const summaryText = successList.map(s => `${s.year}년(${s.count.toLocaleString()}건)`).join(', ')
+      const summaryText = successList.map(s => `${s.year}학년도(${s.count.toLocaleString()}건)`).join(', ')
       syncFeedback.value = {
         type: 'success',
-        message: `구글 시트 일괄 동기화 완료: [${summaryText}] 반영 완료! ${failList.length > 0 ? `(${failList.map(f => f.year).join(', ')} 제외)` : ''}`
+        message: `구글 시트 실시간 자동 동기화 완료: [${summaryText}] 원자료로부터 모든 통계가 실시간 재계산되었습니다.`
       }
     } else {
       syncFeedback.value = {
         type: 'error',
-        message: '동기화 가능한 수시 탭을 찾지 못했습니다.'
+        message: '구글 시트에서 수시 원자료 탭을 찾지 못했습니다.'
       }
     }
   } catch (err) {
