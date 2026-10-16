@@ -153,7 +153,7 @@ export async function getActualGoogleSheetTabs(sheetId, forceReload = false) {
     console.warn('[statApi] Failed to fetch actual sheet tabs via xlsx:', err)
   }
 
-  return cachedActualTabs || ['2027수시', '2026수시']
+  return cachedActualTabs || ['2027수시', '2026수시', '기본통계']
 }
 
 /**
@@ -364,12 +364,6 @@ export async function fetchBasicSchoolStats(sheetId, forceReload = false) {
   }
 
   try {
-    const actualTabs = await getActualGoogleSheetTabs(cleanId, forceReload)
-    if (!actualTabs.includes('기본통계')) {
-      console.log("[statApi] 구글 시트에 '기본통계' 탭이 없습니다.")
-      return cachedBasicStats || {}
-    }
-
     const csvText = await fetchKcueSheetTabCsv(cleanId, '기본통계')
     if (!csvText || !csvText.trim()) return cachedBasicStats || {}
 
