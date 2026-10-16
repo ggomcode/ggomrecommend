@@ -58,11 +58,11 @@
             {{ total5YearApps > 0 ? total5YearApps.toLocaleString() : '-' }}<span v-if="total5YearApps > 0" class="text-xs font-semibold text-slate-400 ml-1">건</span>
           </div>
           <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-            <template v-if="hasMultiYearComparison">
-              <span class="text-emerald-600 font-bold flex items-center">
-                <span>▲</span> 9.7%
+            <template v-if="hasMultiYearComparison && previousYearData?.totalApplications != null">
+              <span :class="volumeGrowth >= 0 ? 'text-emerald-600 font-bold flex items-center' : 'text-slate-600 font-bold flex items-center'">
+                <span>{{ volumeGrowth >= 0 ? '▲ +' : '▼ ' }}</span> {{ volumeGrowth }}%
               </span>
-              <span>5개년 지속 증가 추세</span>
+              <span>전년({{ previousYearData.year }}년 {{ previousYearData.totalApplications.toLocaleString() }}건) 대비</span>
             </template>
             <template v-else>
               <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
@@ -82,11 +82,11 @@
             {{ latestYearData?.applicantRate != null ? latestYearData.applicantRate : '-' }}<span v-if="latestYearData?.applicantRate != null" class="text-xs font-semibold text-slate-400 ml-1">%</span>
           </div>
           <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-            <template v-if="hasMultiYearComparison">
-              <span class="text-emerald-600 font-bold flex items-center">
-                <span>▲</span> +2.0%p
+            <template v-if="hasMultiYearComparison && previousYearData?.applicantRate != null">
+              <span :class="rateGrowth >= 0 ? 'text-emerald-600 font-bold flex items-center' : 'text-rose-600 font-bold flex items-center'">
+                <span>{{ rateGrowth >= 0 ? '▲ +' : '▼ ' }}</span>{{ rateGrowth }}%p
               </span>
-              <span>(23년 71.7% → 27년 73.7%)</span>
+              <span>({{ previousYearData.year }}년 {{ previousYearData.applicantRate }}% → {{ latestYearData.year }}년 {{ latestYearData.applicantRate }}%)</span>
             </template>
             <template v-else>
               <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
@@ -106,11 +106,11 @@
             {{ latestYearData?.avgGrade != null ? latestYearData.avgGrade.toFixed(2) : '-' }}<span v-if="latestYearData?.avgGrade != null" class="text-xs font-semibold text-slate-400 ml-1">등급</span>
           </div>
           <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-            <template v-if="hasMultiYearComparison">
-              <span class="text-indigo-600 font-bold flex items-center">
-                <span>▲</span> +0.12등급
+            <template v-if="hasMultiYearComparison && previousYearData?.avgGrade != null">
+              <span :class="gradeDiff <= 0 ? 'text-indigo-600 font-bold flex items-center' : 'text-slate-600 font-bold flex items-center'">
+                <span>{{ gradeDiff <= 0 ? '▲ +' : '▼ -' }}</span>{{ Math.abs(gradeDiff).toFixed(2) }}등급
               </span>
-              <span>지원자 평균 성적 상승</span>
+              <span>전년({{ previousYearData.year }}년 {{ previousYearData.avgGrade }}) 대비 {{ gradeDiff <= 0 ? '상승' : '하락' }}</span>
             </template>
             <template v-else>
               <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
@@ -130,11 +130,11 @@
             {{ latestYearData?.topTierApps != null ? latestYearData.topTierApps : '-' }}<span v-if="latestYearData?.topTierApps != null" class="text-xs font-semibold text-slate-400 ml-1">건</span>
           </div>
           <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-            <template v-if="hasMultiYearComparison">
-              <span class="text-amber-600 font-bold flex items-center">
-                <span>▲</span> +61.1%
+            <template v-if="hasMultiYearComparison && previousYearData?.topTierApps != null">
+              <span :class="topTierGrowth >= 0 ? 'text-amber-600 font-bold flex items-center' : 'text-slate-600 font-bold flex items-center'">
+                <span>{{ topTierGrowth >= 0 ? '▲ +' : '▼ ' }}</span>{{ topTierGrowth }}%
               </span>
-              <span>(23년 54건 → 27년 87건)</span>
+              <span>({{ previousYearData.year }}년 {{ previousYearData.topTierApps }}건 → {{ latestYearData.year }}년 {{ latestYearData.topTierApps }}건)</span>
             </template>
             <template v-else>
               <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
@@ -256,7 +256,7 @@
               <th v-for="y in years" :key="y" class="py-3 px-3 text-center">
                 {{ y }}학년도
               </th>
-              <th class="py-3 px-4 text-center">5개년 증감</th>
+              <th class="py-3 px-4 text-center">{{ previousYearKey ? `${previousYearKey} 대비 증감` : '전년 대비 증감' }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -286,17 +286,17 @@
                 </template>
               </td>
               <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                <template v-if="target.data['2027'] != null && target.data['2023'] != null">
+                <template v-if="previousYearKey && target.data['2027'] != null && target.data[previousYearKey] != null">
                   <span 
                     :class="[
                       'inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-xs font-bold',
-                      target.data['2027'] >= target.data['2023'] 
+                      target.data['2027'] >= target.data[previousYearKey] 
                         ? 'bg-rose-50 text-rose-700' 
                         : 'bg-blue-50 text-blue-700'
                     ]"
                   >
-                    {{ target.data['2027'] >= target.data['2023'] ? '▲ +' : '▼ -' }}
-                    {{ Math.abs(target.data['2027'] - target.data['2023']) }}건
+                    {{ target.data['2027'] >= target.data[previousYearKey] ? '▲ +' : '▼ ' }}
+                    {{ target.data['2027'] - target.data[previousYearKey] }}건
                   </span>
                 </template>
                 <template v-else>
@@ -415,12 +415,46 @@ const years = multiYearStats.years
 const byYear = multiYearStats.byYear
 const targetUnivComparison = multiYearStats.targetUnivComparison
 
-const latestYearData = computed(() => byYear['2027'] || byYear[years[years.length - 1]])
+const availableYearsWithData = computed(() => years.filter(y => byYear[y]?.hasData))
+const latestYearKey = computed(() => {
+  const list = availableYearsWithData.value
+  return list.length > 0 ? list[list.length - 1] : '2027'
+})
+const previousYearKey = computed(() => {
+  const list = availableYearsWithData.value
+  return list.length >= 2 ? list[list.length - 2] : null
+})
+
+const latestYearData = computed(() => byYear[latestYearKey.value] || byYear['2027'])
+const previousYearData = computed(() => previousYearKey.value ? byYear[previousYearKey.value] : null)
 
 // 실제 등록된 연도가 2개 이상일 때만 과거 대비 증감 비교를 표시 (허수 방지)
 const hasMultiYearComparison = computed(() => {
-  const registeredCount = years.filter(y => byYear[y]?.hasData).length
-  return registeredCount >= 2
+  return availableYearsWithData.value.length >= 2
+})
+
+const volumeGrowth = computed(() => {
+  if (!latestYearData.value?.totalApplications || !previousYearData.value?.totalApplications) return 0
+  const cur = latestYearData.value.totalApplications
+  const prev = previousYearData.value.totalApplications
+  return Number((((cur - prev) / prev) * 100).toFixed(1))
+})
+
+const rateGrowth = computed(() => {
+  if (!latestYearData.value || latestYearData.value.applicantRate == null || !previousYearData.value || previousYearData.value.applicantRate == null) return 0
+  return Number((latestYearData.value.applicantRate - previousYearData.value.applicantRate).toFixed(1))
+})
+
+const gradeDiff = computed(() => {
+  if (!latestYearData.value || latestYearData.value.avgGrade == null || !previousYearData.value || previousYearData.value.avgGrade == null) return 0
+  return Number((latestYearData.value.avgGrade - previousYearData.value.avgGrade).toFixed(2))
+})
+
+const topTierGrowth = computed(() => {
+  if (!latestYearData.value?.topTierApps || !previousYearData.value?.topTierApps) return 0
+  const cur = latestYearData.value.topTierApps
+  const prev = previousYearData.value.topTierApps
+  return Number((((cur - prev) / prev) * 100).toFixed(1))
 })
 
 const total5YearApps = computed(() => {
@@ -620,7 +654,7 @@ function exportMultiYearExcel() {
     '2025 지원건수': t.data['2025'] != null ? t.data['2025'] : '-',
     '2026 지원건수': t.data['2026'] != null ? t.data['2026'] : '-',
     '2027 지원건수': t.data['2027'] != null ? t.data['2027'] : '-',
-    '5개년 증감': (t.data['2027'] != null && t.data['2023'] != null) ? (t.data['2027'] - t.data['2023']) : '-'
+    '전년(2026) 대비 증감': (previousYearKey.value && t.data['2027'] != null && t.data[previousYearKey.value] != null) ? (t.data['2027'] - t.data[previousYearKey.value]) : '-'
   }))
 
   const wb = XLSX.utils.book_new()

@@ -84,26 +84,38 @@ export const MULTI_YEAR_STATS = {
     '2026': {
       year: 2026,
       academicYear: '2026학년도',
-      hasData: false,
+      hasData: true,
       totalStudents: 352,
-      applicantStudents: null,
-      applicantRate: null,
-      totalApplications: null,
-      avgAppsPerStudent: null,
-      avgGrade: null,
-      bestGrade: null,
-      worstGrade: null,
-      metroRate: null,
-      nonMetroRate: null,
-      topTierApps: null,
-      topTierStudents: null,
-      medicalApps: null,
-      recommendationApps: null,
-      ruralApps: null,
-      finalPassRate: null,
-      registerRate: null,
-      gradeDistribution: null,
-      admissionTypes: null
+      applicantStudents: 274,
+      applicantRate: 77.8,
+      totalApplications: 1488,
+      avgAppsPerStudent: 5.43,
+      avgGrade: 4.00,
+      bestGrade: 1.00,
+      worstGrade: 8.29,
+      metroRate: 64.5,
+      nonMetroRate: 35.5,
+      topTierApps: 132,
+      topTierStudents: 45,
+      medicalApps: 17,
+      recommendationApps: 72,
+      ruralApps: 189,
+      finalPassRate: 32.9,
+      registerRate: 8.4,
+      gradeDistribution: {
+        '1~2등급': 88,
+        '2~3등급': 260,
+        '3~4등급': 407,
+        '4~5등급': 387,
+        '5~6등급': 227,
+        '6등급이하': 109
+      },
+      admissionTypes: {
+        '학생부교과': 714,
+        '학생부종합': 566,
+        '논술위주': 37,
+        '실기/실적': 170
+      }
     },
     '2027': {
       year: 2027,
@@ -148,38 +160,38 @@ export const MULTI_YEAR_STATS = {
     {
       groupName: '설·포·연·고',
       note: '서울대, 포항공대, 연세대, 고려대',
-      data: { '2023': null, '2024': null, '2025': null, '2026': null, '2027': 38 },
-      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': null, '2027': 1.90 }
+      data: { '2023': null, '2024': null, '2025': null, '2026': 51, '2027': 38 },
+      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 3.93, '2027': 1.90 }
     },
     {
       groupName: '서·성·한·이',
       note: '서강대, 성균관대, 한양대, 이화여대',
-      data: { '2023': null, '2024': null, '2025': null, '2026': null, '2027': 37 },
-      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': null, '2027': 2.42 }
+      data: { '2023': null, '2024': null, '2025': null, '2026': 75, '2027': 37 },
+      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 2.73, '2027': 2.42 }
     },
     {
       groupName: '5대 과기원',
       note: 'KAIST, UNIST, DGIST, GIST, KENTECH',
-      data: { '2023': null, '2024': null, '2025': null, '2026': null, '2027': 12 },
-      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': null, '2027': 2.15 }
+      data: { '2023': null, '2024': null, '2025': null, '2026': 6, '2027': 12 },
+      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 1.68, '2027': 2.15 }
     },
     {
       groupName: '의·치·한·약·수',
       note: '의학·치의학·한의학·약학·수의학',
-      data: { '2023': null, '2024': null, '2025': null, '2026': null, '2027': 13 },
-      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': null, '2027': 1.52 }
+      data: { '2023': null, '2024': null, '2025': null, '2026': 17, '2027': 13 },
+      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 1.38, '2027': 1.52 }
     },
     {
       groupName: '수도권 주요 15개대',
       note: '중앙·경희·외대·시립·건국·동국·홍익 등',
-      data: { '2023': null, '2024': null, '2025': null, '2026': null, '2027': 162 },
-      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': null, '2027': 2.86 }
+      data: { '2023': null, '2024': null, '2025': null, '2026': 308, '2027': 162 },
+      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 3.38, '2027': 2.86 }
     },
     {
       groupName: '경기권 거점/선호대',
       note: '아주대, 인하대, 경기대, 가천대, 단국대 등',
-      data: { '2023': null, '2024': null, '2025': null, '2026': null, '2027': 345 },
-      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': null, '2027': 3.68 }
+      data: { '2023': null, '2024': null, '2025': null, '2026': 318, '2027': 345 },
+      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 4.07, '2027': 3.68 }
     }
   ]
 }
