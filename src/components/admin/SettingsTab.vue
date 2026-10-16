@@ -423,9 +423,28 @@
                 <span>🔗 시트 바로 열기</span>
               </a>
             </div>
-            <p class="text-[11px] text-slate-500 m-0">
+            <p class="text-[11px] text-slate-500 m-0 leading-relaxed">
               시트 ID 또는 전체 URL을 입력하면 자동으로 ID만 추출하여 안전하게 저장됩니다. (등록 시 교사/관리자 포털의 통계 메뉴가 활성화됩니다)
             </p>
+            
+            <!-- 통합 시트 탭 구조 안내 -->
+            <div class="p-2.5 rounded-lg bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/60 text-[11px] text-indigo-900 dark:text-indigo-200 space-y-1">
+              <div class="font-bold flex items-center gap-1">
+                <span>📑</span>
+                <span>단일 구글 시트 탭(Tab) 통합 관리 시스템</span>
+              </div>
+              <p class="m-0 text-slate-600 dark:text-slate-300 leading-normal">
+                대입학년도마다 별도의 시트 파일을 만들지 않고 <strong>본 구글 시트 1개</strong> 안에 시트 탭(
+                <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-indigo-600 dark:text-indigo-300">2027수시</code>, 
+                <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-indigo-600 dark:text-indigo-300">2026수시</code>, 
+                <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-indigo-600 dark:text-indigo-300">2025수시</code>, 
+                <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-purple-600 dark:text-purple-300">2027정시</code>, 
+                <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-purple-600 dark:text-purple-300">2026정시</code>, 
+                <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-emerald-600 dark:text-emerald-300">2027통계</code>, 
+                <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-emerald-600 dark:text-emerald-300">2026통계</code> 등)을 추가하여 모든 학년도와 전형 자료를 하나로 통합 관리합니다.
+              </p>
+            </div>
+
             <div class="flex gap-2">
               <input
                 v-model="googleSheetKcueId"

@@ -87,27 +87,16 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
-            <div class="absolute right-0 mt-1 w-60 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
+            <div class="absolute right-0 mt-1 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-50">
               <a 
-                :href="`https://docs.google.com/spreadsheets/d/${kcueSheetId}/edit?gid=1103195680#gid=1103195680`" 
+                :href="`https://docs.google.com/spreadsheets/d/${kcueSheetId}/edit`" 
                 target="_blank" 
                 class="flex items-center px-3.5 py-2 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
               >
                 <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2.5"></span>
                 <div class="truncate">
-                  <div class="font-bold">대교협 입력자료 (원자료)</div>
-                  <div class="text-[10px] text-slate-400">1,376건 수시 지원 명세</div>
-                </div>
-              </a>
-              <a 
-                :href="`https://docs.google.com/spreadsheets/d/${kcueSheetId}/edit?gid=1269753392#gid=1269753392`" 
-                target="_blank" 
-                class="flex items-center px-3.5 py-2 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors border-t border-slate-100"
-              >
-                <span class="w-2 h-2 rounded-full bg-blue-500 mr-2.5"></span>
-                <div class="truncate">
-                  <div class="font-bold">포곡고 수시 통계 시트</div>
-                  <div class="text-[10px] text-slate-400">재학생 공식 집계 요약</div>
+                  <div class="font-bold">대교협 통합 원자료 시트</div>
+                  <div class="text-[10px] text-slate-400">수시·정시 원자료 및 공식 통계 통합 파일</div>
                 </div>
               </a>
               <button
@@ -115,10 +104,10 @@
                 @click="isYearSheetModalOpen = true"
                 class="w-full text-left flex items-center px-3.5 py-2 text-xs text-indigo-700 font-bold bg-indigo-50/70 hover:bg-indigo-100 transition-colors border-t border-slate-200 cursor-pointer border-none"
               >
-                <span class="mr-2 text-sm leading-none">⚙️</span>
+                <span class="mr-2 text-sm leading-none">📑</span>
                 <div class="truncate">
-                  <div>연도별 대교협 시트 ID 관리</div>
-                  <div class="text-[10px] text-indigo-500 font-normal">2023~2027 각 학년도별 시트 연동</div>
+                  <div>대교협 시트 탭 관리</div>
+                  <div class="text-[10px] text-indigo-500 font-normal">2027수시·정시·통계 등 탭 연동 확인</div>
                 </div>
               </button>
             </div>
