@@ -14,13 +14,14 @@ import * as XLSX from 'xlsx'
 
 /**
  * 대입 학년도 자동 계산 규칙:
- * 오늘 날짜가 3월 1일 ~ 이듬해 2월 말일이면 다음 연도 대입학년도로 계산
+ * 오늘 날짜가 3월 1일 ~ 이듬해 2월 말일이면 다음 연도 대입학년도로 계산 (최소 2027학년도 보장)
  * 예: 2026년 3월 1일 ~ 2027년 2월 28일 -> '2027'학년도 대입
  */
 export function getCurrentAcademicYear(date = new Date()) {
   const y = date.getFullYear()
   const m = date.getMonth() + 1 // 1 ~ 12
-  return m >= 3 ? String(y + 1) : String(y)
+  const calc = m >= 3 ? y + 1 : y
+  return String(Math.max(calc, 2027))
 }
 
 /**
@@ -41,8 +42,14 @@ const applications = ref(rawAppsData)
 const officialStats = ref(officialStatsData)
 
 // Academic Year State & Multi-Year Sheet Management
-const defaultYear = getCurrentAcademicYear()
-const selectedAcademicYear = ref(localStorage.getItem('pcm_stat_selected_year') || defaultYear)
+// 저장된 연도가 2026 또는 2027이 아니라면 (예: 2025 등) 무조건 기본값 2027로 초기화
+const savedYear = localStorage.getItem('pcm_stat_selected_year')
+const initialYear = (savedYear === '2026' || savedYear === '2027') ? savedYear : '2027'
+const selectedAcademicYear = ref(initialYear)
+if (savedYear !== initialYear) {
+  localStorage.setItem('pcm_stat_selected_year', initialYear)
+}
+
 const selectedScope = ref(localStorage.getItem('pcm_stat_selected_scope') || 'SUSI_ALL')
 const availableAcademicYears = ref([...STANDARD_KCUE_YEARS])
 const kcueYearSheets = ref({ ...DEFAULT_KCUE_YEAR_SHEETS })
@@ -364,6 +371,7 @@ export function useStatData() {
 
   // Target total student count for current selection (Class-specific or overall)
   const currentTargetTotalStudents = computed(() => {
+    if (!applications.value || applications.value.length === 0) return '-'
     const cls = Number(selectedClass.value)
     if (!isNaN(cls) && cls >= 1 && cls <= 11) {
       return CLASS_STUDENT_COUNTS[cls] || 30
@@ -371,7 +379,7 @@ export function useStatData() {
     if (selectedClass.value === '졸업생' || selectedClass.value === 'GRADUATE') {
       return currentStats.value.totalStudents
     }
-    return officialStats.value?.totalStudents || (applications.value.length > 0 ? 334 : 0)
+    return officialStats.value?.totalStudents || 334
   })
 
   // Dynamic label for enrolled card
@@ -391,6 +399,7 @@ export function useStatData() {
 
   // Dynamic subtitle for enrolled card
   const enrolledSubText = computed(() => {
+    if (!applications.value || applications.value.length === 0) return '데이터 미등록'
     const cls = Number(selectedClass.value)
     if (!isNaN(cls) && cls >= 1 && cls <= 11) {
       return `포곡고 3학년 ${cls}반 총원`
@@ -404,9 +413,9 @@ export function useStatData() {
   // Dynamic applicant rate (based on current target students)
   const currentApplicantRate = computed(() => {
     const target = currentTargetTotalStudents.value
-    if (!target || target === 0) return '-'
-    if (currentStats.value.totalStudents === 0) return '0.0'
-    return ((currentStats.value.totalStudents / target) * 100).toFixed(1)
+    if (!target || target === '-' || target === 0) return '-'
+    if (!currentStats.value.totalStudents || currentStats.value.totalStudents === 0 || currentStats.value.totalStudents === '-') return '-'
+    return ((Number(currentStats.value.totalStudents) / Number(target)) * 100).toFixed(1)
   })
 
   // Dynamic statistics based on filtered data
@@ -414,18 +423,49 @@ export function useStatData() {
     const list = filteredApplications.value
     const totalApps = list.length
     
+    // 데이터 미등록 시 허수 데이터를 절대 표시하지 않고 '-' 처리
+    if (totalApps === 0) {
+      return {
+        totalApps: 0,
+        totalStudents: 0,
+        avgApps: '-',
+        metroApps: 0,
+        metroRate: '-',
+        nonMetroApps: 0,
+        nonMetroRate: '-',
+        gyeonggiApps: 0,
+        seoulApps: 0,
+        incheonApps: 0,
+        recApps: 0,
+        recRate: '-',
+        recStudents: 0,
+        recStudentRate: '-',
+        ruralApps: 0,
+        ruralRate: '-',
+        ruralStudents: 0,
+        ruralStudentRate: '-',
+        topTierApps: 0,
+        topTierStudents: 0,
+        topTierRate: '-',
+        typeCounts: { gyogwa: 0, jonghap: 0, silgi: 0, nonsul: 0, other: 0 },
+        fieldCounts: { humanities: 0, natural: 0, arts: 0 },
+        regionalBreakdown: REGION_ORDER.map(region => ({ region, count: 0, rate: 0, metro: METRO_REGIONS.has(region) })),
+        avgGrade: '-'
+      }
+    }
+
     // Unique students in filtered set
     const studentKeys = new Set(list.map(a => a.studentKey))
     const totalStudents = studentKeys.size
 
     // Average applications per student
-    const avgApps = totalStudents > 0 ? (totalApps / totalStudents).toFixed(1) : '0.0'
+    const avgApps = totalStudents > 0 ? (totalApps / totalStudents).toFixed(1) : '-'
 
     // Metropolitan count
     const metroApps = list.filter(a => a.isMetro).length
-    const metroRate = totalApps > 0 ? ((metroApps / totalApps) * 100).toFixed(1) : '0.0'
+    const metroRate = totalApps > 0 ? ((metroApps / totalApps) * 100).toFixed(1) : '-'
     const nonMetroApps = totalApps - metroApps
-    const nonMetroRate = totalApps > 0 ? ((nonMetroApps / totalApps) * 100).toFixed(1) : '0.0'
+    const nonMetroRate = totalApps > 0 ? ((nonMetroApps / totalApps) * 100).toFixed(1) : '-'
 
     // Specific metro regions
     const gyeonggiApps = list.filter(a => a.region === '경기').length

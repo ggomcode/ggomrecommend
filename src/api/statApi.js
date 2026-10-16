@@ -120,6 +120,41 @@ export async function saveKcueSheetId(id) {
   return cleanId
 }
 
+let cachedActualTabs = null
+let cachedActualTabsTime = 0
+
+/**
+ * 구글 스프레드시트에 실제로 존재하는 시트 탭(Sheet Names) 목록 조회
+ * (XLSX export 엔드포인트를 통해 실제 탭 목록을 정확히 파악하여,
+ * 존재하지 않는 탭 요청 시 구글 GViz가 첫 번째 탭을 허수로 반환하는 문제를 방지)
+ */
+export async function getActualGoogleSheetTabs(sheetId, forceReload = false) {
+  const cleanId = extractSheetId(sheetId)
+  if (!cleanId) return []
+
+  const now = Date.now()
+  if (!forceReload && cachedActualTabs && (now - cachedActualTabsTime < 300000)) {
+    return cachedActualTabs
+  }
+
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${cleanId}/export?format=xlsx&_t=${now}`
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const buffer = await res.arrayBuffer()
+    const wb = XLSX.read(buffer, { type: 'buffer' })
+    if (wb && Array.isArray(wb.SheetNames) && wb.SheetNames.length > 0) {
+      cachedActualTabs = wb.SheetNames
+      cachedActualTabsTime = now
+      return cachedActualTabs
+    }
+  } catch (err) {
+    console.warn('[statApi] Failed to fetch actual sheet tabs via xlsx:', err)
+  }
+
+  return cachedActualTabs || ['2027수시', '2026수시']
+}
+
 /**
  * 특정 시트 탭의 CSV 내용 비동기 가져오기
  */
@@ -140,6 +175,16 @@ export async function fetchKcueSheetTabCsv(sheetId, tabName) {
  */
 export async function testKcueSheetTabConnection(sheetId, tabName) {
   try {
+    // 1. 구글 시트에 실제 탭이 존재하는지 먼저 확인
+    const actualTabs = await getActualGoogleSheetTabs(sheetId, true)
+    if (!actualTabs.includes(tabName)) {
+      return { 
+        success: false, 
+        message: `'${tabName}' 탭이 구글 시트에 아직 생성되지 않았습니다.`, 
+        rowCount: 0 
+      }
+    }
+
     const csv = await fetchKcueSheetTabCsv(sheetId, tabName)
     if (!csv || csv.trim().length === 0) {
       return { success: false, message: '탭 데이터가 비어 있습니다.', rowCount: 0 }
@@ -288,6 +333,15 @@ export function parseKcueRows(csvText) {
  */
 export async function fetchAndParseKcueYearData(sheetId, year, type = '수시') {
   const tabName = getKcueTabName(year, type)
+  
+  // 실제 구글 스프레드시트에 존재하는 탭인지 엄격하게 검증!
+  // 존재하지 않는 탭을 GViz로 호출하면 구글 시트가 2027수시(첫 탭)를 허수로 반환하는 문제 차단
+  const actualTabs = await getActualGoogleSheetTabs(sheetId)
+  if (!actualTabs.includes(tabName)) {
+    console.log(`[statApi] 구글 시트에 '${tabName}' 탭이 아직 등록되지 않았습니다. 빈 데이터를 반환합니다.`)
+    return []
+  }
+
   const csv = await fetchKcueSheetTabCsv(sheetId, tabName)
   return parseKcueRows(csv)
 }
