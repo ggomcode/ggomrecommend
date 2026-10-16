@@ -95,7 +95,7 @@ export const MULTI_YEAR_STATS = {
       worstGrade: 8.29,
       metroRate: 64.5,
       nonMetroRate: 35.5,
-      topTierApps: 132,
+      topTierApps: 73,
       topTierStudents: 45,
       medicalApps: 17,
       recommendationApps: 72,
@@ -131,7 +131,7 @@ export const MULTI_YEAR_STATS = {
       worstGrade: 8.41,
       metroRate: 61.4,
       nonMetroRate: 38.6,
-      topTierApps: 87,
+      topTierApps: 101,
       topTierStudents: 31,
       medicalApps: 13,
       recommendationApps: 195,
@@ -159,21 +159,21 @@ export const MULTI_YEAR_STATS = {
   targetUnivComparison: [
     {
       groupName: '설·포·연·고',
-      note: '서울대, 포항공대, 연세대, 고려대',
-      data: { '2023': null, '2024': null, '2025': null, '2026': 51, '2027': 38 },
-      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 3.93, '2027': 1.90 }
+      note: '서울대, 포항공대, 연세대, 고려대 (본교)',
+      data: { '2023': null, '2024': null, '2025': null, '2026': 14, '2027': 33 },
+      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 1.89, '2027': 1.69 }
     },
     {
       groupName: '서·성·한·이',
-      note: '서강대, 성균관대, 한양대, 이화여대',
-      data: { '2023': null, '2024': null, '2025': null, '2026': 75, '2027': 37 },
-      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 2.73, '2027': 2.42 }
+      note: '서강대, 성균관대, 한양대(서울), 이화여대',
+      data: { '2023': null, '2024': null, '2025': null, '2026': 53, '2027': 44 },
+      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 2.11, '2027': 1.79 }
     },
     {
       groupName: '5대 과기원',
       note: 'KAIST, UNIST, DGIST, GIST, KENTECH',
-      data: { '2023': null, '2024': null, '2025': null, '2026': 6, '2027': 12 },
-      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 1.68, '2027': 2.15 }
+      data: { '2023': null, '2024': null, '2025': null, '2026': 6, '2027': 24 },
+      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 1.68, '2027': 1.60 }
     },
     {
       groupName: '의·치·한·약·수',
@@ -216,9 +216,6 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
   const types = { '학생부교과': 0, '학생부종합': 0, '논술위주': 0, '실기/실적': 0 }
   const bands = { '1~2등급': 0, '2~3등급': 0, '3~4등급': 0, '4~5등급': 0, '5~6등급': 0, '6등급이하': 0 }
 
-  const g1Univs = ['서울대학교', '포항공과대학교', '포항공대', '포스텍', '연세대학교', '고려대학교']
-  const g2Univs = ['서강대학교', '성균관대학교', '한양대학교', '이화여자대학교']
-  const g3Univs = ['한국과학기술원', 'KAIST', '울산과학기술원', 'UNIST', '대구경북과학기술원', 'DGIST', '광주과학기술원', 'GIST', '한국에너지공과대학교', 'KENTECH']
   const g5Univs = ['중앙대학교', '경희대학교', '한국외국어대학교', '서울시립대학교', '건국대학교', '동국대학교', '홍익대학교', '숙명여자대학교', '국민대학교', '숭실대학교', '세종대학교', '단국대학교']
   const g6Univs = ['아주대학교', '인하대학교', '경기대학교', '가천대학교', '강남대학교', '명지대학교', '상명대학교', '수원대학교', '용인대학교']
 
@@ -266,13 +263,24 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
     }
     if (reg === 'Y') registerCount++
 
-    // Target university groups
-    const u = String(r.univName || '')
-    const d = String(r.dept || '')
+    // Target university groups (정밀 본교 매칭)
+    const u = String(r.univName || '').trim()
+    const d = String(r.dept || '').trim()
     const isMed = ['의예', '치의', '한의', '약학', '수의', '의학'].some(m => d.includes(m))
-    const isG1 = g1Univs.some(name => u.includes(name))
-    const isG2 = g2Univs.some(name => u.includes(name))
-    const isG3 = g3Univs.some(name => u.includes(name))
+
+    const isG1 = (u === '서울대학교' || u.startsWith('서울대학교(') ||
+                  u === '포항공과대학교' || u.startsWith('포항공과대학교(') ||
+                  u === '연세대학교(서울)' || u === '연세대학교' ||
+                  u === '고려대학교(서울)' || u === '고려대학교') &&
+                 !u.includes('미래') && !u.includes('세종') && !u.includes('동서울') && !u.includes('남서울')
+
+    const isG2 = (u === '서강대학교' || u.startsWith('서강대학교(') ||
+                  u.includes('성균관대학교') ||
+                  u === '한양대학교(서울)' || u === '한양대학교' ||
+                  u.includes('이화여자대학교')) &&
+                 !u.includes('ERICA') && !u.includes('에리카') && !u.includes('한양여')
+
+    const isG3 = ['한국과학기술원', 'KAIST', '울산과학기술원', 'UNIST', '대구경북과학기술원', 'DGIST', '광주과학기술원', 'GIST', '한국에너지공과대학교', 'KENTECH'].some(name => u.includes(name))
     const isG5 = g5Univs.some(name => u.includes(name))
     const isG6 = g6Univs.some(name => u.includes(name))
 

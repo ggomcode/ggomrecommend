@@ -66,8 +66,8 @@ const basicSchoolStats = ref({})
 
 // 5개년 반응형 통계 상태 및 사용자 동기화 영구 저장소
 const reactiveMultiYearStats = reactive(JSON.parse(JSON.stringify(MULTI_YEAR_STATS)))
-const LOCAL_STORAGE_MULTI_YEAR_KEY = 'pcm_multi_year_custom_stats'
-const SUPABASE_MULTI_YEAR_CONFIG_KEY = 'multi_year_custom_stats'
+const LOCAL_STORAGE_MULTI_YEAR_KEY = 'pcm_multi_year_custom_stats_v2'
+const SUPABASE_MULTI_YEAR_CONFIG_KEY = 'multi_year_custom_stats_v2'
 
 function applyMultiYearMerge(parsed) {
   if (!parsed || typeof parsed !== 'object') return
