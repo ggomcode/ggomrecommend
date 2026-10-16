@@ -129,7 +129,7 @@
       <div class="flex items-center justify-between sm:justify-end gap-3">
         <!-- Live Count Badge -->
         <div class="text-xs font-medium text-slate-500 whitespace-nowrap">
-          선택된 지원: <span class="font-bold text-indigo-600">{{ filteredApplications.length }}</span> / 1,376건
+          선택된 지원: <span class="font-bold text-indigo-600">{{ filteredApplications.length }}</span> / {{ applications.length > 0 ? applications.length.toLocaleString() : '-' }}건
           <span class="text-slate-400 text-[11px] ml-1">({{ currentStats.totalStudents }}명)</span>
         </div>
 
@@ -162,6 +162,7 @@ import { computed } from 'vue'
 import { useData } from '../composables/useStatData'
 
 const { 
+  applications,
   selectedClass, 
   selectedField, 
   selectedType, 

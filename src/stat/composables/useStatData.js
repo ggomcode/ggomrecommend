@@ -287,22 +287,23 @@ export function useStatData() {
   const filteredApplications = computed(() => {
     return applications.value.filter(app => {
       // Scope filter (모집시기 및 대학구분)
+      const p = app.period ? String(app.period).trim() : ''
+      const isJungsi = p.includes('정시') || p.includes('추가')
+      const isSusi = !isJungsi // 정시/추가가 아니면 수시 탭 데이터이므로 기본 수시로 판정 (수시, 수시1차, 수시2차 포함)
+      const isCollege = app.schoolType === '전문대'
+
       if (selectedScope.value === 'SUSI_ALL') {
-        if (app.period && app.period !== '수시') return false
+        if (!isSusi) return false
       } else if (selectedScope.value === 'JUNGSI_ALL') {
-        if (app.period && app.period !== '정시') return false
+        if (!isJungsi) return false
       } else if (selectedScope.value === 'SUSI_UNIV') {
-        if (app.period && app.period !== '수시') return false
-        if (app.schoolType && app.schoolType !== '일반대') return false
+        if (!isSusi || isCollege) return false
       } else if (selectedScope.value === 'JUNGSI_UNIV') {
-        if (app.period && app.period !== '정시') return false
-        if (app.schoolType && app.schoolType !== '일반대') return false
+        if (!isJungsi || isCollege) return false
       } else if (selectedScope.value === 'SUSI_COLLEGE') {
-        if (app.period && app.period !== '수시') return false
-        if (app.schoolType && app.schoolType !== '전문대') return false
+        if (!isSusi || !isCollege) return false
       } else if (selectedScope.value === 'JUNGSI_COLLEGE') {
-        if (app.period && app.period !== '정시') return false
-        if (app.schoolType && app.schoolType !== '전문대') return false
+        if (!isJungsi || !isCollege) return false
       }
 
       // Class filter

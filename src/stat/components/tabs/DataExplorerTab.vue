@@ -3,9 +3,9 @@
     <!-- Top Action Bar -->
     <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h3 class="text-sm font-bold text-slate-800">전체 수시 지원 데이터 탐색기</h3>
+        <h3 class="text-sm font-bold text-slate-800">전체 지원 데이터 탐색기</h3>
         <p class="text-xs text-slate-400 mt-0.5">
-          현재 필터 적용: <strong class="text-indigo-600">{{ filteredApplications.length }}</strong>건 (전체 1,376건 중)
+          현재 필터 적용: <strong class="text-indigo-600">{{ filteredApplications.length }}</strong>건 (전체 {{ applications.length > 0 ? applications.length.toLocaleString() : '-' }}건 중)
         </p>
       </div>
 
@@ -18,7 +18,7 @@
           <option :value="20">20개씩 보기</option>
           <option :value="50">50개씩 보기</option>
           <option :value="100">100개씩 보기</option>
-          <option :value="1376">전체 한 번에 보기</option>
+          <option :value="99999">전체 한 번에 보기</option>
         </select>
 
         <!-- Upload Custom File -->
@@ -182,7 +182,7 @@ import { ref, computed, watch } from 'vue'
 import { useData, maskName, formatGrade } from '../../composables/useStatData'
 import * as XLSX from 'xlsx'
 
-const { filteredApplications, exportToExcel, loadCustomData } = useData()
+const { applications, filteredApplications, exportToExcel, loadCustomData } = useData()
 
 const pageSize = ref(50)
 const currentPage = ref(1)
