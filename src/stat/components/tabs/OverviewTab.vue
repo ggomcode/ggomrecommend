@@ -22,7 +22,7 @@
       <!-- 2. Applicants -->
       <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
         <div class="flex items-center justify-between text-slate-400 mb-2">
-          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">수시 지원자</span>
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">{{ applicantLabel }}</span>
           <span class="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
           </span>
@@ -309,6 +309,7 @@ const {
   currentTargetTotalStudents,
   enrolledLabel,
   enrolledSubText,
+  applicantLabel,
   currentApplicantRate
 } = useData()
 

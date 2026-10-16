@@ -18,15 +18,16 @@ export const DEFAULT_KCUE_YEAR_SHEETS = {
 export const STANDARD_KCUE_YEARS = ['2027', '2026', '2025', '2024', '2023']
 
 export const STANDARD_KCUE_TABS = [
+  { key: '기본통계', year: '전체', type: '기본통계', category: 'basic', label: '학년도별 기본통계 (3학년 학생수·학급수)', isDefault: false },
   { key: '2027수시', year: '2027', type: '수시', category: 'susi', label: '2027학년도 수시 지원 원자료', isDefault: true },
   { key: '2026수시', year: '2026', type: '수시', category: 'susi', label: '2026학년도 수시 지원 원자료' },
   { key: '2025수시', year: '2025', type: '수시', category: 'susi', label: '2025학년도 수시 지원 원자료' },
   { key: '2027정시', year: '2027', type: '정시', category: 'jungsi', label: '2027학년도 정시 지원 원자료' },
   { key: '2026정시', year: '2026', type: '정시', category: 'jungsi', label: '2026학년도 정시 지원 원자료' },
   { key: '2025정시', year: '2025', type: '정시', category: 'jungsi', label: '2025학년도 정시 지원 원자료' },
-  { key: '2027통계', year: '2027', type: '통계', category: 'stat', label: '2027학년도 공식 통계 요약' },
-  { key: '2026통계', year: '2026', type: '통계', category: 'stat', label: '2026학년도 공식 통계 요약' },
-  { key: '2025통계', year: '2025', type: '통계', category: 'stat', label: '2025학년도 공식 통계 요약' }
+  { key: '2027통계', year: '2027', type: '통계', category: 'stat', label: '2027학년도 통계 요약 (선택)' },
+  { key: '2026통계', year: '2026', type: '통계', category: 'stat', label: '2026학년도 통계 요약 (선택)' },
+  { key: '2025통계', year: '2025', type: '통계', category: 'stat', label: '2025학년도 통계 요약 (선택)' }
 ]
 
 export function extractSheetId(input) {
@@ -346,6 +347,76 @@ export async function fetchAndParseKcueYearData(sheetId, year, type = '수시') 
   return parseKcueRows(csv)
 }
 
+let cachedBasicStats = null
+let cachedBasicStatsTime = 0
+
+/**
+ * 구글 시트의 '기본통계' 탭 파싱 (학년도별 3학년 학생 수 및 학급 수)
+ * @param {string} sheetId 
+ * @param {boolean} forceReload 
+ * @returns {Promise<Record<string, { academicYear: number, totalStudents: number|null, classCount: number|null }>>}
+ */
+export async function fetchBasicSchoolStats(sheetId, forceReload = false) {
+  const cleanId = extractSheetId(sheetId) || DEFAULT_KCUE_SHEET_ID
+  const now = Date.now()
+  if (!forceReload && cachedBasicStats && (now - cachedBasicStatsTime < 300000)) {
+    return cachedBasicStats
+  }
+
+  try {
+    const actualTabs = await getActualGoogleSheetTabs(cleanId, forceReload)
+    if (!actualTabs.includes('기본통계')) {
+      console.log("[statApi] 구글 시트에 '기본통계' 탭이 없습니다.")
+      return cachedBasicStats || {}
+    }
+
+    const csvText = await fetchKcueSheetTabCsv(cleanId, '기본통계')
+    if (!csvText || !csvText.trim()) return cachedBasicStats || {}
+
+    const wb = XLSX.read(csvText, { type: 'string' })
+    const sheet = wb.Sheets[wb.SheetNames[0]]
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 })
+
+    let yearRow = null
+    let studentCountRow = null
+    let classCountRow = null
+
+    for (const r of rows) {
+      if (!r || r.length === 0) continue
+      const title = String(r[0] || '').replace(/\s+/g, '')
+      if (title.includes('대입학년도')) yearRow = r
+      else if (title.includes('학생수')) studentCountRow = r
+      else if (title.includes('학급수')) classCountRow = r
+    }
+
+    const byYear = {}
+    if (yearRow) {
+      for (let c = 1; c < yearRow.length; c++) {
+        const y = String(yearRow[c] || '').trim()
+        if (!y) continue
+        const totalStudents = studentCountRow && studentCountRow[c] != null && !isNaN(studentCountRow[c])
+          ? Number(studentCountRow[c])
+          : null
+        const classCount = classCountRow && classCountRow[c] != null && !isNaN(classCountRow[c])
+          ? Number(classCountRow[c])
+          : null
+        byYear[y] = {
+          academicYear: Number(y),
+          totalStudents,
+          classCount
+        }
+      }
+    }
+
+    cachedBasicStats = byYear
+    cachedBasicStatsTime = now
+    return cachedBasicStats
+  } catch (err) {
+    console.warn('[statApi] Failed to fetch basic school stats:', err)
+    return cachedBasicStats || {}
+  }
+}
+
 /**
  * 학년도별 대교협 구글 시트 ID 맵 조회 (하위 호환성 유지)
  * - 단일 구글 시트 ID 정책에 따라 모든 학년도가 동일한 단일 시트 ID를 가리키도록 제공
@@ -369,4 +440,5 @@ export async function saveKcueYearSheets(sheetsMap) {
   await saveKcueSheetId(targetId)
   return await getKcueYearSheets()
 }
+
 

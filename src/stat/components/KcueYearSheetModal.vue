@@ -117,6 +117,14 @@
                 </button>
                 <button
                   type="button"
+                  @click="selectedCategory = 'basic'"
+                  :class="selectedCategory === 'basic' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-500 hover:text-slate-800'"
+                  class="px-2 py-1 rounded border-none cursor-pointer transition-colors"
+                >
+                  기본통계
+                </button>
+                <button
+                  type="button"
                   @click="selectedCategory = 'stat'"
                   :class="selectedCategory === 'stat' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-500 hover:text-slate-800'"
                   class="px-2 py-1 rounded border-none cursor-pointer transition-colors"

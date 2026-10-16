@@ -7,6 +7,7 @@ import {
   getKcueYearSheets, 
   DEFAULT_KCUE_YEAR_SHEETS, 
   fetchAndParseKcueYearData, 
+  fetchBasicSchoolStats,
   STANDARD_KCUE_YEARS 
 } from '../../api/statApi.js'
 import officialStatsData from '../data/officialStats.json'
@@ -60,39 +61,33 @@ const yearlyApplicationsCache = ref({
 })
 const isLoadingYearData = ref(false)
 const yearDataError = ref(null)
+const basicSchoolStats = ref({})
 
-// 공식 통계 요약 헬퍼
+// 공식 통계 요약 헬퍼: 구글 시트 '기본통계' 탭의 3학년 학생 수를 우선 반영
 function updateOfficialStats(strYear, appsList) {
+  const basic = basicSchoolStats.value?.[strYear]
   const yData = MULTI_YEAR_STATS.byYear[strYear]
-  if (yData && yData.hasData && selectedScope.value === 'SUSI_ALL') {
-    officialStats.value = {
-      ...officialStatsData,
-      academicYear: Number(strYear),
-      totalStudents: yData.totalStudents,
-      applicantStudents: yData.applicantStudents,
-      applicantRate: yData.applicantRate,
-      totalApplications: yData.totalApplications,
-      avgApplicationsPerStudent: yData.avgAppsPerStudent,
-      metroBreakdown: {
-        metro: { count: Math.round(yData.totalApplications * (yData.metroRate / 100)), rate: yData.metroRate },
-        nonMetro: { count: Math.round(yData.totalApplications * (yData.nonMetroRate / 100)), rate: yData.nonMetroRate },
-        total: yData.totalApplications
-      }
-    }
-  } else if (appsList && appsList.length > 0) {
+  // 기본통계 시트 값 우선, 없으면 MULTI_YEAR_STATS 또는 기본값 334
+  const baselineTotalStudents = basic?.totalStudents || yData?.totalStudents || 334
+
+  if (appsList && appsList.length > 0) {
     const studentKeys = new Set(appsList.map(a => a.studentKey))
     const totalApps = appsList.length
-    const totalStudents = studentKeys.size
+    const applicantStudents = studentKeys.size
     const metroApps = appsList.filter(a => a.isMetro).length
     const metroRate = totalApps > 0 ? Number(((metroApps / totalApps) * 100).toFixed(1)) : 0
+    const applicantRate = baselineTotalStudents > 0 
+      ? Number(((applicantStudents / baselineTotalStudents) * 100).toFixed(1))
+      : 0
+
     officialStats.value = {
       ...officialStatsData,
       academicYear: Number(strYear),
-      totalStudents: totalStudents,
-      applicantStudents: totalStudents,
-      applicantRate: '100.0',
+      totalStudents: baselineTotalStudents, // 항상 3학년 재학생 총원! (334 등)
+      applicantStudents: applicantStudents, // 실제 원서접수 학생 수 (246 등)
+      applicantRate: applicantRate,
       totalApplications: totalApps,
-      avgApplicationsPerStudent: totalStudents > 0 ? Number((totalApps / totalStudents).toFixed(1)) : 0,
+      avgApplicationsPerStudent: applicantStudents > 0 ? Number((totalApps / applicantStudents).toFixed(1)) : 0,
       metroBreakdown: {
         metro: { count: metroApps, rate: metroRate },
         nonMetro: { count: totalApps - metroApps, rate: Number((100 - metroRate).toFixed(1)) },
@@ -152,6 +147,15 @@ async function applyYearAndScope(year, scope, forceReload = false) {
 
   isLoadingYearData.value = true
   try {
+    // 1. 구글 시트의 '기본통계' 탭(학년도별 3학년 재학생 총원 및 학급 수) 로드
+    if (forceReload || Object.keys(basicSchoolStats.value).length === 0) {
+      const sheetId = await getKcueSheetId()
+      const basic = await fetchBasicSchoolStats(sheetId, forceReload)
+      if (basic && typeof basic === 'object') {
+        basicSchoolStats.value = basic
+      }
+    }
+
     let combined = []
     if (scope === 'ALL') {
       const susiApps = await loadPeriodData(strYear, '수시', forceReload)
@@ -189,6 +193,12 @@ async function setScope(scope) {
 
 async function initYearSheets() {
   try {
+    const sheetId = await getKcueSheetId()
+    const basic = await fetchBasicSchoolStats(sheetId)
+    if (basic && typeof basic === 'object') {
+      basicSchoolStats.value = basic
+    }
+
     const sheets = await getKcueYearSheets()
     if (sheets && typeof sheets === 'object') {
       kcueYearSheets.value = sheets
@@ -380,6 +390,11 @@ export function useStatData() {
     if (selectedClass.value === '졸업생' || selectedClass.value === 'GRADUATE') {
       return currentStats.value.totalStudents
     }
+    // 구글 시트 '기본통계' 탭의 3학년 학생 수 우선 사용
+    const basic = basicSchoolStats.value?.[selectedAcademicYear.value]
+    if (basic && basic.totalStudents) {
+      return basic.totalStudents
+    }
     return officialStats.value?.totalStudents || 334
   })
 
@@ -396,6 +411,20 @@ export function useStatData() {
       return '졸업생 지원자'
     }
     return '3학년 재학생'
+  })
+
+  // Dynamic label for applicant card
+  const applicantLabel = computed(() => {
+    if (selectedClass.value === '졸업생' || selectedClass.value === 'GRADUATE') {
+      return '졸업생 지원자'
+    }
+    if (selectedScope.value === 'SUSI_ALL') return '수시 지원자'
+    if (selectedScope.value === 'SUSI_UNIV') return '수시 일반대 지원자'
+    if (selectedScope.value === 'SUSI_COLLEGE') return '수시 전문대 지원자'
+    if (selectedScope.value === 'JUNGSI_ALL') return '정시 지원자'
+    if (selectedScope.value === 'JUNGSI_UNIV') return '정시 일반대 지원자'
+    if (selectedScope.value === 'JUNGSI_COLLEGE') return '정시 전문대 지원자'
+    return '대입 지원자'
   })
 
   // Dynamic subtitle for enrolled card
@@ -624,7 +653,9 @@ export function useStatData() {
     currentTargetTotalStudents,
     enrolledLabel,
     enrolledSubText,
+    applicantLabel,
     currentApplicantRate,
+    basicSchoolStats,
     resetFilters,
     exportToExcel,
     loadCustomData,
