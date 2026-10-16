@@ -77,7 +77,7 @@
               :key="pt.id"
               class="marker-item"
               :class="[
-                pt.isPass ? 'pass-marker' : 'fail-marker',
+                pt.markerType === 'pass' ? 'pass-marker' : (pt.markerType === 'stage1' ? 'stage1-marker' : 'fail-marker'),
                 !isPrintMode ? 'cursor-pointer hover:z-20' : ''
               ]"
               :style="{
@@ -86,8 +86,10 @@
               @mouseenter="handleMouseEnter(pt, $event)"
               @mouseleave="handleMouseLeave"
             >
-              <!-- Pass: Blue Filled Circle ● -->
-              <span v-if="pt.isPass" class="dot-symbol">●</span>
+              <!-- Final Pass: Blue Filled Circle ● -->
+              <span v-if="pt.markerType === 'pass'" class="dot-symbol pass-dot">●</span>
+              <!-- Stage 1 Pass (when enabled): Orange Filled Circle ● -->
+              <span v-else-if="pt.markerType === 'stage1'" class="dot-symbol stage1-dot">●</span>
               <!-- Fail: Red/Coral Cross ✕ -->
               <span v-else class="cross-symbol">✕</span>
             </div>
@@ -116,6 +118,10 @@ const props = defineProps({
     default: false
   },
   isPrivacyMasked: {
+    type: Boolean,
+    default: false
+  },
+  showStage1Pass: {
     type: Boolean,
     default: false
   }
@@ -207,12 +213,34 @@ const rowPointsMap = computed(() => {
     const grade = Number(rawGrade)
     if (grade < 1.0 || grade > 9.0) continue
 
-    // Determine Pass / Fail
-    const res = String(app.finalStage || app.stage1 || '').trim()
-    const isPass = (res.includes('합격') || res.includes('충원') || res.includes('최초') || app.registerStatus === 'Y') && !res.includes('불합')
-    const resultText = isPass 
-      ? (app.registerStatus === 'Y' ? '최종합격(등록)' : (res || '합격'))
-      : (res || '불합격')
+    // Determine Stage 1 Pass & Final Pass / Fail
+    const s1 = String(app.stage1 || '').trim()
+    const isStage1Passed = (s1.includes('합격') || s1.includes('통과')) && !s1.includes('불합')
+
+    const finalRes = String(app.finalStage || '').trim()
+    const isFinalPass = (finalRes.includes('합격') || finalRes.includes('충원') || finalRes.includes('최초') || app.registerStatus === 'Y') && !finalRes.includes('불합')
+
+    let markerType = 'fail'
+    let isPass = false
+    let isStage1Pass = false
+    let resultText = ''
+    let resultBadge = ''
+
+    if (isFinalPass) {
+      markerType = 'pass'
+      isPass = true
+      resultText = app.registerStatus === 'Y' ? '최종합격(등록)' : (finalRes || '최종합격')
+      resultBadge = '최종합격'
+    } else if (isStage1Passed) {
+      isStage1Pass = true
+      markerType = props.showStage1Pass ? 'stage1' : 'fail'
+      resultText = finalRes ? `1차합격 후 ${finalRes}` : '1차합격 (최종불합격)'
+      resultBadge = '1차합격'
+    } else {
+      markerType = 'fail'
+      resultText = finalRes || s1 || '불합격'
+      resultBadge = '불합격'
+    }
 
     if (!map[uName]) map[uName] = []
 
@@ -225,7 +253,12 @@ const rowPointsMap = computed(() => {
       grade,
       leftPct,
       isPass,
+      isStage1Pass,
+      markerType,
       resultText,
+      resultBadge,
+      stage1: s1,
+      finalStage: finalRes,
       dept: app.dept,
       admissionMajorType: app.admissionMajorType,
       admissionDetailType: app.admissionDetailType,
@@ -241,8 +274,9 @@ const rowPointsMap = computed(() => {
   // Calculate micro-offset for identical / very close points on the same university row
   for (const uName of Object.keys(map)) {
     const list = map[uName]
-    // Sort primarily by grade, secondarily by pass status
-    list.sort((a, b) => a.grade - b.grade || (a.isPass === b.isPass ? 0 : a.isPass ? 1 : -1))
+    // Sort primarily by grade, secondarily by marker precedence (pass -> stage1 -> fail)
+    const markerOrder = { pass: 1, stage1: 2, fail: 3 }
+    list.sort((a, b) => a.grade - b.grade || ((markerOrder[a.markerType] || 3) - (markerOrder[b.markerType] || 3)))
 
     // Cluster points within 0.03 grade diff
     const clusters = []
@@ -424,6 +458,10 @@ function handleMouseLeave() {
 }
 
 .pass-marker {
+  z-index: 3;
+}
+
+.stage1-marker {
   z-index: 2;
 }
 
@@ -431,12 +469,19 @@ function handleMouseLeave() {
   z-index: 1;
 }
 
-/* Pass Dot: Blue Filled Circle ● */
+/* Dots: Blue Filled Circle ● vs Orange Filled Circle ● */
 .dot-symbol {
   font-size: 13px;
-  color: #2563eb;
   line-height: 1;
   text-shadow: 0 0 1px rgba(255, 255, 255, 0.9);
+}
+
+.pass-dot {
+  color: #2563eb;
+}
+
+.stage1-dot {
+  color: #ea580c;
 }
 
 /* Fail Cross: Red ✕ */
@@ -470,8 +515,13 @@ function handleMouseLeave() {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  .dot-symbol {
+  .pass-dot {
     color: #1d4ed8 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .stage1-dot {
+    color: #ea580c !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }

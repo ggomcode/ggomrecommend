@@ -92,15 +92,30 @@
             <option value="논술">논술</option>
           </select>
 
-          <!-- Result Filter: Pass vs Fail -->
+          <!-- Result Filter: Pass vs Stage 1 vs Fail -->
           <select
             v-model="filterResult"
             class="bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 px-3 py-2 focus:outline-none"
           >
             <option value="ALL">합불 전체</option>
-            <option value="PASS">합격만 (●)</option>
+            <option value="PASS">최종 합격만 (●)</option>
+            <option value="STAGE1">1차합격(최종불)만 (●)</option>
             <option value="FAIL">불합격만 (✕)</option>
           </select>
+
+          <!-- Option Checkbox: 1차합격 표시 (주황색 원형점) -->
+          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 cursor-pointer transition-colors shadow-2xs select-none">
+            <input
+              type="checkbox"
+              v-model="showStage1Pass"
+              class="rounded text-amber-500 focus:ring-amber-400 w-3.5 h-3.5 cursor-pointer"
+            />
+            <span>1차합격 표시 (</span>
+            <span class="inline-flex items-center gap-1 font-bold text-amber-600">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> 주황 원
+            </span>
+            <span>)</span>
+          </label>
 
           <!-- Reset Filter -->
           <button
@@ -115,11 +130,19 @@
         <!-- Legend and Count Info -->
         <div class="flex items-center gap-3 text-xs">
           <div class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700">
-            <span class="inline-flex items-center gap-1 font-bold text-blue-700">
-              <span class="w-3 h-3 rounded-full bg-blue-600 inline-block"></span> 합격 {{ totalPassCount }}건
+            <span class="inline-flex items-center gap-1 font-bold text-blue-700" title="최종 합격 또는 등록">
+              <span class="w-3 h-3 rounded-full bg-blue-600 inline-block"></span> 최종합격 {{ totalPassCount }}건
             </span>
             <span class="text-slate-300">|</span>
-            <span class="inline-flex items-center gap-1 font-bold text-rose-600">
+            <span 
+              class="inline-flex items-center gap-1 font-bold transition-opacity"
+              :class="showStage1Pass ? 'text-amber-600' : 'text-slate-500'"
+              title="1단계 합격 후 최종 불합격"
+            >
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> 1차합격 {{ totalStage1PassCount }}건
+            </span>
+            <span class="text-slate-300">|</span>
+            <span class="inline-flex items-center gap-1 font-bold text-rose-600" title="최종 불합격">
               <span class="text-rose-500 font-black text-sm">✕</span> 불합격 {{ totalFailCount }}건
             </span>
             <span class="text-slate-300">|</span>
@@ -202,6 +225,7 @@
             :universities="currentPageUnivs"
             :applications="applications"
             :isPrivacyMasked="isPrivacyMasked"
+            :showStage1Pass="showStage1Pass"
             @point-hover="handlePointHover"
           />
         </div>
@@ -226,6 +250,7 @@
             :universities="pageUnivs"
             :applications="applications"
             :isPrivacyMasked="isPrivacyMasked"
+            :showStage1Pass="showStage1Pass"
             @point-hover="handlePointHover"
           />
         </div>
@@ -250,6 +275,7 @@
           :applications="applications"
           :isPrintMode="true"
           :isPrivacyMasked="true"
+          :showStage1Pass="showStage1Pass"
         />
       </div>
     </div>
@@ -266,10 +292,10 @@
           <span 
             :class="[
               'px-1.5 py-0.5 rounded text-[10px] font-black',
-              hoveredPoint.isPass ? 'bg-blue-500 text-white' : 'bg-rose-500 text-white'
+              hoveredPoint.isPass ? 'bg-blue-500 text-white' : (hoveredPoint.isStage1Pass ? 'bg-amber-500 text-white' : 'bg-rose-500 text-white')
             ]"
           >
-            {{ hoveredPoint.resultText }}
+            {{ hoveredPoint.resultBadge || hoveredPoint.resultText }}
           </span>
         </div>
         <div class="space-y-0.5 text-slate-300 text-[11px]">
@@ -277,6 +303,18 @@
           <div><strong class="text-white">전형명:</strong> {{ hoveredPoint.admissionMajorType }} {{ hoveredPoint.admissionDetailType ? `(${hoveredPoint.admissionDetailType})` : '' }}</div>
           <div><strong class="text-white">학생:</strong> {{ hoveredPoint.studentName }} ({{ hoveredPoint.classNum }}반 {{ hoveredPoint.studentNum }}번)</div>
           <div><strong class="text-white">내신등급:</strong> <span class="font-bold text-amber-300 text-xs">{{ hoveredPoint.grade }}등급</span></div>
+          <div v-if="hoveredPoint.stage1">
+            <strong class="text-white">1단계:</strong> 
+            <span :class="hoveredPoint.stage1.includes('합격') ? 'text-amber-300 font-bold' : 'text-slate-300'">
+              {{ hoveredPoint.stage1 }}
+            </span>
+          </div>
+          <div v-if="hoveredPoint.finalStage">
+            <strong class="text-white">최종단계:</strong> 
+            <span :class="hoveredPoint.isPass ? 'text-blue-300 font-bold' : 'text-rose-300'">
+              {{ hoveredPoint.finalStage }}
+            </span>
+          </div>
           <div v-if="hoveredPoint.registerStatus">
             <strong class="text-white">등록여부:</strong> 
             <span :class="hoveredPoint.registerStatus === 'Y' ? 'text-emerald-400 font-bold' : 'text-slate-400'">
@@ -316,18 +354,39 @@ const itemsPerPage = 20
 // Search and Filters
 const univSearchQuery = ref('')
 const filterAdmissionType = ref('ALL') // ALL, 교과, 종합, 실기, 논술
-const filterResult = ref('ALL') // ALL, PASS, FAIL
+const filterResult = ref('ALL') // ALL, PASS, STAGE1, FAIL
+const showStage1Pass = ref(false) // 1차합격 후 불합격 사례를 주황색 원으로 표시하는 옵션
+
+// Helper: Determine Pass, Stage 1 Pass, and Fail status
+function evaluateResult(app) {
+  const s1 = String(app.stage1 || '').trim()
+  const isStage1Passed = (s1.includes('합격') || s1.includes('통과')) && !s1.includes('불합')
+
+  const finalRes = String(app.finalStage || '').trim()
+  const isFinalPass = (finalRes.includes('합격') || finalRes.includes('충원') || finalRes.includes('최초') || app.registerStatus === 'Y') && !finalRes.includes('불합')
+
+  const isStage1PassFinalFail = !isFinalPass && isStage1Passed
+
+  return {
+    isFinalPass,
+    isStage1PassFinalFail,
+    isStage1Passed,
+    isFail: !isFinalPass
+  }
+}
 
 const hasActiveFilters = computed(() => {
   return univSearchQuery.value.trim() !== '' ||
     filterAdmissionType.value !== 'ALL' ||
-    filterResult.value !== 'ALL'
+    filterResult.value !== 'ALL' ||
+    showStage1Pass.value
 })
 
 function resetScatterFilters() {
   univSearchQuery.value = ''
   filterAdmissionType.value = 'ALL'
   filterResult.value = 'ALL'
+  showStage1Pass.value = false
   currentPage.value = 1
 }
 
@@ -360,10 +419,10 @@ const filteredUnivNames = computed(() => {
           if (!app.admissionType || !app.admissionType.includes(filterAdmissionType.value)) return false
         }
         if (filterResult.value !== 'ALL') {
-          const res = String(app.finalStage || app.stage1 || '').trim()
-          const isPass = (res.includes('합격') || res.includes('충원') || res.includes('최초') || app.registerStatus === 'Y') && !res.includes('불합')
-          if (filterResult.value === 'PASS' && !isPass) return false
-          if (filterResult.value === 'FAIL' && isPass) return false
+          const res = evaluateResult(app)
+          if (filterResult.value === 'PASS' && !res.isFinalPass) return false
+          if (filterResult.value === 'STAGE1' && !res.isStage1PassFinalFail) return false
+          if (filterResult.value === 'FAIL' && !res.isFail) return false
         }
         return true
       })
@@ -414,10 +473,10 @@ const currentFilteredApplications = computed(() => {
       if (!app.admissionType || !app.admissionType.includes(filterAdmissionType.value)) return false
     }
     if (filterResult.value !== 'ALL') {
-      const res = String(app.finalStage || app.stage1 || '').trim()
-      const isPass = (res.includes('합격') || res.includes('충원') || res.includes('최초') || app.registerStatus === 'Y') && !res.includes('불합')
-      if (filterResult.value === 'PASS' && !isPass) return false
-      if (filterResult.value === 'FAIL' && isPass) return false
+      const res = evaluateResult(app)
+      if (filterResult.value === 'PASS' && !res.isFinalPass) return false
+      if (filterResult.value === 'STAGE1' && !res.isStage1PassFinalFail) return false
+      if (filterResult.value === 'FAIL' && !res.isFail) return false
     }
     return true
   })
@@ -426,18 +485,15 @@ const currentFilteredApplications = computed(() => {
 const totalPlotItemsCount = computed(() => currentFilteredApplications.value.length)
 
 const totalPassCount = computed(() => {
-  return currentFilteredApplications.value.filter(app => {
-    const res = String(app.finalStage || app.stage1 || '').trim()
-    return (res.includes('합격') || res.includes('충원') || res.includes('최초') || app.registerStatus === 'Y') && !res.includes('불합')
-  }).length
+  return currentFilteredApplications.value.filter(app => evaluateResult(app).isFinalPass).length
+})
+
+const totalStage1PassCount = computed(() => {
+  return currentFilteredApplications.value.filter(app => evaluateResult(app).isStage1PassFinalFail).length
 })
 
 const totalFailCount = computed(() => {
-  return currentFilteredApplications.value.filter(app => {
-    const res = String(app.finalStage || app.stage1 || '').trim()
-    const isPass = (res.includes('합격') || res.includes('충원') || res.includes('최초') || app.registerStatus === 'Y') && !res.includes('불합')
-    return res.includes('불합') || (!isPass && res.length > 0)
-  }).length
+  return currentFilteredApplications.value.filter(app => evaluateResult(app).isFail).length
 })
 
 // Tooltip Management
