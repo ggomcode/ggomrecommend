@@ -9,7 +9,7 @@
 
       <div class="relative z-10 flex items-center justify-between">
         <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5 m-0">
-          <span>2026학년도 & 2027대입 캘린더</span>
+          <span>{{ calendarTitle }}</span>
         </h2>
       </div>
     </div>
@@ -605,7 +605,7 @@
           <div class="flex items-center gap-3">
             <span class="text-2xl">📅</span>
             <div>
-              <span class="text-xs text-blue-300 font-bold block">2027학년도 대입 일정 상세</span>
+              <span class="text-xs text-blue-300 font-bold block">{{ collegeAdmissionYear }}학년도 대입 일정 상세</span>
               <h3 class="text-lg sm:text-xl font-black text-white m-0">
                 {{ selectedDateModal.formattedLong }}
               </h3>
@@ -817,6 +817,16 @@ const initMonth = (now.getFullYear() === 2026 || now.getFullYear() === 2027) ? (
 
 const currentYear = ref(initYear)
 const currentMonth = ref(initMonth)
+
+// 오늘 날짜 기준 현 학년도 및 대입 학년도 동적 계산 (3월 1일 ~ 이듬해 2월 말일 기준)
+const schoolAcademicYear = computed(() => {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = d.getMonth() + 1
+  return m >= 3 ? y : y - 1
+})
+const collegeAdmissionYear = computed(() => schoolAcademicYear.value + 1)
+const calendarTitle = computed(() => `${schoolAcademicYear.value}학년도 & ${collegeAdmissionYear.value}대입 캘린더`)
 
 
 // 오늘 날짜 문자열
