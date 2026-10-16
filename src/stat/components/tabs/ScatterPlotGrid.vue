@@ -320,7 +320,7 @@ function handleMouseEnter(pt, event) {
   if (props.isPrintMode) return
   emit('point-hover', {
     ...pt,
-    studentName: props.isPrivacyMasked ? maskName(pt.studentName) : pt.studentName,
+    studentName: maskName(pt.studentName),
     clientX: event.clientX,
     clientY: event.clientY
   })

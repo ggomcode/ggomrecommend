@@ -102,7 +102,7 @@
                   ? 'bg-gradient-to-tr from-amber-600 to-amber-400 shadow-amber-500/20' 
                   : 'bg-gradient-to-tr from-indigo-600 to-sky-400 shadow-indigo-500/20'
               ]">
-                {{ currentStudent.isGraduate ? '졸' : currentStudent.name.slice(0, 1) }}
+                {{ currentStudent.isGraduate ? '졸' : (maskName(currentStudent.name).replace(/\*/g, '')[0] || '학') }}
               </div>
               <div>
                 <div class="flex flex-wrap items-center gap-1.5">

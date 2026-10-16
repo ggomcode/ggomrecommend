@@ -97,26 +97,36 @@
           </div>
 
           <!-- Privacy Mask Control:
-               - Teacher: Fixed/Locked message
-               - Admin: Toggleable
+               - Teacher: Fixed/Locked message (**동만 표시, 마스킹 해제 불가)
+               - Admin: 3-Stage Cycle Toggle (1단계 **동 -> 2단계 홍*동 -> 3단계 홍길동 -> 1단계)
           -->
-          <div v-if="auth.isTeacher" class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-amber-50 text-amber-800 border border-amber-300" title="교사는 학생 개인정보 보호를 위해 이름이 자동 마스킹됩니다.">
+          <div 
+            v-if="auth.isTeacher" 
+            class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-amber-50 text-amber-800 border border-amber-300 select-none shadow-2xs" 
+            title="교사는 학생 개인정보 보호를 위해 맨 뒷글자만 표시되는 기본 마스킹(**동)으로 고정됩니다 (마스킹 해제 불가)."
+          >
             <span class="mr-1">🔒</span>
-            <span>개인정보 마스킹 고정</span>
+            <span>마스킹 고정 (**동)</span>
           </div>
+
           <button 
             v-else-if="auth.isAdmin"
-            @click="adminMaskToggle = !adminMaskToggle"
+            @click="cycleAdminMaskMode"
             :class="[
-              'inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 border cursor-pointer',
-              isPrivacyMasked 
-                ? 'bg-rose-50 text-rose-700 border-rose-200 ring-2 ring-rose-500/20' 
-                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+              'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-150 border cursor-pointer shadow-2xs select-none',
+              adminMaskMode === 0 
+                ? 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 ring-1 ring-rose-300/50' 
+                : adminMaskMode === 1
+                ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 ring-1 ring-amber-300/50'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-1 ring-emerald-300/50'
             ]"
-            title="학생 이름 마스킹 토글 (홍*동)"
+            :title="adminMaskTooltip"
           >
-            <span class="mr-1.5">{{ isPrivacyMasked ? '🔒' : '🔓' }}</span>
-            <span>이름 마스킹 {{ isPrivacyMasked ? 'ON' : 'OFF' }}</span>
+            <span>{{ adminMaskMode === 0 ? '🔒' : (adminMaskMode === 1 ? '🔓' : '👁️') }}</span>
+            <span>{{ adminMaskLabel }}</span>
+            <span class="text-[10px] px-1 py-0.2 rounded-full font-black bg-white border border-current shadow-2xs">
+              {{ adminMaskMode === 0 ? '1단계' : (adminMaskMode === 1 ? '2단계' : '3단계') }}
+            </span>
           </button>
 
           <!-- External Google Sheet Dropdown (Admin ONLY!) -->
@@ -228,7 +238,9 @@ import { getKcueSheetId } from '../../api/statApi'
 const router = useRouter()
 const { 
   auth, 
+  adminMaskMode,
   adminMaskToggle, 
+  cycleAdminMaskMode,
   isPrivacyMasked, 
   exportToExcel, 
   selectedAcademicYear, 
@@ -241,6 +253,22 @@ const {
   isLoadingYearData,
   reloadCurrentYear
 } = useStatData()
+
+const adminMaskLabel = computed(() => {
+  if (adminMaskMode.value === 0) return '마스킹: **동'
+  if (adminMaskMode.value === 1) return '마스킹: 홍*동'
+  return '이름 전체공개'
+})
+
+const adminMaskTooltip = computed(() => {
+  if (adminMaskMode.value === 0) {
+    return '1단계 [기본 디폴트 마스킹]: 맨 뒷글자(**동)만 표시 중. 클릭 시 2단계(성과 맨뒷글자 총 2개 표시: 홍*동)로 전환됩니다.'
+  }
+  if (adminMaskMode.value === 1) {
+    return '2단계 [부분 마스킹]: 성+맨뒷글자(홍*동) 2글자 표시 중. 클릭 시 3단계(이름 전체 공개: 홍길동)로 전환됩니다.'
+  }
+  return '3단계 [이름 전체공개]: 모든 이름이 표시 중. 클릭 시 다시 1단계(디폴트 마스킹: **동)로 되돌아갑니다.'
+})
 
 const isYearSheetModalOpen = ref(false)
 
