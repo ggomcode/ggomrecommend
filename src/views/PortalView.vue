@@ -416,6 +416,80 @@
       </div>
     </main>
 
+    <!-- 🔐 대입 통계 시스템 보안 암호 입력 모달 -->
+    <div
+      v-if="showStatPasswordModal"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+      @click.self="showStatPasswordModal = false"
+    >
+      <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-100 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-150">
+        <div class="flex items-center gap-3.5">
+          <div class="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 m-0">대입 통계 시스템 보안 인증</h3>
+            <p class="text-xs text-slate-500 m-0 mt-0.5">시스템 관리자 로그인 암호를 입력하세요</p>
+          </div>
+        </div>
+
+        <div class="bg-indigo-50/60 border border-indigo-100/80 rounded-2xl p-3.5 text-xs text-slate-600 leading-relaxed">
+          <p class="m-0 font-medium text-slate-700">
+            🛡️ 본 통계 시스템의 원본 성적·입결 자료는 <strong>AES-256 군사 등급</strong>으로 암호화되어 안전하게 보호받고 있습니다.
+          </p>
+          <p class="m-0 mt-1 text-slate-500 text-[11px]">
+            안전한 복호화 및 열람을 위해 <strong>시스템 관리자 로그인 암호</strong>를 입력해 주세요.
+          </p>
+        </div>
+
+        <form @submit.prevent="submitStatPassword" class="flex flex-col gap-3">
+          <div class="flex flex-col gap-1.5">
+            <label for="stat-pw-input" class="text-xs font-bold text-slate-700">관리자 암호</label>
+            <input
+              id="stat-pw-input"
+              ref="statPwInputRef"
+              v-model="statInputPassword"
+              type="password"
+              placeholder="시스템 관리자 로그인 암호를 입력하세요"
+              class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-mono"
+              :disabled="isVerifyingPassword"
+              autofocus
+            />
+          </div>
+
+          <p v-if="statPasswordError" class="text-xs font-bold text-rose-600 m-0 flex items-center gap-1.5">
+            <span>⚠️</span>
+            <span>{{ statPasswordError }}</span>
+          </p>
+
+          <div class="flex items-center justify-end gap-2.5 mt-2">
+            <button
+              type="button"
+              @click="showStatPasswordModal = false"
+              :disabled="isVerifyingPassword"
+              class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors border border-slate-200 cursor-pointer"
+            >
+              취소
+            </button>
+            <button
+              type="submit"
+              :disabled="isVerifyingPassword || !statInputPassword.trim()"
+              class="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+            >
+              <svg v-if="isVerifyingPassword" class="animate-spin w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              <span>{{ isVerifyingPassword ? '인증 및 복호화 검증 중...' : '인증 및 입장' }}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- 하단 푸터 -->
     <footer class="py-6 border-t border-slate-200 bg-white text-center text-xs text-slate-500">
       <p>© {{ new Date().getFullYear() }} {{ schoolName }} {{ displaySystemName }}</p>
@@ -432,7 +506,13 @@ import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { checkRuralSystemOpenStatus, getRuralEligibilityList } from '../api/ruralApi'
 import { checkExamIntentSystemEnabled } from '../api/examIntentApi'
 import { checkJuniorCollegeSystemEnabled } from '../api/juniorCollegeApi'
-import { isKcueStatSystemEnabled } from '../api/statApi'
+import { 
+  isKcueStatSystemEnabled, 
+  getKcueSheetId, 
+  getStatSessionPassword, 
+  setStatSessionPassword, 
+  verifyStatSheetPassword 
+} from '../api/statApi'
 import { supabase } from '../utils/supabaseClient'
 import { fetchRoundSchedulesMap, computeRoundDisplayStatus, parseKstDate } from '../utils/roundSchedule'
 import { dialog } from '../components/common/dialog'
@@ -603,6 +683,13 @@ const portalGridClass = computed(() => {
   return 'grid-cols-1 max-w-xl'
 })
 
+// 대입 통계 시스템 보안 암호 상태
+const showStatPasswordModal = ref(false)
+const statInputPassword = ref('')
+const isVerifyingPassword = ref(false)
+const statPasswordError = ref('')
+const statPwInputRef = ref(null)
+
 async function enterStatSystem() {
   if (!checkModuleScheduleAccess("stat")) return
   if (!isStatSystemEnabled.value) {
@@ -613,7 +700,62 @@ async function enterStatSystem() {
     })
     return
   }
-  router.push('/stat')
+
+  const sheetId = await getKcueSheetId()
+  const existingPw = getStatSessionPassword()
+
+  // 1. 세션에 암호(로그인 암호 등)가 있는 경우, 구글 시트 복호화가 실제로 성공하는지 사전 무음 검증!
+  if (existingPw) {
+    try {
+      const verifyRes = await verifyStatSheetPassword(sheetId, existingPw)
+      if (verifyRes.success) {
+        // ⭕ 일치: 로그인 암호로 정상 복호화 가능 -> 원클릭 즉시 입장!
+        router.push('/stat')
+        return
+      }
+      // ❌ 불일치: 로그인 암호와 구글 시트 암호화 암호가 다름 -> 팝업으로 수동 입력 유도
+      statPasswordError.value = '시스템 로그인 암호와 구글 시트 복호화 암호가 일치하지 않습니다. 구글 시트 암호화에 사용한 암호를 입력해 주세요.'
+    } catch (e) {
+      statPasswordError.value = ''
+    }
+  } else {
+    statPasswordError.value = ''
+  }
+
+  // 2. 암호가 없거나 다른 경우: 대문 복호화 암호 입력 모달 오픈
+  statInputPassword.value = ''
+  showStatPasswordModal.value = true
+}
+
+async function submitStatPassword() {
+  const pw = statInputPassword.value.trim()
+  if (!pw) {
+    statPasswordError.value = '암호를 입력해 주세요.'
+    return
+  }
+
+  isVerifyingPassword.value = true
+  statPasswordError.value = ''
+
+  try {
+    const sheetId = await getKcueSheetId()
+    const verifyRes = await verifyStatSheetPassword(sheetId, pw)
+
+    if (!verifyRes.success) {
+      statPasswordError.value = verifyRes.message || '암호가 올바르지 않습니다. 다시 확인해 주세요.'
+      isVerifyingPassword.value = false
+      return
+    }
+
+    // ⭕ 인증 성공: 브라우저 세션에 저장하고 시스템 대문 통과
+    setStatSessionPassword(pw)
+    showStatPasswordModal.value = false
+    router.push('/stat')
+  } catch (err) {
+    statPasswordError.value = '인증 중 오류가 발생했습니다: ' + (err.message || '')
+  } finally {
+    isVerifyingPassword.value = false
+  }
 }
 
 function enterRollbookSystem() {

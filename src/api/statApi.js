@@ -1,5 +1,33 @@
 import { supabase } from '../utils/supabaseClient'
 import * as XLSX from 'xlsx'
+import CryptoJS from 'crypto-js'
+
+export const STAT_PASSWORD_SESSION_KEY = 'pcm_stat_secret_key'
+
+export function getStatSessionPassword() {
+  return sessionStorage.getItem(STAT_PASSWORD_SESSION_KEY) || ''
+}
+
+export function setStatSessionPassword(password) {
+  if (password) {
+    sessionStorage.setItem(STAT_PASSWORD_SESSION_KEY, password.trim())
+  }
+}
+
+export function clearStatSessionPassword() {
+  sessionStorage.removeItem(STAT_PASSWORD_SESSION_KEY)
+}
+
+export function decryptAES(cipherText, password) {
+  if (!cipherText || !password) return null
+  try {
+    const bytes = CryptoJS.AES.decrypt(String(cipherText).trim(), password.trim())
+    const decrypted = bytes.toString(CryptoJS.enc.Utf8)
+    return decrypted || null
+  } catch (e) {
+    return null
+  }
+}
 
 export const KCUE_SHEET_KEY = 'google_sheet_kcue_id'
 export const DEFAULT_KCUE_SHEET_ID = '1U5Vnx2x8gnXQlI3N4deyaurKxj-naZP0cRBb3lQnT4o'
@@ -203,8 +231,9 @@ export async function testKcueSheetTabConnection(sheetId, tabName) {
 
 /**
  * 대교협 구글 시트 CSV 원자료를 시스템 표준 applications 배열로 파싱
+ * (DA열 또는 'encrypted_data' 열에 AES 암호문이 있는 경우 복호화하여 파싱)
  */
-export function parseKcueRows(csvText) {
+export function parseKcueRows(csvText, customPassword = null) {
   if (!csvText || typeof csvText !== 'string') return []
 
   const wb = XLSX.read(csvText, { type: 'string' })
@@ -214,7 +243,30 @@ export function parseKcueRows(csvText) {
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1 })
   if (!rows || rows.length < 2) return []
 
+  const password = customPassword || getStatSessionPassword()
   const rawHeaders = rows[0] || []
+  
+  // 1. DA열(105번째 열, 0-index: 104) 또는 'encrypted_data' 헤더 열 확인
+  let encColIdx = rawHeaders.findIndex(h => String(h || '').trim() === 'encrypted_data')
+  if (encColIdx === -1 && rawHeaders.length >= 105) {
+    const sample = rows[1] ? String(rows[1][104] || '').trim() : ''
+    if (sample.startsWith('U2FsdGVkX1')) {
+      encColIdx = 104
+    }
+  }
+
+  // 암호화된 열이 있고 암호문이 존재하는지 확인
+  let isEncrypted = false
+  if (encColIdx !== -1) {
+    for (let i = 1; i < Math.min(rows.length, 10); i++) {
+      if (String(rows[i]?.[encColIdx] || '').trim().startsWith('U2FsdGVkX1')) {
+        isEncrypted = true
+        break
+      }
+    }
+  }
+
+  // 2. 일반 텍스트 모드 컬럼 맵
   const colMap = {}
   rawHeaders.forEach((h, idx) => {
     if (!h) return
@@ -222,40 +274,76 @@ export function parseKcueRows(csvText) {
     colMap[clean] = idx
   })
 
-  const getVal = (row, ...keys) => {
-    for (const k of keys) {
-      const cleanK = k.replace(/[\r\n\s]+/g, '')
-      if (colMap[cleanK] !== undefined) {
-        const val = row[colMap[cleanK]]
-        if (val !== undefined && val !== null && val !== '') return val
-      }
-    }
-    return ''
-  }
-
-  const getNum = (row, ...keys) => {
-    const v = getVal(row, ...keys)
-    if (v === '' || v === null || v === undefined) return null
-    const n = Number(v)
-    return isNaN(n) ? null : n
-  }
-
   const result = []
+
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i]
     if (!r || r.length === 0) continue
-    const name = String(getVal(r, '이름')).trim()
+
+    let rowData = null
+
+    if (isEncrypted) {
+      const cipherText = String(r[encColIdx] || '').trim()
+      if (!cipherText) continue
+      
+      const decryptedStr = decryptAES(cipherText, password)
+      if (decryptedStr) {
+        try {
+          rowData = JSON.parse(decryptedStr)
+        } catch (e) {
+          console.warn(`[statApi] ${i}행 JSON 파싱 실패:`, e)
+        }
+      }
+    }
+
+    // 값 추출 헬퍼 (복호화된 JSON 객체 또는 일반 행 배열 지원)
+    const getVal = (...keys) => {
+      if (rowData) {
+        for (const k of keys) {
+          if (rowData[k] !== undefined && rowData[k] !== null && rowData[k] !== '') {
+            return rowData[k]
+          }
+          // 공백 제거 매칭
+          const cleanKey = k.replace(/[\r\n\s]+/g, '')
+          for (const actualKey of Object.keys(rowData)) {
+            if (actualKey.replace(/[\r\n\s]+/g, '') === cleanKey) {
+              const val = rowData[actualKey]
+              if (val !== undefined && val !== null && val !== '') return val
+            }
+          }
+        }
+        return ''
+      } else {
+        for (const k of keys) {
+          const cleanK = k.replace(/[\r\n\s]+/g, '')
+          if (colMap[cleanK] !== undefined) {
+            const val = r[colMap[cleanK]]
+            if (val !== undefined && val !== null && val !== '') return val
+          }
+        }
+        return ''
+      }
+    }
+
+    const getNum = (...keys) => {
+      const v = getVal(...keys)
+      if (v === '' || v === null || v === undefined) return null
+      const n = Number(v)
+      return isNaN(n) ? null : n
+    }
+
+    const name = String(getVal('이름')).trim()
     if (!name) continue
 
-    const grade = getNum(r, '학년') || 3
-    const classNum = getVal(r, '반') || ''
-    const studentNum = getNum(r, '번호') || ''
-    const univName = String(getVal(r, '대학명')).trim()
-    const region = String(getVal(r, '지역')).trim()
-    const admissionType = String(getVal(r, '전형유형')).trim()
-    const admissionMajorType = String(getVal(r, '전형명(대)')).trim()
-    const admissionDetailType = String(getVal(r, '세부유형')).trim()
-    const minScoreReq = String(getVal(r, '최저학력기준')).trim()
+    const grade = getNum('학년') || 3
+    const classNum = getVal('반') || ''
+    const studentNum = getNum('번호') || ''
+    const univName = String(getVal('대학명')).trim()
+    const region = String(getVal('지역')).trim()
+    const admissionType = String(getVal('전형유형')).trim()
+    const admissionMajorType = String(getVal('전형명(대)')).trim()
+    const admissionDetailType = String(getVal('세부유형')).trim()
+    const minScoreReq = String(getVal('최저학력기준')).trim()
 
     const isRecommendation = admissionMajorType.includes('추천') || 
       admissionMajorType.includes('지역균형') || 
@@ -282,40 +370,40 @@ export function parseKcueRows(csvText) {
       name,
       studentKey,
       isGraduate,
-      schoolType: String(getVal(r, '학교유형')).trim(),
+      schoolType: String(getVal('학교유형')).trim(),
       region,
       univName,
-      period: String(getVal(r, '모집시기')).trim() || '수시',
+      period: String(getVal('모집시기')).trim() || '수시',
       admissionType,
       admissionMajorType,
       admissionDetailType,
-      field: String(getVal(r, '계열')).trim(),
-      dept: String(getVal(r, '모집단위')).trim(),
-      quota: getNum(r, '모집인원'),
-      selectionMethod: String(getVal(r, '선발유형')).trim(),
+      field: String(getVal('계열')).trim(),
+      dept: String(getVal('모집단위')).trim(),
+      quota: getNum('모집인원'),
+      selectionMethod: String(getVal('선발유형')).trim(),
       minScoreReq,
       hasMinScore: !!minScoreReq,
-      score9Grade: getNum(r, '(9등급)일반등급', '일반등급'),
-      univConvertedScore: getNum(r, '내점수(환산)', '대학환산점수'),
-      univConvertedGrade: getNum(r, '내등급(환산)', '대학환산등급'),
-      stage1: String(getVal(r, '1단계')).trim(),
-      finalStage: String(getVal(r, '최종단계')).trim(),
-      failReason: String(getVal(r, '불합격사유')).trim(),
-      candidateRank: String(getVal(r, '최초후보순위')).trim(),
-      registerStatus: String(getVal(r, '등록여부')).trim(),
-      note: String(getVal(r, '비고')).trim(),
-      interviewDate: String(getVal(r, '면접일자')).trim(),
-      practicalDate: String(getVal(r, '실기일자')).trim(),
-      essayDate: String(getVal(r, '논술일자')).trim(),
-      finalAnnounceDate: String(getVal(r, '최종발표일')).trim(),
-      korGrade: getNum(r, '국어'),
-      engGrade: getNum(r, '영어'),
-      mathGrade: getNum(r, '수학'),
-      socGrade: getNum(r, '사회'),
-      sciGrade: getNum(r, '과학'),
-      allSubjectGrade: getNum(r, '전교과(100)', '전교과'),
-      mainSubjectGrade: getNum(r, '국영수사/과(100)', '국영수사/과'),
-      koreanMathEnglish: getNum(r, '국영수'),
+      score9Grade: getNum('(9등급)일반등급', '일반등급'),
+      univConvertedScore: getNum('내점수(환산)', '대학환산점수'),
+      univConvertedGrade: getNum('내등급(환산)', '대학환산등급'),
+      stage1: String(getVal('1단계')).trim(),
+      finalStage: String(getVal('최종단계')).trim(),
+      failReason: String(getVal('불합격사유')).trim(),
+      candidateRank: String(getVal('최초후보순위')).trim(),
+      registerStatus: String(getVal('등록여부')).trim(),
+      note: String(getVal('비고')).trim(),
+      interviewDate: String(getVal('면접일자')).trim(),
+      practicalDate: String(getVal('실기일자')).trim(),
+      essayDate: String(getVal('논술일자')).trim(),
+      finalAnnounceDate: String(getVal('최종발표일')).trim(),
+      korGrade: getNum('국어'),
+      engGrade: getNum('영어'),
+      mathGrade: getNum('수학'),
+      socGrade: getNum('사회'),
+      sciGrade: getNum('과학'),
+      allSubjectGrade: getNum('전교과(100)', '전교과'),
+      mainSubjectGrade: getNum('국영수사/과(100)', '국영수사/과'),
+      koreanMathEnglish: getNum('국영수'),
       isRecommendation,
       isRural,
       isOpportunity,
@@ -331,12 +419,12 @@ export function parseKcueRows(csvText) {
  * @param {string} sheetId 
  * @param {string} year 예: '2026', '2027'
  * @param {string} type 예: '수시', '정시'
+ * @param {string|null} customPassword
  */
-export async function fetchAndParseKcueYearData(sheetId, year, type = '수시') {
+export async function fetchAndParseKcueYearData(sheetId, year, type = '수시', customPassword = null) {
   const tabName = getKcueTabName(year, type)
   
   // 실제 구글 스프레드시트에 존재하는 탭인지 엄격하게 검증!
-  // 존재하지 않는 탭을 GViz로 호출하면 구글 시트가 2027수시(첫 탭)를 허수로 반환하는 문제 차단
   const actualTabs = await getActualGoogleSheetTabs(sheetId)
   if (!actualTabs.includes(tabName)) {
     console.log(`[statApi] 구글 시트에 '${tabName}' 탭이 아직 등록되지 않았습니다. 빈 데이터를 반환합니다.`)
@@ -344,7 +432,79 @@ export async function fetchAndParseKcueYearData(sheetId, year, type = '수시') 
   }
 
   const csv = await fetchKcueSheetTabCsv(sheetId, tabName)
-  return parseKcueRows(csv)
+  return parseKcueRows(csv, customPassword)
+}
+
+/**
+ * 구글 시트의 암호화 상태 확인 및 입력된 비밀번호 검증
+ * @param {string} sheetId 
+ * @param {string} password 
+ * @returns {Promise<{ success: boolean, isEncrypted: boolean, message?: string }>}
+ */
+export async function verifyStatSheetPassword(sheetId, password) {
+  const cleanId = extractSheetId(sheetId) || DEFAULT_KCUE_SHEET_ID
+  try {
+    const actualTabs = await getActualGoogleSheetTabs(cleanId)
+    // '기본통계'가 아닌 데이터 탭 우선 탐색
+    const targetTab = actualTabs.find(t => t !== '기본통계') || '2027수시'
+
+    const csv = await fetchKcueSheetTabCsv(cleanId, targetTab)
+    if (!csv || !csv.trim()) {
+      return { success: true, isEncrypted: false, message: '시트 데이터가 비어 있습니다.' }
+    }
+
+    const wb = XLSX.read(csv, { type: 'string' })
+    if (!wb.SheetNames || wb.SheetNames.length === 0) {
+      return { success: true, isEncrypted: false }
+    }
+
+    const ws = wb.Sheets[wb.SheetNames[0]]
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 })
+    if (!rows || rows.length < 2) {
+      return { success: true, isEncrypted: false }
+    }
+
+    const rawHeaders = rows[0] || []
+    let encColIdx = rawHeaders.findIndex(h => String(h || '').trim() === 'encrypted_data')
+    if (encColIdx === -1 && rawHeaders.length >= 105) {
+      encColIdx = 104
+    }
+
+    let sampleCipher = ''
+    if (encColIdx !== -1) {
+      for (let i = 1; i < rows.length; i++) {
+        const val = String(rows[i]?.[encColIdx] || '').trim()
+        if (val.startsWith('U2FsdGVkX1')) {
+          sampleCipher = val
+          break
+        }
+      }
+    }
+
+    // 시트에 암호화된 내용이 전혀 없는 경우 (기존 일반 시트)
+    if (!sampleCipher) {
+      return { success: true, isEncrypted: false, message: '암호화되지 않은 시트입니다.' }
+    }
+
+    // 암호문이 있는 경우: 비밀번호 검증
+    if (!password) {
+      return { success: false, isEncrypted: true, message: '비밀번호를 입력해야 합니다.' }
+    }
+
+    const decrypted = decryptAES(sampleCipher, password)
+    if (!decrypted) {
+      return { success: false, isEncrypted: true, message: '비밀번호가 올바르지 않습니다.' }
+    }
+
+    try {
+      JSON.parse(decrypted)
+      return { success: true, isEncrypted: true, message: '인증 성공' }
+    } catch (e) {
+      return { success: false, isEncrypted: true, message: '복호화 데이터가 손상되었습니다.' }
+    }
+  } catch (err) {
+    return { success: false, isEncrypted: false, message: err.message || '시트 확인 실패' }
+  }
 }
 
 let cachedBasicStats = null

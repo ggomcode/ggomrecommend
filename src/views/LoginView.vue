@@ -595,6 +595,7 @@ import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
 import { checkExamIntentSystemEnabled } from '../api/examIntentApi.js'
 import { fetchLoginSystemName, loginSystemName, fetchSuiteModules } from '../api/suiteModulesApi.js'
+import { setStatSessionPassword } from '../api/statApi.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -780,6 +781,9 @@ async function handleLogin() {
         throw new Error('학번은 5자리 숫자여야 합니다 (예: 30120).')
       }
       await auth.loginStudent(code, pw, true)
+    }
+    if (activeTab.value === 'teacher') {
+      setStatSessionPassword(loginPassword.value)
     }
     router.push('/select-system')
   } catch (e) {

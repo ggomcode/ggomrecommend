@@ -9,7 +9,9 @@ import {
   fetchAndParseKcueYearData, 
   fetchBasicSchoolStats,
   STANDARD_KCUE_YEARS,
-  getActualGoogleSheetTabs
+  getActualGoogleSheetTabs,
+  getStatSessionPassword,
+  clearStatSessionPassword
 } from '../../api/statApi.js'
 import { supabase } from '../../utils/supabaseClient'
 import officialStatsData from '../data/officialStats.json'
@@ -194,8 +196,10 @@ async function loadPeriodData(year, period = '수시', forceReload = false) {
     return yearlyApplicationsCache.value[cacheKey]
   }
 
-  // 2027 수시 기본값 fallback
-  if (strYear === '2027' && period === '수시' && !forceReload) {
+  const hasPassword = !!getStatSessionPassword()
+
+  // 2027 수시 기본값 fallback (암호화 키가 없고 강제 새로고침이 아닐 때만 사용)
+  if (strYear === '2027' && period === '수시' && !forceReload && !hasPassword) {
     yearlyApplicationsCache.value[cacheKey] = rawAppsData
     return rawAppsData
   }
@@ -207,10 +211,15 @@ async function loadPeriodData(year, period = '수시', forceReload = false) {
       yearlyApplicationsCache.value[cacheKey] = loaded
       return loaded
     }
+    // 구글 시트에 데이터가 없고 비밀번호도 없는 경우 fallback
+    if (strYear === '2027' && period === '수시' && !hasPassword) {
+      yearlyApplicationsCache.value[cacheKey] = rawAppsData
+      return rawAppsData
+    }
     return []
   } catch (e) {
     console.warn(`[useStatData] Failed to load ${strYear}${period} tab:`, e)
-    if (strYear === '2027' && period === '수시') {
+    if (strYear === '2027' && period === '수시' && !hasPassword) {
       yearlyApplicationsCache.value[cacheKey] = rawAppsData
       return rawAppsData
     }

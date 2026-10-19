@@ -127,6 +127,13 @@
           <!-- 액션 링크 -->
           <div class="pt-2 border-t border-slate-200/80 flex flex-col gap-1">
             <button
+              @click="lockAndExit"
+              class="w-full text-left text-xs font-semibold text-amber-700 hover:text-amber-800 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
+              title="복호화 암호를 메모리에서 즉시 삭제하고 포털로 나갑니다"
+            >
+              <Lock :size="14" /> 통계 잠금 (암호화 유지)
+            </button>
+            <button
               @click="goToPortal"
               class="w-full text-left text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
             >
@@ -257,8 +264,10 @@ import {
   Menu,
   Home,
   LogOut,
-  ChartScatter
+  ChartScatter,
+  Lock
 } from 'lucide-vue-next'
+import { clearStatSessionPassword, getStatSessionPassword } from '../api/statApi'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -314,7 +323,13 @@ function goToPortal() {
   router.push('/select-system')
 }
 
+function lockAndExit() {
+  clearStatSessionPassword()
+  router.push('/select-system')
+}
+
 async function handleLogout() {
+  clearStatSessionPassword()
   await auth.logout()
   router.push('/login')
 }
