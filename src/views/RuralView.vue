@@ -43,6 +43,15 @@
           </button>
 
           <button
+            @click="router.push('/calendar')"
+            class="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
+            title="학사일정 & 대입 캘린더"
+          >
+            <span>📅</span>
+            <span>캘린더</span>
+          </button>
+
+          <button
             @click="handleLogout"
             class="text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer"
           >

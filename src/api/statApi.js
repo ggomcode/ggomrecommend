@@ -450,7 +450,7 @@ let memorySampleCipher = ''
 export async function getStatSampleCipher(sheetId, forceReload = false) {
   if (!forceReload) {
     if (memorySampleCipher) return memorySampleCipher
-    const sess = sessionStorage.getItem(STAT_SAMPLE_CIPHER_KEY)
+    const sess = sessionStorage.getItem(STAT_SAMPLE_CIPHER_KEY) || localStorage.getItem(STAT_SAMPLE_CIPHER_KEY)
     if (sess) {
       memorySampleCipher = sess
       return sess
@@ -489,6 +489,7 @@ export async function getStatSampleCipher(sheetId, forceReload = false) {
           if (val.startsWith('U2FsdGVkX1')) {
             memorySampleCipher = val
             sessionStorage.setItem(STAT_SAMPLE_CIPHER_KEY, val)
+            localStorage.setItem(STAT_SAMPLE_CIPHER_KEY, val)
             return val
           }
         }

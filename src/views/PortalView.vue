@@ -39,6 +39,14 @@
             <span>관리자 설정</span>
           </button>
           <button
+            @click="router.push('/calendar')"
+            class="text-xs font-bold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3.5 py-2 rounded-lg transition-all cursor-pointer border border-blue-200 flex items-center gap-1.5 shadow-2xs"
+            title="학사일정 & 대입 캘린더"
+          >
+            <span>📅</span>
+            <span>캘린더</span>
+          </button>
+          <button
             @click="handleLogout"
             class="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer border border-slate-200"
           >
@@ -467,8 +475,16 @@
             />
           </div>
 
-          <p v-if="statPasswordError" class="text-xs font-bold text-rose-600 m-0 flex items-center gap-1.5">
-            <span>⚠️</span>
+          <div v-if="isVerifyingPassword" class="p-3 rounded-2xl bg-indigo-50 border border-indigo-200/80 text-xs font-bold text-indigo-700 flex items-center gap-2.5">
+            <svg class="animate-spin w-4 h-4 text-indigo-600 shrink-0" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            <span>보안 인증 및 복호화 키 확인 중... 잠시만 기다려 주세요.</span>
+          </div>
+
+          <p v-else-if="statPasswordError" class="text-xs font-bold text-rose-600 m-0 flex items-start gap-1.5 leading-relaxed bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+            <span class="shrink-0">⚠️</span>
             <span>{{ statPasswordError }}</span>
           </p>
 
@@ -716,30 +732,36 @@ async function enterStatSystem() {
   if (!existingPw) {
     statPasswordError.value = ''
     statInputPassword.value = ''
+    isVerifyingPassword.value = false
     showStatPasswordModal.value = true
     return
   }
 
-  // 2. 세션 암호가 있는 경우: 즉시 로딩 표시 및 초고속 사전 검증(캐시 우선)
-  isCheckingStat.value = true
+  // 2. 세션 암호가 있는 경우:
+  // ★ 대문 클릭 즉시(0ms) 모달을 화면에 띄우고 내부에서 검증 진행!
+  // 지체 현상("왜 아무 반응이 없지?")을 100% 원천 차단
+  statPasswordError.value = ''
+  statInputPassword.value = ''
+  isVerifyingPassword.value = true
+  showStatPasswordModal.value = true
+
   try {
     const sheetId = await getKcueSheetId()
     const verifyRes = await verifyStatSheetPassword(sheetId, existingPw)
     if (verifyRes.success) {
-      // ⭕ 일치: 정상 복호화 가능 -> 원클릭 즉시 입장!
+      // ⭕ 일치: 정상 복호화 가능 -> 모달 닫고 즉시 대시보드 입장!
+      showStatPasswordModal.value = false
       router.push('/stat')
       return
     }
-    // ❌ 불일치: 세션 암호와 구글 시트 복호화 암호가 다름 -> 모달 오픈 및 안내
+    // ❌ 불일치: 모달이 이미 열려 있으므로 지체 없이 에러 메시지와 함께 입력 대기
     statPasswordError.value = '시스템 로그인 암호와 구글 시트 복호화 암호가 일치하지 않습니다. 구글 시트 암호화에 사용한 암호를 입력해 주세요.'
     statInputPassword.value = ''
-    showStatPasswordModal.value = true
   } catch (e) {
-    statPasswordError.value = ''
+    statPasswordError.value = '인증 중 오류가 발생했습니다: ' + (e.message || '')
     statInputPassword.value = ''
-    showStatPasswordModal.value = true
   } finally {
-    isCheckingStat.value = false
+    isVerifyingPassword.value = false
   }
 }
 
@@ -943,6 +965,10 @@ async function loadPrincipalStatus() {
 
 onMounted(async () => {
   await fetchLoginSystemName()
+  // 대입 통계 구글 시트 암호문 샘플 백그라운드 초고속 사전 로드 (포털 진입 즉시 병렬 시작)
+  getKcueSheetId().then(sheetId => {
+    if (sheetId) preloadStatCipher(sheetId)
+  }).catch(() => {})
   try {
     const mods = await fetchSuiteModules()
     if (mods && mods.length > 0) {

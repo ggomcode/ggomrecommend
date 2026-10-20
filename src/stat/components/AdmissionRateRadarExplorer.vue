@@ -13,7 +13,7 @@
           내신 등급대별 전형 합격률 (교과 vs 종합)
         </h3>
         <p class="text-xs text-slate-500 m-0 mt-1 leading-relaxed">
-          종이 보고서의 반복 나열을 해소하고, 상단 등급 칩에 <strong>마우스를 호버</strong>하면 해당 성적대의 레이더 다각형과 전형별 유불리가 즉시 인터랙티브하게 전환됩니다.
+          내신 등급대별 주요 전형(교과·종합)의 합격률 분포와 전형별 유불리를 비교 분석합니다.
         </p>
       </div>
 
@@ -66,7 +66,7 @@
       <div class="flex items-center justify-between mb-2">
         <span class="text-xs font-extrabold text-slate-700 flex items-center gap-1.5">
           <span>⚡</span>
-          <span>분석할 등급대에 마우스를 올려보세요 (클릭 시 고정)</span>
+          <span>내신 등급 구간</span>
         </span>
         <span v-if="isLocked" class="text-[11px] font-bold text-indigo-600 flex items-center gap-1">
           <span>🔒 {{ activeBand.label }} 고정됨</span>

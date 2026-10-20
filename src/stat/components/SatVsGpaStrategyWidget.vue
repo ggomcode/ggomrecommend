@@ -7,15 +7,13 @@
           <span>🎯</span>
           <span>내신 vs 수능 괴리도 & 2027 대입 전략</span>
           <span class="text-indigo-300">|</span>
-          <span class="text-slate-500 font-semibold">3단계 종합 인사이트 대시보드</span>
+          <span class="text-slate-500 font-semibold">괴리도 & 전략 분석</span>
         </div>
         <h3 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight m-0">
           내신 vs 수능 불균형(괴리도) 분석 & 2027학년도 5대 대입 핵심 전략
         </h3>
         <p class="text-xs text-slate-500 m-0 mt-1 leading-relaxed">
-          대입 결과 보고서(1, 2, 6페이지)의 핵심 데이터인 <strong>내신 대비 수능 과목별 등급 격차(오망성)</strong>, 
-          <strong>사탐런(과탐→사탐 48.7%) 현황</strong>, <strong>수능최저 충족 실질경쟁률 마법 시뮬레이터</strong> 및 
-          <strong>2027학년도 5대 대입 전략</strong>을 한눈에 비교·시뮬레이션할 수 있습니다.
+          내신 대비 수능 과목별 등급 격차(오망성), 사탐런 현황, 수능최저 충족 실질경쟁률 및 2027학년도 5대 대입 전략을 종합 분석합니다.
         </p>
       </div>
 
@@ -319,7 +317,7 @@
         <div class="relative z-10">
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-cyan-300 border border-cyan-400/30 mb-2">
             <span>✨</span>
-            <span>보고서 6페이지 핵심 인사이트</span>
+            <span>수능 최저 영향력 분석</span>
           </div>
           <h3 class="text-xl sm:text-2xl font-black tracking-tight m-0 text-white">
             "수능 최저를 맞추는 순간, 6:1 경쟁률이 2:1로 떨어지는 마법"
@@ -388,14 +386,14 @@
 
           <!-- Quick Scenario Presets -->
           <div class="pt-4 border-t border-slate-200">
-            <span class="text-[11px] font-bold text-slate-500 block mb-2">대표 시나리오 원클릭 적용:</span>
+            <span class="text-[11px] font-bold text-slate-500 block mb-2">대표 시나리오:</span>
             <div class="flex flex-wrap gap-1.5">
               <button
                 type="button"
                 @click="applyPreset(6, 30)"
                 class="px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-white border border-slate-300 hover:border-blue-500 hover:text-blue-600 transition-all cursor-pointer"
               >
-                📖 보고서 기본 (6:1 / 30%)
+                📖 일반 평균 (6:1 / 30%)
               </button>
               <button
                 type="button"
@@ -464,7 +462,7 @@
 
           <!-- Bottom Reference Data -->
           <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>2026학년도 포곡고 실제 수시 통계:</span>
+            <span>전년도 실제 수시 통계:</span>
             <span class="font-semibold text-slate-700">최저 미반영 합격률 49.6% vs 반영 32.0%</span>
           </div>
         </div>
@@ -476,7 +474,7 @@
       <div class="flex items-center justify-between mb-2">
         <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
           <span>💡</span>
-          <span>보고서 6페이지: 2027학년도 수시·정시 대비 5대 핵심 지침 (카드를 클릭하면 상세 수칙이 펼쳐집니다)</span>
+          <span>2027학년도 수시·정시 대비 5대 핵심 지침</span>
         </span>
       </div>
 

@@ -14,6 +14,100 @@
       </div>
     </div>
 
+    <!-- 0-1. 학생/학급 맞춤 대입일정 선택 바 (교사/관리자: 학급 및 학생 드롭다운 선택, 학생: 본인 맞춤 안내) -->
+    <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/90 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <!-- 좌측: 모드 안내 타이틀 및 학생 정보 배지 -->
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div class="flex items-center gap-1.5">
+          <span class="text-base sm:text-lg">🎯</span>
+          <span class="text-xs sm:text-sm font-extrabold text-slate-900">대입일정 맞춤 조회:</span>
+        </div>
+
+        <!-- 학생 모드일 때 (학생 로그인) -->
+        <template v-if="auth.isStudent">
+          <span class="px-3 py-1.5 rounded-xl text-xs font-black bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1.5 shadow-2xs">
+            <span>👤</span>
+            <span>{{ auth.studentName || '학생' }} 맞춤 대입일정</span>
+          </span>
+          <span class="text-xs text-slate-500 font-medium hidden sm:inline">
+            (전체 학교 학사일정 + 본인 지원 대학 대입일정 표출)
+          </span>
+          <span v-if="activeStudentUniversities && activeStudentUniversities.length > 0" class="text-xs text-indigo-700 font-bold bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">
+            지원 대학 {{ activeStudentUniversities.length }}개교 연동
+          </span>
+        </template>
+
+        <!-- 교사 / 관리자 모드일 때 -->
+        <template v-else-if="auth.isTeacher || auth.isAdmin">
+          <!-- 학급 선택 드롭다운 -->
+          <div class="flex items-center gap-1.5">
+            <label class="text-xs font-bold text-slate-600 shrink-0">학급:</label>
+            <select
+              v-model="selectedClass"
+              @change="handleClassChange"
+              class="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            >
+              <option value="ALL">전체 학급</option>
+              <option v-for="cls in availableClasses" :key="cls" :value="cls">
+                {{ cls }}반
+              </option>
+              <option value="GRAD">졸업생</option>
+            </select>
+          </div>
+
+          <!-- 학생 선택 드롭다운 -->
+          <div class="flex items-center gap-1.5">
+            <label class="text-xs font-bold text-slate-600 shrink-0">학생:</label>
+            <select
+              v-model="selectedStudentId"
+              class="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-[130px]"
+            >
+              <option value="ALL">전체 학생</option>
+              <option v-for="st in filteredStudentsForDropdown" :key="st.id" :value="st.id">
+                [{{ st.student_code || `${st.class_no}반` }}] {{ st.name }}
+              </option>
+            </select>
+          </div>
+
+          <!-- 필터 적용 상태 뱃지 -->
+          <div v-if="isStudentFilterActive && activeStudent" class="flex items-center gap-1.5">
+            <span class="px-2.5 py-1 rounded-lg text-xs font-black bg-blue-100 text-blue-800 border border-blue-200">
+              ✨ {{ activeStudent.name }} (지원 대학 {{ (activeStudentUniversities || []).length }}개교)
+            </span>
+            <button
+              @click="resetStudentFilter"
+              class="px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer border border-slate-200"
+              title="전체 학생 일정으로 되돌리기"
+            >
+              전체 보기
+            </button>
+          </div>
+          <span v-else class="text-xs text-slate-400 font-medium hidden sm:inline">
+            (전체 학생의 대입 일정이 종합 표시 중입니다)
+          </span>
+        </template>
+
+        <!-- 게스트 / 미로그인 모드일 때 -->
+        <template v-else>
+          <span class="text-xs text-slate-500 font-medium">
+            (전체 학교 학사일정 및 전국 대입일정이 종합 표시됩니다)
+          </span>
+        </template>
+      </div>
+
+      <!-- 우측: 등록된 지원 대학 툴팁/안내 -->
+      <div v-if="isStudentFilterActive && activeStudentUniversities && activeStudentUniversities.length > 0" class="text-left md:text-right">
+        <span class="text-[11px] text-slate-500 font-medium">
+          지원 대학: <strong class="text-slate-800">{{ activeStudentUniversities.slice(0, 4).join(', ') }}{{ activeStudentUniversities.length > 4 ? ` 외 ${activeStudentUniversities.length - 4}개교` : '' }}</strong>
+        </span>
+      </div>
+      <div v-else-if="isStudentFilterActive" class="text-left md:text-right">
+        <span class="text-[11px] text-amber-600 font-medium">
+          ※ 등록된 지원 대학이 없습니다. (학교 학사일정 및 전국 공통일정만 표시됩니다)
+        </span>
+      </div>
+    </div>
+
     <!-- 1. 오늘의 입시일정 & 2. 주요 입시일정 (1:1 대칭 2열 그리드 배치) -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -309,74 +403,81 @@
     <!-- 3. 월간 입시일정 (월별 캘린더 - 3단 그룹형 트랙) -->
     <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80 space-y-6">
 
-      <!-- 월간 헤더: 월 이동 + 퀵점프 탭 + 범례 -->
-      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200">
-        <!-- 네비게이션: < 2026년 / 10월 > + 이번 달 -->
-        <div class="flex items-center gap-2 sm:gap-3">
-          <div class="flex items-center gap-1">
+      <!-- 월간 헤더: 월 이동 + 12개월 퀵점프 버튼 + 범례 -->
+      <div class="flex flex-col gap-4 pb-6 border-b border-slate-200">
+        <!-- 상단 바: 좌측 네비게이션 (< 2026년 10월 > 이번달) & 우측 범례 -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <!-- 네비게이션: < 2026년 / 10월 > + 이번 달 -->
+          <div class="flex items-center gap-2 sm:gap-3">
+            <div class="flex items-center gap-1">
+              <button
+                @click="moveMonth(-1)"
+                class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-slate-200 hover:bg-slate-100 flex items-center justify-center font-bold text-slate-700 transition-colors cursor-pointer shrink-0"
+                title="이전 달"
+              >
+                ‹
+              </button>
+              <h3 class="text-center min-w-[70px] sm:min-w-[80px] m-0 px-1.5 leading-tight flex flex-col items-center justify-center">
+                <span class="text-xs sm:text-sm font-bold text-slate-500 tracking-tight leading-none mb-1">{{ currentYear }}년</span>
+                <span class="text-lg sm:text-2xl font-black text-slate-900 leading-none">{{ currentMonth }}월</span>
+              </h3>
+              <button
+                @click="moveMonth(1)"
+                class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-slate-200 hover:bg-slate-100 flex items-center justify-center font-bold text-slate-700 transition-colors cursor-pointer shrink-0"
+                title="다음 달"
+              >
+                ›
+              </button>
+            </div>
+
             <button
-              @click="moveMonth(-1)"
-              class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-slate-200 hover:bg-slate-100 flex items-center justify-center font-bold text-slate-700 transition-colors cursor-pointer shrink-0"
-              title="이전 달"
+              @click="jumpToToday"
+              class="px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-700 transition-colors cursor-pointer whitespace-nowrap"
             >
-              ‹
-            </button>
-            <h3 class="text-center min-w-[70px] sm:min-w-[80px] m-0 px-1.5 leading-tight flex flex-col items-center justify-center">
-              <span class="text-xs sm:text-sm font-bold text-slate-500 tracking-tight leading-none mb-1">{{ currentYear }}년</span>
-              <span class="text-lg sm:text-2xl font-black text-slate-900 leading-none">{{ currentMonth }}월</span>
-            </h3>
-            <button
-              @click="moveMonth(1)"
-              class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-slate-200 hover:bg-slate-100 flex items-center justify-center font-bold text-slate-700 transition-colors cursor-pointer shrink-0"
-              title="다음 달"
-            >
-              ›
+              이번 달
             </button>
           </div>
 
-          <button
-            @click="jumpToToday"
-            class="px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-slate-700 transition-colors cursor-pointer whitespace-nowrap"
-          >
-            이번 달
-          </button>
+          <!-- 3단 트랙 및 학사일정 범례 안내 -->
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-bold text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
+            <div class="flex items-center gap-1.5">
+              <span class="w-3 h-3 rounded-sm bg-sky-500 shrink-0"></span>
+              <span>🏫 학사일정</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-3 h-3 rounded-sm bg-emerald-400 shrink-0"></span>
+              <span>1단: 주요일정 (공통·원서)</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-3 h-3 rounded-sm bg-indigo-500 shrink-0"></span>
+              <span>2단: 4년제 (실기·면접·논술)</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-3 h-3 rounded-sm bg-amber-500 shrink-0"></span>
+              <span>3단: 전문대 일정</span>
+            </div>
+          </div>
         </div>
 
-        <!-- 2027 대입 핵심 월 퀵점프 버튼들 -->
-        <div class="flex flex-wrap items-center gap-1.5">
-          <button
-            v-for="qm in quickMonths"
-            :key="qm.key"
-            @click="setYearMonth(qm.year, qm.month)"
-            :class="[
-              'px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border',
-              currentYear === qm.year && currentMonth === qm.month
-                ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-            ]"
-          >
-            <span>{{ qm.label }}</span>
-            <span class="text-[10px] ml-1 opacity-70">{{ qm.desc }}</span>
-          </button>
-        </div>
-
-        <!-- 3단 트랙 및 학사일정 범례 안내 -->
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-bold text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
-          <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rounded-sm bg-sky-500 shrink-0"></span>
-            <span>🏫 학사일정</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rounded-sm bg-emerald-400 shrink-0"></span>
-            <span>1단: 주요일정 (공통·원서)</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rounded-sm bg-indigo-500 shrink-0"></span>
-            <span>2단: 4년제 (실기·면접·논술)</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rounded-sm bg-amber-500 shrink-0"></span>
-            <span>3단: 전문대 일정</span>
+        <!-- 3월 ~ 차년도 2월 (총 12개월) 균등 너비 퀵점프 버튼 그리드 (5월, 8월 빈칸 포함 및 균일한 가로폭) -->
+        <div class="w-full">
+          <div class="grid grid-cols-4 sm:grid-cols-6 xl:grid-cols-12 gap-1.5">
+            <button
+              v-for="qm in quickMonths"
+              :key="qm.key"
+              @click="setYearMonth(qm.year, qm.month)"
+              :class="[
+                'w-full h-[42px] px-1 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer border flex flex-col items-center justify-center text-center',
+                currentYear === qm.year && currentMonth === qm.month
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-slate-900/20'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 hover:border-slate-300'
+              ]"
+            >
+              <span class="font-extrabold text-[11px] sm:text-xs leading-none whitespace-nowrap">{{ qm.label }}</span>
+              <span class="text-[10px] opacity-70 whitespace-nowrap min-h-[14px] mt-0.5 flex items-center justify-center">
+                {{ qm.desc || '\u00A0' }}
+              </span>
+            </button>
           </div>
         </div>
       </div>
@@ -491,16 +592,16 @@
           <!-- ── 2. 주요일정 트랙 (항상 두 번째 줄, 고정 높이 22px) ── -->
           <div class="h-[22px] mb-1 shrink-0 flex items-center overflow-hidden">
             <template v-if="cell.majorRange">
-              <!-- 기간 일정 바: 형광 하이라이트 -->
+              <!-- 시작일 또는 마감일: 텍스트 배지 (h-[20px]) -->
               <div
+                v-if="cell.majorRange.isStart || cell.majorRange.isEnd"
                 :class="[
-                  'w-full h-full py-0.5 text-[10px] sm:text-[11px] leading-tight font-extrabold flex items-center justify-between border-y transition-all',
-                  cell.majorRange.isStart ? 'rounded-l-md border-l pl-1.5' : '',
-                  cell.majorRange.isEnd ? 'rounded-r-md border-r pr-1.5' : '',
-                  !cell.majorRange.isStart && !cell.majorRange.isEnd ? 'rounded-none' : ''
+                  'w-full h-[20px] px-1.5 text-[10px] sm:text-[11px] leading-tight font-extrabold flex items-center justify-between border shadow-2xs transition-all',
+                  cell.majorRange.isStart ? 'rounded-l-md' : '',
+                  cell.majorRange.isEnd ? 'rounded-r-md' : ''
                 ]"
                 :style="{
-                  backgroundColor: cell.majorRange.isStart || cell.majorRange.isEnd ? cell.majorRange.palette.bg : `${cell.majorRange.palette.bar}25`,
+                  backgroundColor: cell.majorRange.palette.bg,
                   borderColor: cell.majorRange.palette.border,
                   color: cell.majorRange.palette.text
                 }"
@@ -511,11 +612,24 @@
                   🟢 [시작] {{ cell.majorRange.title }}
                 </span>
                 <!-- 마감일 텍스트 -->
-                <span v-else-if="cell.majorRange.isEnd" class="truncate font-black">
+                <span v-else class="truncate font-black">
                   🔒 [마감] {{ cell.majorRange.title }} {{ cell.majorRange.time ? `(~${cell.majorRange.time})` : '' }}
                 </span>
-                <!-- 중간 날짜는 바만 표시 -->
-                <span v-else class="h-1.5 w-full block opacity-0">.</span>
+              </div>
+
+              <!-- 중간 날짜: 절반 두께(10px)의 얇은 연속 기간 바 (차지하는 행 공간은 22px 유지) -->
+              <div
+                v-else
+                class="w-full h-full flex items-center justify-center"
+                :title="`${cell.majorRange.title} (${cell.majorRange.startDate} ~ ${cell.majorRange.endDate})`"
+              >
+                <div
+                  class="w-full h-[10px] border-y transition-all hover:brightness-95"
+                  :style="{
+                    backgroundColor: `${cell.majorRange.palette.bar}30`,
+                    borderColor: cell.majorRange.palette.border
+                  }"
+                ></div>
               </div>
             </template>
             <template v-else-if="cell.singleMajorEvent">
@@ -621,6 +735,20 @@
 
         <!-- 모달 본문 (스크롤) -->
         <div class="p-6 space-y-6 overflow-y-auto flex-1">
+
+          <!-- 학생 필터 적용 알림 배너 -->
+          <div
+            v-if="isStudentFilterActive && activeStudent"
+            class="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-xs text-blue-900 font-bold flex items-center justify-between"
+          >
+            <div class="flex items-center gap-2">
+              <span class="text-base">👤</span>
+              <span><strong>{{ activeStudent.name }}</strong> 학생 지원 대학 맞춤 일정 표시 중</span>
+            </div>
+            <span class="text-[11px] font-extrabold text-blue-700 bg-white px-2.5 py-0.5 rounded-lg border border-blue-200 shadow-2xs">
+              지원 대학 {{ (activeStudentUniversities || []).length }}개교
+            </span>
+          </div>
 
           <!-- 0) 학교 학사일정 섹션 -->
           <div v-if="selectedDateModal.academicItems && selectedDateModal.academicItems.length > 0">
@@ -805,9 +933,287 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { fetchAdmissionCalendarData } from '../../services/admissionCalendarService.js'
+import { useAuthStore } from '../../stores/auth.js'
+import { supabase } from '../../utils/supabaseClient.js'
+import { decryptText } from '../../utils/cryptoUtils.js'
+
+const auth = useAuthStore()
 
 const loading = ref(false)
 const rawData = ref(null)
+
+// ── 학급 및 학생별 대입일정 맞춤 필터 상태 ────────────────────────
+const selectedClass = ref('ALL') // 'ALL' | 1 | 2 ... | 'GRAD'
+const selectedStudentId = ref('ALL') // 'ALL' | student id / student_code
+const studentList = ref([])
+const studentApplicationsMap = ref(new Map()) // studentKey or studentId -> Set of applied univ names
+const isLoadingStudents = ref(false)
+
+const availableClasses = computed(() => {
+  const classes = new Set()
+  studentList.value.forEach(s => {
+    if (s.is_enrolled && s.class_no) {
+      classes.add(Number(s.class_no))
+    }
+  })
+  const sorted = Array.from(classes).sort((a, b) => a - b)
+  return sorted.length > 0 ? sorted : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+})
+
+const filteredStudentsForDropdown = computed(() => {
+  if (selectedClass.value === 'ALL') {
+    return studentList.value
+  }
+  if (selectedClass.value === 'GRAD') {
+    return studentList.value.filter(s => !s.is_enrolled)
+  }
+  return studentList.value.filter(s => s.is_enrolled && Number(s.class_no) === Number(selectedClass.value))
+})
+
+function handleClassChange() {
+  selectedStudentId.value = 'ALL'
+}
+
+function resetStudentFilter() {
+  selectedClass.value = 'ALL'
+  selectedStudentId.value = 'ALL'
+}
+
+const activeStudent = computed(() => {
+  if (auth.isStudent) {
+    const found = studentList.value.find(s => 
+      (auth.studentCode && s.student_code === auth.studentCode) ||
+      (auth.studentName && s.name === auth.studentName) ||
+      (auth.userId && s.id === auth.userId)
+    )
+    if (found) return found
+    return {
+      id: auth.studentCode || 'student',
+      student_code: auth.studentCode || '',
+      name: auth.studentName || '학생',
+      grade: auth.grade || 3,
+      class_no: auth.classNo || 1,
+      seq_no: auth.seqNo || 1,
+      is_enrolled: auth.isEnrolled !== false
+    }
+  }
+
+  if (selectedStudentId.value && selectedStudentId.value !== 'ALL') {
+    return studentList.value.find(s => s.id === selectedStudentId.value || s.student_code === selectedStudentId.value) || null
+  }
+
+  return null
+})
+
+const activeStudentUniversities = computed(() => {
+  if (!activeStudent.value) return null
+  const st = activeStudent.value
+  const set = new Set()
+
+  if (st.id && studentApplicationsMap.value.has(st.id)) {
+    studentApplicationsMap.value.get(st.id).forEach(u => set.add(u))
+  }
+  if (st.student_code && studentApplicationsMap.value.has(st.student_code)) {
+    studentApplicationsMap.value.get(st.student_code).forEach(u => set.add(u))
+  }
+  if (st.name && studentApplicationsMap.value.has(st.name)) {
+    studentApplicationsMap.value.get(st.name).forEach(u => set.add(u))
+  }
+
+  return Array.from(set)
+})
+
+const isStudentFilterActive = computed(() => {
+  return activeStudent.value !== null
+})
+
+const ALIAS_MAP = {
+  '인하공전': '인하공업',
+  '동양미래': '동양미래',
+  '명지전문': '명지전문',
+  '한양여대': '한양여자',
+  '숭의여대': '숭의여자',
+  '배화여대': '배화여자',
+  '카이스트': 'KAIST',
+  '지스트': 'GIST',
+  '유니스트': 'UNIST',
+  '디지스트': 'DGIST',
+  '켄텍': '한국에너지공과'
+}
+
+function cleanUniName(name) {
+  let s = String(name || '').trim()
+  for (const [alias, real] of Object.entries(ALIAS_MAP)) {
+    if (s.includes(alias)) {
+      s = s.replace(alias, real)
+    }
+  }
+  return s
+    .replace(/\([^)]*\)/g, '')
+    .replace(/대학교|전문대학|전문대|대학|대$/g, '')
+    .replace(/[\s\-_]/g, '')
+    .trim()
+}
+
+function isUniversityMatch(eventUni, appliedUnivList) {
+  if (!eventUni || !appliedUnivList || appliedUnivList.length === 0) return false
+  const cleanEvent = cleanUniName(eventUni)
+  if (!cleanEvent) return false
+
+  for (const appUni of appliedUnivList) {
+    const cleanApp = cleanUniName(appUni)
+    if (!cleanApp) continue
+    if (cleanEvent === cleanApp) return true
+    if (cleanEvent.length >= 2 && cleanApp.length >= 2) {
+      if (cleanEvent.includes(cleanApp) || cleanApp.includes(cleanEvent)) {
+        return true
+      }
+    }
+  }
+  return false
+}
+
+async function loadStudentsAndApplications() {
+  isLoadingStudents.value = true
+  try {
+    const list = []
+    const appsMap = new Map()
+
+    // 1. enrolled_students 조회 (Supabase)
+    if (supabase) {
+      try {
+        const { data: enrolledData, error } = await supabase
+          .from('enrolled_students')
+          .select('id, student_code, name, grade, class_no, student_no, seq_no, is_enrolled')
+          .order('is_enrolled', { ascending: false })
+          .order('grade', { ascending: true })
+          .order('class_no', { ascending: true })
+          .order('student_no', { ascending: true })
+
+        if (!error && enrolledData && enrolledData.length > 0) {
+          for (const s of enrolledData) {
+            const decName = await decryptText(s.name)
+            list.push({
+              id: s.id,
+              student_code: s.student_code || '',
+              name: decName || '이름 없음',
+              grade: s.grade || 3,
+              class_no: s.class_no || 1,
+              seq_no: s.student_no || s.seq_no || 1,
+              is_enrolled: s.is_enrolled !== false
+            })
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load enrolled_students from Supabase:', e)
+      }
+    }
+
+    // 2. stat applications.json 보강 (동적 import)
+    try {
+      const statModule = await import('../../stat/data/applications.json')
+      const rawApps = statModule.default || []
+      
+      if (list.length === 0 && rawApps.length > 0) {
+        const seen = new Set()
+        for (const a of rawApps) {
+          const key = `${a.grade || 3}-${a.classNum || 1}-${a.studentNum || 1}_${a.name}`
+          if (!seen.has(key)) {
+            seen.add(key)
+            const sCode = `${a.grade || 3}${String(a.classNum || 1).padStart(2, '0')}${String(a.studentNum || 1).padStart(2, '0')}`
+            list.push({
+              id: sCode,
+              student_code: sCode,
+              name: a.name,
+              grade: a.grade || 3,
+              class_no: a.classNum || 1,
+              seq_no: a.studentNum || 1,
+              is_enrolled: !a.isGraduate
+            })
+          }
+        }
+      }
+
+      for (const a of rawApps) {
+        if (!a.name || !a.univName) continue
+        const sKey = a.name
+        if (!appsMap.has(sKey)) appsMap.set(sKey, new Set())
+        appsMap.get(sKey).add(a.univName)
+      }
+    } catch (e) {
+      console.warn('Stat applications loading skipped or error:', e)
+    }
+
+    // 3. Supabase 추천 시스템 지원 데이터 결합
+    if (supabase) {
+      try {
+        const [{ data: apps }, { data: rurals }, { data: juniors }] = await Promise.all([
+          supabase.from('applications').select('student_id, universities(univ_name)'),
+          supabase.from('rural_applications').select('student_id, univ_name'),
+          supabase.from('junior_college_recommendations').select('student_id, student_code, university_name')
+        ])
+
+        if (apps) {
+          for (const ap of apps) {
+            const uName = ap.universities?.univ_name
+            if (ap.student_id && uName) {
+              if (!appsMap.has(ap.student_id)) appsMap.set(ap.student_id, new Set())
+              appsMap.get(ap.student_id).add(uName)
+            }
+          }
+        }
+
+        if (rurals) {
+          for (const ru of rurals) {
+            if (ru.student_id && ru.univ_name) {
+              if (!appsMap.has(ru.student_id)) appsMap.set(ru.student_id, new Set())
+              appsMap.get(ru.student_id).add(ru.univ_name)
+            }
+          }
+        }
+
+        if (juniors) {
+          for (const jn of juniors) {
+            if (jn.university_name) {
+              if (jn.student_id) {
+                if (!appsMap.has(jn.student_id)) appsMap.set(jn.student_id, new Set())
+                appsMap.get(jn.student_id).add(jn.university_name)
+              }
+              if (jn.student_code) {
+                if (!appsMap.has(jn.student_code)) appsMap.set(jn.student_code, new Set())
+                appsMap.get(jn.student_code).add(jn.university_name)
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load application tables from Supabase:', e)
+      }
+    }
+
+    studentList.value = list
+    studentApplicationsMap.value = appsMap
+
+    // 4. 학생으로 로그인된 경우 본인으로 자동 초기화
+    if (auth.isStudent) {
+      if (auth.classNo) selectedClass.value = auth.classNo
+      const matched = list.find(s => 
+        (auth.studentCode && s.student_code === auth.studentCode) ||
+        (auth.studentName && s.name === auth.studentName) ||
+        (auth.userId && s.id === auth.userId)
+      )
+      if (matched) {
+        selectedStudentId.value = matched.id
+      } else {
+        selectedStudentId.value = auth.studentCode || auth.studentName || 'STUDENT'
+      }
+    }
+  } catch (err) {
+    console.error('loadStudentsAndApplications error:', err)
+  } finally {
+    isLoadingStudents.value = false
+  }
+}
 
 // 캘린더 네비게이션 상태 (기본 2026년 9월 또는 현재 시점)
 const now = new Date()
@@ -826,7 +1232,7 @@ const schoolAcademicYear = computed(() => {
   return m >= 3 ? y : y - 1
 })
 const collegeAdmissionYear = computed(() => schoolAcademicYear.value + 1)
-const calendarTitle = computed(() => `${schoolAcademicYear.value}학년도 & ${collegeAdmissionYear.value}대입 캘린더`)
+const calendarTitle = computed(() => `${schoolAcademicYear.value}학년도 학사일정 & ${collegeAdmissionYear.value}대입 캘린더`)
 
 
 // 오늘 날짜 문자열
@@ -844,19 +1250,28 @@ const todayFormatted = computed(() => {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`
 })
 
-// 2027 대입 핵심 월 퀵점프 리스트
-const quickMonths = [
-  { key: '2026-03', year: 2026, month: 3, label: '26년 3월', desc: '개학·학평' },
-  { key: '2026-04', year: 2026, month: 4, label: '26년 4월', desc: '1차지필' },
-  { key: '2026-06', year: 2026, month: 6, label: '26년 6월', desc: '모평·2차' },
-  { key: '2026-07', year: 2026, month: 7, label: '26년 7월', desc: '방학식' },
-  { key: '2026-09', year: 2026, month: 9, label: '26년 9월', desc: '수시원서·모평' },
-  { key: '2026-10', year: 2026, month: 10, label: '26년 10월', desc: '면접·1차' },
-  { key: '2026-11', year: 2026, month: 11, label: '26년 11월', desc: '수능·2차원서' },
-  { key: '2026-12', year: 2026, month: 12, label: '26년 12월', desc: '합격·등록' },
-  { key: '2027-01', year: 2027, month: 1, label: '27년 1월', desc: '정시·졸업' },
-  { key: '2027-02', year: 2027, month: 2, label: '27년 2월', desc: '정시발표·등록' },
-]
+// 3월 ~ 차년도 2월 (총 12개월) 균등 퀵점프 리스트 (5월, 8월 빈칸 포함)
+const quickMonths = computed(() => {
+  const y1 = schoolAcademicYear.value
+  const y2 = collegeAdmissionYear.value
+  const s1 = String(y1).slice(2)
+  const s2 = String(y2).slice(2)
+
+  return [
+    { key: `${y1}-03`, year: y1, month: 3, label: `${s1}년 3월`, desc: '개학·학평' },
+    { key: `${y1}-04`, year: y1, month: 4, label: `${s1}년 4월`, desc: '1차지필' },
+    { key: `${y1}-05`, year: y1, month: 5, label: `${s1}년 5월`, desc: '' },
+    { key: `${y1}-06`, year: y1, month: 6, label: `${s1}년 6월`, desc: '모평·2차' },
+    { key: `${y1}-07`, year: y1, month: 7, label: `${s1}년 7월`, desc: '방학식' },
+    { key: `${y1}-08`, year: y1, month: 8, label: `${s1}년 8월`, desc: '' },
+    { key: `${y1}-09`, year: y1, month: 9, label: `${s1}년 9월`, desc: '수시원서·모평' },
+    { key: `${y1}-10`, year: y1, month: 10, label: `${s1}년 10월`, desc: '면접·1차' },
+    { key: `${y1}-11`, year: y1, month: 11, label: `${s1}년 11월`, desc: '수능·2차원서' },
+    { key: `${y1}-12`, year: y1, month: 12, label: `${s1}년 12월`, desc: '합격·등록' },
+    { key: `${y2}-01`, year: y2, month: 1, label: `${s2}년 1월`, desc: '정시·졸업' },
+    { key: `${y2}-02`, year: y2, month: 2, label: `${s2}년 2월`, desc: '정시발표·등록' },
+  ]
+})
 
 const currentYearMonthLabel = computed(() => {
   return `${currentYear.value}년 ${currentMonth.value}월`
@@ -1009,17 +1424,51 @@ const todayMajorEvents = computed(() => {
 
 const todayDeadlines = computed(() => {
   if (!rawData.value?.deadlineByDate) return []
-  return rawData.value.deadlineByDate[todayStr.value] || []
+  const list = rawData.value.deadlineByDate[todayStr.value] || []
+  if (isStudentFilterActive.value && activeStudentUniversities.value) {
+    return list.filter(d => isUniversityMatch(d.university, activeStudentUniversities.value))
+  }
+  return list
 })
 
 const todayFourYear = computed(() => {
   if (!rawData.value?.fourYearByDate) return null
-  return rawData.value.fourYearByDate[todayStr.value] || null
+  const fy = rawData.value.fourYearByDate[todayStr.value]
+  if (!fy || !fy.items) return null
+  if (!isStudentFilterActive.value || !activeStudentUniversities.value) return fy
+
+  const filteredItems = fy.items.filter(it => isUniversityMatch(it.university, activeStudentUniversities.value))
+  if (filteredItems.length === 0) return null
+
+  const typeCounts = {}
+  filteredItems.forEach(it => {
+    typeCounts[it.type] = (typeCounts[it.type] || 0) + 1
+  })
+  return {
+    ...fy,
+    items: filteredItems,
+    typeCounts
+  }
 })
 
 const todayJunior = computed(() => {
   if (!rawData.value?.juniorByDate) return null
-  return rawData.value.juniorByDate[todayStr.value] || null
+  const jn = rawData.value.juniorByDate[todayStr.value]
+  if (!jn || !jn.items) return null
+  if (!isStudentFilterActive.value || !activeStudentUniversities.value) return jn
+
+  const filteredItems = jn.items.filter(it => isUniversityMatch(it.university, activeStudentUniversities.value))
+  if (filteredItems.length === 0) return null
+
+  const typeCounts = {}
+  filteredItems.forEach(it => {
+    typeCounts[it.type] = (typeCounts[it.type] || 0) + 1
+  })
+  return {
+    ...jn,
+    items: filteredItems,
+    typeCounts
+  }
 })
 
 // ── 월간 캘린더 그리드 셀 계산 (일 ~ 토) ──────────────────────
@@ -1136,36 +1585,51 @@ function createCalendarCell(dateObj, isCurrentMonth) {
   }
 
   // 원서접수 마감 대학 수
-  const deadlineList = rawData.value?.deadlineByDate?.[dateStr] || []
+  let deadlineList = rawData.value?.deadlineByDate?.[dateStr] || []
+  if (isStudentFilterActive.value && activeStudentUniversities.value) {
+    deadlineList = deadlineList.filter(d => isUniversityMatch(d.university, activeStudentUniversities.value))
+  }
 
   // Track 2: 4년제 일정 데이터 (실기 / 면접 / 기타 별도 분리)
   let fourYearData = null
   const fy = rawData.value?.fourYearByDate?.[dateStr]
   if (fy && fy.items.length > 0) {
-    const practicalCount = fy.typeCounts['실기'] || 0
-    const interviewCount = fy.typeCounts['면접'] || 0
+    let items = fy.items
+    if (isStudentFilterActive.value && activeStudentUniversities.value) {
+      items = items.filter(it => isUniversityMatch(it.university, activeStudentUniversities.value))
+    }
 
-    // 실기, 면접 외의 기타 유형들 (논술, 1단계합격, 최종합격 등)
-    const otherEntries = Object.entries(fy.typeCounts).filter(
-      ([type]) => type !== '실기' && type !== '면접'
-    )
-    const otherCount = otherEntries.reduce((sum, [, cnt]) => sum + cnt, 0)
-    const otherLabel = otherEntries.map(([type, cnt]) => `${type} ${cnt}`).slice(0, 2).join(' · ')
-    const otherTitle = fy.items
-      .filter(it => it.type !== '실기' && it.type !== '면접')
-      .map(it => `${it.university}(${it.type})`)
-      .slice(0, 8)
-      .join(', ')
+    if (items.length > 0) {
+      const typeCounts = {}
+      items.forEach(it => {
+        typeCounts[it.type] = (typeCounts[it.type] || 0) + 1
+      })
 
-    fourYearData = {
-      items: fy.items,
-      typeCounts: fy.typeCounts,
-      practicalCount,
-      interviewCount,
-      otherCount,
-      otherLabel: otherLabel || '기타',
-      otherTitle,
-      summaryTitle: fy.items.map(it => `${it.university}(${it.type})`).slice(0, 8).join(', ')
+      const practicalCount = typeCounts['실기'] || 0
+      const interviewCount = typeCounts['면접'] || 0
+
+      // 실기, 면접 외의 기타 유형들 (논술, 1단계합격, 최종합격 등)
+      const otherEntries = Object.entries(typeCounts).filter(
+        ([type]) => type !== '실기' && type !== '면접'
+      )
+      const otherCount = otherEntries.reduce((sum, [, cnt]) => sum + cnt, 0)
+      const otherLabel = otherEntries.map(([type, cnt]) => `${type} ${cnt}`).slice(0, 2).join(' · ')
+      const otherTitle = items
+        .filter(it => it.type !== '실기' && it.type !== '면접')
+        .map(it => `${it.university}(${it.type})`)
+        .slice(0, 8)
+        .join(', ')
+
+      fourYearData = {
+        items,
+        typeCounts,
+        practicalCount,
+        interviewCount,
+        otherCount,
+        otherLabel: otherLabel || '기타',
+        otherTitle,
+        summaryTitle: items.map(it => `${it.university}(${it.type})`).slice(0, 8).join(', ')
+      }
     }
   }
 
@@ -1173,17 +1637,29 @@ function createCalendarCell(dateObj, isCurrentMonth) {
   let juniorData = null
   const jn = rawData.value?.juniorByDate?.[dateStr]
   if (jn && jn.items.length > 0) {
-    const topTypes = Object.entries(jn.typeCounts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([type, cnt]) => `${type} ${cnt}`)
-      .slice(0, 2)
-      .join(' · ')
+    let items = jn.items
+    if (isStudentFilterActive.value && activeStudentUniversities.value) {
+      items = items.filter(it => isUniversityMatch(it.university, activeStudentUniversities.value))
+    }
 
-    juniorData = {
-      items: jn.items,
-      typeCounts: jn.typeCounts,
-      compactSummary: topTypes,
-      summaryTitle: jn.items.map(it => `${it.university}(${it.type})`).slice(0, 8).join(', ')
+    if (items.length > 0) {
+      const typeCounts = {}
+      items.forEach(it => {
+        typeCounts[it.type] = (typeCounts[it.type] || 0) + 1
+      })
+
+      const topTypes = Object.entries(typeCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([type, cnt]) => `${type} ${cnt}`)
+        .slice(0, 2)
+        .join(' · ')
+
+      juniorData = {
+        items,
+        typeCounts,
+        compactSummary: topTypes,
+        summaryTitle: items.map(it => `${it.university}(${it.type})`).slice(0, 8).join(', ')
+      }
     }
   }
 
@@ -1224,13 +1700,19 @@ function openModalForDate(dateStr) {
   )
 
   // 원서접수 마감 대학
-  const deadlines = rawData.value?.deadlineByDate?.[dateStr] || []
+  let deadlines = rawData.value?.deadlineByDate?.[dateStr] || []
 
   // 4년제 일정 목록
-  const fourYearItems = rawData.value?.fourYearByDate?.[dateStr]?.items || []
+  let fourYearItems = rawData.value?.fourYearByDate?.[dateStr]?.items || []
 
   // 전문대 일정 목록
-  const juniorItems = rawData.value?.juniorByDate?.[dateStr]?.items || []
+  let juniorItems = rawData.value?.juniorByDate?.[dateStr]?.items || []
+
+  if (isStudentFilterActive.value && activeStudentUniversities.value) {
+    deadlines = deadlines.filter(d => isUniversityMatch(d.university, activeStudentUniversities.value))
+    fourYearItems = fourYearItems.filter(it => isUniversityMatch(it.university, activeStudentUniversities.value))
+    juniorItems = juniorItems.filter(it => isUniversityMatch(it.university, activeStudentUniversities.value))
+  }
 
   modalFilterSearch.value = ''
   selectedDateModal.value = {
@@ -1264,6 +1746,7 @@ defineExpose({
 
 onMounted(() => {
   refreshData()
+  loadStudentsAndApplications()
 })
 </script>
 

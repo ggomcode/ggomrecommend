@@ -42,8 +42,8 @@
             @click="openLoginView"
             class="px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-white bg-slate-900 hover:bg-slate-800 shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer border-none"
           >
-            <span>🔐</span>
-            <span>로그인 창으로 돌아가기</span>
+            <span>{{ auth.isAuthenticated ? '🔙' : '🔐' }}</span>
+            <span>{{ auth.isAuthenticated ? '시스템으로 돌아가기' : '로그인 창으로 돌아가기' }}</span>
           </button>
         </div>
       </div>
@@ -608,7 +608,7 @@ const calendarTitle = computed(() => {
   const m = d.getMonth() + 1
   const schoolYear = m >= 3 ? y : y - 1
   const collegeYear = schoolYear + 1
-  return `${schoolYear}학년도 & ${collegeYear}대입 캘린더`
+  return `${schoolYear}학년도 학사일정 & ${collegeYear}대입 캘린더`
 })
 
 // 화면 모드: 'login' (기본 로그인 카드) | 'calendar' (입시 캘린더 화면)
@@ -623,6 +623,14 @@ function openCalendarView() {
 }
 
 function openLoginView() {
+  if (auth.isAuthenticated) {
+    if (window.history.length > 1) {
+      router.back()
+    } else {
+      router.push('/select-system')
+    }
+    return
+  }
   viewMode.value = 'login'
   if (route.path !== '/login') {
     router.push('/login')

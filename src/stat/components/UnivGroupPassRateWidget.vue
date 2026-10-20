@@ -7,13 +7,13 @@
           <span>🏛️</span>
           <span>대학 그룹별 전형 심층 분석</span>
           <span class="text-blue-300">|</span>
-          <span class="text-slate-500 font-semibold">2단계 인터랙티브 대시보드</span>
+          <span class="text-slate-500 font-semibold">그룹별 비교 대시보드</span>
         </div>
         <h3 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight m-0">
           주요 대학 그룹별 합격률 & 전형 유불리 분석
         </h3>
         <p class="text-xs text-slate-500 m-0 mt-1 leading-relaxed">
-          종이 보고서(5~6페이지)에 흩어져 있던 대학 그룹별 비교 그래프를 통합했습니다. 상단 그룹 칩에 <strong>마우스를 호버</strong>하면 일반 vs 농어촌/기회, 교과 vs 종합, 수능최저 유무 및 충원율이 실시간으로 전환됩니다.
+          주요 대학 그룹별 일반 vs 농어촌, 학생부교과 vs 종합, 수능최저 충족 여부 및 충원율을 비교 분석합니다.
         </p>
       </div>
 
@@ -35,7 +35,7 @@
       <div class="flex items-center justify-between mb-2">
         <span class="text-xs font-extrabold text-slate-700 flex items-center gap-1.5">
           <span>⚡</span>
-          <span>분석할 대학 라인을 선택하세요 (호버 시 즉시 전환 / 클릭 시 고정)</span>
+          <span>대학 그룹 라인 선택</span>
         </span>
         <span v-if="isLocked" class="text-[11px] font-bold text-blue-600 flex items-center gap-1">
           <span>🔒 {{ activeGroup.title }} 고정됨</span>
@@ -314,10 +314,6 @@
             <div v-else class="text-center py-6 text-xs text-slate-600 font-medium">
               해당 대학 그룹에 합격한 데이터가 없습니다.
             </div>
-          </div>
-
-          <div class="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>아래 대학 상세 테이블에서 학생별 지원 명단을 확인할 수 있습니다.</span>
           </div>
         </div>
       </div>

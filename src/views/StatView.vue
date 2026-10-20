@@ -316,7 +316,6 @@ const menuGroups = computed(() => [
     title: '현황 & 대입 진단',
     items: [
       { id: 'overview', name: '종합 대시보드', iconComponent: BarChart3 },
-      { id: 'admission', name: '고입 설명회 특화', iconComponent: GraduationCap, badge: '중3' },
       { id: 'counsel', name: '학부모 맞춤 상담', iconComponent: Sparkles, badge: 'HOT' },
       { id: 'multiYear', name: '5개년 추이 분석', iconComponent: TrendingUp }
     ]
@@ -336,6 +335,13 @@ const menuGroups = computed(() => [
     items: [
       { id: 'student', name: '학생별 6장 카드', iconComponent: Users },
       { id: 'calendar', name: '면접·고사 캘린더', iconComponent: CalendarDays }
+    ]
+  },
+  {
+    emoji: '🎓',
+    title: '고입 설명회 특화',
+    items: [
+      { id: 'admission', name: '고입 설명회 특화', iconComponent: GraduationCap, badge: '중3' }
     ]
   },
   {

@@ -35,6 +35,14 @@
             class="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40 px-3.5 py-2 rounded-lg transition-all cursor-pointer"
           >🏠 포털 이동</button>
           <button
+            @click="router.push('/calendar')"
+            class="text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40 px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
+            title="학사일정 & 대입 캘린더"
+          >
+            <span>📅</span>
+            <span>캘린더</span>
+          </button>
+          <button
             @click="handleLogout"
             class="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 px-3.5 py-2 rounded-lg transition-all cursor-pointer"
           >로그아웃</button>

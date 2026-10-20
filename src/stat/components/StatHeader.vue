@@ -202,6 +202,16 @@
             <span>포털로 이동</span>
           </button>
 
+          <!-- 캘린더 Button -->
+          <button
+            @click="router.push('/calendar')"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors cursor-pointer"
+            title="학사일정 & 대입 캘린더"
+          >
+            <span>📅</span>
+            <span>캘린더</span>
+          </button>
+
           <!-- Logout Button -->
           <button 
             @click="handleLogout"

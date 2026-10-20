@@ -72,11 +72,10 @@
     <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
       <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
         <div>
-          <h3 class="text-sm font-bold text-slate-800">
+          <h3 class="text-sm font-bold text-slate-800 m-0">
             {{ getPresetTitle() }}
             <span class="text-xs font-normal text-slate-500 ml-1">총 {{ filteredUnivList.length }}개교</span>
           </h3>
-          <p class="text-xs text-slate-400 mt-0.5">대학 카드를 클릭하면 해당 대학에 지원한 학생 및 학과 세부 정보를 확인할 수 있습니다.</p>
         </div>
       </div>
 

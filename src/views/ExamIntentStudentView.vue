@@ -17,6 +17,7 @@
         </div>
         <div class="ei-header-right">
           <button @click="$router.push('/select-system')" class="ei-btn-ghost">🏠 포털</button>
+          <button @click="$router.push('/calendar')" class="ei-btn-ghost flex items-center gap-1" title="학사일정 & 대입 캘린더">📅 캘린더</button>
           <button @click="handleLogout" class="ei-btn-ghost">로그아웃</button>
         </div>
       </div>

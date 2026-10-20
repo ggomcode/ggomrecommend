@@ -15,7 +15,7 @@
                 : 'bg-transparent text-slate-600 hover:text-slate-900'
             ]"
           >
-            🏛️ 2026 대입 결과 종합 보고서 (공식 원본 복원)
+            🏛️ 2026 대입 결과 종합 보고서
           </button>
           <button
             type="button"
@@ -27,7 +27,7 @@
                 : 'bg-transparent text-slate-600 hover:text-slate-900'
             ]"
           >
-            📋 수시 지원 총괄 보고서 (행정 결재용)
+            📋 수시 지원 총괄 보고서
           </button>
         </div>
       </div>
@@ -49,7 +49,7 @@
     <div v-if="reportMode === 'result2026'" class="bg-white rounded-2xl border border-slate-300 shadow-lg max-w-4xl mx-auto p-8 sm:p-12 text-slate-900 print:shadow-none print:border-none print:p-0">
       <!-- Title -->
       <div class="text-center pb-6 border-b-2 border-slate-900">
-        <div class="text-xs text-slate-500 font-semibold tracking-wider">포곡고등학교 진로진학상담부 대입 분석 결과 자료</div>
+        <div class="text-xs text-slate-500 font-semibold tracking-wider">{{ displaySchoolName }} 대입 분석 결과 자료</div>
         <h1 class="text-2xl sm:text-3xl font-black tracking-tight mt-1 text-slate-900">
           Ⅴ. 2026학년도 대학 입시 결과 분석 보고서
         </h1>
@@ -289,12 +289,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Signoff Footer -->
-      <div class="mt-10 pt-6 border-t border-slate-300 flex items-center justify-between text-xs text-slate-500">
-        <div>보고자: 3학년 진학부장 및 진로진학 교사단 협의체</div>
-        <div class="font-bold text-slate-800 text-sm">포곡고등학교장 귀하</div>
-      </div>
     </div>
 
     <!-- ========================================================================= -->
@@ -303,14 +297,14 @@
     <div v-else class="bg-white rounded-2xl border border-slate-300 shadow-lg max-w-4xl mx-auto p-8 sm:p-12 text-slate-900 print:shadow-none print:border-none print:p-0 print-break-inside-avoid">
       <!-- Document Header -->
       <div class="text-center pb-6 border-b-2 border-slate-900">
-        <div class="text-xs text-slate-500 font-semibold tracking-wider">포곡고등학교 진로진학상담부</div>
+        <div class="text-xs text-slate-500 font-semibold tracking-wider">{{ displaySchoolName }}</div>
         <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1 text-slate-900">
-          {{ selectedAcademicYear }}학년도 대입 수시모집 지원 통계 보고서
+          {{ reportAdmissionYear }}학년도 대입 수시모집 지원 통계 보고서
         </h1>
         <div class="text-xs text-slate-600 mt-2 flex items-center justify-center space-x-4">
           <span><strong>대상:</strong> 3학년 재학생 (총 {{ officialStats?.totalStudents != null ? officialStats.totalStudents + '명' : '-' }})</span>
           <span>•</span>
-          <span><strong>기준일:</strong> 2026년 대교협 수시 원서접수 마감</span>
+          <span><strong>기준일:</strong> {{ reportApplicationYear }}년 대교협 수시 원서접수 마감</span>
           <span>•</span>
           <span><strong>자료출처:</strong> 대교협 수시 원서접수 데이터베이스</span>
         </div>
@@ -475,12 +469,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Signoff Footer -->
-      <div class="mt-12 pt-6 border-t border-slate-300 flex items-center justify-between text-xs text-slate-500">
-        <div>보고자: 3학년 진학부장 및 담임교사 협의체</div>
-        <div class="font-bold text-slate-800 text-sm">포곡고등학교장 귀하</div>
-      </div>
     </div>
   </div>
 </template>
@@ -488,9 +476,29 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useData } from '../../composables/useStatData'
+import { schoolName } from '../../../utils/schoolConfig'
 
 const { officialStats, applications, selectedAcademicYear } = useData()
 const window = globalThis.window
+
+const displaySchoolName = computed(() => {
+  return (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '포곡고등학교'
+})
+
+// 오늘 날짜 기준 대입 학년도 계산 규칙:
+// 오늘 날짜가 2026년이면 -> 2027학년도 대입 (3월 이후는 당해연도 + 1년)
+const reportAdmissionYear = computed(() => {
+  const today = new Date()
+  const y = today.getFullYear()
+  const m = today.getMonth() + 1
+  const calc = m >= 3 ? y + 1 : y
+  return String(Math.max(calc, 2027))
+})
+
+// 대입 수시 원서접수 연도 (대입 학년도 - 1년, 예: 2027학년도 대입의 수시 접수 연도는 2026년)
+const reportApplicationYear = computed(() => {
+  return String(Number(reportAdmissionYear.value) - 1)
+})
 
 const reportMode = ref('result2026') // 기본을 2026 대입 결과 종합 보고서로 설정
 
