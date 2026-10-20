@@ -178,8 +178,8 @@
       <!-- 상단 헤더 배너 (고정, 학추 시스템 헤더 규격) -->
       <StatHeader :currentTabItem="currentTabItem" />
 
-      <!-- 필터 바 (상단 고정) -->
-      <StatFilterBar />
+      <!-- 필터 바 (상단 고정, 고입 설명회 탭은 자체 컨트롤 사용으로 제외) -->
+      <StatFilterBar v-if="currentTab !== 'admission'" />
 
       <!-- 스크롤 가능한 본문 영역 -->
       <div class="flex-1 min-h-0 flex flex-col overflow-y-auto" style="scrollbar-gutter: stable;">
@@ -273,6 +273,7 @@ import DataExplorerTab from '../stat/components/tabs/DataExplorerTab.vue'
 import PrintReportTab from '../stat/components/tabs/PrintReportTab.vue'
 import PassFailScatterTab from '../stat/components/tabs/PassFailScatterTab.vue'
 import ParentCounselTab from '../stat/components/tabs/ParentCounselTab.vue'
+import HighSchoolAdmissionTab from '../stat/components/tabs/HighSchoolAdmissionTab.vue'
 import { useStatData } from '../stat/composables/useStatData'
 import { schoolName } from '../utils/schoolConfig'
 import {
@@ -290,7 +291,8 @@ import {
   LogOut,
   ChartScatter,
   Lock,
-  Sparkles
+  Sparkles,
+  GraduationCap
 } from 'lucide-vue-next'
 import { clearStatSessionPassword, getStatSessionPassword } from '../api/statApi'
 
@@ -314,6 +316,7 @@ const menuGroups = computed(() => [
     title: '현황 & 대입 진단',
     items: [
       { id: 'overview', name: '종합 대시보드', iconComponent: BarChart3 },
+      { id: 'admission', name: '고입 설명회 특화', iconComponent: GraduationCap, badge: '중3' },
       { id: 'counsel', name: '학부모 맞춤 상담', iconComponent: Sparkles, badge: 'HOT' },
       { id: 'multiYear', name: '5개년 추이 분석', iconComponent: TrendingUp }
     ]
@@ -359,6 +362,7 @@ const currentTabItem = computed(() => {
 const activeTabComponent = computed(() => {
   switch (currentTab.value) {
     case 'overview': return OverviewTab
+    case 'admission': return HighSchoolAdmissionTab
     case 'counsel': return ParentCounselTab
     case 'scatter': return PassFailScatterTab
     case 'multiYear': return MultiYearTab
