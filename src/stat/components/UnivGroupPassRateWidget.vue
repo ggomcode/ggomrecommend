@@ -417,13 +417,13 @@ const UNIV_GROUPS_CONFIG = [
     id: 'SPECIAL',
     emoji: '🩺',
     title: '의치한약수 & 과기원',
-    univsSummary: '의약학 계열 & UNIST·DGIST·GIST·한국에너지공대',
+    univsSummary: '의치한약수 계열 & GIST·UNIST·DGIST·한국에너지공대',
     matcher: (name, dept) => {
       const u = String(name || '')
       const d = String(dept || '')
       // 카이스트 및 포스텍은 SKYSSHE로 분리/이동 완료
-      const isTech = ['UNIST', '울산과학기술원', 'DGIST', '대구경북과학기술원', 'GIST', '광주과학기술원', '한국에너지공과대'].some(k => u.includes(k))
-      const isMed = !d.includes('스포츠의학') && !d.includes('식물의학') && !d.includes('바이오의약') &&
+      const isTech = ['GIST', '광주과학기술원', 'UNIST', '울산과학기술원', 'DGIST', '대구경북과학기술원', '한국에너지공과대'].some(k => u.includes(k))
+      const isMed = !d.includes('스포츠의학') && !d.includes('식물의학') && !d.includes('바이오의약') && !d.includes('창의') &&
                     ['의예', '치의', '한의', '약학', '수의', '의학'].some(m => d.includes(m))
       return isTech || isMed
     }

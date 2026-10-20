@@ -20,7 +20,7 @@
             최근 5개년 수시 지원 및 입결 종합 비교 분석
           </h2>
           <p class="text-xs sm:text-sm text-slate-300 mt-2 max-w-2xl leading-relaxed m-0">
-            대교협 수시 원서접수 자료를 바탕으로 학년도별 지원자 규모, 전과목 평균 내신 추이, 주요 대학 및 의·약학 지원 경향, 합불 성과를 프레젠테이션용으로 시각화하여 비교합니다. (데이터 미등록 연도는 '-' 표시)
+            대교협 수시 원서접수 자료를 바탕으로 학년도별 지원자 규모, 전과목 평균 내신 추이, 주요 대학 및 의·치·한·약·수 지원 경향, 합불 성과를 프레젠테이션용으로 시각화하여 비교합니다. (데이터 미등록 연도는 '-' 표시)
           </p>
         </div>
 
@@ -239,7 +239,7 @@
             <span>주요 목표 대학군별 5개년 지원 현황 및 평균 성적</span>
           </h3>
           <p class="text-xs text-slate-400 mt-1 m-0">
-            설·포·연·고, 서·성·한·이, 5대 과기원, 의·치·한·약·수 및 수도권 주요 대학별 지원 건수와 지원자 평균 내신 (미등록 연도는 '-' 표시)
+            설·카·포·연·고, 서·성·한·이, 과기원, 의·치·한·약·수 및 수도권 주요 대학별 지원 건수와 지원자 평균 내신 (미등록 연도는 '-' 표시)
           </p>
         </div>
         <span class="text-xs text-slate-500 font-semibold">
@@ -336,7 +336,7 @@
               <th class="py-3 px-3 text-center">내신 범위(최고~최저)</th>
               <th class="py-3 px-3 text-center">수도권 비율</th>
               <th class="py-3 px-3 text-center">주요대 지원</th>
-              <th class="py-3 px-3 text-center">의·약학 지원</th>
+              <th class="py-3 px-3 text-center">의치한약수 지원</th>
               <th class="py-3 px-4 text-center">최종 합격률</th>
             </tr>
           </thead>
@@ -654,7 +654,7 @@ function exportMultiYearExcel() {
     '최저 내신': byYear[y]?.worstGrade != null ? byYear[y].worstGrade : '-',
     '수도권 대학 비율(%)': byYear[y]?.metroRate != null ? byYear[y].metroRate : '-',
     '주요대 지원 건수': byYear[y]?.topTierApps != null ? byYear[y].topTierApps : '-',
-    '의약학 지원 건수': byYear[y]?.medicalApps != null ? byYear[y].medicalApps : '-',
+    '의치한약수 지원 건수': byYear[y]?.medicalApps != null ? byYear[y].medicalApps : '-',
     '최종 합격률(%)': byYear[y]?.finalPassRate != null ? byYear[y].finalPassRate : '-'
   }))
 

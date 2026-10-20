@@ -218,8 +218,10 @@ const gradeBandsConfig = [
 const gradeBands = computed(() => {
   return gradeBandsConfig.map(cfg => {
     const apps = filteredApplications.value.filter(a => {
-      const g = a.allSubjectGrade
-      return g !== null && g >= cfg.min && g <= cfg.max
+      const g = typeof a.allSubjectGrade === 'number' ? a.allSubjectGrade : (typeof a.score9Grade === 'number' ? a.score9Grade : a.mainSubjectGrade)
+      if (g === null || g === undefined || isNaN(g) || g < 1.0) return false
+      if (cfg.id === 'band6') return g >= 6.0
+      return g >= cfg.min && g < (cfg.min + 1.0)
     })
 
     const students = new Set(apps.map(a => a.studentKey))

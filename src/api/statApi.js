@@ -441,45 +441,86 @@ export async function fetchAndParseKcueYearData(sheetId, year, type = '수시', 
  * @param {string} password 
  * @returns {Promise<{ success: boolean, isEncrypted: boolean, message?: string }>}
  */
+const STAT_SAMPLE_CIPHER_KEY = 'pcm_stat_sample_cipher'
+let memorySampleCipher = ''
+
+/**
+ * 구글 시트의 DA열 암호문 샘플 1개를 초고속으로 획득 (캐시 우선 & gviz limit 3 초경량 쿼리)
+ */
+export async function getStatSampleCipher(sheetId, forceReload = false) {
+  if (!forceReload) {
+    if (memorySampleCipher) return memorySampleCipher
+    const sess = sessionStorage.getItem(STAT_SAMPLE_CIPHER_KEY)
+    if (sess) {
+      memorySampleCipher = sess
+      return sess
+    }
+  }
+
+  const cleanId = extractSheetId(sheetId) || DEFAULT_KCUE_SHEET_ID
+  if (!cleanId) return ''
+
+  // 초고속 GViz 쿼리 (단 3개 행만 요청: 5KB 미만, 0.2~0.5초 완료)
+  const candidateTabs = ['2027수시', '2026수시', '']
+  for (const tab of candidateTabs) {
+    try {
+      const tabParam = tab ? `&sheet=${encodeURIComponent(tab)}` : ''
+      const url = `https://docs.google.com/spreadsheets/d/${cleanId}/gviz/tq?tqx=out:csv${tabParam}&tq=limit%203&_t=${Date.now()}`
+      const res = await fetch(url)
+      if (!res.ok) continue
+      const csv = await res.text()
+      if (!csv || !csv.trim()) continue
+
+      const wb = XLSX.read(csv, { type: 'string' })
+      if (!wb.SheetNames || wb.SheetNames.length === 0) continue
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1 })
+      if (!rows || rows.length < 2) continue
+
+      const rawHeaders = rows[0] || []
+      let encColIdx = rawHeaders.findIndex(h => String(h || '').trim() === 'encrypted_data')
+      if (encColIdx === -1 && rawHeaders.length >= 105) {
+        encColIdx = 104
+      }
+
+      if (encColIdx !== -1) {
+        for (let i = 1; i < rows.length; i++) {
+          const val = String(rows[i]?.[encColIdx] || '').trim()
+          if (val.startsWith('U2FsdGVkX1')) {
+            memorySampleCipher = val
+            sessionStorage.setItem(STAT_SAMPLE_CIPHER_KEY, val)
+            return val
+          }
+        }
+      }
+    } catch (e) {
+      // 다음 후보 탭 시도
+    }
+  }
+
+  return memorySampleCipher || ''
+}
+
+/**
+ * 포털 진입 시 백그라운드에서 암호문 샘플을 조용히 사전 로드 (클릭 시 0초 즉시 판정)
+ */
+export function preloadStatCipher(sheetId) {
+  setTimeout(() => {
+    getStatSampleCipher(sheetId).catch(() => {})
+  }, 50)
+}
+
+/**
+ * 대교협 구글 시트의 복호화 암호 검증 (초고속 캐시 활용)
+ * @param {string} sheetId 
+ * @param {string} password 
+ * @returns {Promise<{ success: boolean, isEncrypted: boolean, message?: string }>}
+ */
 export async function verifyStatSheetPassword(sheetId, password) {
   const cleanId = extractSheetId(sheetId) || DEFAULT_KCUE_SHEET_ID
   try {
-    const actualTabs = await getActualGoogleSheetTabs(cleanId)
-    // '기본통계'가 아닌 데이터 탭 우선 탐색
-    const targetTab = actualTabs.find(t => t !== '기본통계') || '2027수시'
-
-    const csv = await fetchKcueSheetTabCsv(cleanId, targetTab)
-    if (!csv || !csv.trim()) {
-      return { success: true, isEncrypted: false, message: '시트 데이터가 비어 있습니다.' }
-    }
-
-    const wb = XLSX.read(csv, { type: 'string' })
-    if (!wb.SheetNames || wb.SheetNames.length === 0) {
-      return { success: true, isEncrypted: false }
-    }
-
-    const ws = wb.Sheets[wb.SheetNames[0]]
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 })
-    if (!rows || rows.length < 2) {
-      return { success: true, isEncrypted: false }
-    }
-
-    const rawHeaders = rows[0] || []
-    let encColIdx = rawHeaders.findIndex(h => String(h || '').trim() === 'encrypted_data')
-    if (encColIdx === -1 && rawHeaders.length >= 105) {
-      encColIdx = 104
-    }
-
-    let sampleCipher = ''
-    if (encColIdx !== -1) {
-      for (let i = 1; i < rows.length; i++) {
-        const val = String(rows[i]?.[encColIdx] || '').trim()
-        if (val.startsWith('U2FsdGVkX1')) {
-          sampleCipher = val
-          break
-        }
-      }
-    }
+    // 캐시 우선으로 0ms 만에 암호문 샘플 획득
+    const sampleCipher = await getStatSampleCipher(cleanId)
 
     // 시트에 암호화된 내용이 전혀 없는 경우 (기존 일반 시트)
     if (!sampleCipher) {

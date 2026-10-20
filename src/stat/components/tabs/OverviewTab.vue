@@ -83,7 +83,7 @@
         </div>
         <div class="mt-1 text-[11px] text-slate-500 flex items-center">
           <span class="inline-block w-1.5 h-1.5 rounded-full bg-purple-400 mr-1.5"></span>
-          {{ currentStats.recStudents }}명 지원 ({{ currentStats.recRate }}%)
+          {{ currentStats.recStudents }}명 지원 ({{ currentStats.recStudentRate }}%)
         </div>
       </div>
 
@@ -117,8 +117,8 @@
         </div>
         <div class="mt-1 text-[11px] text-slate-500 flex items-center">
           <span class="inline-block w-1.5 h-1.5 rounded-full bg-rose-400 mr-1.5"></span>
-          <span v-if="currentStats.topTierStudents > 0">{{ currentStats.topTierStudents }}명 (설포연고/과기원)</span>
-          <span v-else>설포연고서성한이/과기원</span>
+          <span v-if="currentStats.topTierStudents > 0">{{ currentStats.topTierStudents }}명 (설카포연고/과기원)</span>
+          <span v-else>설카포연고서성한이/과기원</span>
         </div>
       </div>
     </div>

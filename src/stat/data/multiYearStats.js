@@ -125,32 +125,32 @@ export const MULTI_YEAR_STATS = {
       applicantStudents: 246,
       applicantRate: 73.7,
       totalApplications: 1376,
-      avgAppsPerStudent: 5.60,
-      avgGrade: 4.40,
-      bestGrade: 1.32,
-      worstGrade: 8.41,
+      avgAppsPerStudent: 5.59,
+      avgGrade: 3.96,
+      bestGrade: 1.00,
+      worstGrade: 8.71,
       metroRate: 61.4,
       nonMetroRate: 38.6,
       topTierApps: 101,
-      topTierStudents: 31,
-      medicalApps: 13,
-      recommendationApps: 195,
-      ruralApps: 276,
+      topTierStudents: 26,
+      medicalApps: 1,
+      recommendationApps: 144,
+      ruralApps: 137,
       finalPassRate: null, // 대입 전형 진행 중 (미발표 -> '-')
       registerRate: null,  // 미발표 -> '-'
       gradeDistribution: {
-        '1~2등급': 74,
-        '2~3등급': 201,
-        '3~4등급': 364,
-        '4~5등급': 408,
-        '5~6등급': 238,
-        '6등급이하': 91
+        '1~2등급': 141,
+        '2~3등급': 178,
+        '3~4등급': 360,
+        '4~5등급': 396,
+        '5~6등급': 200,
+        '6등급이하': 101
       },
       admissionTypes: {
-        '학생부교과': 652,
-        '학생부종합': 508,
-        '논술위주': 112,
-        '실기/실적': 104
+        '학생부교과': 632,
+        '학생부종합': 503,
+        '논술위주': 41,
+        '실기/실적': 121
       }
     }
   },
@@ -158,8 +158,8 @@ export const MULTI_YEAR_STATS = {
   // 주요 대학군별 5개년 지원 건수 비교 데이터 (데이터 없는 연도는 null)
   targetUnivComparison: [
     {
-      groupName: '설·포·연·고',
-      note: '서울대, 포항공대, 연세대, 고려대 (본교)',
+      groupName: '설·카·포·연·고',
+      note: '서울대, KAIST, 포항공대, 연세대, 고려대 (본교)',
       data: { '2023': null, '2024': null, '2025': null, '2026': 14, '2027': 33 },
       avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 1.89, '2027': 1.69 }
     },
@@ -170,16 +170,16 @@ export const MULTI_YEAR_STATS = {
       avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 2.11, '2027': 1.79 }
     },
     {
-      groupName: '5대 과기원',
-      note: 'KAIST, UNIST, DGIST, GIST, KENTECH',
+      groupName: '과기원',
+      note: 'GIST, UNIST, DGIST, KENTECH',
       data: { '2023': null, '2024': null, '2025': null, '2026': 6, '2027': 24 },
       avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 1.68, '2027': 1.60 }
     },
     {
       groupName: '의·치·한·약·수',
       note: '의학·치의학·한의학·약학·수의학',
-      data: { '2023': null, '2024': null, '2025': null, '2026': 19, '2027': 2 },
-      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 1.59, '2027': 2.92 }
+      data: { '2023': null, '2024': null, '2025': null, '2026': 19, '2027': 1 },
+      avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 1.59, '2027': 1.52 }
     },
     {
       groupName: '수도권 주요 15개대',
@@ -223,9 +223,9 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
   const isG6 = u => g6Univs.some(name => u.includes(name))
 
   const targetStats = {
-    '설·포·연·고': { count: 0, grades: [] },
+    '설·카·포·연·고': { count: 0, grades: [] },
     '서·성·한·이': { count: 0, grades: [] },
-    '5대 과기원': { count: 0, grades: [] },
+    '과기원': { count: 0, grades: [] },
     '의·치·한·약·수': { count: 0, grades: [] },
     '수도권 주요 15개대': { count: 0, grades: [] },
     '경기권 거점/선호대': { count: 0, grades: [] }
@@ -270,31 +270,37 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
     const u = String(r.univName || '').trim()
     const d = String(r.dept || '').trim()
     
-    // 의치한약수 엄격 필터링 (스포츠의학, 식물의학, 바이오의약 등 비의료계열 제외)
-    const isMed = !d.includes('스포츠의학') && !d.includes('식물의학') && !d.includes('바이오의약') &&
+    // 의치한약수 엄격 필터링 (스포츠의학, 식물의학, 바이오의약, 문화창의학 등 비의료계열 제외)
+    const isMed = !d.includes('스포츠의학') && !d.includes('식물의학') && !d.includes('바이오의약') && !d.includes('창의') &&
                   ['의예', '치의', '한의', '약학', '수의', '의학'].some(m => d.includes(m))
 
-    const isG1 = (u === '서울대학교' || u.startsWith('서울대학교(') ||
+    // KAIST 식별
+    const isKaist = u.includes('한국과학기술원') || u.includes('KAIST')
+
+    // 1. 설·카·포·연·고 (서울대, KAIST, 포항공대, 연세대, 고려대 본교)
+    const isG1 = isKaist || (((u === '서울대학교' || u.startsWith('서울대학교(') ||
                   u === '포항공과대학교' || u.startsWith('포항공과대학교(') ||
                   u === '연세대학교(서울)' || u === '연세대학교' ||
                   u === '고려대학교(서울)' || u === '고려대학교') &&
-                 !u.includes('미래') && !u.includes('세종') && !u.includes('동서울') && !u.includes('남서울')
+                 !u.includes('미래') && !u.includes('세종') && !u.includes('동서울') && !u.includes('남서울')))
 
+    // 2. 서·성·한·이 (서강대, 성균관대, 한양대 서울, 이화여대)
     const isG2 = (u === '서강대학교' || u.startsWith('서강대학교(') ||
                   u.includes('성균관대학교') ||
                   u === '한양대학교(서울)' || u === '한양대학교' ||
                   u.includes('이화여자대학교')) &&
                  !u.includes('ERICA') && !u.includes('에리카') && !u.includes('한양여')
 
-    const isG3 = ['한국과학기술원', 'KAIST', '울산과학기술원', 'UNIST', '대구경북과학기술원', 'DGIST', '광주과학기술원', 'GIST', '한국에너지공과대학교', 'KENTECH'].some(name => u.includes(name))
+    // 3. 과기원 (KAIST 제외, GIST, UNIST, DGIST, KENTECH)
+    const isG3 = !isKaist && ['광주과학기술원', 'GIST', '울산과학기술원', 'UNIST', '대구경북과학기술원', 'DGIST', '한국에너지공과대학교', 'KENTECH'].some(name => u.includes(name))
     const isG5Val = isG5(u)
     const isG6Val = isG6(u) && !isG5Val && !isG1 && !isG2
 
     const validG = (g !== null && !isNaN(g) && g > 0) ? g : null
 
     if (isG1) {
-      targetStats['설·포·연·고'].count++
-      if (validG) targetStats['설·포·연·고'].grades.push(validG)
+      targetStats['설·카·포·연·고'].count++
+      if (validG) targetStats['설·카·포·연·고'].grades.push(validG)
       if (r.studentKey) topTierStudentKeys.add(r.studentKey)
     }
     if (isG2) {
@@ -303,8 +309,8 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
       if (r.studentKey) topTierStudentKeys.add(r.studentKey)
     }
     if (isG3) {
-      targetStats['5대 과기원'].count++
-      if (validG) targetStats['5대 과기원'].grades.push(validG)
+      targetStats['과기원'].count++
+      if (validG) targetStats['과기원'].grades.push(validG)
       if (r.studentKey) topTierStudentKeys.add(r.studentKey)
     }
     if (isMed) {
@@ -330,7 +336,7 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
   const metroRate = totalApps > 0 ? Number(((metroCount / totalApps) * 100).toFixed(1)) : null
   const nonMetroRate = metroRate != null ? Number((100 - metroRate).toFixed(1)) : null
 
-  const topTierApps = targetStats['설·포·연·고'].count + targetStats['서·성·한·이'].count + targetStats['5대 과기원'].count
+  const topTierApps = targetStats['설·카·포·연·고'].count + targetStats['서·성·한·이'].count + targetStats['과기원'].count
   const medicalApps = targetStats['의·치·한·약·수'].count
 
   const targetUnivSummary = {}

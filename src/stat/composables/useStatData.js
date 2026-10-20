@@ -68,8 +68,8 @@ const basicSchoolStats = ref({})
 
 // 5개년 반응형 통계 상태 및 사용자 동기화 영구 저장소
 const reactiveMultiYearStats = reactive(JSON.parse(JSON.stringify(MULTI_YEAR_STATS)))
-const LOCAL_STORAGE_MULTI_YEAR_KEY = 'pcm_multi_year_custom_stats_v2'
-const SUPABASE_MULTI_YEAR_CONFIG_KEY = 'multi_year_custom_stats_v2'
+const LOCAL_STORAGE_MULTI_YEAR_KEY = 'pcm_multi_year_custom_stats_v3'
+const SUPABASE_MULTI_YEAR_CONFIG_KEY = 'multi_year_custom_stats_v3'
 
 function applyMultiYearMerge(parsed) {
   if (!parsed || typeof parsed !== 'object') return
@@ -85,7 +85,11 @@ function applyMultiYearMerge(parsed) {
   }
   if (Array.isArray(parsed.targetUnivComparison)) {
     parsed.targetUnivComparison.forEach(pTarget => {
-      const found = reactiveMultiYearStats.targetUnivComparison.find(t => t.groupName === pTarget.groupName)
+      let targetName = pTarget.groupName
+      if (targetName === '설·포·연·고' || targetName === '설포연고') targetName = '설·카·포·연·고'
+      if (targetName === '5대 과기원') targetName = '과기원'
+
+      const found = reactiveMultiYearStats.targetUnivComparison.find(t => t.groupName === targetName)
       if (found) {
         found.data = { ...found.data, ...pTarget.data }
         found.avgGrade = { ...found.avgGrade, ...pTarget.avgGrade }
@@ -102,6 +106,25 @@ try {
   }
 } catch (e) {
   console.warn('Failed to parse local multi-year stats:', e)
+}
+
+// 2027년도 기본 원자료 기반 5개년 통계 자동 보정 (의치한약수 1건, 설카포연고, 과기원 정합성 보장)
+try {
+  const init2027 = computeYearMultiYearStats('2027', rawAppsData, 334)
+  if (init2027) {
+    reactiveMultiYearStats.byYear['2027'] = {
+      ...reactiveMultiYearStats.byYear['2027'],
+      ...init2027
+    }
+    reactiveMultiYearStats.targetUnivComparison.forEach(t => {
+      if (init2027.targetUnivSummary && init2027.targetUnivSummary[t.groupName]) {
+        t.data['2027'] = init2027.targetUnivSummary[t.groupName].count
+        t.avgGrade['2027'] = init2027.targetUnivSummary[t.groupName].avgGrade
+      }
+    })
+  }
+} catch (e) {
+  console.warn('Failed to compute initial 2027 multi-year stats:', e)
 }
 
 // Supabase config에 등록된 5개년 통계 로드

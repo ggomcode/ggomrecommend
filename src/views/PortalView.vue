@@ -405,8 +405,15 @@
           </div>
 
           <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-indigo-600">
-            <span>통계 대시보드 바로가기</span>
-            <svg class="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <span v-if="isCheckingStat" class="inline-flex items-center gap-2 text-indigo-500 font-medium">
+              <svg class="animate-spin h-4 w-4 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              보안 인증 확인 중...
+            </span>
+            <span v-else>통계 대시보드 바로가기</span>
+            <svg v-if="!isCheckingStat" class="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
           </div>
@@ -511,7 +518,8 @@ import {
   getKcueSheetId, 
   getStatSessionPassword, 
   setStatSessionPassword, 
-  verifyStatSheetPassword 
+  verifyStatSheetPassword,
+  preloadStatCipher
 } from '../api/statApi'
 import { supabase } from '../utils/supabaseClient'
 import { fetchRoundSchedulesMap, computeRoundDisplayStatus, parseKstDate } from '../utils/roundSchedule'
@@ -689,6 +697,7 @@ const statInputPassword = ref('')
 const isVerifyingPassword = ref(false)
 const statPasswordError = ref('')
 const statPwInputRef = ref(null)
+const isCheckingStat = ref(false)
 
 async function enterStatSystem() {
   if (!checkModuleScheduleAccess("stat")) return
@@ -701,30 +710,37 @@ async function enterStatSystem() {
     return
   }
 
-  const sheetId = await getKcueSheetId()
   const existingPw = getStatSessionPassword()
 
-  // 1. 세션에 암호(로그인 암호 등)가 있는 경우, 구글 시트 복호화가 실제로 성공하는지 사전 무음 검증!
-  if (existingPw) {
-    try {
-      const verifyRes = await verifyStatSheetPassword(sheetId, existingPw)
-      if (verifyRes.success) {
-        // ⭕ 일치: 로그인 암호로 정상 복호화 가능 -> 원클릭 즉시 입장!
-        router.push('/stat')
-        return
-      }
-      // ❌ 불일치: 로그인 암호와 구글 시트 암호화 암호가 다름 -> 팝업으로 수동 입력 유도
-      statPasswordError.value = '시스템 로그인 암호와 구글 시트 복호화 암호가 일치하지 않습니다. 구글 시트 암호화에 사용한 암호를 입력해 주세요.'
-    } catch (e) {
-      statPasswordError.value = ''
-    }
-  } else {
+  // 1. 세션에 암호가 아예 없는 경우: 비동기 지체 없이 즉시(0ms) 모달 오픈!
+  if (!existingPw) {
     statPasswordError.value = ''
+    statInputPassword.value = ''
+    showStatPasswordModal.value = true
+    return
   }
 
-  // 2. 암호가 없거나 다른 경우: 대문 복호화 암호 입력 모달 오픈
-  statInputPassword.value = ''
-  showStatPasswordModal.value = true
+  // 2. 세션 암호가 있는 경우: 즉시 로딩 표시 및 초고속 사전 검증(캐시 우선)
+  isCheckingStat.value = true
+  try {
+    const sheetId = await getKcueSheetId()
+    const verifyRes = await verifyStatSheetPassword(sheetId, existingPw)
+    if (verifyRes.success) {
+      // ⭕ 일치: 정상 복호화 가능 -> 원클릭 즉시 입장!
+      router.push('/stat')
+      return
+    }
+    // ❌ 불일치: 세션 암호와 구글 시트 복호화 암호가 다름 -> 모달 오픈 및 안내
+    statPasswordError.value = '시스템 로그인 암호와 구글 시트 복호화 암호가 일치하지 않습니다. 구글 시트 암호화에 사용한 암호를 입력해 주세요.'
+    statInputPassword.value = ''
+    showStatPasswordModal.value = true
+  } catch (e) {
+    statPasswordError.value = ''
+    statInputPassword.value = ''
+    showStatPasswordModal.value = true
+  } finally {
+    isCheckingStat.value = false
+  }
 }
 
 async function submitStatPassword() {
@@ -964,6 +980,14 @@ onMounted(async () => {
         const statEnabled = await isKcueStatSystemEnabled()
         const mStat = suiteModules.value.find(m => m.id === 'stat')
         isStatSystemEnabled.value = mStat ? mStat.isEnabled : statEnabled
+        if (isStatSystemEnabled.value) {
+          try {
+            const sheetId = await getKcueSheetId()
+            if (sheetId) {
+              preloadStatCipher(sheetId)
+            }
+          } catch (e) {}
+        }
       })(),
       (async () => {
         const status = await checkRuralSystemOpenStatus()

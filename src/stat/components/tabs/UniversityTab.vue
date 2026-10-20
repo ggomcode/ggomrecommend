@@ -199,8 +199,8 @@ const selectedUniv = ref(null)
 
 const presets = [
   { id: 'all', label: '전체 대학' },
-  { id: 'topTier', label: '🌟 설포연고서성한이/과기원' },
-  { id: 'medical', label: '🩺 메디컬' },
+  { id: 'topTier', label: '🌟 설카포연고서성한이/과기원' },
+  { id: 'medical', label: '🩺 의치한약수' },
   { id: 'flagship', label: '🏛️ 거점국립대' },
   { id: 'metro', label: '🏙️ 수도권 대학' }
 ]
