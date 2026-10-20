@@ -1,10 +1,35 @@
 <template>
   <div class="space-y-6">
     <!-- Action Bar (Hidden when printing) -->
-    <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex items-center justify-between no-print">
-      <div>
-        <h3 class="text-sm font-bold text-slate-800">A4 공식 수시 지원 통계 보고서 양식</h3>
-        <p class="text-xs text-slate-400 mt-0.5">교무회의, 부장단 회의 및 학교장 결재 보고용 인쇄 최적화 서식입니다.</p>
+    <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
+      <div class="flex items-center gap-3">
+        <!-- Report Type Toggle Buttons -->
+        <div class="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200">
+          <button
+            type="button"
+            @click="reportMode = 'result2026'"
+            :class="[
+              'px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer border-none',
+              reportMode === 'result2026'
+                ? 'bg-white text-indigo-700 shadow-xs'
+                : 'bg-transparent text-slate-600 hover:text-slate-900'
+            ]"
+          >
+            🏛️ 2026 대입 결과 종합 보고서 (공식 원본 복원)
+          </button>
+          <button
+            type="button"
+            @click="reportMode = 'applicationOfficial'"
+            :class="[
+              'px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer border-none',
+              reportMode === 'applicationOfficial'
+                ? 'bg-white text-indigo-700 shadow-xs'
+                : 'bg-transparent text-slate-600 hover:text-slate-900'
+            ]"
+          >
+            📋 수시 지원 총괄 보고서 (행정 결재용)
+          </button>
+        </div>
       </div>
 
       <div class="flex items-center space-x-2">
@@ -18,8 +43,264 @@
       </div>
     </div>
 
-    <!-- Official Printable A4 Document Sheet -->
-    <div class="bg-white rounded-2xl border border-slate-300 shadow-lg max-w-4xl mx-auto p-8 sm:p-12 text-slate-900 print:shadow-none print:border-none print:p-0 print-break-inside-avoid">
+    <!-- ========================================================================= -->
+    <!-- MODE 1: 2026학년도 대입 입시 결과 분석 종합 보고서 (종이 보고서 1~6p 완전 복원) -->
+    <!-- ========================================================================= -->
+    <div v-if="reportMode === 'result2026'" class="bg-white rounded-2xl border border-slate-300 shadow-lg max-w-4xl mx-auto p-8 sm:p-12 text-slate-900 print:shadow-none print:border-none print:p-0">
+      <!-- Title -->
+      <div class="text-center pb-6 border-b-2 border-slate-900">
+        <div class="text-xs text-slate-500 font-semibold tracking-wider">포곡고등학교 진로진학상담부 대입 분석 결과 자료</div>
+        <h1 class="text-2xl sm:text-3xl font-black tracking-tight mt-1 text-slate-900">
+          Ⅴ. 2026학년도 대학 입시 결과 분석 보고서
+        </h1>
+        <div class="text-xs text-slate-600 mt-2 flex items-center justify-center space-x-4">
+          <span><strong>기준일:</strong> 2026. 02. 28 기준 (최종 추가합격 및 등록 마감)</span>
+          <span>•</span>
+          <span><strong>대상:</strong> 2026학년도 대입 수시·정시 지원 졸업생 및 재학생</span>
+        </div>
+      </div>
+
+      <!-- Part 1: 주요 4년제 대학 세부 합격 현황 -->
+      <div class="mt-8">
+        <h2 class="text-sm font-bold text-slate-900 mb-2 flex items-center">
+          <span class="w-2 h-2 bg-slate-900 rounded-full mr-2"></span>
+          1. 2026학년도 주요 4년제 대학 세부 합격 현황 (2026. 02. 28 기준)
+        </h2>
+        <table class="w-full border-collapse border border-slate-400 text-xs">
+          <thead>
+            <tr class="bg-slate-100 text-center font-bold text-slate-800">
+              <th class="border border-slate-300 p-2">대학명</th>
+              <th class="border border-slate-300 p-2">합격건수</th>
+              <th class="border border-slate-300 p-2">대학명</th>
+              <th class="border border-slate-300 p-2">합격건수</th>
+              <th class="border border-slate-300 p-2">대학명</th>
+              <th class="border border-slate-300 p-2">합격건수</th>
+            </tr>
+          </thead>
+          <tbody class="text-center font-medium">
+            <tr>
+              <td class="border border-slate-300 p-2 font-bold text-rose-700 bg-rose-50/30">(의치한수약)</td>
+              <td class="border border-slate-300 p-2 font-bold text-rose-700 font-mono">6건</td>
+              <td class="border border-slate-300 p-2 font-bold text-blue-800">서울대</td>
+              <td class="border border-slate-300 p-2 font-bold text-blue-800 font-mono">1건</td>
+              <td class="border border-slate-300 p-2 font-bold text-blue-800">연세대</td>
+              <td class="border border-slate-300 p-2 font-bold text-blue-800 font-mono">2건</td>
+            </tr>
+            <tr>
+              <td class="border border-slate-300 p-2 font-bold text-blue-800">고려대</td>
+              <td class="border border-slate-300 p-2 font-bold text-blue-800 font-mono">1건</td>
+              <td class="border border-slate-300 p-2 font-bold text-blue-800">성균관대</td>
+              <td class="border border-slate-300 p-2 font-bold text-blue-800 font-mono">1건</td>
+              <td class="border border-slate-300 p-2 font-bold text-blue-800">서강대</td>
+              <td class="border border-slate-300 p-2 font-bold text-blue-800 font-mono">2건</td>
+            </tr>
+            <tr>
+              <td class="border border-slate-300 p-2 font-bold text-blue-800">한양대</td>
+              <td class="border border-slate-300 p-2 font-bold text-blue-800 font-mono">2건</td>
+              <td class="border border-slate-300 p-2 font-bold text-blue-800">이화여대</td>
+              <td class="border border-slate-300 p-2 font-bold text-blue-800 font-mono">7건</td>
+              <td class="border border-slate-300 p-2 font-semibold">중앙대</td>
+              <td class="border border-slate-300 p-2 font-mono">4건</td>
+            </tr>
+            <tr>
+              <td class="border border-slate-300 p-2 font-semibold">경희대</td>
+              <td class="border border-slate-300 p-2 font-mono">4건</td>
+              <td class="border border-slate-300 p-2 font-semibold">서울시립대</td>
+              <td class="border border-slate-300 p-2 font-mono">5건</td>
+              <td class="border border-slate-300 p-2 font-semibold">건국대</td>
+              <td class="border border-slate-300 p-2 font-mono">1건</td>
+            </tr>
+            <tr>
+              <td class="border border-slate-300 p-2 font-semibold">동국대</td>
+              <td class="border border-slate-300 p-2 font-mono">3건</td>
+              <td class="border border-slate-300 p-2 font-semibold">홍익대</td>
+              <td class="border border-slate-300 p-2 font-mono">2건</td>
+              <td class="border border-slate-300 p-2 font-semibold">숙명여대</td>
+              <td class="border border-slate-300 p-2 font-mono">2건</td>
+            </tr>
+            <tr>
+              <td class="border border-slate-300 p-2">국민대</td>
+              <td class="border border-slate-300 p-2 font-mono">2건</td>
+              <td class="border border-slate-300 p-2">숭실대</td>
+              <td class="border border-slate-300 p-2 font-mono">1건</td>
+              <td class="border border-slate-300 p-2">세종대</td>
+              <td class="border border-slate-300 p-2 font-mono">3건</td>
+            </tr>
+            <tr>
+              <td class="border border-slate-300 p-2">단국대(죽전)</td>
+              <td class="border border-slate-300 p-2 font-bold font-mono text-indigo-700">9건</td>
+              <td class="border border-slate-300 p-2">아주대</td>
+              <td class="border border-slate-300 p-2 font-bold font-mono text-indigo-700">7건</td>
+              <td class="border border-slate-300 p-2">가천대</td>
+              <td class="border border-slate-300 p-2 font-mono">1건</td>
+            </tr>
+            <tr>
+              <td class="border border-slate-300 p-2">인하대</td>
+              <td class="border border-slate-300 p-2 font-mono">2건</td>
+              <td class="border border-slate-300 p-2">한양대(ERICA)</td>
+              <td class="border border-slate-300 p-2 font-mono">4건</td>
+              <td class="border border-slate-300 p-2">광운대</td>
+              <td class="border border-slate-300 p-2 font-mono">4건</td>
+            </tr>
+            <tr class="bg-slate-50 font-bold">
+              <td class="border border-slate-300 p-2 text-indigo-800">DGIST / 에너지공대</td>
+              <td class="border border-slate-300 p-2 font-mono text-indigo-800">2건</td>
+              <td class="border border-slate-300 p-2 text-emerald-800">지거국 (본교)</td>
+              <td class="border border-slate-300 p-2 font-mono text-emerald-800">11건</td>
+              <td class="border border-slate-300 p-2 text-purple-800">교대</td>
+              <td class="border border-slate-300 p-2 font-mono text-purple-800">5건</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Part 2: 내신 vs 수능 오망성 괴리도 & 영역별 수능 결과 -->
+      <div class="mt-8">
+        <h2 class="text-sm font-bold text-slate-900 mb-2 flex items-center">
+          <span class="w-2 h-2 bg-slate-900 rounded-full mr-2"></span>
+          2. 내신 vs 수능 과목별 괴리도 & 수능 응시 현황
+        </h2>
+        <div class="grid grid-cols-2 gap-4 text-xs mb-3">
+          <div class="border border-slate-300 p-3 rounded">
+            <div class="font-bold border-b border-slate-200 pb-1 mb-2 text-blue-900">내신 vs 수능 등급 비교 (괴리도)</div>
+            <table class="w-full text-center">
+              <tr class="bg-slate-50 font-semibold text-slate-700">
+                <th class="p-1 border border-slate-200">영역</th>
+                <th class="p-1 border border-slate-200">국어</th>
+                <th class="p-1 border border-slate-200">수학</th>
+                <th class="p-1 border border-slate-200">영어</th>
+                <th class="p-1 border border-slate-200">사탐</th>
+                <th class="p-1 border border-slate-200">과탐</th>
+              </tr>
+              <tr>
+                <td class="p-1 border border-slate-200 font-bold text-blue-700">내신 평균</td>
+                <td class="p-1 border border-slate-200 font-mono">4.20</td>
+                <td class="p-1 border border-slate-200 font-mono">4.50</td>
+                <td class="p-1 border border-slate-200 font-mono">4.80</td>
+                <td class="p-1 border border-slate-200 font-mono">4.60</td>
+                <td class="p-1 border border-slate-200 font-mono">4.40</td>
+              </tr>
+              <tr>
+                <td class="p-1 border border-slate-200 font-bold text-amber-700">수능 평균</td>
+                <td class="p-1 border border-slate-200 font-mono">6.10</td>
+                <td class="p-1 border border-slate-200 font-mono">5.80</td>
+                <td class="p-1 border border-slate-200 font-mono">4.94</td>
+                <td class="p-1 border border-slate-200 font-mono">6.00</td>
+                <td class="p-1 border border-slate-200 font-mono">6.30</td>
+              </tr>
+              <tr class="bg-rose-50/50 font-bold text-rose-700">
+                <td class="p-1 border border-slate-200">수능 하락폭</td>
+                <td class="p-1 border border-slate-200 font-mono">-1.90</td>
+                <td class="p-1 border border-slate-200 font-mono">-1.30</td>
+                <td class="p-1 border border-slate-200 font-mono">-0.14</td>
+                <td class="p-1 border border-slate-200 font-mono">-1.40</td>
+                <td class="p-1 border border-slate-200 font-mono">-1.90</td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="border border-slate-300 p-3 rounded flex flex-col justify-between">
+            <div>
+              <div class="font-bold border-b border-slate-200 pb-1 mb-2 text-indigo-900">국어·수학·영어 수능 세부 응시 현황</div>
+              <ul class="space-y-1 text-slate-700 leading-normal">
+                <li>• <strong>국어 (227명 응시):</strong> 언어와 매체 36명(평균 5.28) / 화법과 작문 191명(평균 6.26)</li>
+                <li>• <strong>수학 (214명 응시):</strong> 미적분 69명(평균 4.71) / 확률과 통계 145명(평균 6.32)</li>
+                <li>• <strong>영어 (221명 응시):</strong> 절대평가 평균 4.94등급 (수능 최저의 핵심 전략 영역)</li>
+              </ul>
+            </div>
+            <div class="p-2 bg-slate-50 border border-slate-200 rounded text-[11px] text-slate-600 mt-2">
+              * 미적분 및 언매 응시자가 확통/화작 대비 1.0~1.6등급 우수하여 수능 최저 충족의 주력군 역할을 수행함.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Part 3: 사탐런 현황 (과탐 ➔ 사탐) -->
+      <div class="mt-8">
+        <h2 class="text-sm font-bold text-slate-900 mb-2 flex items-center">
+          <span class="w-2 h-2 bg-slate-900 rounded-full mr-2"></span>
+          3. 사탐런 (과탐 ➔ 사탐 전향 현황) 및 탐구 분석
+        </h2>
+        <table class="w-full border-collapse border border-slate-400 text-xs text-center mb-3">
+          <thead>
+            <tr class="bg-amber-50 text-amber-900 font-bold">
+              <th class="border border-slate-300 p-2">구분</th>
+              <th class="border border-slate-300 p-2">전체 전향 학생수</th>
+              <th class="border border-slate-300 p-2">1과목 전향 (과탐1 + 사탐1)</th>
+              <th class="border border-slate-300 p-2">2과목 전향 (사탐2)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="border border-slate-300 p-2 font-bold bg-slate-50">전향 인원 (비율)</td>
+              <td class="border border-slate-300 p-2 font-bold text-amber-800 font-mono">56명 (48.7%)</td>
+              <td class="border border-slate-300 p-2 font-mono">30명 (26.1%)</td>
+              <td class="border border-slate-300 p-2 font-mono">26명 (22.6%)</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="text-[11px] text-slate-600 p-2.5 bg-slate-50 border border-slate-200 rounded leading-relaxed">
+          자연계열 학생의 48.7%가 사회탐구로 과목을 전환하였으며, <strong>사회·문화(127명, 5.94등급)</strong>와 <strong>생활과 윤리(111명, 6.00등급)</strong>에 응시자가 집중되었습니다. 과탐(생명과학Ⅰ 35명, 지구과학Ⅰ 17명 등)에 비해 수능 최저학력기준 등급을 방어하는 데 매우 효과적인 전략으로 확인되었습니다.
+        </div>
+      </div>
+
+      <!-- Part 4: 2027학년도 대입 5대 핵심 전략 지침 -->
+      <div class="mt-8">
+        <h2 class="text-sm font-bold text-slate-900 mb-2 flex items-center">
+          <span class="w-2 h-2 bg-slate-900 rounded-full mr-2"></span>
+          4. 2027학년도 대입 수시·정시 대비 5대 핵심 전략
+        </h2>
+        <div class="space-y-2 text-xs">
+          <div class="border border-slate-300 p-3 rounded bg-slate-50/50">
+            <div class="font-bold text-slate-900 mb-1">1. 우리 학교는 등급에 관계없이 학생부교과 전형이 유리합니다.</div>
+            <p class="text-slate-600 m-0 leading-relaxed">
+              - 1.0~1.9등급(서울권), 2.0~2.9등급(서울 하위권 & 지거국 본교 & 수도권 주요대), 3.0~3.9등급(수도권 & 지방 중위권).<br />
+              - 가장 중요한 것이 정량 내신이며, 학생부 관리를 통해 종합 전형으로 0.5등급 내외 보완 합격이 가능합니다.
+            </p>
+          </div>
+
+          <div class="border border-slate-300 p-3 rounded bg-slate-50/50">
+            <div class="font-bold text-slate-900 mb-1">2. 농어촌+기회균형 전형의 양면성 (상위권 유리, 중하위권 치열)</div>
+            <p class="text-slate-600 m-0 leading-relaxed">
+              - 상위권(1~2등급대) 학생은 농어촌 전형 합격률이 42.9%로 일반전형(13.6%) 대비 3배 이상 폭증합니다.<br />
+              - 중하위권은 농어촌 몰림 현상으로 컷이 역전될 수 있으므로 일반 정량 교과 전형과 반드시 병행 지원해야 합니다.
+            </p>
+          </div>
+
+          <div class="border border-slate-300 p-3 rounded bg-slate-50/50">
+            <div class="font-bold text-slate-900 mb-1">3. 수능 최저를 맞추는 순간 실질경쟁률이 6:1에서 2:1로 떨어지는 마법</div>
+            <p class="text-slate-600 m-0 leading-relaxed">
+              - 수능 최저를 충족하는 학생의 비율이 약 30%에 불과하므로, 최저만 맞추면 경쟁률이 1/3로 급락합니다. 충원합격까지 감안하면 사실상 전원 합격권에 도달합니다.
+            </p>
+          </div>
+
+          <div class="border border-slate-300 p-3 rounded bg-slate-50/50">
+            <div class="font-bold text-slate-900 mb-1">4. 수능은 정시를 위한 전략이 아니라, 수시 최저를 위한 핵심 무기</div>
+            <p class="text-slate-600 m-0 leading-relaxed">
+              - 재학생의 정시 파이터 합격 확률은 극히 낮습니다. 수능은 정시 올인이 아니라 수시 최저 2합/3합 충족을 목표로 영어를 필두로 집중 대비해야 합니다.
+            </p>
+          </div>
+
+          <div class="border border-slate-300 p-3 rounded bg-slate-50/50">
+            <div class="font-bold text-slate-900 mb-1">5. 그래도 정시를 쓰고 싶다면, 수시 접수 전 정시 가능 대학 라인을 확정할 것</div>
+            <p class="text-slate-600 m-0 leading-relaxed">
+              - 6월/9월 모의평가 기준으로 정시로 갈 수 있는 대학 라인을 냉정히 선을 긋고, 그보다 아래인 대학은 수시에서 쓰지 않는 '수시 납치 방지선'을 엄수해야 합니다.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Signoff Footer -->
+      <div class="mt-10 pt-6 border-t border-slate-300 flex items-center justify-between text-xs text-slate-500">
+        <div>보고자: 3학년 진학부장 및 진로진학 교사단 협의체</div>
+        <div class="font-bold text-slate-800 text-sm">포곡고등학교장 귀하</div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODE 2: 수시 지원 총괄 보고서 (기존 행정 결재 양식) -->
+    <!-- ========================================================================= -->
+    <div v-else class="bg-white rounded-2xl border border-slate-300 shadow-lg max-w-4xl mx-auto p-8 sm:p-12 text-slate-900 print:shadow-none print:border-none print:p-0 print-break-inside-avoid">
       <!-- Document Header -->
       <div class="text-center pb-6 border-b-2 border-slate-900">
         <div class="text-xs text-slate-500 font-semibold tracking-wider">포곡고등학교 진로진학상담부</div>
@@ -104,47 +385,25 @@
           </thead>
           <tbody class="text-center">
             <tr>
-              <td v-for="r in (officialStats?.regionalBreakdown || []).slice(0, 9)" :key="r.region" class="border border-slate-300 p-2 font-medium">
-                <div>{{ r.count }}건</div>
-                <div class="text-[10px] text-slate-500">({{ r.rate }}%)</div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <table class="w-full border-collapse border border-slate-400 text-xs mt-1">
-          <thead>
-            <tr class="bg-slate-100 text-center font-bold text-slate-800">
-              <th v-for="r in (officialStats?.regionalBreakdown || []).slice(9)" :key="r.region" class="border border-slate-300 p-1.5">
-                {{ r.region }}
-              </th>
-              <th class="border border-slate-300 p-1.5 bg-slate-200">총계</th>
-            </tr>
-          </thead>
-          <tbody class="text-center">
-            <tr>
-              <td v-for="r in (officialStats?.regionalBreakdown || []).slice(9)" :key="r.region" class="border border-slate-300 p-2 font-medium">
-                <div>{{ r.count }}건</div>
-                <div class="text-[10px] text-slate-500">({{ r.rate }}%)</div>
-              </td>
-              <td class="border border-slate-300 p-2 font-bold bg-slate-100">
-                {{ officialStats?.totalApplications != null ? officialStats.totalApplications.toLocaleString() + '건 (100%)' : '-' }}
+              <td v-for="r in (officialStats?.regionalBreakdown || []).slice(0, 9)" :key="r.region" class="border border-slate-300 p-1.5 font-bold">
+                {{ r.count }}건
+                <span class="text-[10px] text-slate-500 font-normal block">({{ r.rate }}%)</span>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- Section 3: Class by Class Table -->
+      <!-- Section 3: Class Breakdown -->
       <div class="mt-8">
         <h2 class="text-sm font-bold text-slate-900 mb-2 flex items-center">
           <span class="w-2 h-2 bg-slate-900 rounded-full mr-2"></span>
-          3. 학급별(1반 ~ 11반) 수시 지원 현황
+          3. 학급별(1반~11반) 수시 지원 현황
         </h2>
         <table class="w-full border-collapse border border-slate-400 text-xs text-center">
           <thead>
             <tr class="bg-slate-100 font-bold text-slate-800">
-              <th class="border border-slate-300 p-1.5">학급</th>
+              <th class="border border-slate-300 p-1.5 bg-slate-200">구분</th>
               <th v-for="c in 11" :key="c" class="border border-slate-300 p-1.5">{{ c }}반</th>
               <th v-if="hasGraduates" class="border border-slate-300 p-1.5 bg-amber-50 text-amber-900">졸업생</th>
               <th class="border border-slate-300 p-1.5 bg-slate-200">합계</th>
@@ -227,11 +486,13 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useData } from '../../composables/useStatData'
 
 const { officialStats, applications, selectedAcademicYear } = useData()
 const window = globalThis.window
+
+const reportMode = ref('result2026') // 기본을 2026 대입 결과 종합 보고서로 설정
 
 const hasGraduates = computed(() => {
   return applications.value.some(a => a.isGraduate || a.classNum === '졸업생')

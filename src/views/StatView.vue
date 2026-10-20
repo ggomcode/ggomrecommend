@@ -45,54 +45,77 @@
         </button>
       </div>
 
-      <!-- 메뉴 내비게이션 (학추 시스템 스타일) -->
-      <nav class="flex-1 overflow-y-auto" style="padding: 10px 8px; display: flex; flex-direction: column; gap: 2px;">
-        <button
-          v-for="item in tabs"
-          :key="item.id"
-          @click="currentTab = item.id"
-          :title="item.name"
-          class="w-full rounded-lg text-sm transition-all duration-150"
-          :style="{
-            display: 'flex',
-            alignItems: 'center',
-            gap: collapsed ? '0' : '10px',
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            padding: collapsed ? '10px 0' : '9px 12px',
-            border: 'none',
-            cursor: 'pointer',
-            fontWeight: currentTab === item.id ? '700' : '500',
-            color: currentTab === item.id ? '#1d4ed8' : '#64748b',
-            background: currentTab === item.id ? '#eff6ff' : 'transparent',
-          }"
-        >
-          <span class="relative shrink-0 flex items-center justify-center">
-            <component 
-              :is="item.iconComponent" 
-              :size="19" 
-              :style="{ color: currentTab === item.id ? '#1d4ed8' : undefined }" 
-            />
-            <span
-              v-if="item.badge && collapsed"
-              class="absolute -top-1.5 -right-2 flex h-3.5 min-w-[14px] px-0.5 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white shadow"
-            >
-              {{ item.badge }}
-            </span>
-          </span>
+      <!-- 메뉴 내비게이션 (그룹화된 4대 섹션 메뉴) -->
+      <nav class="flex-1 overflow-y-auto px-2 py-3 space-y-3" style="scrollbar-gutter: stable;">
+        <div v-for="(group, gIdx) in menuGroups" :key="group.title" class="space-y-0.5">
+          <!-- 섹션 헤더 (펼침 상태) -->
+          <div 
+            v-if="!collapsed" 
+            class="px-2.5 pt-1.5 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 select-none"
+          >
+            <span>{{ group.emoji }}</span>
+            <span>{{ group.title }}</span>
+          </div>
 
-          <span v-if="!collapsed" class="whitespace-nowrap flex items-center justify-between w-full">
-            <span>{{ item.name }}</span>
-            <span
-              v-if="item.badge"
-              :class="[
-                'ml-auto text-[10px] font-bold px-1.5 py-0.2 rounded-full',
-                currentTab === item.id ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'
-              ]"
-            >
-              {{ item.badge }}
+          <!-- 섹션 구분선 (접힘 상태) -->
+          <div v-else-if="gIdx > 0" class="my-2 border-t border-slate-200/80 mx-1"></div>
+
+          <!-- 메뉴 아이템 목록 -->
+          <button
+            v-for="item in group.items"
+            :key="item.id"
+            @click="currentTab = item.id"
+            :title="collapsed ? `${group.title} > ${item.name}` : item.name"
+            class="w-full rounded-xl text-xs transition-all duration-150 relative cursor-pointer border-none text-left"
+            :class="[
+              collapsed ? 'p-2.5 flex justify-center items-center' : 'px-3 py-2 flex items-center gap-2.5',
+              currentTab === item.id 
+                ? 'bg-blue-50 text-blue-700 font-bold shadow-2xs' 
+                : 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium'
+            ]"
+          >
+            <!-- 활성 탭 좌측 인디케이터 바 -->
+            <span 
+              v-if="currentTab === item.id && !collapsed" 
+              class="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-blue-600"
+            ></span>
+
+            <!-- 아이콘 & 접힘 시 배지 -->
+            <span class="relative shrink-0 flex items-center justify-center">
+              <component 
+                :is="item.iconComponent" 
+                :size="18" 
+                :class="currentTab === item.id ? 'text-blue-600' : 'text-slate-400'" 
+              />
+              <span
+                v-if="item.badge && collapsed"
+                class="absolute -top-1.5 -right-2 flex h-3.5 min-w-[14px] px-0.5 items-center justify-center rounded-full bg-blue-600 text-[9px] font-black text-white shadow"
+              >
+                {{ item.badge }}
+              </span>
             </span>
-          </span>
-        </button>
+
+            <!-- 레이블 & 펼침 시 배지 -->
+            <span v-if="!collapsed" class="whitespace-nowrap flex items-center justify-between w-full">
+              <span class="truncate">{{ item.name }}</span>
+              <span
+                v-if="item.badge"
+                :class="[
+                  'ml-auto text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full',
+                  currentTab === item.id 
+                    ? 'bg-blue-600 text-white' 
+                    : item.badge === 'HOT' 
+                      ? 'bg-rose-100 text-rose-700'
+                      : item.badge === 'NEW'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-slate-200 text-slate-600'
+                ]"
+              >
+                {{ item.badge }}
+              </span>
+            </span>
+          </button>
+        </div>
       </nav>
 
       <!-- 사이드바 하단 정보 & 액션 버튼 -->
@@ -249,6 +272,7 @@ import StudentTab from '../stat/components/tabs/StudentTab.vue'
 import DataExplorerTab from '../stat/components/tabs/DataExplorerTab.vue'
 import PrintReportTab from '../stat/components/tabs/PrintReportTab.vue'
 import PassFailScatterTab from '../stat/components/tabs/PassFailScatterTab.vue'
+import ParentCounselTab from '../stat/components/tabs/ParentCounselTab.vue'
 import { useStatData } from '../stat/composables/useStatData'
 import { schoolName } from '../utils/schoolConfig'
 import {
@@ -265,7 +289,8 @@ import {
   Home,
   LogOut,
   ChartScatter,
-  Lock
+  Lock,
+  Sparkles
 } from 'lucide-vue-next'
 import { clearStatSessionPassword, getStatSessionPassword } from '../api/statApi'
 
@@ -283,22 +308,49 @@ const {
 const collapsed = ref(false)
 const currentTab = ref('overview')
 
-const tabs = computed(() => [
-  { id: 'overview', name: '종합 통계', iconComponent: BarChart3 },
-  { id: 'scatter', name: '대입 합불 산점도', iconComponent: ChartScatter, badge: 'NEW' },
-  { id: 'multiYear', name: '5개년 비교 분석', iconComponent: TrendingUp },
-  { id: 'university', name: '대학별 분석', iconComponent: Building2 },
-  { id: 'grade', name: '성적대별 경향', iconComponent: Target },
-  { id: 'calendar', name: '면접·고사 캘린더', iconComponent: CalendarDays },
-  { id: 'student', name: '학생별 6장 카드', iconComponent: Users },
-  { 
-    id: 'data', 
-    name: '전체 데이터 탐색기', 
-    iconComponent: FileSpreadsheet, 
-    badge: applications.value?.length ? applications.value.length.toLocaleString() : '0' 
+const menuGroups = computed(() => [
+  {
+    emoji: '📊',
+    title: '현황 & 대입 진단',
+    items: [
+      { id: 'overview', name: '종합 대시보드', iconComponent: BarChart3 },
+      { id: 'counsel', name: '학부모 맞춤 상담', iconComponent: Sparkles, badge: 'HOT' },
+      { id: 'multiYear', name: '5개년 추이 분석', iconComponent: TrendingUp }
+    ]
   },
-  { id: 'report', name: '공식 인쇄 보고서', iconComponent: Printer }
+  {
+    emoji: '🏛️',
+    title: '대학 & 전형 심층 분석',
+    items: [
+      { id: 'scatter', name: '대입 합불 산점도', iconComponent: ChartScatter, badge: 'NEW' },
+      { id: 'university', name: '대학 그룹별 분석', iconComponent: Building2 },
+      { id: 'grade', name: '성적대별 전형 경향', iconComponent: Target }
+    ]
+  },
+  {
+    emoji: '👤',
+    title: '학생 지도 & 일정',
+    items: [
+      { id: 'student', name: '학생별 6장 카드', iconComponent: Users },
+      { id: 'calendar', name: '면접·고사 캘린더', iconComponent: CalendarDays }
+    ]
+  },
+  {
+    emoji: '📁',
+    title: '자료실 & 공식 출력',
+    items: [
+      { 
+        id: 'data', 
+        name: '전체 데이터 탐색기', 
+        iconComponent: FileSpreadsheet, 
+        badge: applications.value?.length ? applications.value.length.toLocaleString() : '0' 
+      },
+      { id: 'report', name: '공식 인쇄 보고서', iconComponent: Printer }
+    ]
+  }
 ])
+
+const tabs = computed(() => menuGroups.value.flatMap(g => g.items))
 
 const currentTabItem = computed(() => {
   return tabs.value.find(t => t.id === currentTab.value) || tabs.value[0]
@@ -307,6 +359,7 @@ const currentTabItem = computed(() => {
 const activeTabComponent = computed(() => {
   switch (currentTab.value) {
     case 'overview': return OverviewTab
+    case 'counsel': return ParentCounselTab
     case 'scatter': return PassFailScatterTab
     case 'multiYear': return MultiYearTab
     case 'university': return UniversityTab

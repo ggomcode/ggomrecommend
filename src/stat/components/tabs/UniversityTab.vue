@@ -1,5 +1,8 @@
 <template>
   <div class="space-y-6">
+    <!-- 🎯 2단계: 대학 그룹별 전형 심층 분석 & 합격률 비교 위젯 (보고서 5~6페이지 통합) -->
+    <UnivGroupPassRateWidget />
+
     <!-- Top Filter & Presets Bar -->
     <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
       <!-- Preset Pills -->
@@ -185,6 +188,7 @@ import { ref, computed } from 'vue'
 import { Bar } from 'vue-chartjs'
 import { useData, formatGrade } from '../../composables/useStatData'
 import UnivDetailModal from '../StatUnivModal.vue'
+import UnivGroupPassRateWidget from '../UnivGroupPassRateWidget.vue'
 
 const { filteredApplications } = useData()
 

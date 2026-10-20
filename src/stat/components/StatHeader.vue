@@ -262,7 +262,7 @@ const adminMaskLabel = computed(() => {
 
 const adminMaskTooltip = computed(() => {
   if (adminMaskMode.value === 0) {
-    return '1단계 [기본 디폴트 마스킹]: 맨 뒷글자(**동)만 표시 중. 클릭 시 2단계(성과 맨뒷글자 총 2개 표시: 홍*동)로 전환됩니다.'
+    return '1단계 [기본 디폴트 마스킹]: 맨 뒷글자(**동)만 표시 (2글자 이름은 ** 전체 마스킹). 클릭 시 2단계(성과 맨뒷글자 총 2개 표시: 홍*동)로 전환됩니다.'
   }
   if (adminMaskMode.value === 1) {
     return '2단계 [부분 마스킹]: 성+맨뒷글자(홍*동) 2글자 표시 중. 클릭 시 3단계(이름 전체 공개: 홍길동)로 전환됩니다.'

@@ -438,7 +438,7 @@
 
         <div class="bg-indigo-50/60 border border-indigo-100/80 rounded-2xl p-3.5 text-xs text-slate-600 leading-relaxed">
           <p class="m-0 font-medium text-slate-700">
-            🛡️ 본 통계 시스템의 원본 성적·입결 자료는 <strong>AES-256 군사 등급</strong>으로 암호화되어 안전하게 보호받고 있습니다.
+            🛡️ 본 통계 시스템의 원본 성적·입결 자료는 <strong>암호화되어 안전하게 보호받고 있습니다.</strong>
           </p>
           <p class="m-0 mt-1 text-slate-500 text-[11px]">
             안전한 복호화 및 열람을 위해 <strong>시스템 관리자 로그인 암호</strong>를 입력해 주세요.

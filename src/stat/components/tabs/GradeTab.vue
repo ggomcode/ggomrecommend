@@ -33,6 +33,9 @@
       </div>
     </div>
 
+    <!-- 🎯 1단계: 수시 전형별·등급별 합격률 인터랙티브 레이더 분석기 -->
+    <AdmissionRateRadarExplorer />
+
     <!-- Charts Row: Grade Band Distribution & Admission Type Stacked Bar -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
       <!-- Applications by Grade Band Bar Chart -->
@@ -191,6 +194,7 @@
 import { ref, computed } from 'vue'
 import { Bar } from 'vue-chartjs'
 import { useData, maskName, formatGrade } from '../../composables/useStatData'
+import AdmissionRateRadarExplorer from '../AdmissionRateRadarExplorer.vue'
 
 const { filteredApplications } = useData()
 

@@ -512,8 +512,9 @@ export function maskName(name, forceLevel = null) {
     return str[0] + '*'.repeat(str.length - 2) + str[str.length - 1]
   }
 
-  // 1단계(디폴트): 맨 뒤 한 글자만 보임
-  if (str.length <= 1) return str
+  // 1단계(디폴트): 맨 뒤 한 글자만 보임 (단, 2글자 이름은 2글자 모두 '**'로 마스킹)
+  if (str.length <= 1) return '*'
+  if (str.length === 2) return '**'
   return '*'.repeat(str.length - 1) + str[str.length - 1]
 }
 
