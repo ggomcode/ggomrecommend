@@ -43,7 +43,7 @@ export const SCOPE_OPTIONS = [
 ]
 
 // Global state
-const applications = ref(rawAppsData)
+export const applications = ref(rawAppsData)
 const officialStats = ref(officialStatsData)
 
 // Academic Year State & Multi-Year Sheet Management

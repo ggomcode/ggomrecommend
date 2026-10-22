@@ -178,8 +178,8 @@
       <!-- 상단 헤더 배너 (고정, 학추 시스템 헤더 규격) -->
       <StatHeader :currentTabItem="currentTabItem" />
 
-      <!-- 필터 바 (상단 고정, 고입 설명회 탭은 자체 컨트롤 사용으로 제외) -->
-      <StatFilterBar v-if="currentTab !== 'admission'" />
+      <!-- 필터 바 (상단 고정, 고입 설명회 및 학생별 6장 카드 탭은 자체 컨트롤 사용으로 제외) -->
+      <StatFilterBar v-if="currentTab !== 'admission' && currentTab !== 'student'" />
 
       <!-- 스크롤 가능한 본문 영역 -->
       <div class="flex-1 min-h-0 flex flex-col overflow-y-auto" style="scrollbar-gutter: stable;">
@@ -316,7 +316,6 @@ const menuGroups = computed(() => [
     title: '현황 & 대입 진단',
     items: [
       { id: 'overview', name: '종합 대시보드', iconComponent: BarChart3 },
-      { id: 'counsel', name: '학부모 맞춤 상담', iconComponent: Sparkles, badge: 'HOT' },
       { id: 'multiYear', name: '5개년 추이 분석', iconComponent: TrendingUp }
     ]
   },
@@ -339,8 +338,9 @@ const menuGroups = computed(() => [
   },
   {
     emoji: '🎓',
-    title: '고입 설명회 특화',
+    title: '상담 및 설명회',
     items: [
+      { id: 'counsel', name: '학부모 맞춤 상담', iconComponent: Sparkles, badge: 'HOT' },
       { id: 'admission', name: '고입 설명회 특화', iconComponent: GraduationCap, badge: '중3' }
     ]
   },

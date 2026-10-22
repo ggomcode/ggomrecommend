@@ -839,9 +839,9 @@
               />
             </div>
 
-            <div v-if="filteredFourYearItems.length > 0" class="border border-slate-200 rounded-2xl overflow-hidden max-h-64 overflow-y-auto">
+            <div v-if="filteredFourYearItems.length > 0" class="border border-slate-200 rounded-2xl overflow-hidden max-h-96 overflow-y-auto">
               <table class="w-full text-left text-xs border-collapse">
-                <thead class="bg-slate-100 text-slate-700 sticky top-0 font-bold border-b border-slate-200">
+                <thead class="bg-slate-100 text-slate-700 sticky top-0 font-bold border-b border-slate-200 z-10 shadow-2xs">
                   <tr>
                     <th class="p-2.5 pl-3">구분</th>
                     <th class="p-2.5">대학명</th>
@@ -850,22 +850,249 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                  <tr
-                    v-for="(item, idx) in filteredFourYearItems"
-                    :key="idx"
-                    class="hover:bg-slate-50 transition-colors"
-                  >
-                    <td class="p-2.5 pl-3 whitespace-nowrap">
-                      <span class="px-2 py-0.5 rounded text-[10px] font-black bg-indigo-100 text-indigo-800">
-                        {{ item.type }}
-                      </span>
-                    </td>
-                    <td class="p-2.5 font-bold text-slate-900 whitespace-nowrap">{{ item.university }}</td>
-                    <td class="p-2.5 text-slate-700">{{ item.track || '-' }}</td>
-                    <td class="p-2.5 text-slate-500 text-[11px]">
-                      {{ item.time ? `${item.time} ` : '' }}{{ item.note || '-' }}
-                    </td>
-                  </tr>
+                  <template v-for="(item, idx) in filteredFourYearItems" :key="'fy_' + idx">
+                    <tr class="hover:bg-slate-50 transition-colors">
+                      <td class="p-2.5 pl-3 whitespace-nowrap">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-black bg-indigo-100 text-indigo-800">
+                          {{ item.type }}
+                        </span>
+                      </td>
+                      <td class="p-2.5 font-bold text-slate-900 whitespace-nowrap">
+                        <button
+                          v-if="canViewStudents"
+                          @click="toggleRowAccordion(getItemRowKey(item, idx, 'fourYear'), item, 'univ')"
+                          type="button"
+                          class="inline-flex items-center gap-1.5 text-left font-bold text-indigo-950 hover:text-indigo-600 group cursor-pointer transition-colors bg-transparent border-none p-0"
+                          :title="auth.isStudent ? '본인 지원 내역 확인' : '지원 학생 목록 보기 (대학 기준)'"
+                        >
+                          <span class="group-hover:underline underline-offset-2">{{ item.university }}</span>
+                          <span
+                            v-if="getApplicantCount(item, 'univ') > 0"
+                            :class="[
+                              'text-[10px] px-1.5 py-0.2 rounded-full font-extrabold flex items-center gap-0.5',
+                              isRowExpanded(getItemRowKey(item, idx, 'fourYear'))
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                            ]"
+                          >
+                            <span>👥</span>
+                            <span>{{ getApplicantCount(item, 'univ') }}명</span>
+                          </span>
+                        </button>
+                        <span v-else class="text-slate-900">{{ item.university }}</span>
+                      </td>
+                      <td class="p-2.5 text-slate-700">
+                        <button
+                          v-if="canViewStudents"
+                          @click="toggleRowAccordion(getItemRowKey(item, idx, 'fourYear'), item, 'track')"
+                          type="button"
+                          class="inline-flex items-center gap-1.5 text-left text-slate-700 hover:text-indigo-600 group cursor-pointer transition-colors bg-transparent border-none p-0"
+                          :title="auth.isStudent ? '본인 지원 전형 확인' : '이 전형 지원 학생만 필터링하여 보기'"
+                        >
+                          <span class="group-hover:underline underline-offset-2">{{ item.track || '-' }}</span>
+                          <span
+                            v-if="item.track && getApplicantCount(item, 'track') > 0 && getApplicantCount(item, 'track') !== getApplicantCount(item, 'univ')"
+                            class="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 group-hover:bg-indigo-100 group-hover:text-indigo-700 font-semibold"
+                          >
+                            {{ getApplicantCount(item, 'track') }}명
+                          </span>
+                        </button>
+                        <span v-else>{{ item.track || '-' }}</span>
+                      </td>
+                      <td class="p-2.5 text-slate-500 text-[11px]">
+                        <div class="flex items-center justify-between">
+                          <span>{{ item.time ? `${item.time} ` : '' }}{{ item.note || '-' }}</span>
+                          <!-- Expand toggle button -->
+                          <button
+                            v-if="canViewStudents && getApplicantCount(item, 'univ') > 0"
+                            @click="toggleRowAccordion(getItemRowKey(item, idx, 'fourYear'), item, 'univ')"
+                            type="button"
+                            class="p-1 rounded hover:bg-slate-200/70 text-slate-400 hover:text-indigo-600 transition-colors ml-1 cursor-pointer border-none bg-transparent"
+                            :title="isRowExpanded(getItemRowKey(item, idx, 'fourYear')) ? '접기' : '지원 학생 펼치기'"
+                          >
+                            <svg
+                              :class="['w-3.5 h-3.5 transition-transform duration-200', isRowExpanded(getItemRowKey(item, idx, 'fourYear')) ? 'rotate-180 text-indigo-600' : '']"
+                              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            >
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <!-- 4년제 아코디언 펼침 영역 -->
+                    <tr v-if="isRowExpanded(getItemRowKey(item, idx, 'fourYear'))" class="bg-indigo-50/50">
+                      <td colspan="4" class="p-3 border-t border-b border-indigo-100">
+                        <div class="bg-white rounded-xl p-3 border border-indigo-100/90 shadow-2xs space-y-2.5">
+                          <!-- Accordion Header: Filter Switcher & Role Badges -->
+                          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                            <!-- Left: Target Info & Mode Buttons -->
+                            <div class="flex flex-wrap items-center gap-1.5">
+                              <span class="text-xs font-black text-indigo-950 flex items-center gap-1">
+                                <span>🎓</span>
+                                <span>{{ item.university }}</span>
+                              </span>
+                              <!-- Mode Switch Tabs -->
+                              <div v-if="item.track && getApplicantCount(item, 'track') !== getApplicantCount(item, 'univ')" class="flex items-center bg-slate-100 p-0.5 rounded-lg text-[10px]">
+                                <button
+                                  @click="setRowExpandedMode(getItemRowKey(item, idx, 'fourYear'), 'univ')"
+                                  :class="[
+                                    'px-2 py-0.5 rounded-md font-bold transition-colors cursor-pointer border-none',
+                                    getRowExpandedMode(getItemRowKey(item, idx, 'fourYear')) === 'univ' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-500 hover:text-slate-900 bg-transparent'
+                                  ]"
+                                >
+                                  대학 전체 ({{ getApplicantCount(item, 'univ') }}명)
+                                </button>
+                                <button
+                                  @click="setRowExpandedMode(getItemRowKey(item, idx, 'fourYear'), 'track')"
+                                  :class="[
+                                    'px-2 py-0.5 rounded-md font-bold transition-colors cursor-pointer border-none',
+                                    getRowExpandedMode(getItemRowKey(item, idx, 'fourYear')) === 'track' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-500 hover:text-slate-900 bg-transparent'
+                                  ]"
+                                >
+                                  해당 전형만 ({{ getApplicantCount(item, 'track') }}명)
+                                </button>
+                              </div>
+                              <span v-else class="text-[11px] text-slate-500 font-medium">
+                                (지원자 총 {{ getApplicantCount(item, 'univ') }}명)
+                              </span>
+                            </div>
+
+                            <!-- Right: Role & Masking Control / Close -->
+                            <div class="flex items-center gap-2">
+                              <!-- Admin Mask Mode Toggle Button -->
+                              <div v-if="auth.isAdmin" class="flex items-center gap-1">
+                                <button
+                                  @click="cycleAdminMaskMode"
+                                  type="button"
+                                  class="text-[10px] px-2 py-0.5 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold border border-amber-300 transition-colors flex items-center gap-1 cursor-pointer"
+                                  title="클릭하여 마스킹 단계 변경 (1단계: **동 / 2단계: 홍*동 / 3단계: 홍길동)"
+                                >
+                                  <span>{{ adminMaskMode === 0 ? '🔒' : (adminMaskMode === 1 ? '🔓' : '👁️') }}</span>
+                                  <span>마스킹: {{ adminMaskMode === 0 ? '1단계(**동)' : (adminMaskMode === 1 ? '2단계(홍*동)' : '3단계(전체)') }}</span>
+                                </button>
+                              </div>
+                              <!-- Teacher Info -->
+                              <div v-else-if="auth.isTeacher" class="text-[10px] text-slate-500 font-medium flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                                <span>🔒</span> 교사 모드 (이름 마스킹 보호)
+                              </div>
+                              <!-- Student Info -->
+                              <div v-else-if="auth.isStudent" class="text-[10px] text-blue-700 font-bold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                                <span>👤</span> 본인 지원 내역
+                              </div>
+
+                              <!-- Close Button -->
+                              <button
+                                @click="toggleRowAccordion(getItemRowKey(item, idx, 'fourYear'), item, 'univ')"
+                                type="button"
+                                class="text-[10px] text-slate-400 hover:text-slate-700 p-0.5 rounded hover:bg-slate-100 cursor-pointer border-none bg-transparent"
+                                title="접기"
+                              >
+                                ✕ 닫기
+                              </button>
+                            </div>
+                          </div>
+
+                          <!-- Accordion Body: Student List Table or Notice -->
+                          <!-- Case 1: Student Role -->
+                          <template v-if="auth.isStudent">
+                            <div v-if="getVisibleStudents(item, getRowExpandedMode(getItemRowKey(item, idx, 'fourYear'))).length > 0" class="space-y-2">
+                              <div
+                                v-for="(myApp, mIdx) in getVisibleStudents(item, getRowExpandedMode(getItemRowKey(item, idx, 'fourYear')))"
+                                :key="mIdx"
+                                class="p-2.5 rounded-xl bg-blue-50/70 border border-blue-200 text-xs text-blue-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                              >
+                                <div class="space-y-0.5">
+                                  <div class="flex items-center gap-2">
+                                    <span class="font-extrabold text-blue-900 text-xs">👤 {{ myApp.name }} (본인)</span>
+                                    <span class="text-[11px] text-blue-700 font-medium">3학년 {{ myApp.classNum }}반 {{ myApp.studentNum }}번</span>
+                                  </div>
+                                  <p class="m-0 text-slate-700 text-xs">
+                                    모집단위: <strong class="text-slate-900">{{ myApp.dept || '-' }}</strong> 
+                                    <span class="text-slate-400 mx-1">|</span>
+                                    전형: <strong class="text-slate-900">{{ myApp.admissionDetailType || myApp.admissionMajorType || '-' }}</strong>
+                                  </p>
+                                </div>
+                                <div class="shrink-0 text-right">
+                                  <span class="px-2.5 py-1 rounded-lg text-xs font-extrabold bg-blue-600 text-white">
+                                    {{ myApp.finalStage || myApp.stage1 || '원서 접수 완료' }}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div v-else class="p-3 text-center rounded-xl bg-slate-50 text-slate-500 text-xs">
+                              <span>ℹ️</span> 회원님(본인)의 해당 대학/전형 지원 내역이 없습니다. (타 학생의 지원 정보는 보호를 위해 비공개됩니다)
+                            </div>
+                          </template>
+
+                          <!-- Case 2: Teacher or Admin Role -->
+                          <template v-else>
+                            <div v-if="getVisibleStudents(item, getRowExpandedMode(getItemRowKey(item, idx, 'fourYear'))).length > 0" class="overflow-x-auto rounded-xl border border-indigo-200/70 bg-white shadow-2xs">
+                              <table class="w-full text-left text-xs border-collapse">
+                                <thead class="bg-indigo-50/70 text-indigo-950 font-bold border-b border-indigo-100">
+                                  <tr>
+                                    <th class="p-2 pl-3">학급/번호</th>
+                                    <th class="p-2">이름</th>
+                                    <th class="p-2">모집단위(학과)</th>
+                                    <th class="p-2">지원 전형</th>
+                                    <th class="p-2 text-center pr-3">전형결과</th>
+                                  </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                  <tr 
+                                    v-for="(stApp, sIdx) in getVisibleStudents(item, getRowExpandedMode(getItemRowKey(item, idx, 'fourYear')))" 
+                                    :key="sIdx"
+                                    class="hover:bg-slate-50/80 transition-colors"
+                                  >
+                                    <td class="p-2 pl-3 whitespace-nowrap text-slate-600 font-medium">
+                                      <span v-if="stApp.isGraduate" class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-bold">졸업생</span>
+                                      <span v-else class="text-slate-700 font-bold">{{ stApp.classNum }}반 {{ stApp.studentNum }}번</span>
+                                    </td>
+                                    <td class="p-2 whitespace-nowrap font-bold text-slate-900">
+                                      {{ getDisplayStudentName(stApp) }}
+                                    </td>
+                                    <td class="p-2 text-slate-800 font-medium">{{ stApp.dept || '-' }}</td>
+                                    <td class="p-2 text-slate-600 text-[11px]">
+                                      <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
+                                        {{ stApp.admissionDetailType || stApp.admissionMajorType || '-' }}
+                                      </span>
+                                    </td>
+                                    <td class="p-2 pr-3 text-center whitespace-nowrap">
+                                      <span 
+                                        v-if="stApp.stage1 || stApp.finalStage"
+                                        :class="[
+                                          'px-2 py-0.5 rounded-full text-[10px] font-extrabold',
+                                          (stApp.stage1 === '합격' || stApp.finalStage === '합격' || String(stApp.finalStage).includes('최초합') || String(stApp.finalStage).includes('충원합'))
+                                            ? 'bg-emerald-100 text-emerald-800'
+                                            : (stApp.stage1 === '불합격' || stApp.finalStage === '불합격')
+                                              ? 'bg-rose-100 text-rose-800'
+                                              : 'bg-indigo-100 text-indigo-800'
+                                        ]"
+                                      >
+                                        {{ stApp.finalStage || stApp.stage1 }}
+                                      </span>
+                                      <span v-else class="text-slate-400 text-[11px]">-</span>
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                            <div v-else class="p-3 text-center rounded-xl bg-slate-50 text-slate-500 text-xs">
+                              <span>ℹ️</span> 해당 조건에 맞는 지원 학생이 없습니다.
+                              <span 
+                                v-if="getRowExpandedMode(getItemRowKey(item, idx, 'fourYear')) === 'track' && getApplicantCount(item, 'univ') > 0" 
+                                class="ml-1 text-indigo-600 font-bold cursor-pointer underline" 
+                                @click="setRowExpandedMode(getItemRowKey(item, idx, 'fourYear'), 'univ')"
+                              >
+                                [이 대학 전체 지원자 ({{ getApplicantCount(item, 'univ') }}명) 보기]
+                              </span>
+                            </div>
+                          </template>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
                 </tbody>
               </table>
             </div>
@@ -883,9 +1110,9 @@
               <span class="w-1.5 h-3.5 bg-amber-600 rounded-full"></span>
               전문대학 일정 (총 {{ selectedDateModal.juniorItems.length }}건)
             </h4>
-            <div class="border border-slate-200 rounded-2xl overflow-hidden max-h-48 overflow-y-auto">
+            <div class="border border-slate-200 rounded-2xl overflow-hidden max-h-64 overflow-y-auto">
               <table class="w-full text-left text-xs border-collapse">
-                <thead class="bg-slate-100 text-slate-700 sticky top-0 font-bold border-b border-slate-200">
+                <thead class="bg-slate-100 text-slate-700 sticky top-0 font-bold border-b border-slate-200 z-10 shadow-2xs">
                   <tr>
                     <th class="p-2.5 pl-3">구분</th>
                     <th class="p-2.5">대학명</th>
@@ -894,20 +1121,141 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                  <tr
-                    v-for="(item, idx) in selectedDateModal.juniorItems"
-                    :key="idx"
-                    class="hover:bg-slate-50 transition-colors"
-                  >
-                    <td class="p-2.5 pl-3 whitespace-nowrap">
-                      <span class="px-2 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-800">
-                        {{ item.type }}
-                      </span>
-                    </td>
-                    <td class="p-2.5 font-bold text-slate-900">{{ item.university }}</td>
-                    <td class="p-2.5 text-slate-700">{{ item.round }}</td>
-                    <td class="p-2.5 text-slate-500 text-[11px]">{{ item.note || '-' }}</td>
-                  </tr>
+                  <template v-for="(item, idx) in selectedDateModal.juniorItems" :key="'jr_' + idx">
+                    <tr class="hover:bg-slate-50 transition-colors">
+                      <td class="p-2.5 pl-3 whitespace-nowrap">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-800">
+                          {{ item.type }}
+                        </span>
+                      </td>
+                      <td class="p-2.5 font-bold text-slate-900 whitespace-nowrap">
+                        <button
+                          v-if="canViewStudents"
+                          @click="toggleRowAccordion(getItemRowKey(item, idx, 'junior'), item, 'univ')"
+                          type="button"
+                          class="inline-flex items-center gap-1.5 text-left font-bold text-amber-950 hover:text-amber-600 group cursor-pointer transition-colors bg-transparent border-none p-0"
+                          :title="auth.isStudent ? '본인 지원 내역 확인' : '지원 학생 목록 보기'"
+                        >
+                          <span class="group-hover:underline underline-offset-2">{{ item.university }}</span>
+                          <span
+                            v-if="getApplicantCount(item, 'univ') > 0"
+                            :class="[
+                              'text-[10px] px-1.5 py-0.2 rounded-full font-extrabold flex items-center gap-0.5',
+                              isRowExpanded(getItemRowKey(item, idx, 'junior'))
+                                ? 'bg-amber-600 text-white'
+                                : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                            ]"
+                          >
+                            <span>👥</span>
+                            <span>{{ getApplicantCount(item, 'univ') }}명</span>
+                          </span>
+                        </button>
+                        <span v-else class="text-slate-900">{{ item.university }}</span>
+                      </td>
+                      <td class="p-2.5 text-slate-700">{{ item.round }}</td>
+                      <td class="p-2.5 text-slate-500 text-[11px]">
+                        <div class="flex items-center justify-between">
+                          <span>{{ item.note || '-' }}</span>
+                          <button
+                            v-if="canViewStudents && getApplicantCount(item, 'univ') > 0"
+                            @click="toggleRowAccordion(getItemRowKey(item, idx, 'junior'), item, 'univ')"
+                            type="button"
+                            class="p-1 rounded hover:bg-slate-200/70 text-slate-400 hover:text-amber-700 transition-colors ml-1 cursor-pointer border-none bg-transparent"
+                            :title="isRowExpanded(getItemRowKey(item, idx, 'junior')) ? '접기' : '지원 학생 펼치기'"
+                          >
+                            <svg
+                              :class="['w-3.5 h-3.5 transition-transform duration-200', isRowExpanded(getItemRowKey(item, idx, 'junior')) ? 'rotate-180 text-amber-600' : '']"
+                              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            >
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <!-- 전문대 아코디언 펼침 영역 -->
+                    <tr v-if="isRowExpanded(getItemRowKey(item, idx, 'junior'))" class="bg-amber-50/50">
+                      <td colspan="4" class="p-3 border-t border-b border-amber-100">
+                        <div class="bg-white rounded-xl p-3 border border-amber-100/90 shadow-2xs space-y-2.5">
+                          <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <span class="text-xs font-black text-amber-950 flex items-center gap-1">
+                              <span>🎓</span>
+                              <span>{{ item.university }} 지원 학생 (총 {{ getApplicantCount(item, 'univ') }}명)</span>
+                            </span>
+                            <div class="flex items-center gap-2">
+                              <!-- Admin Masking toggle -->
+                              <button
+                                v-if="auth.isAdmin"
+                                @click="cycleAdminMaskMode"
+                                type="button"
+                                class="text-[10px] px-2 py-0.5 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold border border-amber-300 transition-colors flex items-center gap-1 cursor-pointer"
+                              >
+                                <span>{{ adminMaskMode === 0 ? '🔒' : (adminMaskMode === 1 ? '🔓' : '👁️') }}</span>
+                                <span>마스킹: {{ adminMaskMode === 0 ? '1단계' : (adminMaskMode === 1 ? '2단계' : '3단계') }}</span>
+                              </button>
+                              <button
+                                @click="toggleRowAccordion(getItemRowKey(item, idx, 'junior'), item, 'univ')"
+                                type="button"
+                                class="text-[10px] text-slate-400 hover:text-slate-700 cursor-pointer border-none bg-transparent"
+                              >
+                                ✕ 닫기
+                              </button>
+                            </div>
+                          </div>
+
+                          <!-- 학생 역할 -->
+                          <template v-if="auth.isStudent">
+                            <div v-if="getVisibleStudents(item, 'univ').length > 0" class="space-y-1.5">
+                              <div
+                                v-for="(myApp, mIdx) in getVisibleStudents(item, 'univ')"
+                                :key="mIdx"
+                                class="p-2.5 rounded-xl bg-amber-50/60 border border-amber-200 text-xs flex justify-between items-center"
+                              >
+                                <div>
+                                  <span class="font-extrabold text-amber-950">👤 {{ myApp.name }} (본인)</span>
+                                  <span class="text-slate-600 ml-2">모집단위: {{ myApp.dept || '-' }}</span>
+                                </div>
+                                <span class="font-bold text-amber-800">{{ myApp.finalStage || '접수' }}</span>
+                              </div>
+                            </div>
+                            <div v-else class="p-3 text-center text-xs text-slate-400 bg-slate-50 rounded-xl">
+                              회원님(본인)의 지원 내역이 없습니다.
+                            </div>
+                          </template>
+
+                          <!-- 교사 / 관리자 역할 -->
+                          <template v-else>
+                            <div v-if="getVisibleStudents(item, 'univ').length > 0" class="overflow-x-auto rounded-xl border border-amber-200/60 bg-white">
+                              <table class="w-full text-left text-xs border-collapse">
+                                <thead class="bg-amber-50 text-amber-950 font-bold border-b border-amber-100">
+                                  <tr>
+                                    <th class="p-2 pl-3">학급/번호</th>
+                                    <th class="p-2">이름</th>
+                                    <th class="p-2">모집단위(학과)</th>
+                                    <th class="p-2">전형결과</th>
+                                  </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                  <tr v-for="(stApp, sIdx) in getVisibleStudents(item, 'univ')" :key="sIdx" class="hover:bg-slate-50">
+                                    <td class="p-2 pl-3 whitespace-nowrap text-slate-600 font-medium">
+                                      {{ stApp.isGraduate ? '졸업생' : `${stApp.classNum}반 ${stApp.studentNum}번` }}
+                                    </td>
+                                    <td class="p-2 font-bold text-slate-900 whitespace-nowrap">{{ getDisplayStudentName(stApp) }}</td>
+                                    <td class="p-2 text-slate-800">{{ stApp.dept || '-' }}</td>
+                                    <td class="p-2 text-slate-600">{{ stApp.finalStage || stApp.stage1 || '-' }}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                            <div v-else class="p-3 text-center text-xs text-slate-400 bg-slate-50 rounded-xl">
+                              지원 학생 데이터가 없습니다.
+                            </div>
+                          </template>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
                 </tbody>
               </table>
             </div>
@@ -936,6 +1284,13 @@ import { fetchAdmissionCalendarData } from '../../services/admissionCalendarServ
 import { useAuthStore } from '../../stores/auth.js'
 import { supabase } from '../../utils/supabaseClient.js'
 import { decryptText } from '../../utils/cryptoUtils.js'
+import { 
+  applications, 
+  maskName, 
+  adminMaskMode, 
+  cycleAdminMaskMode, 
+  MASK_MODES 
+} from '../../stat/composables/useStatData.js'
 
 const auth = useAuthStore()
 
@@ -1715,6 +2070,7 @@ function openModalForDate(dateStr) {
   }
 
   modalFilterSearch.value = ''
+  expandedRows.value = {}
   selectedDateModal.value = {
     dateStr,
     formattedLong,
@@ -1738,6 +2094,161 @@ const filteredFourYearItems = computed(() => {
     (it.note && it.note.toLowerCase().includes(q))
   )
 })
+
+// ── 모달 내 대학별/전형별 지원 학생 인라인 아코디언 상태 및 로직 ──
+const allApplications = computed(() => {
+  return applications.value || []
+})
+
+const canViewStudents = computed(() => {
+  return auth.isAdmin || auth.isTeacher || auth.isStudent
+})
+
+const expandedRows = ref({}) // key -> { mode: 'univ' | 'track' }
+
+function getItemRowKey(item, idx, type = 'fourYear') {
+  return `${type}_${idx}_${item.university}`
+}
+
+function isRowExpanded(key) {
+  return !!expandedRows.value[key]
+}
+
+function getRowExpandedMode(key) {
+  return expandedRows.value[key]?.mode || 'univ'
+}
+
+function setRowExpandedMode(key, mode) {
+  if (expandedRows.value[key]) {
+    expandedRows.value[key].mode = mode
+  }
+}
+
+function toggleRowAccordion(key, item, preferredMode = 'univ') {
+  if (!canViewStudents.value) return
+  if (expandedRows.value[key]) {
+    if (expandedRows.value[key].mode === preferredMode) {
+      delete expandedRows.value[key]
+      expandedRows.value = { ...expandedRows.value }
+    } else {
+      expandedRows.value[key].mode = preferredMode
+      expandedRows.value = { ...expandedRows.value }
+    }
+  } else {
+    expandedRows.value = {
+      ...expandedRows.value,
+      [key]: { mode: preferredMode }
+    }
+  }
+}
+
+function getApplicantsForItem(item, mode = 'univ') {
+  if (!item || !item.university) return []
+  const list = allApplications.value || []
+  
+  // 1. 대학명 매칭
+  const uniMatched = list.filter(app => isUniversityMatch(item.university, [app.univName]))
+  
+  if (mode === 'univ') {
+    return uniMatched
+  }
+  
+  // 2. 전형명 매칭
+  if (!item.track) return uniMatched
+  const cleanTrack = item.track.trim().replace(/[\s\-_()\/,]/g, '').toLowerCase()
+  if (cleanTrack === '수시전체' || cleanTrack === '전체' || cleanTrack === '수시') {
+    return uniMatched
+  }
+  
+  const keywords = item.track
+    .split(/[\/,\(\)\s+]/)
+    .map(k => k.trim())
+    .filter(k => k.length >= 2 && !['전형', '수시', '학생부', '1단계', '2단계'].includes(k))
+    
+  const trackMatched = uniMatched.filter(app => {
+    const detail = (app.admissionDetailType || '').replace(/[\s\-_()\/,]/g, '').toLowerCase()
+    const major = (app.admissionMajorType || '').replace(/[\s\-_()\/,]/g, '').toLowerCase()
+    const dept = (app.dept || '').replace(/[\s\-_()\/,]/g, '').toLowerCase()
+    
+    if (detail && (detail.includes(cleanTrack) || cleanTrack.includes(detail))) return true
+    if (major && (major.includes(cleanTrack) || cleanTrack.includes(major))) return true
+    if (dept && cleanTrack.includes(dept)) return true
+    
+    for (const kw of keywords) {
+      const lkw = kw.toLowerCase()
+      if (detail.includes(lkw) || major.includes(lkw) || dept.includes(lkw)) {
+        return true
+      }
+    }
+    return false
+  })
+  
+  return trackMatched
+}
+
+function getVisibleStudents(item, mode = 'univ') {
+  if (!canViewStudents.value) return []
+  
+  let applicants = getApplicantsForItem(item, mode)
+  
+  // 학생 로그인: 본인 지원 내역만 철저히 격리
+  if (auth.isStudent) {
+    return applicants.filter(app => {
+      if (auth.studentCode && (app.studentCode === auth.studentCode || app.studentKey?.startsWith(auth.studentCode))) return true
+      if (auth.studentName && app.name === auth.studentName) {
+        if (auth.classNo && app.classNum) {
+          return Number(auth.classNo) === Number(app.classNum)
+        }
+        return true
+      }
+      return false
+    })
+  }
+  
+  // 교사 / 관리자: 상단 학급 및 학생 필터가 지정되어 있다면 적용
+  if (selectedClass.value && selectedClass.value !== 'ALL') {
+    if (selectedClass.value === 'GRAD') {
+      applicants = applicants.filter(a => a.isGraduate)
+    } else {
+      applicants = applicants.filter(a => !a.isGraduate && Number(a.classNum) === Number(selectedClass.value))
+    }
+  }
+  
+  if (selectedStudentId.value && selectedStudentId.value !== 'ALL') {
+    applicants = applicants.filter(a => 
+      a.studentCode === selectedStudentId.value || 
+      a.name === selectedStudentId.value ||
+      a.studentKey === selectedStudentId.value
+    )
+  }
+  
+  // 반, 번호 순 정렬
+  return applicants.slice().sort((a, b) => {
+    if (a.classNum !== b.classNum) return (a.classNum || 0) - (b.classNum || 0)
+    return (a.studentNum || 0) - (b.studentNum || 0)
+  })
+}
+
+function getApplicantCount(item, mode = 'univ') {
+  if (!canViewStudents.value) return 0
+  return getVisibleStudents(item, mode).length
+}
+
+function getDisplayStudentName(app) {
+  if (!app) return ''
+  if (auth.isStudent) {
+    return `${app.name} (본인)`
+  }
+  if (auth.isTeacher) {
+    // 교사는 항상 마스킹 보호
+    return maskName(app.name, MASK_MODES.LAST_ONLY)
+  }
+  if (auth.isAdmin) {
+    // 관리자는 관리자 마스킹 단계 연동
+    return maskName(app.name, adminMaskMode.value)
+  }
+  return maskName(app.name)
+}
 
 defineExpose({
   refreshData,

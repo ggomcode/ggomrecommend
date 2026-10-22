@@ -53,6 +53,7 @@ export const STANDARD_KCUE_TABS = [
   { key: '2027정시', year: '2027', type: '정시', category: 'jungsi', label: '2027학년도 정시 지원 원자료' },
   { key: '2026정시', year: '2026', type: '정시', category: 'jungsi', label: '2026학년도 정시 지원 원자료' },
   { key: '2025정시', year: '2025', type: '정시', category: 'jungsi', label: '2025학년도 정시 지원 원자료' },
+  { key: '2027가채점', year: '2027', type: '가채점', category: 'mock', label: '2027학년도 가채점 원자료 (모의고사)', isDefault: false },
   { key: '2027통계', year: '2027', type: '통계', category: 'stat', label: '2027학년도 통계 요약 (선택)' },
   { key: '2026통계', year: '2026', type: '통계', category: 'stat', label: '2026학년도 통계 요약 (선택)' },
   { key: '2025통계', year: '2025', type: '통계', category: 'stat', label: '2025학년도 통계 요약 (선택)' }
@@ -246,13 +247,23 @@ export function parseKcueRows(csvText, customPassword = null) {
   const password = customPassword || getStatSessionPassword()
   const rawHeaders = rows[0] || []
   
-  // 1. FA열(157번째, 0-index: 156), DA열(105번째 열, 0-index: 104) 또는 'encrypted_data' 헤더 열 확인
+  // 1. FA열(157번째, 0-index: 156), DA열(105번째, 0-index: 104), CA열(79번째, 0-index: 78) 또는 'encrypted_data' 헤더 열 확인
   let encColIdx = rawHeaders.findIndex(h => String(h || '').trim() === 'encrypted_data')
   if (encColIdx === -1) {
-    if (rawHeaders.length >= 157 && String(rows[1]?.[156] || '').trim().startsWith('U2FsdGVkX1')) {
-      encColIdx = 156
-    } else if (rawHeaders.length >= 105 && String(rows[1]?.[104] || '').trim().startsWith('U2FsdGVkX1')) {
-      encColIdx = 104
+    for (const cIdx of [156, 104, 78]) {
+      if (rawHeaders.length > cIdx && String(rows[1]?.[cIdx] || '').trim().startsWith('U2FsdGVkX1')) {
+        encColIdx = cIdx
+        break
+      }
+    }
+    // Fallback: 1행(첫 데이터행) 전체 열 탐색
+    if (encColIdx === -1 && rows[1]) {
+      for (let c = 0; c < rows[1].length; c++) {
+        if (String(rows[1][c] || '').trim().startsWith('U2FsdGVkX1')) {
+          encColIdx = c
+          break
+        }
+      }
     }
   }
 
@@ -695,5 +706,124 @@ export async function saveKcueYearSheets(sheetsMap) {
   await saveKcueSheetId(targetId)
   return await getKcueYearSheets()
 }
+
+/**
+ * 배포 구글 시트의 '2027가채점' 탭(CA열 암호화 데이터)을 비동기 조회하여
+ * 모의고사 응시 배열로 파싱 및 복호화
+ */
+export async function fetchAndParseKcueMockData(sheetId = null, tabName = '2027가채점', customPassword = null) {
+  const cleanId = sheetId ? extractSheetId(sheetId) : await getKcueSheetId()
+  if (!cleanId) throw new Error('구글 시트 ID가 설정되지 않았습니다.')
+
+  const password = customPassword || getStatSessionPassword()
+  const csvText = await fetchKcueSheetTabCsv(cleanId, tabName)
+  if (!csvText || typeof csvText !== 'string') return []
+
+  const wb = XLSX.read(csvText, { type: 'string' })
+  if (!wb.SheetNames || wb.SheetNames.length === 0) return []
+
+  const ws = wb.Sheets[wb.SheetNames[0]]
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1 })
+  if (!rows || rows.length < 2) return []
+
+  const rawHeaders = rows[0] || []
+  
+  // CA열(79번째, 0-index: 78), encrypted_data 열 또는 U2FsdGVkX1 암호문 열 탐색
+  let encColIdx = rawHeaders.findIndex(h => String(h || '').trim() === 'encrypted_data')
+  if (encColIdx === -1) {
+    for (const cIdx of [78, 156, 104]) {
+      if (rawHeaders.length > cIdx && String(rows[1]?.[cIdx] || '').trim().startsWith('U2FsdGVkX1')) {
+        encColIdx = cIdx
+        break
+      }
+    }
+    if (encColIdx === -1 && rows[1]) {
+      for (let c = 0; c < rows[1].length; c++) {
+        if (String(rows[1][c] || '').trim().startsWith('U2FsdGVkX1')) {
+          encColIdx = c
+          break
+        }
+      }
+    }
+  }
+
+  const isEncrypted = encColIdx !== -1 && String(rows[1]?.[encColIdx] || '').trim().startsWith('U2FsdGVkX1')
+
+  const colMap = {}
+  rawHeaders.forEach((h, idx) => {
+    if (!h) return
+    const clean = String(h).replace(/[\r\n\s]+/g, '').trim()
+    colMap[clean] = idx
+  })
+
+  const records = []
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i]
+    if (!r || r.length === 0) continue
+
+    let rowData = null
+    if (isEncrypted) {
+      const cipherText = String(r[encColIdx] || '').trim()
+      if (!cipherText) continue
+      const decryptedStr = decryptAES(cipherText, password)
+      if (decryptedStr) {
+        try {
+          rowData = JSON.parse(decryptedStr)
+        } catch (e) {}
+      }
+    }
+
+    const getVal = (...keys) => {
+      if (rowData) {
+        for (const k of keys) {
+          if (rowData[k] !== undefined && rowData[k] !== null && rowData[k] !== '') {
+            return String(rowData[k]).trim()
+          }
+          const cleanK = k.replace(/[\r\n\s]+/g, '')
+          for (const ak of Object.keys(rowData)) {
+            if (ak.replace(/[\r\n\s]+/g, '') === cleanK && rowData[ak] !== undefined && rowData[ak] !== null && rowData[ak] !== '') {
+              return String(rowData[ak]).trim()
+            }
+          }
+        }
+        return ''
+      } else {
+        for (const k of keys) {
+          const cleanK = k.replace(/[\r\n\s]+/g, '')
+          if (colMap[cleanK] !== undefined && r[colMap[cleanK]] !== undefined && r[colMap[cleanK]] !== null && r[colMap[cleanK]] !== '') {
+            return String(r[colMap[cleanK]]).trim()
+          }
+        }
+        return ''
+      }
+    }
+
+    const name = getVal('이름', '성명', '학생명')
+    if (!name) continue
+
+    const classNum = getVal('반', '학급') || ''
+    const studentNum = getVal('번호', '출석번호') || ''
+    const examName = getVal('시험명', '회차', '모의고사', '월', '구분') || tabName
+    const mathSubject = getVal('수학', '수학선택', '수학과목', '선택_수학') || ''
+    const inquiry1 = getVal('탐구1', '선택과목1', '탐구과목1', '사탐/과탐1', '제1선택', '탐구1과목') || ''
+    const inquiry2 = getVal('탐구2', '선택과목2', '탐구과목2', '사탐/과탐2', '제2선택', '탐구2과목') || ''
+
+    records.push({
+      examName,
+      name,
+      classNum,
+      studentNum,
+      studentKey: `${classNum}-${studentNum}_${name}`,
+      mathSubject,
+      inquiry1,
+      inquiry2,
+      rawRow: rowData || {}
+    })
+  }
+
+  return records
+}
+
 
 

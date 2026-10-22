@@ -39,6 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isAdmin = computed(() => role.value === 'admin')
   const isTeacher = computed(() => role.value === 'teacher')
   const isStudent = computed(() => role.value === 'student')
+  const isAuthenticated = computed(() => isAdmin.value || isTeacher.value || isStudent.value || !!userId.value || !!role.value)
 
   // Supabase 세션 상태 동기화 및 런타임 체크
   async function checkStatus() {
@@ -637,7 +638,7 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     token, userId, user, role, status, grade, classNo, teacherName,
     studentCode, studentName, studentPhone, gpaOverall, phoneLast4, seqNo, isEnrolled, gradYear, hasDisciplinary,
-    initialized, isAdmin, isTeacher, isStudent,
+    initialized, isAdmin, isTeacher, isStudent, isAuthenticated,
     checkStatus, loginAdmin, loginTeacher, loginStudent, signUpStudent, logout
   }
 })

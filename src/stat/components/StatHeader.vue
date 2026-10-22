@@ -204,7 +204,7 @@
 
           <!-- 캘린더 Button -->
           <button
-            @click="router.push('/calendar')"
+            @click="goToCalendar"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors cursor-pointer"
             title="학사일정 & 대입 캘린더"
           >
@@ -298,6 +298,14 @@ function handleScopeChange(scope) {
 function handleSheetsSaved() {
   refreshYearSheets()
 }
+
+function goToCalendar() {
+  try {
+    sessionStorage.setItem('pcm_calendar_from', 'stat')
+  } catch (e) {}
+  router.push({ path: '/calendar', query: { from: 'stat' } })
+}
+
 const window = globalThis.window
 
 const kcueSheetId = ref('')

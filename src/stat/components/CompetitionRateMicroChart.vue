@@ -1,23 +1,13 @@
 <template>
   <div class="mt-3 p-2.5 bg-slate-50/90 rounded-xl border border-slate-200/80">
-    <!-- Header: Title & Axis Note -->
+    <!-- Header: Title -->
     <div class="flex items-center justify-between mb-2">
-      <div class="flex items-center space-x-1.5">
-        <span class="text-[11px] font-bold text-slate-700 flex items-center">
-          <svg class="w-3 h-3 text-indigo-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-          </svg>
-          최근 3개년 경쟁률 추이
-        </span>
-        <span class="text-[9px] px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-600 font-medium border border-indigo-100">
-          기준 20:1
-        </span>
-      </div>
-      <div class="text-[10px] text-slate-400">
-        <span class="inline-flex items-center">
-          <span class="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1"></span>20:1 초과(물결축)
-        </span>
-      </div>
+      <span class="text-[11px] font-bold text-slate-700 flex items-center">
+        <svg class="w-3 h-3 text-indigo-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+        최근 3개년 경쟁률 추이
+      </span>
     </div>
 
     <!-- Micro Chart Area -->

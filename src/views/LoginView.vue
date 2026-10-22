@@ -37,13 +37,25 @@
             <span>{{ calendarLoading ? '동기화 중…' : '일정 새로고침' }}</span>
           </button>
 
+          <!-- 대입 통계 시스템으로 돌아가기 버튼 (대입 통계 시스템에서 캘린더로 진입한 로그인 사용자 전용) -->
+          <button
+            v-if="isFromStat"
+            type="button"
+            @click="goToStatDashboard"
+            class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
+            title="대입 통계 시스템 대시보드로 이동"
+          >
+            <span>📊</span>
+            <span>대입 통계 시스템으로 돌아가기</span>
+          </button>
+
           <button
             type="button"
             @click="openLoginView"
             class="px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-white bg-slate-900 hover:bg-slate-800 shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer border-none"
           >
-            <span>{{ auth.isAuthenticated ? '🔙' : '🔐' }}</span>
-            <span>{{ auth.isAuthenticated ? '시스템으로 돌아가기' : '로그인 창으로 돌아가기' }}</span>
+            <span>{{ (auth.isAuthenticated && !isFromStat) ? '🔙' : '🔐' }}</span>
+            <span>{{ (auth.isAuthenticated && !isFromStat) ? '시스템으로 돌아가기' : '로그인 창으로 돌아가기' }}</span>
           </button>
         </div>
       </div>
@@ -622,7 +634,23 @@ function openCalendarView() {
   }
 }
 
+const isFromStat = computed(() => {
+  const isLogged = auth.isAuthenticated || auth.isAdmin || auth.isTeacher || auth.isStudent
+  if (!isLogged) return false
+  return route.query.from === 'stat' || sessionStorage.getItem('pcm_calendar_from') === 'stat'
+})
+
+function goToStatDashboard() {
+  try {
+    sessionStorage.removeItem('pcm_calendar_from')
+  } catch (e) {}
+  router.push('/stat')
+}
+
 function openLoginView() {
+  try {
+    sessionStorage.removeItem('pcm_calendar_from')
+  } catch (e) {}
   if (auth.isAuthenticated) {
     if (window.history.length > 1) {
       router.back()

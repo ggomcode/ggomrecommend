@@ -158,11 +158,11 @@
       <div class="mt-8">
         <h2 class="text-sm font-bold text-slate-900 mb-2 flex items-center">
           <span class="w-2 h-2 bg-slate-900 rounded-full mr-2"></span>
-          2. 내신 vs 수능 과목별 괴리도 & 수능 응시 현황
+          2. 과목별 내신 vs 수능 등급 비교 & 수능 응시 현황
         </h2>
         <div class="grid grid-cols-2 gap-4 text-xs mb-3">
           <div class="border border-slate-300 p-3 rounded">
-            <div class="font-bold border-b border-slate-200 pb-1 mb-2 text-blue-900">내신 vs 수능 등급 비교 (괴리도)</div>
+            <div class="font-bold border-b border-slate-200 pb-1 mb-2 text-blue-900">과목별 내신 vs 수능 등급 비교</div>
             <table class="w-full text-center">
               <tr class="bg-slate-50 font-semibold text-slate-700">
                 <th class="p-1 border border-slate-200">영역</th>

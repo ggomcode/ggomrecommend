@@ -3,6 +3,9 @@
     <!-- 🎯 2단계: 대학 그룹별 전형 심층 분석 & 합격률 비교 위젯 (보고서 5~6페이지 통합) -->
     <UnivGroupPassRateWidget />
 
+    <!-- 🏆 대학별 합격률 랭킹 위젯 (1~20위, 21~40위, 41~60위 구간 선택) -->
+    <UnivPassRateRankingWidget @select-univ="handleSelectRankedUniv" />
+
     <!-- Top Filter & Presets Bar -->
     <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
       <!-- Preset Pills -->
@@ -188,6 +191,7 @@ import { Bar } from 'vue-chartjs'
 import { useData, formatGrade } from '../../composables/useStatData'
 import UnivDetailModal from '../StatUnivModal.vue'
 import UnivGroupPassRateWidget from '../UnivGroupPassRateWidget.vue'
+import UnivPassRateRankingWidget from '../UnivPassRateRankingWidget.vue'
 
 const { filteredApplications } = useData()
 
@@ -195,6 +199,14 @@ const activePreset = ref('all')
 const univSearch = ref('')
 const sortBy = ref('count')
 const selectedUniv = ref(null)
+
+function handleSelectRankedUniv(rawApp) {
+  if (!rawApp) return
+  const found = aggregatedUnivs.value.find(u => u.name === rawApp.univName)
+  if (found) {
+    selectedUniv.value = found
+  }
+}
 
 const presets = [
   { id: 'all', label: '전체 대학' },
