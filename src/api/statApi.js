@@ -246,11 +246,12 @@ export function parseKcueRows(csvText, customPassword = null) {
   const password = customPassword || getStatSessionPassword()
   const rawHeaders = rows[0] || []
   
-  // 1. DA열(105번째 열, 0-index: 104) 또는 'encrypted_data' 헤더 열 확인
+  // 1. FA열(157번째, 0-index: 156), DA열(105번째 열, 0-index: 104) 또는 'encrypted_data' 헤더 열 확인
   let encColIdx = rawHeaders.findIndex(h => String(h || '').trim() === 'encrypted_data')
-  if (encColIdx === -1 && rawHeaders.length >= 105) {
-    const sample = rows[1] ? String(rows[1][104] || '').trim() : ''
-    if (sample.startsWith('U2FsdGVkX1')) {
+  if (encColIdx === -1) {
+    if (rawHeaders.length >= 157 && String(rows[1]?.[156] || '').trim().startsWith('U2FsdGVkX1')) {
+      encColIdx = 156
+    } else if (rawHeaders.length >= 105 && String(rows[1]?.[104] || '').trim().startsWith('U2FsdGVkX1')) {
       encColIdx = 104
     }
   }
@@ -362,6 +363,59 @@ export function parseKcueRows(csvText, customPassword = null) {
     const isGraduate = String(classNum).includes('졸업') || grade !== 3
     const studentKey = `${classNum}-${studentNum}_${name}`
 
+    // 경쟁률 수치 파싱 헬퍼 (예: "15.4", "15.4:1", "15.4 : 1" 등 지원)
+    const parseRateVal = (val) => {
+      if (val === null || val === undefined || val === '') return null
+      const str = String(val).trim()
+      if (str === '자료없음' || str === '-' || str === '미매칭' || str === 'N/A') return null
+      const match = str.match(/([0-9]+(?:\.[0-9]+)?)/)
+      if (match) {
+        const n = parseFloat(match[1])
+        return isNaN(n) ? null : n
+      }
+      return null
+    }
+
+    // 물리적 열 인덱스 또는 헤더명으로 값 추출 (CI, CK, CM 등)
+    const getColOrKeyVal = (colIdx, ...keys) => {
+      // 1) rowData 또는 헤더명 매핑 우선
+      const namedVal = getVal(...keys)
+      if (namedVal !== '' && namedVal !== null && namedVal !== undefined) return namedVal
+      // 2) 행 배열의 물리적 열 인덱스
+      if (r && r[colIdx] !== undefined && r[colIdx] !== null && r[colIdx] !== '') {
+        return r[colIdx]
+      }
+      return ''
+    }
+
+    // 2027: CI=86 (모집), CK=88 (지원), CM=90 (경쟁률)
+    // 2026: CU=98 (모집), CV=99 (지원), CW=100 (경쟁률)
+    // 2025: DA=104 (모집), DB=105 (지원), DC=106 (경쟁률)
+    const rawRate2027 = getColOrKeyVal(90, '2027경쟁률', '27경쟁률', '경쟁률(2027)', '경쟁률')
+    const rawRate2026 = getColOrKeyVal(100, '2026경쟁률', '26경쟁률', '경쟁률(2026)')
+    const rawRate2025 = getColOrKeyVal(106, '2025경쟁률', '25경쟁률', '경쟁률(2025)')
+
+    const competitionRates = {
+      '2025': {
+        quota: getColOrKeyVal(104, '2025모집인원', '25모집인원', '모집인원(2025)'),
+        applicants: getColOrKeyVal(105, '2025지원인원', '25지원인원', '지원인원(2025)'),
+        rate: parseRateVal(rawRate2025),
+        raw: String(rawRate2025 || '').trim()
+      },
+      '2026': {
+        quota: getColOrKeyVal(98, '2026모집인원', '26모집인원', '모집인원(2026)'),
+        applicants: getColOrKeyVal(99, '2026지원인원', '26지원인원', '지원인원(2026)'),
+        rate: parseRateVal(rawRate2026),
+        raw: String(rawRate2026 || '').trim()
+      },
+      '2027': {
+        quota: getColOrKeyVal(86, '2027모집인원', '27모집인원', '모집인원(2027)'),
+        applicants: getColOrKeyVal(88, '2027지원인원', '27지원인원', '지원인원(2027)'),
+        rate: parseRateVal(rawRate2027),
+        raw: String(rawRate2027 || '').trim()
+      }
+    }
+
     result.push({
       id: i,
       grade,
@@ -407,7 +461,8 @@ export function parseKcueRows(csvText, customPassword = null) {
       isRecommendation,
       isRural,
       isOpportunity,
-      isMetro
+      isMetro,
+      competitionRates
     })
   }
 
@@ -479,8 +534,12 @@ export async function getStatSampleCipher(sheetId, forceReload = false) {
 
       const rawHeaders = rows[0] || []
       let encColIdx = rawHeaders.findIndex(h => String(h || '').trim() === 'encrypted_data')
-      if (encColIdx === -1 && rawHeaders.length >= 105) {
-        encColIdx = 104
+      if (encColIdx === -1) {
+        if (rawHeaders.length >= 157) {
+          encColIdx = 156
+        } else if (rawHeaders.length >= 105) {
+          encColIdx = 104
+        }
       }
 
       if (encColIdx !== -1) {

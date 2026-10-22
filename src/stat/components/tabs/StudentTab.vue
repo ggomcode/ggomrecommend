@@ -221,6 +221,9 @@
                   <span class="font-semibold text-amber-800">최저기준: </span>
                   <span>{{ app.minScoreReq || '수능최저학력기준 없음' }}</span>
                 </div>
+
+                <!-- Recent 3 Years Competition Rate Micro Chart -->
+                <CompetitionRateMicroChart :rates="app.competitionRates" />
               </div>
 
               <!-- Footer: Converted Scores & Key Exam Dates -->
@@ -247,6 +250,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useData, maskName, formatGrade } from '../../composables/useStatData'
+import CompetitionRateMicroChart from '../CompetitionRateMicroChart.vue'
 
 const { applications } = useData()
 
