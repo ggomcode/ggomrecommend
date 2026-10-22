@@ -59,9 +59,7 @@ const availableAcademicYears = ref([...STANDARD_KCUE_YEARS])
 const kcueYearSheets = ref({ ...DEFAULT_KCUE_YEAR_SHEETS })
 
 // 연도 및 시기별 인메모리 캐시 (예: '2027_수시', '2026_수시', '2027_정시')
-const yearlyApplicationsCache = ref({
-  '2027_수시': rawAppsData
-})
+const yearlyApplicationsCache = ref({})
 const isLoadingYearData = ref(false)
 const yearDataError = ref(null)
 const basicSchoolStats = ref({})
@@ -214,14 +212,15 @@ function updateOfficialStats(strYear, appsList) {
 async function loadPeriodData(year, period = '수시', forceReload = false) {
   const strYear = String(year)
   const cacheKey = `${strYear}_${period}`
-
-  if (!forceReload && yearlyApplicationsCache.value[cacheKey] && yearlyApplicationsCache.value[cacheKey].length > 0) {
-    return yearlyApplicationsCache.value[cacheKey]
-  }
-
   const hasPassword = !!getStatSessionPassword()
 
-  // 2027 수시 기본값 fallback (암호화 키가 없고 강제 새로고침이 아닐 때만 사용)
+  if (!forceReload && yearlyApplicationsCache.value[cacheKey] && yearlyApplicationsCache.value[cacheKey].length > 0) {
+    if (!(hasPassword && yearlyApplicationsCache.value[cacheKey] === rawAppsData)) {
+      return yearlyApplicationsCache.value[cacheKey]
+    }
+  }
+
+  // 2027 수시 기본값 fallback (비밀번호가 전혀 없는 순수 데모 상태일 때만 사용)
   if (strYear === '2027' && period === '수시' && !forceReload && !hasPassword) {
     yearlyApplicationsCache.value[cacheKey] = rawAppsData
     return rawAppsData
