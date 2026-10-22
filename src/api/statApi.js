@@ -388,29 +388,29 @@ export function parseKcueRows(csvText, customPassword = null) {
       return ''
     }
 
-    // 2027: CI=86 (모집), CK=88 (지원), CM=90 (경쟁률)
+    // 2027: CI=86 (모집), CK=88 (지원), CM=90 (경쟁률 수치) / 89 (경쟁률 표시용)
     // 2026: CU=98 (모집), CV=99 (지원), CW=100 (경쟁률)
     // 2025: DA=104 (모집), DB=105 (지원), DC=106 (경쟁률)
-    const rawRate2027 = getColOrKeyVal(90, '2027경쟁률', '27경쟁률', '경쟁률(2027)', '경쟁률')
-    const rawRate2026 = getColOrKeyVal(100, '2026경쟁률', '26경쟁률', '경쟁률(2026)')
-    const rawRate2025 = getColOrKeyVal(106, '2025경쟁률', '25경쟁률', '경쟁률(2025)')
+    const rawRate2027 = getColOrKeyVal(90, '[2027_매칭]경쟁률(수치)', '[2027_매칭]경쟁률(표시용)', '2027경쟁률', '27경쟁률', '경쟁률(2027)', '경쟁률') || getColOrKeyVal(89, '[2027_매칭]경쟁률(표시용)')
+    const rawRate2026 = getColOrKeyVal(100, '[2026_매칭]경쟁률', '2026경쟁률', '26경쟁률', '경쟁률(2026)')
+    const rawRate2025 = getColOrKeyVal(106, '[2025_매칭]경쟁률', '2025경쟁률', '25경쟁률', '경쟁률(2025)')
 
     const competitionRates = {
       '2025': {
-        quota: getColOrKeyVal(104, '2025모집인원', '25모집인원', '모집인원(2025)'),
-        applicants: getColOrKeyVal(105, '2025지원인원', '25지원인원', '지원인원(2025)'),
+        quota: getColOrKeyVal(104, '[2025_매칭]모집인원', '2025모집인원', '25모집인원', '모집인원(2025)'),
+        applicants: getColOrKeyVal(105, '[2025_매칭]지원인원', '2025지원인원', '25지원인원', '지원인원(2025)'),
         rate: parseRateVal(rawRate2025),
         raw: String(rawRate2025 || '').trim()
       },
       '2026': {
-        quota: getColOrKeyVal(98, '2026모집인원', '26모집인원', '모집인원(2026)'),
-        applicants: getColOrKeyVal(99, '2026지원인원', '26지원인원', '지원인원(2026)'),
+        quota: getColOrKeyVal(98, '[2026_매칭]모집인원', '2026모집인원', '26모집인원', '모집인원(2026)'),
+        applicants: getColOrKeyVal(99, '[2026_매칭]지원인원', '2026지원인원', '26지원인원', '지원인원(2026)'),
         rate: parseRateVal(rawRate2026),
         raw: String(rawRate2026 || '').trim()
       },
       '2027': {
-        quota: getColOrKeyVal(86, '2027모집인원', '27모집인원', '모집인원(2027)'),
-        applicants: getColOrKeyVal(88, '2027지원인원', '27지원인원', '지원인원(2027)'),
+        quota: getColOrKeyVal(86, '[2027_매칭]모집인원(표시용)', '[2027_매칭]모집인원(합산용)', '2027모집인원', '27모집인원', '모집인원(2027)'),
+        applicants: getColOrKeyVal(88, '[2027_매칭]지원인원', '2027지원인원', '27지원인원', '지원인원(2027)'),
         rate: parseRateVal(rawRate2027),
         raw: String(rawRate2027 || '').trim()
       }

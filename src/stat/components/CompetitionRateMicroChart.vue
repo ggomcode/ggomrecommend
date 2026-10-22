@@ -1,5 +1,5 @@
 <template>
-  <div v-if="hasAnyData" class="mt-3 p-2.5 bg-slate-50/90 rounded-xl border border-slate-200/80">
+  <div class="mt-3 p-2.5 bg-slate-50/90 rounded-xl border border-slate-200/80">
     <!-- Header: Title & Axis Note -->
     <div class="flex items-center justify-between mb-2">
       <div class="flex items-center space-x-1.5">
