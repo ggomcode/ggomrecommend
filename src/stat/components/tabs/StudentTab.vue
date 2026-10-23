@@ -216,11 +216,14 @@
                   <div class="text-[11px] text-slate-400 mt-0.5">{{ app.selectionMethod || '전형 방식 미지정' }}</div>
                 </div>
 
-                <!-- Minimum Criteria -->
-                <div class="mt-2 text-[11px] p-2 rounded-lg bg-amber-50/50 border border-amber-200/60 text-amber-900">
-                  <span class="font-semibold text-amber-800">최저기준: </span>
-                  <span>{{ app.minScoreReq || '수능최저학력기준 없음' }}</span>
-                </div>
+                <!-- Minimum Criteria & Monthly Mock Exam Tracker -->
+                <CsatMinScoreTracker
+                  :minScoreReq="app.minScoreReq"
+                  :studentField="app.field || '공통'"
+                  :mockExams="currentStudentMockExams"
+                  :canLoadMock="true"
+                  @request-mock-load="handleManualMockLoad"
+                />
 
                 <!-- Recent 3 Years Competition Rate Micro Chart -->
                 <CompetitionRateMicroChart :rates="app.competitionRates" />
@@ -248,11 +251,26 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useData, maskName, formatGrade } from '../../composables/useStatData'
 import CompetitionRateMicroChart from '../CompetitionRateMicroChart.vue'
+import CsatMinScoreTracker from '../CsatMinScoreTracker.vue'
 
-const { applications } = useData()
+const { 
+  applications, 
+  studentMockExamsMap, 
+  loadMockExamData, 
+  isLoadingMockExams 
+} = useData()
+
+// 마운트 시 구글 시트 모의고사 데이터 자동 로드
+onMounted(() => {
+  loadMockExamData()
+})
+
+const handleManualMockLoad = () => {
+  loadMockExamData(true)
+}
 
 const studentClassFilter = ref('ALL')
 const searchQuery = ref('')
@@ -357,5 +375,45 @@ const currentStudent = computed(() => {
     }
   }
   return null
+})
+
+// 현재 선택된 학생의 월별 모의고사 성적 이력 목록 (3월, 6월, 9월, 10월 등)
+const currentStudentMockExams = computed(() => {
+  if (!currentStudent.value) return []
+  const target = currentStudent.value
+  const primaryKey = target.key // 예: '1-1_고윤'
+
+  // 1) studentKey 완전 일치 매칭
+  if (studentMockExamsMap.value.has(primaryKey)) {
+    return studentMockExamsMap.value.get(primaryKey)
+  }
+
+  // 2) 이름과 반/번호 조합 유연 매칭 (포맷 차이 대응)
+  const normName = String(target.name || '').trim()
+  const classStr = String(target.classNum || '').trim()
+  const numStr = String(target.studentNum || '').trim()
+
+  for (const [mapKey, records] of studentMockExamsMap.value.entries()) {
+    if (mapKey.includes(normName)) {
+      if (classStr && numStr && mapKey.includes(`${classStr}-${numStr}`)) {
+        return records
+      }
+    }
+  }
+
+  // 3) 이름 단독 매칭 fallback (동명이인이 없는 경우)
+  if (normName) {
+    const candidates = []
+    for (const [mapKey, records] of studentMockExamsMap.value.entries()) {
+      if (mapKey.includes(normName)) {
+        candidates.push(records)
+      }
+    }
+    if (candidates.length === 1) {
+      return candidates[0]
+    }
+  }
+
+  return []
 })
 </script>

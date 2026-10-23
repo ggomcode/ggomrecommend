@@ -711,12 +711,19 @@ export async function saveKcueYearSheets(sheetsMap) {
  * 배포 구글 시트의 '2027가채점' 탭(CA열 암호화 데이터)을 비동기 조회하여
  * 모의고사 응시 배열로 파싱 및 복호화
  */
-export async function fetchAndParseKcueMockData(sheetId = null, tabName = '2027가채점', customPassword = null) {
+export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, customPassword = null) {
   const cleanId = sheetId ? extractSheetId(sheetId) : await getKcueSheetId()
   if (!cleanId) throw new Error('구글 시트 ID가 설정되지 않았습니다.')
 
+  // 1. 실제 구글 시트에 존재하는 탭 자동 탐색 (2027모의가채점, 2027가채점, 모의가채점 등)
+  let targetTab = tabName
+  if (!targetTab) {
+    const actualTabs = await getActualGoogleSheetTabs(cleanId)
+    targetTab = actualTabs.find(t => t.includes('모의') || t.includes('가채점')) || '2027모의가채점'
+  }
+
   const password = customPassword || getStatSessionPassword()
-  const csvText = await fetchKcueSheetTabCsv(cleanId, tabName)
+  const csvText = await fetchKcueSheetTabCsv(cleanId, targetTab)
   if (!csvText || typeof csvText !== 'string') return []
 
   const wb = XLSX.read(csvText, { type: 'string' })
@@ -799,15 +806,31 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = '2027�
       }
     }
 
+    const getNum = (...keys) => {
+      const v = getVal(...keys)
+      if (v === '' || v === null || v === undefined) return null
+      const n = Number(v)
+      return isNaN(n) ? null : n
+    }
+
     const name = getVal('이름', '성명', '학생명')
     if (!name) continue
 
     const classNum = getVal('반', '학급') || ''
     const studentNum = getVal('번호', '출석번호') || ''
-    const examName = getVal('시험명', '회차', '모의고사', '월', '구분') || tabName
-    const mathSubject = getVal('수학', '수학선택', '수학과목', '선택_수학') || ''
-    const inquiry1 = getVal('탐구1', '선택과목1', '탐구과목1', '사탐/과탐1', '제1선택', '탐구1과목') || ''
-    const inquiry2 = getVal('탐구2', '선택과목2', '탐구과목2', '사탐/과탐2', '제2선택', '탐구2과목') || ''
+    const examName = getVal('시험명', '회차', '모의고사', '월', '구분') || targetTab
+    const mathSubject = getVal('수학(과목)', '수학', '수학선택', '수학과목', '선택_수학') || ''
+    const inquiry1 = getVal('탐구1(과목)', '탐구1', '선택과목1', '탐구과목1', '사탐/과탐1', '제1선택', '탐구1과목') || ''
+    const inquiry2 = getVal('탐구2(과목)', '탐구2', '선택과목2', '탐구과목2', '사탐/과탐2', '제2선택', '탐구2과목') || ''
+
+    // 등급 파싱 (수능최저학력기준 판정용)
+    const korGrade = getNum('국어(등급)', '국어등급', '국어_등급', '국어')
+    const mathGrade = getNum('수학(등급)', '수학등급', '수학_등급', '수학')
+    const engGrade = getNum('영어(등급)', '영어등급', '영어_등급', '영어')
+    const inq1Grade = getNum('탐구1(등급)', '탐구1등급', '탐구1_등급', '제1선택_등급', '탐구1')
+    const inq2Grade = getNum('탐구2(등급)', '탐구2등급', '탐구2_등급', '제2선택_등급', '탐구2')
+    const histGrade = getNum('한국사(등급)', '한국사등급', '한국사_등급', '한국사')
+    const secondLangGrade = getNum('제2외국어(등급)', '제2외국어등급', '제2외국어')
 
     records.push({
       examName,
@@ -818,6 +841,13 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = '2027�
       mathSubject,
       inquiry1,
       inquiry2,
+      korGrade,
+      mathGrade,
+      engGrade,
+      inq1Grade,
+      inq2Grade,
+      histGrade,
+      secondLangGrade,
       rawRow: rowData || {}
     })
   }
@@ -825,5 +855,149 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = '2027�
   return records
 }
 
+/**
+ * 학생별 모의고사 응시 이력을 studentKey 기준으로 그룹화하여 반환하는 헬퍼
+ * @param {Array} records 
+ * @returns {Map<string, Array>} studentKey -> [exam1, exam2, ...]
+ */
+export function groupMockRecordsByStudent(records = []) {
+  const map = new Map()
+  if (!Array.isArray(records)) return map
 
+  records.forEach(r => {
+    const key = r.studentKey
+    if (!map.has(key)) {
+      map.set(key, [])
+    }
+    map.get(key).push(r)
+  })
 
+  // 각 학생의 시험 이력을 월 순서대로 정렬
+  map.forEach((examList) => {
+    examList.sort((a, b) => {
+      const getMonth = (name) => {
+        const m = String(name).match(/([0-9]{1,2})\s*월/)
+        return m ? parseInt(m[1], 10) : 0
+      }
+      return getMonth(a.examName) - getMonth(b.examName)
+    })
+  })
+
+  return map
+}
+
+// 수능최저 시트 데이터 메모리 캐시
+const csatMinScoreCache = new Map()
+
+/**
+ * [수능최저 시트 로더] 구글 시트의 '{year}수능최저' 탭 데이터를 비암호화 평문으로 로드
+ * @param {string|null} sheetId 구글 스프레드시트 ID (생략 시 기본/설정된 시트 사용)
+ * @param {string} year 학년도 ('2027', '2028' 등)
+ * @param {boolean} forceRefresh 강제 새로고침 여부
+ * @returns {Promise<Array<object>>} 9개 컬럼 정규화 레코드 배열
+ */
+export async function fetchCsatMinScoreTable(sheetId = null, year = '2027', forceRefresh = false) {
+  const targetSheetId = sheetId ? extractSheetId(sheetId) : await getKcueSheetId()
+  const cacheKey = `${targetSheetId}_${year}`
+
+  if (!forceRefresh && csatMinScoreCache.has(cacheKey)) {
+    return csatMinScoreCache.get(cacheKey)
+  }
+
+  const tabName = `${year}수능최저`
+  const gvizUrl = buildSheetTabGvizUrl(targetSheetId, tabName)
+
+  try {
+    const res = await fetch(gvizUrl)
+    if (!res.ok) {
+      console.warn(`[fetchCsatMinScoreTable] '${tabName}' 탭 로드 실패: HTTP ${res.status}`)
+      return []
+    }
+
+    const text = await res.text()
+    if (!text || text.includes('google-signin') || text.includes('accounts.google.com')) {
+      console.warn(`[fetchCsatMinScoreTable] 구글 로그인 필요 또는 시트 권한 부족`)
+      return []
+    }
+
+    const wb = XLSX.read(text, { type: 'string' })
+    const sheetName = wb.SheetNames[0]
+    if (!sheetName) return []
+
+    const sheet = wb.Sheets[sheetName]
+    const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 })
+    if (!rawRows || rawRows.length < 2) return []
+
+    // 첫 행 헤더 확인
+    const headerRow = rawRows[0] || []
+    const colIdx = {
+      seq: headerRow.findIndex(h => String(h).includes('연번')),
+      univSeq: headerRow.findIndex(h => String(h).includes('대학순번')),
+      region: headerRow.findIndex(h => String(h).includes('지역')),
+      univName: headerRow.findIndex(h => String(h).includes('대학명')),
+      broadType: headerRow.findIndex(h => String(h).trim() === '전형'),
+      detailType: headerRow.findIndex(h => String(h).includes('세부전형') && !String(h).includes('세세부')),
+      subDetailType: headerRow.findIndex(h => String(h).includes('세세부전형')),
+      dept: headerRow.findIndex(h => String(h).includes('학부') || String(h).includes('학과')),
+      minScore: headerRow.findIndex(h => String(h).includes('수능최저'))
+    }
+
+    // fallback to positional indices if header matching is imperfect
+    const getVal = (row, idx, fallback) => {
+      const targetIdx = idx !== -1 ? idx : fallback
+      return row[targetIdx] !== undefined ? String(row[targetIdx]).trim() : ''
+    }
+
+    const records = []
+    for (let r = 1; r < rawRows.length; r++) {
+      const row = rawRows[r]
+      if (!row || row.length === 0) continue
+
+      const univName = getVal(row, colIdx.univName, 3)
+      if (!univName) continue
+
+      records.push({
+        seq: parseInt(getVal(row, colIdx.seq, 0), 10) || r,
+        univSeq: parseInt(getVal(row, colIdx.univSeq, 1), 10) || 0,
+        region: getVal(row, colIdx.region, 2),
+        univName,
+        broadType: getVal(row, colIdx.broadType, 4),
+        detailType: getVal(row, colIdx.detailType, 5),
+        subDetailType: getVal(row, colIdx.subDetailType, 6),
+        dept: getVal(row, colIdx.dept, 7),
+        minScore: getVal(row, colIdx.minScore, 8)
+      })
+    }
+
+    csatMinScoreCache.set(cacheKey, records)
+    return records
+  } catch (err) {
+    console.error(`[fetchCsatMinScoreTable] 오류 발생:`, err)
+    return []
+  }
+}
+
+/**
+ * 수능최저 테이블의 필터 옵션 메타데이터(지역 목록, 대학 목록, 전형 목록 등) 추출
+ * @param {Array<object>} records 
+ */
+export function getCsatMinScoreFilterOptions(records = []) {
+  const regions = new Set()
+  const univNames = new Set()
+  const broadTypes = new Set()
+  const detailTypes = new Set()
+
+  records.forEach(r => {
+    if (r.region) regions.add(r.region)
+    if (r.univName) univNames.add(r.univName)
+    if (r.broadType) broadTypes.add(r.broadType)
+    if (r.detailType) detailTypes.add(r.detailType)
+  })
+
+  return {
+    regions: Array.from(regions),
+    univNames: Array.from(univNames),
+    broadTypes: Array.from(broadTypes),
+    detailTypes: Array.from(detailTypes)
+  }
+}

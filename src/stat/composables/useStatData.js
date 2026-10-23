@@ -11,7 +11,9 @@ import {
   STANDARD_KCUE_YEARS,
   getActualGoogleSheetTabs,
   getStatSessionPassword,
-  clearStatSessionPassword
+  clearStatSessionPassword,
+  fetchAndParseKcueMockData,
+  groupMockRecordsByStudent
 } from '../../api/statApi.js'
 import { supabase } from '../../utils/supabaseClient'
 import officialStatsData from '../data/officialStats.json'
@@ -45,6 +47,67 @@ export const SCOPE_OPTIONS = [
 // Global state
 export const applications = ref(rawAppsData)
 const officialStats = ref(officialStatsData)
+
+// 학생별 모의고사 성적 전역 상태 (2027모의가채점 탭 연계)
+export const mockExamRecords = ref([])
+export const studentMockExamsMap = ref(new Map())
+export const isLoadingMockExams = ref(false)
+
+// 수능최저 시트(2027수능최저, 2028수능최저) 전역 상태
+export const csatMinScoreTable = ref([])
+export const isLoadingCsatMinScore = ref(false)
+export const loadedCsatMinScoreYear = ref('')
+
+/**
+ * 구글 시트 '{year}수능최저' 탭의 정규화 데이터를 비동기 로드
+ */
+export async function loadCsatMinScoreData(year = '2027', forceReload = false) {
+  if (!forceReload && csatMinScoreTable.value.length > 0 && loadedCsatMinScoreYear.value === year) {
+    return csatMinScoreTable.value
+  }
+  isLoadingCsatMinScore.value = true
+  try {
+    const sheetId = await getKcueSheetId()
+    const { fetchCsatMinScoreTable } = await import('../../api/statApi.js')
+    const records = await fetchCsatMinScoreTable(sheetId, year, forceReload)
+    if (records && records.length > 0) {
+      csatMinScoreTable.value = records
+      loadedCsatMinScoreYear.value = year
+      console.log(`[useStatData] '${year}수능최저' 데이터 ${records.length}건 로드 완료`)
+    }
+    return records
+  } catch (err) {
+    console.warn(`[useStatData] '${year}수능최저' 데이터 로드 실패:`, err)
+    return []
+  } finally {
+    isLoadingCsatMinScore.value = false
+  }
+}
+
+/**
+ * 구글 시트 '2027모의가채점' 탭의 모의고사 성적 데이터를 비동기 로드 및 복호화
+ */
+export async function loadMockExamData(forceReload = false) {
+  if (!forceReload && mockExamRecords.value.length > 0) {
+    return mockExamRecords.value
+  }
+  isLoadingMockExams.value = true
+  try {
+    const sheetId = await getKcueSheetId()
+    const records = await fetchAndParseKcueMockData(sheetId)
+    if (records && records.length > 0) {
+      mockExamRecords.value = records
+      studentMockExamsMap.value = groupMockRecordsByStudent(records)
+      console.log(`[useStatData] 모의고사 성적 ${records.length}건 로드 완료 (학생수: ${studentMockExamsMap.value.size}명)`)
+    }
+    return records
+  } catch (err) {
+    console.warn('[useStatData] 모의고사 성적 로드 실패:', err)
+    return []
+  } finally {
+    isLoadingMockExams.value = false
+  }
+}
 
 // Academic Year State & Multi-Year Sheet Management
 const savedYear = localStorage.getItem('pcm_stat_selected_year')
@@ -977,7 +1040,13 @@ export function useStatData() {
     generateMultiYearStatsForYear,
     resetMultiYearStatsForYear,
     syncAllAvailableSheetYears,
-    getCurrentAcademicYear
+    mockExamRecords,
+    studentMockExamsMap,
+    isLoadingMockExams,
+    loadMockExamData,
+    csatMinScoreTable,
+    isLoadingCsatMinScore,
+    loadCsatMinScoreData
   }
 }
 

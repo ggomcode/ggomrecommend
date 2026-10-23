@@ -178,14 +178,14 @@
       <!-- 상단 헤더 배너 (고정, 학추 시스템 헤더 규격) -->
       <StatHeader :currentTabItem="currentTabItem" />
 
-      <!-- 필터 바 (상단 고정, 고입 설명회 및 학생별 6장 카드 탭은 자체 컨트롤 사용으로 제외) -->
-      <StatFilterBar v-if="currentTab !== 'admission' && currentTab !== 'student'" />
+      <!-- 필터 바 (상단 고정, 고입 설명회, 학생별 6장 카드 및 수능최저 시뮬레이터 탭은 자체 컨트롤 사용으로 제외) -->
+      <StatFilterBar v-if="currentTab !== 'admission' && currentTab !== 'student' && currentTab !== 'csatTarget'" />
 
       <!-- 스크롤 가능한 본문 영역 -->
       <div class="flex-1 min-h-0 flex flex-col overflow-y-auto" style="scrollbar-gutter: stable;">
         <div class="max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
           <!-- 1. 구글 시트 탭 데이터 실시간 로딩 중 -->
-          <div v-if="isLoadingYearData" class="flex flex-col items-center justify-center py-24 text-center">
+          <div v-if="isLoadingYearData && currentTab !== 'csatTarget'" class="flex flex-col items-center justify-center py-24 text-center">
             <div class="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-200/60 flex items-center justify-center mb-4 text-indigo-600 shadow-sm">
               <svg class="animate-spin w-7 h-7" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -200,8 +200,8 @@
             </p>
           </div>
 
-          <!-- 2. 데이터가 없는 경우 (미등록 연도 또는 탭 부재) -->
-          <div v-else-if="!applications || applications.length === 0" class="flex flex-col items-center justify-center py-20 text-center">
+          <!-- 2. 데이터가 없는 경우 (미등록 연도 또는 탭 부재, 수능최저 시뮬레이터는 제외) -->
+          <div v-else-if="currentTab !== 'csatTarget' && (!applications || applications.length === 0)" class="flex flex-col items-center justify-center py-20 text-center">
             <div class="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mb-4 text-2xl shadow-xs">
               📂
             </div>
@@ -274,6 +274,7 @@ import PrintReportTab from '../stat/components/tabs/PrintReportTab.vue'
 import PassFailScatterTab from '../stat/components/tabs/PassFailScatterTab.vue'
 import ParentCounselTab from '../stat/components/tabs/ParentCounselTab.vue'
 import HighSchoolAdmissionTab from '../stat/components/tabs/HighSchoolAdmissionTab.vue'
+import CsatTargetSimulatorTab from '../stat/components/tabs/CsatTargetSimulatorTab.vue'
 import { useStatData } from '../stat/composables/useStatData'
 import { schoolName } from '../utils/schoolConfig'
 import {
@@ -292,7 +293,8 @@ import {
   ChartScatter,
   Lock,
   Sparkles,
-  GraduationCap
+  GraduationCap,
+  Compass
 } from 'lucide-vue-next'
 import { clearStatSessionPassword, getStatSessionPassword } from '../api/statApi'
 
@@ -340,6 +342,7 @@ const menuGroups = computed(() => [
     emoji: '🎓',
     title: '상담 및 설명회',
     items: [
+      { id: 'csatTarget', name: '수능최저 & 목표진단', iconComponent: Compass, badge: '예비고3' },
       { id: 'counsel', name: '학부모 맞춤 상담', iconComponent: Sparkles, badge: 'HOT' },
       { id: 'admission', name: '고입 설명회 특화', iconComponent: GraduationCap, badge: '중3' }
     ]
@@ -368,6 +371,7 @@ const currentTabItem = computed(() => {
 const activeTabComponent = computed(() => {
   switch (currentTab.value) {
     case 'overview': return OverviewTab
+    case 'csatTarget': return CsatTargetSimulatorTab
     case 'admission': return HighSchoolAdmissionTab
     case 'counsel': return ParentCounselTab
     case 'scatter': return PassFailScatterTab
