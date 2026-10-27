@@ -122,54 +122,316 @@
 
         <!-- 9등급 vs 5등급 구조 비교표 & 포인트 -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 mt-5">
-          <!-- Left: 9등급 vs 5등급 비교 테이블 -->
-          <div class="lg:col-span-7 bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80">
-            <h3 class="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5 m-0">
-              <span>⚖️</span>
-              <span>현행 9등급제 vs 2028 개편 5등급제 비율 비교</span>
-            </h3>
-            <div class="overflow-x-auto">
-              <table class="w-full text-xs text-center border-collapse">
-                <thead>
-                  <tr class="bg-white border-b border-slate-200 text-slate-600 font-bold">
-                    <th class="py-2 px-2 text-left">등급 구분</th>
-                    <th class="py-2 px-2 bg-slate-100/80 text-slate-500">기존 9등급제 (누적)</th>
-                    <th class="py-2 px-2 bg-indigo-50 text-indigo-900">2028 개편 5등급제 (누적)</th>
-                    <th class="py-2 px-2 text-rose-600">포곡고 진학 시 효과</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200/60 font-medium">
-                  <tr class="bg-indigo-50/30">
-                    <td class="py-2 px-2 font-bold text-left text-indigo-700">1등급</td>
-                    <td class="py-2 px-2 text-slate-500">상위 4% (12명 내외)</td>
-                    <td class="py-2 px-2 font-black text-indigo-700 bg-indigo-100/50">상위 10% (33명 내외)</td>
-                    <td class="py-2 px-2 font-bold text-emerald-700">1등급 인원 2.7배 대폭 증가!</td>
-                  </tr>
-                  <tr>
-                    <td class="py-2 px-2 font-bold text-left text-slate-700">2등급</td>
-                    <td class="py-2 px-2 text-slate-500">상위 11% (36명 내외)</td>
-                    <td class="py-2 px-2 font-bold text-slate-900">상위 34% (113명 내외)</td>
-                    <td class="py-2 px-2 text-slate-700">인서울 및 수도권 지원권 안착</td>
-                  </tr>
-                  <tr>
-                    <td class="py-2 px-2 font-bold text-left text-slate-700">3등급</td>
-                    <td class="py-2 px-2 text-slate-500">상위 23% (76명 내외)</td>
-                    <td class="py-2 px-2 font-bold text-slate-900">상위 66% (220명 내외)</td>
-                    <td class="py-2 px-2 text-slate-700">지거국 및 경기권 주요대 타겟</td>
-                  </tr>
-                  <tr class="text-slate-400 text-[11px]">
-                    <td class="py-1.5 px-2 text-left">4~5등급</td>
-                    <td class="py-1.5 px-2">상위 40% ~ 100%</td>
-                    <td class="py-1.5 px-2">상위 90% ~ 100%</td>
-                    <td class="py-1.5 px-2">-</td>
-                  </tr>
-                </tbody>
-              </table>
+          <!-- Left: 9등급 vs 5등급 높이 비교 그래프 & 인터랙티브 유불리 분석 -->
+          <div class="lg:col-span-7 bg-slate-50/90 rounded-2xl p-4 border border-slate-200/90 flex flex-col justify-between">
+            <div>
+              <!-- Header -->
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5 m-0">
+                  <span>⚖️</span>
+                  <span>현행 9등급제 vs 2028 개편 5등급제 비율 높이 비교 그래프</span>
+                </h3>
+                <span class="text-[10px] font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+                  🖱️ 블록에 마우스 오버 시 등급별 유불리 진단
+                </span>
+              </div>
+
+              <!-- Quick Focus Selector Buttons -->
+              <div class="flex flex-wrap items-center gap-1.5 mb-2.5 text-[11px]">
+                <span class="text-slate-400 font-bold text-[10px] mr-0.5">핵심 쟁점 바로보기:</span>
+                <button
+                  type="button"
+                  @click="selectedGradeKey = '5-1'"
+                  :class="[
+                    'px-2 py-0.5 rounded-md font-bold transition-all border cursor-pointer text-[11px]',
+                    selectedGradeKey === '5-1' 
+                      ? 'bg-emerald-600 text-white border-emerald-700 shadow-2xs' 
+                      : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'
+                  ]"
+                >
+                  🏆 1등급 10% 확대 (2.7배)
+                </button>
+                <button
+                  type="button"
+                  @click="selectedGradeKey = '5-2'"
+                  :class="[
+                    'px-2 py-0.5 rounded-md font-bold transition-all border cursor-pointer text-[11px]',
+                    selectedGradeKey === '5-2' 
+                      ? 'bg-amber-600 text-white border-amber-700 shadow-2xs' 
+                      : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'
+                  ]"
+                >
+                  🚨 10~11% 경계선 리스크
+                </button>
+                <button
+                  type="button"
+                  @click="selectedGradeKey = '9-2'"
+                  :class="[
+                    'px-2 py-0.5 rounded-md font-bold transition-all border cursor-pointer text-[11px]',
+                    selectedGradeKey === '9-2' 
+                      ? 'bg-indigo-600 text-white border-indigo-700 shadow-2xs' 
+                      : 'bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50'
+                  ]"
+                >
+                  ⚡ 9등급제 2등급의 분기
+                </button>
+              </div>
+
+              <!-- Main Height Comparison Chart -->
+              <div class="relative bg-white rounded-xl p-3 border border-slate-200 shadow-xs">
+                <!-- Column Labels -->
+                <div class="grid grid-cols-12 gap-2 text-center text-xs font-black pb-1.5 mb-2 border-b border-slate-100">
+                  <div class="col-span-5 text-slate-700 flex items-center justify-center gap-1">
+                    <span>현행 9등급제</span>
+                    <span class="text-[10px] font-normal text-slate-400">(상대 9단계)</span>
+                  </div>
+                  <div class="col-span-2 text-[10px] text-slate-400 font-bold flex items-center justify-center">
+                    누적 컷오프
+                  </div>
+                  <div class="col-span-5 text-indigo-700 flex items-center justify-center gap-1">
+                    <span>2028 개편 5등급제</span>
+                    <span class="text-[10px] font-normal text-indigo-400">(상대·절대 병기)</span>
+                  </div>
+                </div>
+
+                <!-- Bars Container (Height 300px) -->
+                <div class="relative grid grid-cols-12 gap-2 h-72 select-none">
+                  <!-- Left: 9-Grade Column (1~9 All Displayed) -->
+                  <div class="col-span-5 flex flex-col h-full rounded-lg overflow-hidden border border-slate-200/80 bg-slate-50">
+                    <div
+                      v-for="item in nineGradeList"
+                      :key="'9-' + item.grade"
+                      @mouseenter="hoverGrade('9', item.grade)"
+                      @click="selectGrade('9', item.grade)"
+                      :style="{ height: item.span + '%' }"
+                      :class="[
+                        'w-full flex items-center justify-between px-2 cursor-pointer transition-all duration-150 relative border-b border-white/20 last:border-b-0',
+                        item.bgColor,
+                        selectedGradeKey === '9-' + item.grade 
+                          ? 'ring-2 ring-indigo-600 z-10 brightness-110 shadow-sm' 
+                          : 'hover:brightness-105'
+                      ]"
+                    >
+                      <!-- Left: Grade Title & Range indicator -->
+                      <div class="flex items-center gap-1 min-w-0">
+                        <span class="font-black text-[11px] leading-tight text-white drop-shadow-xs shrink-0">
+                          {{ item.grade }}등급
+                        </span>
+                        <span class="text-[9px] text-white/80 font-mono hidden sm:inline shrink-0">
+                          (↕{{ item.span }}%p)
+                        </span>
+                      </div>
+                      <!-- Right: Cumulative Cut & Count -->
+                      <div class="text-right text-[10px] font-bold text-white/90 leading-tight shrink-0 font-mono">
+                        <span>~{{ item.cumEnd }}%</span>
+                        <span class="text-[9px] opacity-75 hidden md:inline ml-0.5">({{ item.count }}명)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Center: Cutoff Comparison Bridge Line & Key Indicators -->
+                  <div class="col-span-2 relative flex flex-col justify-between py-0.5 text-center pointer-events-none">
+                    <!-- 0% Line -->
+                    <div class="absolute top-0 inset-x-0 border-t border-slate-300"></div>
+
+                    <!-- 4% Marker (9등급 1등급 컷) -->
+                    <div class="absolute w-full flex items-center justify-center -translate-y-1/2" :style="{ top: '4%' }">
+                      <div class="w-full border-t border-dashed border-emerald-400"></div>
+                      <span class="absolute bg-white px-0.5 text-[8px] font-extrabold text-emerald-600 border border-emerald-200 rounded">
+                        4%
+                      </span>
+                    </div>
+
+                    <!-- 10% Marker (5등급 1등급 컷) -->
+                    <div class="absolute w-full flex items-center justify-center -translate-y-1/2 z-10" :style="{ top: '10%' }">
+                      <div class="w-full border-t-2 border-indigo-600"></div>
+                      <span class="absolute bg-indigo-600 text-white px-1 rounded text-[8px] font-black shadow-2xs">
+                        10%
+                      </span>
+                    </div>
+
+                    <!-- 11% Marker (9등급 2등급 컷) -->
+                    <div class="absolute w-full flex items-center justify-center -translate-y-1/2" :style="{ top: '11%' }">
+                      <div class="w-full border-t border-dashed border-amber-500"></div>
+                      <span class="absolute bg-amber-500 text-white px-0.5 text-[8px] font-black rounded shadow-2xs">
+                        11%
+                      </span>
+                    </div>
+
+                    <!-- 23% Marker (9등급 3등급 컷) -->
+                    <div class="absolute w-full flex items-center justify-center -translate-y-1/2" :style="{ top: '23%' }">
+                      <div class="w-full border-t border-dashed border-sky-400"></div>
+                      <span class="absolute bg-white px-0.5 text-[8px] font-bold text-sky-700 border border-sky-200 rounded">
+                        23%
+                      </span>
+                    </div>
+
+                    <!-- 34% Marker (5등급 2등급 컷) -->
+                    <div class="absolute w-full flex items-center justify-center -translate-y-1/2" :style="{ top: '34%' }">
+                      <div class="w-full border-t-2 border-indigo-500"></div>
+                      <span class="absolute bg-indigo-500 text-white px-1 text-[8px] font-black rounded shadow-2xs">
+                        34%
+                      </span>
+                    </div>
+
+                    <!-- 40% Marker (9등급 4등급 컷) -->
+                    <div class="absolute w-full flex items-center justify-center -translate-y-1/2" :style="{ top: '40%' }">
+                      <div class="w-full border-t border-dashed border-slate-300"></div>
+                      <span class="absolute bg-white px-0.5 text-[8px] text-slate-500 border border-slate-200 rounded">
+                        40%
+                      </span>
+                    </div>
+
+                    <!-- 66% Marker (5등급 3등급 컷) -->
+                    <div class="absolute w-full flex items-center justify-center -translate-y-1/2" :style="{ top: '66%' }">
+                      <div class="w-full border-t-2 border-indigo-400"></div>
+                      <span class="absolute bg-white text-indigo-700 border border-indigo-300 px-1 text-[8px] font-bold rounded">
+                        66%
+                      </span>
+                    </div>
+
+                    <!-- 90% Marker (5등급 4등급 컷) -->
+                    <div class="absolute w-full flex items-center justify-center -translate-y-1/2" :style="{ top: '90%' }">
+                      <div class="w-full border-t-2 border-slate-400"></div>
+                      <span class="absolute bg-white text-slate-700 border border-slate-300 px-1 text-[8px] font-bold rounded">
+                        90%
+                      </span>
+                    </div>
+
+                    <!-- 100% Line -->
+                    <div class="absolute bottom-0 inset-x-0 border-b border-slate-300"></div>
+                  </div>
+
+                  <!-- Right: 5-Grade Column (1~5 All Displayed) -->
+                  <div class="col-span-5 flex flex-col h-full rounded-lg overflow-hidden border border-slate-200/80 bg-slate-50">
+                    <div
+                      v-for="item in fiveGradeList"
+                      :key="'5-' + item.grade"
+                      @mouseenter="hoverGrade('5', item.grade)"
+                      @click="selectGrade('5', item.grade)"
+                      :style="{ height: item.span + '%' }"
+                      :class="[
+                        'w-full flex items-center justify-between px-2.5 cursor-pointer transition-all duration-150 relative border-b border-white/20 last:border-b-0',
+                        item.bgColor,
+                        selectedGradeKey === '5-' + item.grade 
+                          ? 'ring-2 ring-indigo-600 z-10 brightness-110 shadow-sm' 
+                          : 'hover:brightness-105'
+                      ]"
+                    >
+                      <!-- Special Badge for Grade 1 (2.7배 확대) -->
+                      <div v-if="item.grade === 1" class="absolute -left-1.5 top-1/2 -translate-y-1/2 hidden md:block">
+                        <span class="bg-amber-400 text-slate-950 font-black text-[9px] px-1 py-0.5 rounded shadow-xs">
+                          2.7배↑
+                        </span>
+                      </div>
+                      <!-- Special Top border warning for Grade 2 (10~11% boundary) -->
+                      <div v-if="item.grade === 2" class="absolute top-0 inset-x-0 h-1 bg-amber-400/90" title="10~11% 경계 위험선"></div>
+
+                      <!-- Left: Grade Title & Arrow indicator -->
+                      <div class="flex items-center gap-1.5 min-w-0">
+                        <span class="font-black text-xs leading-tight text-white drop-shadow-xs shrink-0">
+                          {{ item.grade }}등급
+                        </span>
+                        <span class="text-[9px] text-white/80 font-mono hidden sm:inline shrink-0">
+                          (↕{{ item.span }}%p)
+                        </span>
+                      </div>
+                      <!-- Right: Cumulative Cut & Count -->
+                      <div class="text-right text-[11px] font-black text-white/95 leading-tight shrink-0 font-mono">
+                        <span>~{{ item.cumEnd }}%</span>
+                        <span class="text-[9px] font-bold text-white/80 hidden md:inline ml-1">({{ item.count }}명)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Footer Scale Legend -->
+                <div class="flex flex-wrap items-center justify-between gap-1.5 mt-2 pt-2 border-t border-slate-100 text-[10px] text-slate-500 font-medium">
+                  <div class="flex items-center gap-1.5">
+                    <span class="inline-block w-2 h-2 bg-emerald-600 rounded-full"></span>
+                    <span>1등급 컷 4% ➔ <strong>10% 확대 (2.7배)</strong></span>
+                  </div>
+                  <div class="flex items-center gap-1 text-amber-700 font-bold">
+                    <span>⚠️ 10~11% 학생:</span>
+                    <span>9등급 2등급 ➔ <strong>5등급 2등급 밀림(실질 3등급 취급 주의)</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Interactive Detailed Insight Card (호버 / 활성화된 등급 정보) -->
+              <div class="mt-3 p-3.5 rounded-xl bg-white border border-indigo-100 shadow-2xs transition-all duration-200">
+                <!-- Card Header -->
+                <div class="flex flex-wrap items-center justify-between gap-1.5 pb-2 border-b border-slate-100">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-black text-slate-900">{{ currentAnalysis.title }}</span>
+                    <span class="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+                      {{ currentAnalysis.range }}
+                    </span>
+                    <span class="text-[10px] text-slate-500">({{ currentAnalysis.rangeDetail }})</span>
+                  </div>
+                  <span :class="['text-[10px] font-extrabold px-2 py-0.5 rounded-md border', currentAnalysis.badgeClass]">
+                    {{ currentAnalysis.badge }}
+                  </span>
+                </div>
+
+                <!-- Grade Mapping Comparison -->
+                <div class="mt-2 text-[11px] text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200/60 flex items-center gap-1.5">
+                  <span class="font-bold text-indigo-900 shrink-0">🔄 등급 변동 매핑:</span>
+                  <span>{{ currentAnalysis.comparison }}</span>
+                </div>
+
+                <!-- Pros / Cons Section List -->
+                <div class="mt-2.5 space-y-2">
+                  <div
+                    v-for="(sec, sIdx) in currentAnalysis.sections"
+                    :key="sIdx"
+                    class="p-2.5 rounded-lg text-[11px] leading-relaxed"
+                    :class="[
+                      sec.tagType === 'loss' ? 'bg-rose-50/70 border border-rose-200/80 text-rose-950' :
+                      sec.tagType === 'win' ? 'bg-emerald-50/70 border border-emerald-200/80 text-emerald-950' :
+                      sec.tagType === 'danger' ? 'bg-amber-50/90 border-2 border-amber-400 text-amber-950 shadow-2xs' :
+                      'bg-slate-50 border border-slate-200 text-slate-800'
+                    ]"
+                  >
+                    <div class="flex items-center justify-between gap-1 mb-1 font-bold">
+                      <span class="flex items-center gap-1.5">
+                        <span v-if="sec.tagType === 'loss'">📉</span>
+                        <span v-else-if="sec.tagType === 'win'">🎉</span>
+                        <span v-else-if="sec.tagType === 'danger'">🚨</span>
+                        <span v-else>📌</span>
+                        <span>{{ sec.subtitle }}</span>
+                      </span>
+                      <span
+                        class="text-[9px] font-extrabold px-1.5 py-0.2 rounded shrink-0"
+                        :class="[
+                          sec.tagType === 'loss' ? 'bg-rose-200 text-rose-900' :
+                          sec.tagType === 'win' ? 'bg-emerald-200 text-emerald-900' :
+                          sec.tagType === 'danger' ? 'bg-amber-400 text-amber-950' :
+                          'bg-slate-200 text-slate-700'
+                        ]"
+                      >
+                        {{ sec.tag }}
+                      </span>
+                    </div>
+                    <p class="m-0 text-[11px] leading-normal opacity-90">{{ sec.desc }}</p>
+                  </div>
+                </div>
+
+                <!-- Core Advice / Caution Box -->
+                <div class="mt-2.5 p-2.5 rounded-lg bg-indigo-50/80 border border-indigo-200/80 text-[11px] text-indigo-950 leading-relaxed">
+                  <strong class="text-indigo-800 flex items-center gap-1 mb-0.5">
+                    <span>💡</span>
+                    <span>{{ currentAnalysis.cautionTitle }}</span>
+                  </strong>
+                  <p class="m-0 text-[11px] text-slate-700 leading-normal">{{ currentAnalysis.cautionText }}</p>
+                </div>
+              </div>
             </div>
 
-            <!-- Key Summary Callout -->
-            <div class="mt-3 p-2.5 rounded-xl bg-amber-50 border border-amber-200/70 text-[11px] text-amber-900 leading-relaxed">
-              <strong>💡 핵심 시사점:</strong> 기존 9등급제에서는 1등급(4%)을 놓쳐 2등급(11%)이 되면 인서울 상위권 교과 전형 지원이 위축되었으나, <strong>2028 개편에서는 10%까지 모두 1등급</strong>을 받게 되므로 포곡고에서 성실히 학업에 임하는 중위~상위권 학생들의 주요 대학 수시 출원 문호가 획기적으로 넓어집니다!
+            <!-- Bottom Slide Anchor Footnote -->
+            <div class="mt-2 text-[10px] text-slate-400 flex items-center justify-between">
+              <span>* 포곡고 1개 학년 인원 약 334명 기준 등급별 인원 산출</span>
+              <span class="font-bold text-slate-500">교육부 2028 대입 개편안 확정 수치</span>
             </div>
           </div>
 
@@ -937,8 +1199,350 @@ function triggerPrint() {
 }
 
 // -------------------------------------------------------------
-// Interactive 2028 GPA Simulator State
+// [SLIDE 2] 9-Grade vs 5-Grade Height Comparison Data & Analysis
 // -------------------------------------------------------------
+const selectedGradeKey = ref('5-1')
+
+function hoverGrade(system, grade) {
+  selectedGradeKey.value = `${system}-${grade}`
+}
+
+function selectGrade(system, grade) {
+  selectedGradeKey.value = `${system}-${grade}`
+}
+
+// 9등급제 높이 데이터 (1~9 All)
+const nineGradeList = [
+  { grade: 1, span: 4, cumEnd: 4, count: 13, bgColor: 'bg-emerald-600' },
+  { grade: 2, span: 7, cumEnd: 11, count: 24, bgColor: 'bg-teal-600' },
+  { grade: 3, span: 12, cumEnd: 23, count: 40, bgColor: 'bg-sky-600' },
+  { grade: 4, span: 17, cumEnd: 40, count: 57, bgColor: 'bg-blue-600' },
+  { grade: 5, span: 20, cumEnd: 60, count: 66, bgColor: 'bg-slate-500' },
+  { grade: 6, span: 17, cumEnd: 77, count: 57, bgColor: 'bg-slate-600' },
+  { grade: 7, span: 12, cumEnd: 89, count: 40, bgColor: 'bg-slate-700' },
+  { grade: 8, span: 7, cumEnd: 96, count: 24, bgColor: 'bg-zinc-700' },
+  { grade: 9, span: 4, cumEnd: 100, count: 13, bgColor: 'bg-zinc-800' }
+]
+
+// 2028 개편 5등급제 높이 데이터 (1~5 All)
+const fiveGradeList = [
+  { grade: 1, span: 10, cumEnd: 10, count: 33, bgColor: 'bg-gradient-to-r from-emerald-600 to-teal-700' },
+  { grade: 2, span: 24, cumEnd: 34, count: 80, bgColor: 'bg-gradient-to-r from-indigo-600 to-violet-700' },
+  { grade: 3, span: 32, cumEnd: 66, count: 107, bgColor: 'bg-gradient-to-r from-sky-600 to-blue-700' },
+  { grade: 4, span: 24, cumEnd: 90, count: 80, bgColor: 'bg-gradient-to-r from-slate-500 to-slate-600' },
+  { grade: 5, span: 10, cumEnd: 100, count: 33, bgColor: 'bg-gradient-to-r from-zinc-700 to-zinc-800' }
+]
+
+// 각 등급별 유불리 진단 & 필독 주의사항 맵
+const gradeAnalysisMap = {
+  // 5등급제 1등급 (0~10%)
+  '5-1': {
+    title: '2028 개편 5등급제 - 1등급',
+    range: '상위 0% ~ 10%',
+    rangeDetail: '포곡고 약 33명 (기존 12명 대비 2.7배 대폭 확대)',
+    badge: '🏆 최대 수혜 & 최상위 변별력 격변',
+    badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    comparison: '현행 9등급제의 1등급(4%) + 2등급 상위(4~10%)가 하나로 통합',
+    sections: [
+      {
+        subtitle: '🥇 상위 1~4% (최상위권 학생): 상대적 손해 체감 & 변별력 저하',
+        tag: '상대적 불리감',
+        tagType: 'loss',
+        desc: '9등급제에서는 4%만의 독보적 1등급이었으나, 5등급제에서는 10%까지 모두 1등급을 받게 되므로 "내신 1등급" 타이틀의 희소성이 하락하여 상대적으로 손해를 보는 느낌을 받습니다.'
+      },
+      {
+        subtitle: '🚀 상위 4~10% (상위권 학생): 최대 수혜! 명문대 수시 출원 문호 개방',
+        tag: '최대 수혜',
+        tagType: 'win',
+        desc: '기존 9등급제에서는 아깝게 2등급(11% 이내)으로 밀려 서울 상위권 교과·추천전형 지원이 위축되었으나, 5등급제에서는 모두 "1등급"을 받아 SKY·의약학·주요 명문대 추천 전형 지원권에 안착합니다.'
+      }
+    ],
+    cautionTitle: '1등급 학생이 반드시 유의하고 대비해야 할 핵심 포인트',
+    cautionText: '대학들은 1등급이 10%로 흔해진 만큼 단순 내신 등급만으로 학생을 변별할 수 없습니다. ① 과학중점학교 실험·과제연구 등 심화 학생부 세특, ② 수능 최저학력기준(3합/4합) 충족, ③ 대학별 심층 면접이 실질 당락을 결정합니다. 포곡고의 과학중점 탐구 인프라와 수능최저 관리반이 최상위권의 필수 무기입니다.'
+  },
+
+  // 5등급제 2등급 (10~34%)
+  '5-2': {
+    title: '2028 개편 5등급제 - 2등급',
+    range: '상위 10% ~ 34%',
+    rangeDetail: '포곡고 약 80명 (누적 113명까지)',
+    badge: '⚡ 10~11% 요주의 경계선 & 거대 통합',
+    badgeClass: 'bg-amber-100 text-amber-800 border-amber-300',
+    comparison: '9등급제의 2등급 끝(10~11%) + 3등급 전체(11~23%) + 4등급 초반(23~34%)',
+    sections: [
+      {
+        subtitle: '🚨 상위 10~11% 학생 (가장 뼈아픈 요주의 위험 구간!)',
+        tag: '치명적 위기',
+        tagType: 'danger',
+        desc: '9등급제였다면 분명 "2등급(11% 이내)"이었을 학생이, 5등급제 1등급 컷(10%)에 1~2문제 차이로 걸리지 못해 2등급으로 밀려납니다. 더욱이 5등급제 2등급은 상위 34%까지로 범위가 매우 넓어서, 대학 평가자에게 "실질적 9등급제 3등급(23%) 수준의 학생"과 도매금으로 묶여 취급받을 위험이 매우 높습니다!'
+      },
+      {
+        subtitle: '📈 상위 11~23% 학생 (9등급제 3등급권): 2등급 표기 승격 효과',
+        tag: '수혜',
+        tagType: 'win',
+        desc: '기존 9등급제 3등급이었던 학생들이 2등급으로 표기되면서 인서울 주요 15개대 학종 및 수도권 상위권 대학 교과·종합 지원 가시권에 안정적으로 안착합니다.'
+      },
+      {
+        subtitle: '🎯 상위 23~34% 학생 (9등급제 4등급권): 수도권 주요대 도전권 확보',
+        tag: '기회 확대',
+        tagType: 'win',
+        desc: '기존 4등급에서 2등급으로 통합되어 경기권 거점 국공립대 및 수도권 주요 4년제 대학 지원 경쟁력을 확보합니다.'
+      }
+    ],
+    cautionTitle: '2등급 구간(특히 10~11% 경계선) 필독 주의사항',
+    cautionText: '10~11% 경계선 학생은 1~2문제 실수 방지로 10% 이내(1등급) 진입을 1차 목표로 삼아야 합니다. 만약 2등급을 받더라도 생활기록부에 원점수와 성취도(A), 과목평균·표준편차가 병기되므로, 높은 원점수와 압도적인 전공 세특, 높은 수능최저로 "상위 2등급"임을 증명해내야 합니다.'
+  },
+
+  // 5등급제 3등급 (34~66%)
+  '5-3': {
+    title: '2028 개편 5등급제 - 3등급',
+    range: '상위 34% ~ 66%',
+    rangeDetail: '포곡고 약 107명 (누적 220명까지)',
+    badge: '중위권 대통합 허리 구간',
+    badgeClass: 'bg-blue-100 text-blue-800 border-blue-300',
+    comparison: '9등급제의 4등급 중하위(34~40%) + 5등급 전체(40~60%) + 6등급 초반(60~66%)',
+    sections: [
+      {
+        subtitle: '중위권 전체(34~66%)가 하나의 3등급으로 단일화',
+        tag: '변별 축 이동',
+        tagType: 'neutral',
+        desc: '기존의 4등급, 5등급, 6등급 초반까지 전체 수험생의 32%가 하나의 3등급으로 묶이므로, 고교 내신 등급 숫자만으로는 변별력이 거의 사라집니다.'
+      }
+    ],
+    cautionTitle: '3등급 학생의 진학 전략 주의사항',
+    cautionText: '3등급 내에서는 등급 자체보다 과목별 원점수 관리와 비교과 스토리, 포곡고 특화 학교장추천 및 농어촌 전형, 약술형 논술 전형 등을 적극 결합하여 경기권 거점 4년제 및 국립대 진학을 전략적으로 공략해야 합니다.'
+  },
+
+  // 5등급제 4등급 (66~90%)
+  '5-4': {
+    title: '2028 개편 5등급제 - 4등급',
+    range: '상위 66% ~ 90%',
+    rangeDetail: '포곡고 약 80명 (누적 300명까지)',
+    badge: '하위-중하위권 통합 구간',
+    badgeClass: 'bg-slate-100 text-slate-800 border-slate-300',
+    comparison: '9등급제의 6등급 중하위(66~77%) + 7등급 전체(77~89%) + 8등급 초반',
+    sections: [
+      {
+        subtitle: '기존 6~7등급대가 4등급으로 통합',
+        tag: '기본기 보강',
+        tagType: 'neutral',
+        desc: '고교 진학 후 교과 기초학력 보강과 진로 적성 탐색을 통해 상위 등급으로의 도약 기회를 마련합니다.'
+      }
+    ],
+    cautionTitle: '4등급 학생의 진학 전략 주의사항',
+    cautionText: '포곡고 맞춤형 진로 집중 상담을 통해 전공 실기/면접 위주 전형, 특성화 학과 또는 전문대 인기 유망 학과(보건·IT계열 등)를 타겟팅하여 취업 및 진로 경쟁력을 극대화합니다.'
+  },
+
+  // 5등급제 5등급 (90~100%)
+  '5-5': {
+    title: '2028 개편 5등급제 - 5등급',
+    range: '상위 90% ~ 100%',
+    rangeDetail: '포곡고 하위 약 34명',
+    badge: '최하 등급 (하위 10%)',
+    badgeClass: 'bg-rose-100 text-rose-800 border-rose-300',
+    comparison: '현행 9등급제의 8등급 중후반 + 9등급 전체(96~100%)',
+    sections: [
+      {
+        subtitle: '하위 10%에만 부여되는 5등급제 최하 등급',
+        tag: '방어 필수',
+        tagType: 'danger',
+        desc: '9등급제 시절 8~9등급 수준의 극하위권만이 5등급을 받게 되므로 대입 수시 지원 시 치명적인 감점 요인이 될 수 있습니다.'
+      }
+    ],
+    cautionTitle: '5등급 방지 필독 주의사항',
+    cautionText: '학교 수업 충실도, 수행평가 성실 참여, 기본 출결 및 태도 관리만으로도 5등급을 피하고 4등급 이내로 쉽게 진입할 수 있으므로 기본 생활 습관 형성이 가장 중요합니다.'
+  },
+
+  // 9등급제 1등급 (0~4%)
+  '9-1': {
+    title: '현행 9등급제 - 1등급',
+    range: '상위 0% ~ 4%',
+    rangeDetail: '포곡고 약 13명 (초극상위권)',
+    badge: '극소수 최상위권',
+    badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    comparison: '2028 개편 5등급제에서는 10%까지 확대된 1등급의 전반부에 해당',
+    sections: [
+      {
+        subtitle: '5등급제 전환 시: 1등급 희소성 희석으로 상대적 손해감',
+        tag: '변별력 약화',
+        tagType: 'loss',
+        desc: '과거에는 4%만의 독점적 상징이었으나, 2028 개편에서는 10%까지 모두 1등급을 받으므로 최상위권 학생들의 내신 희소성이 크게 낮아집니다.'
+      }
+    ],
+    cautionTitle: '9등급제 1등급 수준 학생의 핵심 주의사항',
+    cautionText: '내신 1등급 취득은 당연한 기본 조건이 되며, 서울대·의약학 등 초상위권 대학들은 심화 탐구 세특과 높은 수능 최저기준(3합 4~5 등)으로 실질 당락을 가르게 됩니다.'
+  },
+
+  // 9등급제 2등급 (4~11%)
+  '9-2': {
+    title: '현행 9등급제 - 2등급',
+    range: '상위 4% ~ 11%',
+    rangeDetail: '포곡고 약 24명 (누적 37명까지)',
+    badge: '⚡ 명암이 극명하게 갈리는 분수령 구간',
+    badgeClass: 'bg-amber-100 text-amber-800 border-amber-300',
+    comparison: '4~10%는 5등급제 1등급으로 승격! / 10~11%는 5등급제 2등급으로 전락!',
+    sections: [
+      {
+        subtitle: '🎉 4% ~ 10% 학생: 5등급제 1등급으로 전격 승격 (최대 수혜!)',
+        tag: '최대 수혜',
+        tagType: 'win',
+        desc: '9등급제에서는 2등급이라는 아쉬운 타이틀로 인서울 상위권 교과 지원이 망설여졌으나, 5등급제에서는 당당히 "1등급"이 되어 주요 대학 교과/지균 지원이 대폭 가능해집니다.'
+      },
+      {
+        subtitle: '⚠️ 10% ~ 11% 학생: 5등급제 2등급으로 밀려나 3등급 취급 위험 (최대 피해 우려!)',
+        tag: '치명적 위기',
+        tagType: 'danger',
+        desc: '9등급제에서는 분명 2등급이었던 학생이, 5등급제에서는 1등급(10%)에 턱걸이하지 못하고 2등급(34%까지)으로 배정됩니다. 대학에서는 5등급제 2등급을 9등급제의 3등급(상위 23% 수준)과 같게 볼 가능성이 높아 실질적으로 등급이 강등되는 불이익을 겪게 됩니다.'
+      }
+    ],
+    cautionTitle: '4~11% 구간 학생의 필독 주의사항',
+    cautionText: '포곡고에서 1~2문제 실수 차이로 10% 컷오프(33등) 안팎이 결정됩니다. 10% 이내 진입을 철저히 준비해야 하며, 만약 10~11%에 머물더라도 세특과 원점수, 수능최저로 최상위 실력을 입증해야 합니다.'
+  },
+
+  // 9등급제 3등급 (11~23%)
+  '9-3': {
+    title: '현행 9등급제 - 3등급',
+    range: '상위 11% ~ 23%',
+    rangeDetail: '포곡고 약 40명 (누적 77명까지)',
+    badge: '5등급제 2등급으로 상향 표기',
+    badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+    comparison: '2028 개편 5등급제에서는 2등급(10~34%)의 중심부에 해당',
+    sections: [
+      {
+        subtitle: '표기상 3등급에서 2등급으로 신분 상승 효과',
+        tag: '기회 확대',
+        tagType: 'win',
+        desc: '기존 9등급제 3등급은 인서울 주요 15개대 교과 지원이 불가능에 가까웠으나, 5등급제 2등급으로 표기되면서 학종 및 수도권 거점대 합격 가능성이 대폭 상승합니다.'
+      }
+    ],
+    cautionTitle: '9등급제 3등급 수준 학생의 주의사항',
+    cautionText: '2등급 내에서도 중간 위치이므로 대학별 환산점수 및 수능 최저를 충족시켜 실질 경쟁력을 증명해야 인서울 및 수도권 선호 대학 합격이 보장됩니다.'
+  },
+
+  // 9등급제 4등급 (23~40%)
+  '9-4': {
+    title: '현행 9등급제 - 4등급',
+    range: '상위 23% ~ 40%',
+    rangeDetail: '포곡고 약 57명 (누적 134명까지)',
+    badge: '2등급과 3등급으로 분기되는 구간',
+    badgeClass: 'bg-blue-100 text-blue-800 border-blue-300',
+    comparison: '23~34%는 5등급제 2등급 편입 / 34~40%는 5등급제 3등급 배정',
+    sections: [
+      {
+        subtitle: '23~34% 학생은 2등급 편입 수혜, 34~40%는 3등급으로 분리',
+        tag: '분기 구간',
+        tagType: 'neutral',
+        desc: '34% 컷을 기준으로 2등급과 3등급으로 나뉘므로, 34% 이내로 진입하여 2등급 타이틀을 선점하는 것이 매우 중요합니다.'
+      }
+    ],
+    cautionTitle: '4등급 수준 학생의 주의사항',
+    cautionText: '34% 이내로 들어와 5등급제 2등급을 확보하면 경기권 거점 대학 및 수도권 4년제 지원 시 매우 유리한 위치를 점할 수 있습니다.'
+  },
+
+  // 9등급제 5등급 (40~60%)
+  '9-5': {
+    title: '현행 9등급제 - 5등급',
+    range: '상위 40% ~ 60%',
+    rangeDetail: '포곡고 약 66명 (정중앙 20%)',
+    badge: '5등급제 3등급 정중앙에 편입',
+    badgeClass: 'bg-slate-100 text-slate-800 border-slate-300',
+    comparison: '2028 개편 5등급제 3등급(34~66%)의 핵심 구간에 통합',
+    sections: [
+      {
+        subtitle: '5등급제 3등급으로 표기 통합',
+        tag: '통합',
+        tagType: 'neutral',
+        desc: '정규분포의 가장 두터운 중간층으로, 5등급제 3등급(34~66%) 안에 자연스럽게 수렴됩니다.'
+      }
+    ],
+    cautionTitle: '5등급 수준 학생의 주의사항',
+    cautionText: '내신 성적의 표기 변별력이 낮아지므로, 면접 비중이 높은 전형 또는 농어촌/지역인재 전형을 활용한 맞춤형 지원 전략이 유효합니다.'
+  },
+
+  // 9등급제 6등급 (60~77%)
+  '9-6': {
+    title: '현행 9등급제 - 6등급',
+    range: '상위 60% ~ 77%',
+    rangeDetail: '포곡고 약 57명',
+    badge: '3등급 말단(60~66%) vs 4등급(66~77%)',
+    badgeClass: 'bg-slate-100 text-slate-800 border-slate-300',
+    comparison: '66% 기준으로 5등급제 3등급과 4등급으로 분리',
+    sections: [
+      {
+        subtitle: '66% 경계선에 걸치는 구간',
+        tag: '경계 구간',
+        tagType: 'neutral',
+        desc: '상위 66% 안으로 들어오면 3등급에 턱걸이할 수 있어 경기권 4년제 지원의 마지노선이 됩니다.'
+      }
+    ],
+    cautionTitle: '6등급 수준 학생의 주의사항',
+    cautionText: '66% 이내 진입을 통한 3등급 확보가 1차 목표입니다.'
+  },
+
+  // 9등급제 7등급 (77~89%)
+  '9-7': {
+    title: '현행 9등급제 - 7등급',
+    range: '상위 77% ~ 89%',
+    rangeDetail: '포곡고 약 40명',
+    badge: '5등급제 4등급(66~90%)에 통합',
+    badgeClass: 'bg-slate-100 text-slate-800 border-slate-300',
+    comparison: '2028 5등급제 4등급(66~90%)에 안착',
+    sections: [
+      {
+        subtitle: '7등급에서 4등급으로 표기 상향',
+        tag: '표기 상향',
+        tagType: 'neutral',
+        desc: '7등급이라는 극단적 낙인이 사라지고 4등급으로 통합됩니다.'
+      }
+    ],
+    cautionTitle: '7등급 수준 학생의 주의사항',
+    cautionText: '실기/면접 위주 전형 또는 전문대 특성화 학과 전략이 유효합니다.'
+  },
+
+  // 9등급제 8등급 (89~96%)
+  '9-8': {
+    title: '현행 9등급제 - 8등급',
+    range: '상위 89% ~ 96%',
+    rangeDetail: '포곡고 약 24명',
+    badge: '4등급 말단(89~90%) vs 5등급(90~96%)',
+    badgeClass: 'bg-rose-100 text-rose-800 border-rose-300',
+    comparison: '90% 기준으로 5등급제 4등급과 최하 5등급으로 갈림',
+    sections: [
+      {
+        subtitle: '90% 컷오프를 지켜내야 하는 방어선',
+        tag: '방어선',
+        tagType: 'danger',
+        desc: '90%를 넘어가면 5등급제 최하 등급인 5등급으로 떨어지게 됩니다.'
+      }
+    ],
+    cautionTitle: '8등급 수준 학생의 주의사항',
+    cautionText: '수업 및 수행평가 충실도로 90% 이내(4등급) 진입을 사수해야 합니다.'
+  },
+
+  // 9등급제 9등급 (96~100%)
+  '9-9': {
+    title: '현행 9등급제 - 9등급',
+    range: '상위 96% ~ 100%',
+    rangeDetail: '포곡고 하위 13명 (최하위 4%)',
+    badge: '5등급제 5등급(하위 10%)에 흡수',
+    badgeClass: 'bg-slate-100 text-slate-800 border-slate-300',
+    comparison: '2028 5등급제의 최하 등급인 5등급에 편입',
+    sections: [
+      {
+        subtitle: '최하 등급 구간',
+        tag: '기초 관리',
+        tagType: 'neutral',
+        desc: '기초 학력과 출결 관리로 4등급 진입을 도모합니다.'
+      }
+    ],
+    cautionTitle: '9등급 수준 학생의 주의사항',
+    cautionText: '기본 출결과 수행평가 참여만으로도 성적 상승이 가능합니다.'
+  }
+}
+
+const currentAnalysis = computed(() => {
+  return gradeAnalysisMap[selectedGradeKey.value] || gradeAnalysisMap['5-1']
+})
 const simPercent = ref(15) // Default: Middle school top 15%
 
 const simResult = computed(() => {
