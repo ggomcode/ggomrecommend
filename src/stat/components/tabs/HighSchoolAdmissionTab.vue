@@ -120,10 +120,10 @@
           <span class="text-xs font-bold text-slate-400">SLIDE 02 / 08</span>
         </div>
 
-        <!-- 9등급 vs 5등급 구조 비교표 & 포인트 -->
+        <!-- 9등급 vs 5등급 구조 비교 그래프 & 인터랙티브 등급 유불리 분석 (좌우 배치) -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 mt-5">
-          <!-- Left: 9등급 vs 5등급 높이 비교 그래프 & 인터랙티브 유불리 분석 -->
-          <div class="lg:col-span-7 bg-slate-50/90 rounded-2xl p-4 border border-slate-200/90 flex flex-col justify-between">
+          <!-- Left (lg:col-span-7): 9등급 vs 5등급 높이 비교 그래프 -->
+          <div class="lg:col-span-7 bg-slate-50/90 rounded-2xl p-4 border border-slate-200/90 flex flex-col justify-between shadow-xs">
             <div>
               <!-- Header -->
               <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
@@ -194,8 +194,8 @@
                   </div>
                 </div>
 
-                <!-- Bars Container (여유 있는 높이 540px 적용) -->
-                <div class="relative grid grid-cols-12 gap-2 h-[520px] sm:h-[540px] select-none">
+                <!-- Bars Container (여유 있는 높이 480px~520px 적용) -->
+                <div class="relative grid grid-cols-12 gap-2 h-[480px] sm:h-[500px] select-none">
                   <!-- Left: 9-Grade Column (1~9 All Displayed) -->
                   <div class="col-span-5 flex flex-col h-full rounded-xl overflow-hidden border border-slate-200/90 bg-slate-100/50 shadow-inner">
                     <div
@@ -321,17 +321,10 @@
                       <!-- Special Top border warning for Grade 2 (10~11% boundary) -->
                       <div v-if="item.grade === 2" class="absolute top-0 inset-x-0 h-1.5 bg-amber-400/90 z-20" title="10~11% 경계 위험선"></div>
 
-                      <!-- Left: Grade Title, 2.7배 badge & Arrow indicator (인라인 배치로 겹침 현상 원천 해결) -->
+                      <!-- Left: Grade Title & Arrow indicator (노란색 2.7배 확대 뱃지 제거 완료) -->
                       <div class="flex items-center gap-2 min-w-0">
                         <span class="font-black text-xs sm:text-sm leading-none text-white drop-shadow-xs shrink-0">
                           {{ item.grade }}등급
-                        </span>
-                        <!-- 2.7배 확대 뱃지 -->
-                        <span
-                          v-if="item.grade === 1"
-                          class="bg-amber-400 text-slate-950 font-black text-[10px] sm:text-[11px] px-2 py-0.5 rounded-full shadow-xs shrink-0 inline-flex items-center"
-                        >
-                          2.7배 확대
                         </span>
                         <span class="text-[10px] sm:text-[11px] text-white/80 font-mono hidden sm:inline shrink-0">
                           (↕{{ item.span }}%p)
@@ -351,150 +344,182 @@
                 <div class="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-100 text-xs text-slate-600 font-medium">
                   <div class="flex items-center gap-1.5">
                     <span class="inline-block w-2.5 h-2.5 bg-emerald-600 rounded-full"></span>
-                    <span>1등급 컷 4% ➔ <strong class="text-emerald-700 font-black">10% 확대 (2.7배)</strong></span>
+                    <span>1등급 컷 4% ➔ <strong class="text-emerald-700 font-black">10% 확대</strong></span>
                   </div>
-                  <div class="flex items-center gap-1.5 text-amber-900 font-bold bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200 text-xs">
-                    <span>⚠️ 10~11% 구간:</span>
-                    <span>현행 2등급 ➔ <strong class="text-rose-700 underline underline-offset-2">개편 2등급 밀림(실질 3등급 취급 주의)</strong></span>
+                  <div class="flex items-center gap-1.5 text-amber-900 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 text-[11px]">
+                    <span>⚠️ 10~11%:</span>
+                    <span>현행 2등급 ➔ <strong class="text-rose-700 underline underline-offset-2">개편 2등급 밀림 주의</strong></span>
                   </div>
-                </div>
-              </div>
-
-              <!-- Interactive Detailed Insight Card (호버 / 활성화된 등급 정보) -->
-              <div class="mt-3 p-3.5 rounded-xl bg-white border border-indigo-100 shadow-2xs transition-all duration-200">
-                <!-- Card Header -->
-                <div class="flex flex-wrap items-center justify-between gap-1.5 pb-2 border-b border-slate-100">
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs font-black text-slate-900">{{ currentAnalysis.title }}</span>
-                    <span class="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
-                      {{ currentAnalysis.range }}
-                    </span>
-                    <span class="text-[10px] text-slate-500">({{ currentAnalysis.rangeDetail }})</span>
-                  </div>
-                  <span :class="['text-[10px] font-extrabold px-2 py-0.5 rounded-md border', currentAnalysis.badgeClass]">
-                    {{ currentAnalysis.badge }}
-                  </span>
-                </div>
-
-                <!-- Grade Mapping Comparison -->
-                <div class="mt-2 text-[11px] text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200/60 flex items-center gap-1.5">
-                  <span class="font-bold text-indigo-900 shrink-0">🔄 등급 변동 매핑:</span>
-                  <span>{{ currentAnalysis.comparison }}</span>
-                </div>
-
-                <!-- Pros / Cons Section List -->
-                <div class="mt-2.5 space-y-2">
-                  <div
-                    v-for="(sec, sIdx) in currentAnalysis.sections"
-                    :key="sIdx"
-                    class="p-2.5 rounded-lg text-[11px] leading-relaxed"
-                    :class="[
-                      sec.tagType === 'loss' ? 'bg-rose-50/70 border border-rose-200/80 text-rose-950' :
-                      sec.tagType === 'win' ? 'bg-emerald-50/70 border border-emerald-200/80 text-emerald-950' :
-                      sec.tagType === 'danger' ? 'bg-amber-50/90 border-2 border-amber-400 text-amber-950 shadow-2xs' :
-                      'bg-slate-50 border border-slate-200 text-slate-800'
-                    ]"
-                  >
-                    <div class="flex items-center justify-between gap-1 mb-1 font-bold">
-                      <span class="flex items-center gap-1.5">
-                        <span v-if="sec.tagType === 'loss'">📉</span>
-                        <span v-else-if="sec.tagType === 'win'">🎉</span>
-                        <span v-else-if="sec.tagType === 'danger'">🚨</span>
-                        <span v-else>📌</span>
-                        <span>{{ sec.subtitle }}</span>
-                      </span>
-                      <span
-                        class="text-[9px] font-extrabold px-1.5 py-0.2 rounded shrink-0"
-                        :class="[
-                          sec.tagType === 'loss' ? 'bg-rose-200 text-rose-900' :
-                          sec.tagType === 'win' ? 'bg-emerald-200 text-emerald-900' :
-                          sec.tagType === 'danger' ? 'bg-amber-400 text-amber-950' :
-                          'bg-slate-200 text-slate-700'
-                        ]"
-                      >
-                        {{ sec.tag }}
-                      </span>
-                    </div>
-                    <p class="m-0 text-[11px] leading-normal opacity-90">{{ sec.desc }}</p>
-                  </div>
-                </div>
-
-                <!-- Core Advice / Caution Box -->
-                <div class="mt-2.5 p-2.5 rounded-lg bg-indigo-50/80 border border-indigo-200/80 text-[11px] text-indigo-950 leading-relaxed">
-                  <strong class="text-indigo-800 flex items-center gap-1 mb-0.5">
-                    <span>💡</span>
-                    <span>{{ currentAnalysis.cautionTitle }}</span>
-                  </strong>
-                  <p class="m-0 text-[11px] text-slate-700 leading-normal">{{ currentAnalysis.cautionText }}</p>
                 </div>
               </div>
             </div>
 
             <!-- Bottom Slide Anchor Footnote -->
             <div class="mt-2 text-[10px] text-slate-400 flex items-center justify-between">
-              <span>* 포곡고 1개 학년 인원 약 334명 기준 등급별 인원 산출</span>
-              <span class="font-bold text-slate-500">교육부 2028 대입 개편안 확정 수치</span>
+              <span>* 포곡고 1개 학년 약 334명 기준 등급별 인원 산출</span>
+              <span class="font-bold text-slate-500">교육부 2028 개편안</span>
             </div>
           </div>
 
-          <!-- Right: Interactive Middle School GPA Simulator -->
-          <div class="lg:col-span-5 bg-gradient-to-br from-indigo-50/70 via-white to-sky-50/70 rounded-2xl p-4 border border-indigo-200/80 flex flex-col justify-between">
+          <!-- Right (lg:col-span-5): 인터랙티브 등급 유불리 심층 분석 카드 (그래프와 나란히 좌우 배치) -->
+          <div class="lg:col-span-5 bg-gradient-to-br from-indigo-50/70 via-white to-sky-50/70 rounded-2xl p-4 sm:p-5 border border-indigo-200/80 flex flex-col justify-between shadow-xs">
             <div>
-              <div class="flex items-center justify-between mb-2">
-                <h3 class="text-xs font-bold text-indigo-950 flex items-center gap-1.5 m-0">
-                  <span>🧮</span>
-                  <span>중3 내신 기반 2028 5등급제 진단기</span>
-                </h3>
-                <span class="text-[10px] font-bold text-indigo-600 bg-white px-2 py-0.5 rounded-full border border-indigo-200">체험형</span>
-              </div>
-              <p class="text-[11px] text-slate-500 m-0 leading-normal">
-                현재 학생의 중학교 석차 백분율을 슬라이더로 조절해보세요.
-              </p>
-
-              <!-- Slider Input -->
-              <div class="mt-3 space-y-2">
-                <div class="flex items-center justify-between text-xs font-bold">
-                  <span class="text-slate-700">중학교 석차 백분율</span>
-                  <span class="text-indigo-600 text-sm font-black">상위 {{ simPercent }}%</span>
+              <!-- Section Title & Live Indicator -->
+              <div class="flex items-center justify-between pb-2 mb-3 border-b border-indigo-100">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-sm">🔍</span>
+                  <h3 class="text-xs sm:text-sm font-bold text-indigo-950 m-0">
+                    선택 등급 심층 유불리 분석
+                  </h3>
                 </div>
-                <input
-                  v-model.number="simPercent"
-                  type="range"
-                  min="1"
-                  max="50"
-                  step="1"
-                  class="w-full accent-indigo-600 cursor-pointer"
-                />
-                <div class="flex justify-between text-[10px] text-slate-400">
-                  <span>상위 1% (최상위)</span>
-                  <span>상위 10%</span>
-                  <span>상위 25%</span>
-                  <span>상위 50%</span>
+                <span class="text-[10px] font-extrabold text-indigo-700 bg-white border border-indigo-200 px-2 py-0.5 rounded-full shadow-2xs">
+                  실시간 연동 진단
+                </span>
+              </div>
+
+              <!-- Selected Grade Main Header -->
+              <div class="p-3 bg-white rounded-xl border border-indigo-100 shadow-2xs">
+                <div class="flex flex-wrap items-center justify-between gap-1.5">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm sm:text-base font-black text-slate-900">{{ currentAnalysis.title }}</span>
+                    <span class="text-[11px] font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+                      {{ currentAnalysis.range }}
+                    </span>
+                  </div>
+                  <span :class="['text-[11px] font-extrabold px-2.5 py-0.5 rounded-md border shadow-2xs', currentAnalysis.badgeClass]">
+                    {{ currentAnalysis.badge }}
+                  </span>
+                </div>
+                <div class="mt-1 text-[11px] text-slate-500 font-medium">
+                  {{ currentAnalysis.rangeDetail }}
                 </div>
               </div>
 
-              <!-- Simulator Result Card -->
-              <div class="mt-4 p-3 rounded-xl bg-white border border-indigo-100 shadow-2xs space-y-1.5 text-xs">
+              <!-- Grade Mapping Comparison -->
+              <div class="mt-3 text-[11px] text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs flex items-center gap-2">
+                <span class="font-bold text-indigo-900 shrink-0">🔄 등급 변동:</span>
+                <span class="font-medium text-slate-800">{{ currentAnalysis.comparison }}</span>
+              </div>
+
+              <!-- Pros / Cons Section List -->
+              <div class="mt-3 space-y-2.5">
+                <div
+                  v-for="(sec, sIdx) in currentAnalysis.sections"
+                  :key="sIdx"
+                  class="p-3 rounded-xl text-xs leading-relaxed shadow-2xs"
+                  :class="[
+                    sec.tagType === 'loss' ? 'bg-rose-50/80 border border-rose-200 text-rose-950' :
+                    sec.tagType === 'win' ? 'bg-emerald-50/80 border border-emerald-200 text-emerald-950' :
+                    sec.tagType === 'danger' ? 'bg-amber-50/90 border-2 border-amber-400 text-amber-950 shadow-2xs' :
+                    'bg-slate-50 border border-slate-200 text-slate-800'
+                  ]"
+                >
+                  <div class="flex items-center justify-between gap-1 mb-1 font-bold">
+                    <span class="flex items-center gap-1.5">
+                      <span v-if="sec.tagType === 'loss'">📉</span>
+                      <span v-else-if="sec.tagType === 'win'">🎉</span>
+                      <span v-else-if="sec.tagType === 'danger'">🚨</span>
+                      <span v-else>📌</span>
+                      <span class="font-black">{{ sec.subtitle }}</span>
+                    </span>
+                    <span
+                      class="text-[9px] font-black px-1.5 py-0.5 rounded shrink-0 shadow-2xs"
+                      :class="[
+                        sec.tagType === 'loss' ? 'bg-rose-200 text-rose-900' :
+                        sec.tagType === 'win' ? 'bg-emerald-200 text-emerald-900' :
+                        sec.tagType === 'danger' ? 'bg-amber-400 text-amber-950' :
+                        'bg-slate-200 text-slate-700'
+                      ]"
+                    >
+                      {{ sec.tag }}
+                    </span>
+                  </div>
+                  <p class="m-0 text-[11px] leading-relaxed opacity-95">{{ sec.desc }}</p>
+                </div>
+              </div>
+
+              <!-- Core Advice / Caution Box -->
+              <div class="mt-3 p-3 rounded-xl bg-white border border-indigo-200 shadow-2xs text-[11px] text-indigo-950 leading-relaxed">
+                <strong class="text-indigo-800 flex items-center gap-1.5 mb-1 font-black text-xs">
+                  <span>💡</span>
+                  <span>{{ currentAnalysis.cautionTitle }}</span>
+                </strong>
+                <p class="m-0 text-[11px] text-slate-700 leading-relaxed">{{ currentAnalysis.cautionText }}</p>
+              </div>
+            </div>
+
+            <!-- Interactive Guidance Footer -->
+            <div class="mt-3 pt-2.5 border-t border-indigo-100 flex items-center justify-between text-[10px] text-slate-400 font-medium">
+              <span>* 좌측 그래프의 등급 블록 클릭/호버 시 분석 전환</span>
+              <span class="text-indigo-600 font-bold">포곡고 진학 맞춤 가이드</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- [ROW 2]: 중3 내신 기반 2028 5등급제 진단기 (하단 배치로 좌우 균형 완성) -->
+        <div class="mt-4 bg-gradient-to-r from-indigo-50/70 via-white to-sky-50/70 rounded-2xl p-4 border border-indigo-200/80 shadow-2xs">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+            <div class="flex items-center gap-2">
+              <span class="text-base">🧮</span>
+              <h3 class="text-xs sm:text-sm font-bold text-indigo-950 m-0">
+                중3 내신 기반 2028 5등급제 진단기
+              </h3>
+              <span class="text-[10px] font-bold text-indigo-600 bg-white px-2 py-0.5 rounded-full border border-indigo-200 shadow-2xs">
+                체험형 시뮬레이터
+              </span>
+            </div>
+            <span class="text-[11px] text-slate-500 hidden sm:inline">
+              슬라이더를 움직여 중3 석차 백분율에 따른 포곡고 진학 시 예상 등급과 목표 대학군을 확인하세요
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-center">
+            <!-- Left: Slider (5 cols) -->
+            <div class="lg:col-span-5 bg-white p-3 rounded-xl border border-indigo-100 shadow-2xs space-y-1.5">
+              <div class="flex items-center justify-between text-xs font-bold">
+                <span class="text-slate-700">중학교 석차 백분율</span>
+                <span class="text-indigo-600 text-sm font-black">상위 {{ simPercent }}%</span>
+              </div>
+              <input
+                v-model.number="simPercent"
+                type="range"
+                min="1"
+                max="50"
+                step="1"
+                class="w-full accent-indigo-600 cursor-pointer"
+              />
+              <div class="flex justify-between text-[10px] text-slate-400 font-mono">
+                <span>상위 1% (최상위)</span>
+                <span>상위 10%</span>
+                <span>상위 25%</span>
+                <span>상위 50%</span>
+              </div>
+            </div>
+
+            <!-- Right: Results (7 cols) -->
+            <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+              <div class="p-2.5 rounded-xl bg-white border border-indigo-100 shadow-2xs space-y-1 flex flex-col justify-center">
                 <div class="flex items-center justify-between">
-                  <span class="text-slate-500">2028 고교 내신 예상 등급:</span>
-                  <span :class="['px-2.5 py-0.5 rounded-md font-black text-xs text-white', simResult.badgeClass]">
+                  <span class="text-slate-500 text-[11px]">2028 고교 예상 등급:</span>
+                  <span :class="['px-2.5 py-0.5 rounded-md font-black text-xs text-white shadow-2xs', simResult.badgeClass]">
                     {{ simResult.gradeText }}
                   </span>
                 </div>
                 <div class="flex items-center justify-between">
-                  <span class="text-slate-500">포곡고 진학 시 예상 석차:</span>
+                  <span class="text-slate-500 text-[11px]">포곡고 진학 시 예상 석차:</span>
                   <span class="font-bold text-slate-800">334명 중 약 {{ Math.max(1, Math.round(334 * (simPercent / 100))) }}등</span>
                 </div>
-                <div class="pt-1.5 border-t border-slate-100">
-                  <span class="text-slate-500 block text-[10px]">대입 추천 목표 대학군:</span>
-                  <span class="font-bold text-indigo-700 text-xs">{{ simResult.targetUniv }}</span>
+                <div class="pt-1 border-t border-slate-100">
+                  <span class="text-slate-500 text-[10px] block">대입 추천 목표 대학군:</span>
+                  <span class="font-extrabold text-indigo-700 text-xs truncate block">{{ simResult.targetUniv }}</span>
                 </div>
               </div>
-            </div>
-
-            <!-- Advice Box -->
-            <div class="mt-3 p-2.5 rounded-xl bg-indigo-600 text-white text-[11px] leading-relaxed">
-              <strong>📢 포곡고 전략 가이드:</strong> {{ simResult.advice }}
+              <div class="p-2.5 rounded-xl bg-indigo-600 text-white text-[11px] leading-relaxed flex flex-col justify-center shadow-2xs">
+                <div>
+                  <strong class="text-amber-300 block mb-0.5">📢 포곡고 전략 가이드</strong>
+                  <span class="leading-snug block text-white/95">{{ simResult.advice }}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
