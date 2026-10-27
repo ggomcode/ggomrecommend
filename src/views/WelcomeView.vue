@@ -15,7 +15,7 @@
             <path d="M6 12v5c3 3 9 3 12 0v-5"/>
           </svg>
         </div>
-        <h1 class="text-2xl font-bold" style="color: #0f172a; margin: 0;">학교장추천전형 시스템</h1>
+        <h1 class="text-2xl font-bold" style="color: #0f172a; margin: 0;">{{ displaySystemName }}</h1>
       </div>
 
       <!-- 1단계: 이용 안내 동의 -->
@@ -24,29 +24,16 @@
           class="rounded-xl text-base leading-relaxed mb-6"
           style="padding: 20px 22px; background: #f8fafc; border: 1px solid #e2e8f0; color: #334155; line-height: 1.9;"
         >
-          <p class="font-semibold mb-3" style="color: #1e293b;">프로그램 이용 안내</p>
+          <p class="font-semibold mb-3" style="color: #1e293b;">시스템 이용 안내</p>
           <p class="mb-3">
-            본 프로그램은 학교장추천전형 선발 업무를 편리하게 지원하기 위한 <strong>보조 도구</strong>입니다.
+            본 시스템은 고등학교 3학년의 진학 지도, 학사 관리 및 대입 전형 업무를 편리하게 지원하기 위한 <strong>통합 포털 보조 도구</strong>입니다.
           </p>
           <p class="mb-3">
-            프로그램은 입력된 자료를 바탕으로 점수를 계산하고 결과를 정리해 드리지만,
-            최종 선발 결과의 정확성 확인 및 공식 결정은 <strong>담당자의 검토와 판단</strong>을 통해 이루어져야 합니다.
+            시스템의 안전한 운영을 위해 최초 실행 시 관리자(admin) 및 교사(teacher) 계정 정보를 설정해 주세요.
           </p>
           <p>
             이 프로그램의 사용으로 인해 발생할 수 있는 결과에 대한 책임은 프로그램 개발자에게 있지 않으며,
             운용 및 결과 활용에 관한 책임은 <strong>사용 기관에 있음</strong>을 확인하여 주시기 바랍니다.
-          </p>
-        </div>
-
-        <div
-          class="rounded-xl text-base leading-relaxed mb-4"
-          style="padding: 16px 20px; background: #fffbeb; border: 1px solid #fde68a; color: #78350f;"
-        >
-          <p class="font-semibold mb-1.5" style="color: #92400e;">라이선스 안내</p>
-          <p>
-            본 프로그램은 <strong>PolyForm Noncommercial 1.0.0</strong> 라이선스에 따라
-            학교·교육청 등 <strong>비상업적 목적에 한해</strong> 무료로 사용할 수 있습니다.
-            학원·유료 입시 컨설팅 등 영리 목적의 사교육 기관에서의 사용은 엄격히 금지됩니다.
           </p>
         </div>
 
@@ -197,12 +184,16 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { supabase } from '../utils/supabaseClient'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
+import { fetchLoginSystemName, loginSystemName, DEFAULT_SYSTEM_NAME } from '../api/suiteModulesApi.js'
 
 const router = useRouter()
 const auth = useAuthStore()
 
+const displaySystemName = computed(() => loginSystemName.value || DEFAULT_SYSTEM_NAME || '3학년 진학·학사 통합 포털')
+
 onMounted(() => {
   fetchSchoolName()
+  fetchLoginSystemName()
 })
 
 const agreed = ref(false)

@@ -980,11 +980,15 @@
         </Suspense>
       </div>
     </div>
+
+    <!-- 학교장추천전형 최초 접속 안내 모달 -->
+    <PrincipalNoticeModal />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import PrincipalNoticeModal from '../components/common/PrincipalNoticeModal.vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 

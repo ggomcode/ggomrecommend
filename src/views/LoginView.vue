@@ -593,7 +593,37 @@
       <AdmissionCalendarWidget ref="calendarWidgetRef" />
     </main>
 
-    <div v-if="viewMode === 'login'" class="py-2"></div>
+    <!-- 하단 푸터 (라이선스 표기) -->
+    <footer class="w-full py-4 text-center text-xs text-slate-500 shrink-0">
+      <div class="max-w-6xl mx-auto px-4 flex items-center justify-center gap-2">
+        <span>License:</span>
+        <div class="relative group inline-flex items-center">
+          <a
+            href="https://polyformproject.org/licenses/noncommercial/1.0.0/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-slate-600 hover:text-blue-600 font-semibold underline underline-offset-2 decoration-slate-300 hover:decoration-blue-400 transition-colors cursor-pointer"
+          >
+            PolyForm Noncommercial 1.0.0
+          </a>
+
+          <!-- 호버 시 상세 툴팁 -->
+          <div
+            class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 sm:w-80 p-3 bg-slate-900 text-white text-xs rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 z-50 text-left leading-relaxed border border-slate-700 font-normal"
+          >
+            <p class="font-bold text-amber-300 mb-1 flex items-center gap-1.5">
+              <span>⚖️</span>
+              <span>라이선스 안내</span>
+            </p>
+            <p class="m-0 text-slate-200 text-xs leading-normal">
+              본 프로그램은 <strong>PolyForm Noncommercial 1.0.0</strong> 라이선스에 따라 학교·교육청 등 <strong>비상업적 목적에 한해</strong> 무료로 사용할 수 있습니다. 학원·유료 입시 컨설팅 등 영리 목적의 사교육 기관에서의 사용은 엄격히 금지됩니다.
+            </p>
+            <!-- 말풍선 꼬리 -->
+            <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+          </div>
+        </div>
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -606,7 +636,7 @@ import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
 import { checkExamIntentSystemEnabled } from '../api/examIntentApi.js'
-import { fetchLoginSystemName, loginSystemName, fetchSuiteModules } from '../api/suiteModulesApi.js'
+import { fetchLoginSystemName, loginSystemName, fetchSuiteModules, DEFAULT_SYSTEM_NAME } from '../api/suiteModulesApi.js'
 import { setStatSessionPassword } from '../api/statApi.js'
 
 const router = useRouter()
@@ -719,7 +749,7 @@ const cleanPhoneInput = computed(() => {
 })
 
 const suiteModules = ref([])
-const displaySystemName = computed(() => loginSystemName.value || '3학년 통합 학년업무 시스템')
+const displaySystemName = computed(() => loginSystemName.value || DEFAULT_SYSTEM_NAME || '3학년 진학·학사 통합 포털')
 
 const activeModuleBadges = computed(() => {
   if (suiteModules.value && suiteModules.value.length > 0) {

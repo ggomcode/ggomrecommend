@@ -68,7 +68,7 @@
             v-model="inputLoginSystemName"
             type="text"
             required
-            placeholder="예: 3학년 통합 학년업무 시스템"
+            placeholder="예: 3학년 진학·학사 통합 포털"
             class="flex-1 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white font-semibold"
           />
           <button
@@ -83,7 +83,7 @@
         <div class="mt-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 flex items-center gap-2">
           <span class="font-bold text-blue-600">미리보기:</span>
           <span class="font-extrabold text-blue-700">[{{ inputSchoolName || '우리고등학교' }}]</span>
-          <span class="font-black text-slate-900 dark:text-white text-sm">{{ inputLoginSystemName || '3학년 통합 학년업무 시스템' }}</span>
+          <span class="font-black text-slate-900 dark:text-white text-sm">{{ inputLoginSystemName || '3학년 진학·학사 통합 포털' }}</span>
         </div>
       </div>
 

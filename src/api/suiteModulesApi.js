@@ -2,7 +2,7 @@ import { ref } from 'vue'
 import { supabase } from '../utils/supabaseClient'
 
 // ── 기본 시스템명 및 캐시 키 ──────────────────────────────────────────
-export const DEFAULT_SYSTEM_NAME = '3학년 통합 학년업무 시스템'
+export const DEFAULT_SYSTEM_NAME = '3학년 진학·학사 통합 포털'
 export const CONFIG_KEY_LOGIN_SYSTEM_NAME = 'login_system_name'
 export const CONFIG_KEY_MODULES_CACHE = 'suite_modules_cache'
 
@@ -115,11 +115,11 @@ export const DEFAULT_SUITE_MODULES = [
 
 // ── 추천 시스템 이름 목록 (관리자 편의 퀵픽) ───────────────────────────
 export const RECOMMENDED_SYSTEM_NAMES = [
+  '3학년 진학·학사 통합 포털',
   '3학년 통합 학년업무 시스템',
   '꼼스위트 (ggomsuite) 365',
   '스마트 학년업무 포털 (Smart Grade)',
   '하이그레이드 3 (HiGrade 3)',
-  '3학년 진학·학사 통합 포털',
   '올인원 학년통합 업무시스템'
 ]
 
