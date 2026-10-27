@@ -150,16 +150,27 @@ export function normalizeDateStr(raw, defaultYear = 2026) {
 }
 
 /**
- * 단일 시트 CSV 데이터 fetch (GViz 엔드포인트)
+ * 단일 시트 CSV 데이터 fetch (GViz 엔드포인트, 실패 시 최대 2회 재시도)
  */
-async function fetchSheetCSV(sheetId, sheetName) {
+async function fetchSheetCSV(sheetId, sheetName, retries = 2) {
   const encName = encodeURIComponent(sheetName)
   const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encName}`
-  const res = await fetch(url)
-  if (!res.ok) {
-    throw new Error(`Failed to fetch sheet ${sheetName}: status ${res.status}`)
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url)
+      if (!res.ok) {
+        throw new Error(`Failed to fetch sheet ${sheetName}: status ${res.status}`)
+      }
+      const text = await res.text()
+      if (text && text.trim().length > 10) {
+        return text
+      }
+      throw new Error(`Empty response for sheet ${sheetName}`)
+    } catch (err) {
+      if (attempt === retries) throw err
+      await new Promise(r => setTimeout(r, 600 * (attempt + 1)))
+    }
   }
-  return await res.text()
 }
 
 /**
@@ -218,6 +229,13 @@ export async function fetchAdmissionCalendarData({ forceRefresh = false } = {}) 
       fetchSheetCSV(sheetId, '학사일정').catch(e => { console.warn('학사일정 fetch 실패', e); return null }),
     ])
 
+    // 기존 캐시 보존용 로드
+    let previousCached = null
+    try {
+      const raw = localStorage.getItem(CACHE_KEY)
+      if (raw) previousCached = JSON.parse(raw)
+    } catch {}
+
     const parsedData = processAdmissionSheets({
       csvMajor,
       csvDeadline,
@@ -225,6 +243,21 @@ export async function fetchAdmissionCalendarData({ forceRefresh = false } = {}) 
       csvJunior,
       csvAcademic
     })
+
+    // 특정 시트(특히 1,800행 규모의 4년제일정) fetch 실패 시 기존 정상 캐시 보존
+    if (!csvFourYear && previousCached?.fourYearByDate && Object.keys(previousCached.fourYearByDate).length > 0) {
+      console.warn('4년제일정 fetch 실패로 이전 정상 캐시 데이터를 보존합니다.')
+      parsedData.fourYearByDate = previousCached.fourYearByDate
+    }
+    if (!csvJunior && previousCached?.juniorByDate && Object.keys(previousCached.juniorByDate).length > 0) {
+      parsedData.juniorByDate = previousCached.juniorByDate
+    }
+    if (!csvDeadline && previousCached?.deadlineByDate && Object.keys(previousCached.deadlineByDate).length > 0) {
+      parsedData.deadlineByDate = previousCached.deadlineByDate
+    }
+    if (!csvAcademic && previousCached?.academicByDate && Object.keys(previousCached.academicByDate).length > 0) {
+      parsedData.academicByDate = previousCached.academicByDate
+    }
 
     // 캐시 저장
     try {
