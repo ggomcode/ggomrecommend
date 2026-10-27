@@ -178,26 +178,26 @@
               </div>
 
               <!-- Main Height Comparison Chart -->
-              <div class="relative bg-white rounded-xl p-3 border border-slate-200 shadow-xs">
+              <div class="relative bg-white rounded-xl p-3 sm:p-4 border border-slate-200 shadow-xs">
                 <!-- Column Labels -->
-                <div class="grid grid-cols-12 gap-2 text-center text-xs font-black pb-1.5 mb-2 border-b border-slate-100">
-                  <div class="col-span-5 text-slate-700 flex items-center justify-center gap-1">
-                    <span>현행 9등급제</span>
-                    <span class="text-[10px] font-normal text-slate-400">(상대 9단계)</span>
+                <div class="grid grid-cols-12 gap-2 text-center text-xs font-black pb-2 mb-2.5 border-b border-slate-100">
+                  <div class="col-span-5 text-slate-700 flex items-center justify-center gap-1.5">
+                    <span class="text-xs sm:text-sm font-extrabold">현행 9등급제</span>
+                    <span class="text-[10px] sm:text-xs font-medium text-slate-400">(상대 9단계)</span>
                   </div>
-                  <div class="col-span-2 text-[10px] text-slate-400 font-bold flex items-center justify-center">
+                  <div class="col-span-2 text-[10px] sm:text-xs text-slate-500 font-extrabold flex items-center justify-center">
                     누적 컷오프
                   </div>
-                  <div class="col-span-5 text-indigo-700 flex items-center justify-center gap-1">
-                    <span>2028 개편 5등급제</span>
-                    <span class="text-[10px] font-normal text-indigo-400">(상대·절대 병기)</span>
+                  <div class="col-span-5 text-indigo-700 flex items-center justify-center gap-1.5">
+                    <span class="text-xs sm:text-sm font-extrabold">2028 개편 5등급제</span>
+                    <span class="text-[10px] sm:text-xs font-medium text-indigo-400">(상대·절대 병기)</span>
                   </div>
                 </div>
 
-                <!-- Bars Container (Height 300px) -->
-                <div class="relative grid grid-cols-12 gap-2 h-72 select-none">
+                <!-- Bars Container (여유 있는 높이 540px 적용) -->
+                <div class="relative grid grid-cols-12 gap-2 h-[520px] sm:h-[540px] select-none">
                   <!-- Left: 9-Grade Column (1~9 All Displayed) -->
-                  <div class="col-span-5 flex flex-col h-full rounded-lg overflow-hidden border border-slate-200/80 bg-slate-50">
+                  <div class="col-span-5 flex flex-col h-full rounded-xl overflow-hidden border border-slate-200/90 bg-slate-100/50 shadow-inner">
                     <div
                       v-for="item in nineGradeList"
                       :key="'9-' + item.grade"
@@ -205,7 +205,7 @@
                       @click="selectGrade('9', item.grade)"
                       :style="{ height: item.span + '%' }"
                       :class="[
-                        'w-full flex items-center justify-between px-2 cursor-pointer transition-all duration-150 relative border-b border-white/20 last:border-b-0',
+                        'w-full flex items-center justify-between px-2.5 sm:px-3 cursor-pointer transition-all duration-150 relative border-b border-white/20 last:border-b-0 overflow-hidden',
                         item.bgColor,
                         selectedGradeKey === '9-' + item.grade 
                           ? 'ring-2 ring-indigo-600 z-10 brightness-110 shadow-sm' 
@@ -213,87 +213,87 @@
                       ]"
                     >
                       <!-- Left: Grade Title & Range indicator -->
-                      <div class="flex items-center gap-1 min-w-0">
-                        <span class="font-black text-[11px] leading-tight text-white drop-shadow-xs shrink-0">
+                      <div class="flex items-center gap-1.5 min-w-0">
+                        <span class="font-black text-xs sm:text-[13px] leading-none text-white drop-shadow-xs shrink-0">
                           {{ item.grade }}등급
                         </span>
-                        <span class="text-[9px] text-white/80 font-mono hidden sm:inline shrink-0">
+                        <span class="text-[10px] text-white/80 font-mono hidden sm:inline shrink-0">
                           (↕{{ item.span }}%p)
                         </span>
                       </div>
                       <!-- Right: Cumulative Cut & Count -->
-                      <div class="text-right text-[10px] font-bold text-white/90 leading-tight shrink-0 font-mono">
+                      <div class="text-right text-[10px] sm:text-xs font-bold text-white/95 leading-none shrink-0 font-mono flex items-center gap-1">
                         <span>~{{ item.cumEnd }}%</span>
-                        <span class="text-[9px] opacity-75 hidden md:inline ml-0.5">({{ item.count }}명)</span>
+                        <span class="text-[10px] text-white/75 hidden md:inline">({{ item.count }}명)</span>
                       </div>
                     </div>
                   </div>
 
-                  <!-- Center: Cutoff Comparison Bridge Line & Key Indicators -->
+                  <!-- Center: Cutoff Comparison Bridge Line & Key Indicators (좌/우 분리 배치로 글자 겹침 해결) -->
                   <div class="col-span-2 relative flex flex-col justify-between py-0.5 text-center pointer-events-none">
                     <!-- 0% Line -->
                     <div class="absolute top-0 inset-x-0 border-t border-slate-300"></div>
 
-                    <!-- 4% Marker (9등급 1등급 컷) -->
-                    <div class="absolute w-full flex items-center justify-center -translate-y-1/2" :style="{ top: '4%' }">
+                    <!-- 4% Marker (9등급 1등급 컷 - 좌측 배치) -->
+                    <div class="absolute w-full flex items-center -translate-y-1/2 z-10" :style="{ top: '4%' }">
                       <div class="w-full border-t border-dashed border-emerald-400"></div>
-                      <span class="absolute bg-white px-0.5 text-[8px] font-extrabold text-emerald-600 border border-emerald-200 rounded">
+                      <span class="absolute left-0.5 sm:left-1 bg-white px-1.5 py-0.5 text-[9px] font-black text-emerald-700 border border-emerald-300 rounded shadow-2xs">
                         4%
                       </span>
                     </div>
 
-                    <!-- 10% Marker (5등급 1등급 컷) -->
-                    <div class="absolute w-full flex items-center justify-center -translate-y-1/2 z-10" :style="{ top: '10%' }">
+                    <!-- 10% Marker (5등급 1등급 컷 - 우측 배치) -->
+                    <div class="absolute w-full flex items-center justify-end -translate-y-1/2 z-20" :style="{ top: '10%' }">
                       <div class="w-full border-t-2 border-indigo-600"></div>
-                      <span class="absolute bg-indigo-600 text-white px-1 rounded text-[8px] font-black shadow-2xs">
+                      <span class="absolute right-0.5 sm:right-1 bg-indigo-600 text-white px-1.5 py-0.5 rounded text-[9px] font-black shadow-2xs">
                         10%
                       </span>
                     </div>
 
-                    <!-- 11% Marker (9등급 2등급 컷) -->
-                    <div class="absolute w-full flex items-center justify-center -translate-y-1/2" :style="{ top: '11%' }">
-                      <div class="w-full border-t border-dashed border-amber-500"></div>
-                      <span class="absolute bg-amber-500 text-white px-0.5 text-[8px] font-black rounded shadow-2xs">
+                    <!-- 11% Marker (9등급 2등급 컷 - 좌측 배치, 10%와 겹침 없이 좌/우 완벽 분리) -->
+                    <div class="absolute w-full flex items-center -translate-y-1/2 z-20" :style="{ top: '11%' }">
+                      <div class="w-full border-t-2 border-dashed border-amber-500"></div>
+                      <span class="absolute left-0.5 sm:left-1 bg-amber-500 text-white px-1.5 py-0.5 text-[9px] font-black rounded shadow-2xs">
                         11%
                       </span>
                     </div>
 
-                    <!-- 23% Marker (9등급 3등급 컷) -->
-                    <div class="absolute w-full flex items-center justify-center -translate-y-1/2" :style="{ top: '23%' }">
+                    <!-- 23% Marker (9등급 3등급 컷 - 좌측 배치) -->
+                    <div class="absolute w-full flex items-center -translate-y-1/2 z-10" :style="{ top: '23%' }">
                       <div class="w-full border-t border-dashed border-sky-400"></div>
-                      <span class="absolute bg-white px-0.5 text-[8px] font-bold text-sky-700 border border-sky-200 rounded">
+                      <span class="absolute left-0.5 sm:left-1 bg-white px-1.5 py-0.5 text-[9px] font-bold text-sky-700 border border-sky-300 rounded shadow-2xs">
                         23%
                       </span>
                     </div>
 
-                    <!-- 34% Marker (5등급 2등급 컷) -->
-                    <div class="absolute w-full flex items-center justify-center -translate-y-1/2" :style="{ top: '34%' }">
+                    <!-- 34% Marker (5등급 2등급 컷 - 우측 배치) -->
+                    <div class="absolute w-full flex items-center justify-end -translate-y-1/2 z-10" :style="{ top: '34%' }">
                       <div class="w-full border-t-2 border-indigo-500"></div>
-                      <span class="absolute bg-indigo-500 text-white px-1 text-[8px] font-black rounded shadow-2xs">
+                      <span class="absolute right-0.5 sm:right-1 bg-indigo-500 text-white px-1.5 py-0.5 text-[9px] font-black rounded shadow-2xs">
                         34%
                       </span>
                     </div>
 
-                    <!-- 40% Marker (9등급 4등급 컷) -->
-                    <div class="absolute w-full flex items-center justify-center -translate-y-1/2" :style="{ top: '40%' }">
+                    <!-- 40% Marker (9등급 4등급 컷 - 좌측 배치) -->
+                    <div class="absolute w-full flex items-center -translate-y-1/2 z-10" :style="{ top: '40%' }">
                       <div class="w-full border-t border-dashed border-slate-300"></div>
-                      <span class="absolute bg-white px-0.5 text-[8px] text-slate-500 border border-slate-200 rounded">
+                      <span class="absolute left-0.5 sm:left-1 bg-white px-1.5 py-0.5 text-[9px] text-slate-600 border border-slate-300 rounded shadow-2xs">
                         40%
                       </span>
                     </div>
 
-                    <!-- 66% Marker (5등급 3등급 컷) -->
-                    <div class="absolute w-full flex items-center justify-center -translate-y-1/2" :style="{ top: '66%' }">
+                    <!-- 66% Marker (5등급 3등급 컷 - 우측 배치) -->
+                    <div class="absolute w-full flex items-center justify-end -translate-y-1/2 z-10" :style="{ top: '66%' }">
                       <div class="w-full border-t-2 border-indigo-400"></div>
-                      <span class="absolute bg-white text-indigo-700 border border-indigo-300 px-1 text-[8px] font-bold rounded">
+                      <span class="absolute right-0.5 sm:right-1 bg-white text-indigo-700 border border-indigo-300 px-1.5 py-0.5 text-[9px] font-black rounded shadow-2xs">
                         66%
                       </span>
                     </div>
 
-                    <!-- 90% Marker (5등급 4등급 컷) -->
-                    <div class="absolute w-full flex items-center justify-center -translate-y-1/2" :style="{ top: '90%' }">
+                    <!-- 90% Marker (5등급 4등급 컷 - 우측 배치) -->
+                    <div class="absolute w-full flex items-center justify-end -translate-y-1/2 z-10" :style="{ top: '90%' }">
                       <div class="w-full border-t-2 border-slate-400"></div>
-                      <span class="absolute bg-white text-slate-700 border border-slate-300 px-1 text-[8px] font-bold rounded">
+                      <span class="absolute right-0.5 sm:right-1 bg-white text-slate-700 border border-slate-300 px-1.5 py-0.5 text-[9px] font-bold rounded shadow-2xs">
                         90%
                       </span>
                     </div>
@@ -303,7 +303,7 @@
                   </div>
 
                   <!-- Right: 5-Grade Column (1~5 All Displayed) -->
-                  <div class="col-span-5 flex flex-col h-full rounded-lg overflow-hidden border border-slate-200/80 bg-slate-50">
+                  <div class="col-span-5 flex flex-col h-full rounded-xl overflow-hidden border border-slate-200/90 bg-slate-100/50 shadow-inner">
                     <div
                       v-for="item in fiveGradeList"
                       :key="'5-' + item.grade"
@@ -311,49 +311,51 @@
                       @click="selectGrade('5', item.grade)"
                       :style="{ height: item.span + '%' }"
                       :class="[
-                        'w-full flex items-center justify-between px-2.5 cursor-pointer transition-all duration-150 relative border-b border-white/20 last:border-b-0',
+                        'w-full flex items-center justify-between px-3 sm:px-4 cursor-pointer transition-all duration-150 relative border-b border-white/20 last:border-b-0 overflow-hidden',
                         item.bgColor,
                         selectedGradeKey === '5-' + item.grade 
                           ? 'ring-2 ring-indigo-600 z-10 brightness-110 shadow-sm' 
                           : 'hover:brightness-105'
                       ]"
                     >
-                      <!-- Special Badge for Grade 1 (2.7배 확대) -->
-                      <div v-if="item.grade === 1" class="absolute -left-1.5 top-1/2 -translate-y-1/2 hidden md:block">
-                        <span class="bg-amber-400 text-slate-950 font-black text-[9px] px-1 py-0.5 rounded shadow-xs">
-                          2.7배↑
-                        </span>
-                      </div>
                       <!-- Special Top border warning for Grade 2 (10~11% boundary) -->
-                      <div v-if="item.grade === 2" class="absolute top-0 inset-x-0 h-1 bg-amber-400/90" title="10~11% 경계 위험선"></div>
+                      <div v-if="item.grade === 2" class="absolute top-0 inset-x-0 h-1.5 bg-amber-400/90 z-20" title="10~11% 경계 위험선"></div>
 
-                      <!-- Left: Grade Title & Arrow indicator -->
-                      <div class="flex items-center gap-1.5 min-w-0">
-                        <span class="font-black text-xs leading-tight text-white drop-shadow-xs shrink-0">
+                      <!-- Left: Grade Title, 2.7배 badge & Arrow indicator (인라인 배치로 겹침 현상 원천 해결) -->
+                      <div class="flex items-center gap-2 min-w-0">
+                        <span class="font-black text-xs sm:text-sm leading-none text-white drop-shadow-xs shrink-0">
                           {{ item.grade }}등급
                         </span>
-                        <span class="text-[9px] text-white/80 font-mono hidden sm:inline shrink-0">
+                        <!-- 2.7배 확대 뱃지 -->
+                        <span
+                          v-if="item.grade === 1"
+                          class="bg-amber-400 text-slate-950 font-black text-[10px] sm:text-[11px] px-2 py-0.5 rounded-full shadow-xs shrink-0 inline-flex items-center"
+                        >
+                          2.7배 확대
+                        </span>
+                        <span class="text-[10px] sm:text-[11px] text-white/80 font-mono hidden sm:inline shrink-0">
                           (↕{{ item.span }}%p)
                         </span>
                       </div>
+
                       <!-- Right: Cumulative Cut & Count -->
-                      <div class="text-right text-[11px] font-black text-white/95 leading-tight shrink-0 font-mono">
+                      <div class="text-right text-xs sm:text-sm font-black text-white/95 leading-none shrink-0 font-mono flex items-center gap-1">
                         <span>~{{ item.cumEnd }}%</span>
-                        <span class="text-[9px] font-bold text-white/80 hidden md:inline ml-1">({{ item.count }}명)</span>
+                        <span class="text-[10px] sm:text-xs font-bold text-white/80 hidden md:inline">({{ item.count }}명)</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <!-- Footer Scale Legend -->
-                <div class="flex flex-wrap items-center justify-between gap-1.5 mt-2 pt-2 border-t border-slate-100 text-[10px] text-slate-500 font-medium">
+                <div class="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-100 text-xs text-slate-600 font-medium">
                   <div class="flex items-center gap-1.5">
-                    <span class="inline-block w-2 h-2 bg-emerald-600 rounded-full"></span>
-                    <span>1등급 컷 4% ➔ <strong>10% 확대 (2.7배)</strong></span>
+                    <span class="inline-block w-2.5 h-2.5 bg-emerald-600 rounded-full"></span>
+                    <span>1등급 컷 4% ➔ <strong class="text-emerald-700 font-black">10% 확대 (2.7배)</strong></span>
                   </div>
-                  <div class="flex items-center gap-1 text-amber-700 font-bold">
-                    <span>⚠️ 10~11% 학생:</span>
-                    <span>9등급 2등급 ➔ <strong>5등급 2등급 밀림(실질 3등급 취급 주의)</strong></span>
+                  <div class="flex items-center gap-1.5 text-amber-900 font-bold bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200 text-xs">
+                    <span>⚠️ 10~11% 구간:</span>
+                    <span>현행 2등급 ➔ <strong class="text-rose-700 underline underline-offset-2">개편 2등급 밀림(실질 3등급 취급 주의)</strong></span>
                   </div>
                 </div>
               </div>
