@@ -16,16 +16,11 @@
 
     <!-- 0-1. 학생/학급 맞춤 대입일정 선택 바 (교사/관리자: 학급 및 학생 드롭다운 선택, 학생: 본인 맞춤 안내) -->
     <div
-      v-if="auth.isStudent || auth.isTeacher || auth.isAdmin"
-      class="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/90 flex flex-col md:flex-row md:items-center justify-between gap-4"
+      v-if="auth.isStudent || ((auth.isTeacher || auth.isAdmin) && studentList.length > 0)"
+      class="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-200/90 flex flex-col md:flex-row md:items-center justify-between gap-4"
     >
       <!-- 좌측: 모드 안내 타이틀 및 학생 정보 배지 -->
       <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-        <div class="flex items-center gap-1.5">
-          <span class="text-base sm:text-lg">🎯</span>
-          <span class="text-xs sm:text-sm font-extrabold text-slate-900">대입일정 맞춤 조회:</span>
-        </div>
-
         <!-- 학생 모드일 때 (학생 로그인) -->
         <template v-if="auth.isStudent">
           <span class="px-3 py-1.5 rounded-xl text-xs font-black bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1.5 shadow-2xs">
@@ -85,9 +80,6 @@
               전체 보기
             </button>
           </div>
-          <span v-else class="text-xs text-slate-400 font-medium hidden sm:inline">
-            (전체 학생의 대입 일정이 종합 표시 중입니다)
-          </span>
         </template>
 
 
@@ -1279,6 +1271,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { fetchAdmissionCalendarData } from '../../services/admissionCalendarService.js'
+import defaultCalendarData from '../../data/admissionCalendarDefault.json'
 import { useAuthStore } from '../../stores/auth.js'
 import { supabase } from '../../utils/supabaseClient.js'
 import { decryptText } from '../../utils/cryptoUtils.js'
@@ -1294,7 +1287,7 @@ import {
 const auth = useAuthStore()
 
 const loading = ref(false)
-const rawData = ref(null)
+const rawData = ref(defaultCalendarData)
 
 // ── 학급 및 학생별 대입일정 맞춤 필터 상태 ────────────────────────
 const selectedClass = ref('ALL') // 'ALL' | 1 | 2 ... | 'GRAD'
@@ -1665,7 +1658,10 @@ const currentYearMonthLabel = computed(() => {
 async function refreshData(force = false) {
   loading.value = true
   try {
-    rawData.value = await fetchAdmissionCalendarData({ forceRefresh: force })
+    const res = await fetchAdmissionCalendarData({ forceRefresh: force })
+    if (res && res.academicByDate && Object.keys(res.academicByDate).length > 0) {
+      rawData.value = res
+    }
   } catch (err) {
     console.error('Admission data fetch failed:', err)
   } finally {
