@@ -2,9 +2,21 @@ import { supabase } from '../utils/supabaseClient.js'
 import defaultCalendarData from '../data/admissionCalendarDefault.json'
 
 export const DEFAULT_ADMISSION_SHEET_ID = '1hoiLXSv7B3_7hWYnSlv60AIRKhkERj8wQAFGCgmhJ2k'
-const CACHE_KEY = 'pcm_admission_calendar_cache_v7'
-const CACHE_TIME_KEY = 'pcm_admission_calendar_cache_time_v7'
+const CACHE_KEY = 'pcm_admission_calendar_cache_v8'
+const CACHE_TIME_KEY = 'pcm_admission_calendar_cache_time_v8'
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000 // 6시간 캐시
+
+/**
+ * 2027 기본 구글 스프레드시트 각 탭별 고유 GID 매핑
+ * (구글 시트에서 Apps Script로 숨김 처리된 과거 행까지 누락 없이 전체 내보내기 위한 GID)
+ */
+export const DEFAULT_SHEET_GIDS = {
+  '주요일정': '493465284',
+  '원서접수마감': '0',
+  '4년제일정': '1893353782',
+  '전문대일정': '1486297043',
+  '학사일정': '1779739532'
+}
 
 /**
  * URL이나 ID 문자열에서 순수 시트 ID 추출
@@ -56,7 +68,8 @@ export async function saveAdmissionSheetId(rawInput) {
   // 이전/현재 캐시 모두 무효화
   try {
     ['pcm_admission_calendar_cache_v6', 'pcm_admission_calendar_cache_time_v6',
-     'pcm_admission_calendar_cache_v7', 'pcm_admission_calendar_cache_time_v7'].forEach(k => localStorage.removeItem(k))
+     'pcm_admission_calendar_cache_v7', 'pcm_admission_calendar_cache_time_v7',
+     'pcm_admission_calendar_cache_v8', 'pcm_admission_calendar_cache_time_v8'].forEach(k => localStorage.removeItem(k))
   } catch {}
 
   if (supabase) {
@@ -157,25 +170,49 @@ export function normalizeDateStr(raw, defaultYear = 2026) {
 }
 
 /**
- * 단일 시트 CSV 데이터 fetch (GViz 엔드포인트, 실패 시 최대 2회 재시도 + 캐시방지 파라미터)
+ * 단일 시트 CSV 데이터 fetch
+ * 1순위: /export?format=csv&gid=... (구글 시트에서 Apps Script로 숨김 처리된 과거 행까지 모두 포함하여 온전히 내보냄)
+ * 2순위: /gviz/tq?tqx=out:csv&sheet=... (시트 이름 기반 Fallback)
  */
 async function fetchSheetCSV(sheetId, sheetName, retries = 2) {
+  const targetId = extractSheetId(sheetId) || DEFAULT_ADMISSION_SHEET_ID
+  const gid = DEFAULT_SHEET_GIDS[sheetName]
+
+  // 1순위: GID 기반 /export?format=csv (숨겨진 과거 행도 전부 포함)
+  if (gid !== undefined) {
+    const exportUrl = `https://docs.google.com/spreadsheets/d/${targetId}/export?format=csv&gid=${gid}&_t=${Date.now()}`
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch(exportUrl)
+        if (res.ok) {
+          const text = await res.text()
+          if (text && text.trim().length > 10 && !text.includes('<!DOCTYPE html>')) {
+            return text
+          }
+        }
+      } catch (err) {
+        if (attempt === retries) console.warn(`Export CSV failed for ${sheetName}, trying GViz fallback:`, err)
+        await new Promise(r => setTimeout(r, 400 * (attempt + 1)))
+      }
+    }
+  }
+
+  // 2순위 (fallback): GViz 엔드포인트
   const encName = encodeURIComponent(sheetName)
-  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encName}&_t=${Date.now()}`
+  const gvizUrl = `https://docs.google.com/spreadsheets/d/${targetId}/gviz/tq?tqx=out:csv&sheet=${encName}&_t=${Date.now()}`
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const res = await fetch(url)
-      if (!res.ok) {
-        throw new Error(`Failed to fetch sheet ${sheetName}: status ${res.status}`)
-      }
-      const text = await res.text()
-      if (text && text.trim().length > 10 && !text.includes('<!DOCTYPE html>')) {
-        return text
+      const res = await fetch(gvizUrl)
+      if (res.ok) {
+        const text = await res.text()
+        if (text && text.trim().length > 10 && !text.includes('<!DOCTYPE html>')) {
+          return text
+        }
       }
       throw new Error(`Empty or invalid response for sheet ${sheetName}`)
     } catch (err) {
       if (attempt === retries) throw err
-      await new Promise(r => setTimeout(r, 500 * (attempt + 1)))
+      await new Promise(r => setTimeout(r, 400 * (attempt + 1)))
     }
   }
 }
@@ -211,7 +248,8 @@ export async function fetchAdmissionCalendarData({ forceRefresh = false } = {}) 
   // 이전 버전의 깨지거나 빈 캐시 완벽 제거
   try {
     ['pcm_admission_calendar_cache_v5', 'pcm_admission_calendar_cache_time_v5',
-     'pcm_admission_calendar_cache_v6', 'pcm_admission_calendar_cache_time_v6'].forEach(k => localStorage.removeItem(k))
+     'pcm_admission_calendar_cache_v6', 'pcm_admission_calendar_cache_time_v6',
+     'pcm_admission_calendar_cache_v7', 'pcm_admission_calendar_cache_time_v7'].forEach(k => localStorage.removeItem(k))
   } catch {}
 
   // 1. 캐시 확인 (유효 데이터 존재 여부 엄격 검증)
@@ -241,7 +279,7 @@ export async function fetchAdmissionCalendarData({ forceRefresh = false } = {}) 
   const sheetId = extractSheetId(rawSheetId) || DEFAULT_ADMISSION_SHEET_ID
 
   try {
-    // 5개 시트 순차/배치 호출 (구글 GViz 동시 요청 시 429 차단 방지)
+    // 5개 시트 순차/배치 호출 (구글 동시 요청 차단 방지)
     const csvMajor = await fetchSheetCSV(sheetId, '주요일정').catch(e => { console.warn('주요일정 fetch 실패', e); return null })
     const csvDeadline = await fetchSheetCSV(sheetId, '원서접수마감').catch(e => { console.warn('원서접수마감 fetch 실패', e); return null })
     const csvFourYear = await fetchSheetCSV(sheetId, '4년제일정').catch(e => { console.warn('4년제일정 fetch 실패', e); return null })
@@ -290,6 +328,30 @@ export async function fetchAdmissionCalendarData({ forceRefresh = false } = {}) 
     if (!parsedData.majorList || parsedData.majorList.length === 0) {
       parsedData.majorList = defaultCalendarData.majorList
       parsedData.rangeEvents = defaultCalendarData.rangeEvents
+    }
+
+    // ★ 과거 일정 보호: 구글 시트에서 Apps Script(autoHidePastRows)로 인해 오늘 이전 행이 숨겨져서 누락된 경우,
+    // 번들된 기본 데이터 및 이전 캐시의 과거 일정들을 완벽하게 보존/병합
+    if (defaultCalendarData.fourYearByDate) {
+      for (const [dateStr, data] of Object.entries(defaultCalendarData.fourYearByDate)) {
+        if (!parsedData.fourYearByDate[dateStr] || parsedData.fourYearByDate[dateStr].items.length === 0) {
+          parsedData.fourYearByDate[dateStr] = data
+        }
+      }
+    }
+    if (defaultCalendarData.juniorByDate) {
+      for (const [dateStr, data] of Object.entries(defaultCalendarData.juniorByDate)) {
+        if (!parsedData.juniorByDate[dateStr] || parsedData.juniorByDate[dateStr].items.length === 0) {
+          parsedData.juniorByDate[dateStr] = data
+        }
+      }
+    }
+    if (defaultCalendarData.academicByDate) {
+      for (const [dateStr, data] of Object.entries(defaultCalendarData.academicByDate)) {
+        if (!parsedData.academicByDate[dateStr] || parsedData.academicByDate[dateStr].length === 0) {
+          parsedData.academicByDate[dateStr] = data
+        }
+      }
     }
 
     // 데이터가 충분히 검증되었을 때만 로컬스토리지 캐시에 저장
