@@ -24,7 +24,7 @@
           type="button"
           @click="triggerPrint"
           class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-black text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-all shadow-xs cursor-pointer border-none"
-          title="A4 가로 방향 8페이지 설명회 자료 인쇄 또는 PDF 저장"
+          title="A4 가로 방향 7페이지 설명회 자료 인쇄 또는 PDF 저장"
         >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
           <span>A4 가로 책자 인쇄 / PDF</span>
@@ -95,7 +95,7 @@
       <!-- Bottom Banner Footnote -->
       <div class="relative z-10 pt-3 border-t border-white/15 flex items-center justify-between text-[11px] text-slate-300">
         <span>📍 경기도 용인시 처인구 포곡읍 | 포곡고등학교 진로진학상담부</span>
-        <span class="font-bold text-amber-300">SLIDE 01 / 08</span>
+        <span class="font-bold text-amber-300">SLIDE 01 / 07</span>
       </div>
     </section>
 
@@ -117,7 +117,7 @@
               내신 5등급제 개편 & 2028 통합수능, 포곡고가 완벽한 기회인 이유
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 02 / 08</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 02 / 07</span>
         </div>
 
         <!-- 9등급 vs 5등급 구조 비교 그래프 & 인터랙티브 등급 유불리 분석 (좌우 배치) -->
@@ -550,7 +550,7 @@
               과학중점학교 × 2027 혁신자치예비학교, 학생의 진로를 입시 성과로!
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 03 / 08</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 03 / 07</span>
         </div>
 
         <!-- 2 Big Engines Grid -->
@@ -701,7 +701,7 @@
               용인시 처인구 내 고교 지형도, 왜 포곡고가 가장 안정적인 선택인가?
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 04 / 08</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 04 / 07</span>
         </div>
 
         <p class="text-xs text-slate-600 mt-2 max-w-3xl leading-relaxed m-0">
@@ -838,7 +838,7 @@
               농어촌 전형의 위력 & [농어촌 비대상자 30~40%] 필승 성공 전략
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 05 / 08</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 05 / 07</span>
         </div>
 
         <p class="text-xs text-slate-600 mt-2 max-w-3xl leading-relaxed m-0">
@@ -905,7 +905,7 @@
               <div class="text-emerald-600 font-black text-sm mb-1">03. 2028 1등급 선점의 교과 파워</div>
               <strong class="text-slate-900 block mb-1">10% 1등급 안착 후 수능 최저 충족</strong>
               <p class="text-[11px] text-slate-600 m-0 leading-relaxed">
-                처인구 외곽 대형고나 분당/수지 학군지에서 3~4등급으로 밀려날 학생이 포곡고에서는 1~2등급을 안정적으로 선점하여 교과전형으로 인서울 명문대에 직행합니다.
+                서울 및 분당/수지 학군지에서 3~4등급에 머물 수 있는 학생도 포곡고에서는 1~2등급을 안정적으로 선점하여 교과전형으로 인서울 명문대에 직행합니다.
               </p>
             </div>
           </div>
@@ -971,31 +971,31 @@
               수치로 입증된 포곡고의 수시 경쟁력, 최상위권부터 수도권까지!
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 06 / 08</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 06 / 07</span>
         </div>
 
         <!-- 4 Stat Highlight Cards -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mt-4">
           <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
-            <span class="text-[11px] font-bold text-slate-500">최상위 주요대/과기원 출원</span>
-            <div class="text-2xl font-black text-rose-600 mt-0.5">101건</div>
-            <span class="text-[10px] text-slate-400">설카포연고 + 서성한이 + 과기원</span>
+            <span class="text-[11px] font-bold text-slate-500">최상위 주요대 지원</span>
+            <div class="text-2xl font-black text-rose-600 mt-0.5">77건</div>
+            <span class="text-[10px] text-slate-400">설카포연고 + 서성한이</span>
           </div>
 
           <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
-            <span class="text-[11px] font-bold text-slate-500">수도권 4년제 출원율</span>
+            <span class="text-[11px] font-bold text-slate-500">수도권 4년제 지원율</span>
             <div class="text-2xl font-black text-indigo-600 mt-0.5">61.4%</div>
             <span class="text-[10px] text-slate-400">서울 265건, 경기 550건, 인천 30건</span>
           </div>
 
           <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
-            <span class="text-[11px] font-bold text-slate-500">과학기술원(과기원) 지원</span>
+            <span class="text-[11px] font-bold text-slate-500">과기원(KAIST제외) 지원</span>
             <div class="text-2xl font-black text-sky-600 mt-0.5">24건</div>
             <span class="text-[10px] text-slate-400">GIST, UNIST, DGIST, KENTECH (평균 1.60)</span>
           </div>
 
           <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
-            <span class="text-[11px] font-bold text-slate-500">1인당 수시 전략 출원</span>
+            <span class="text-[11px] font-bold text-slate-500">1인당 수시 전략 지원</span>
             <div class="text-2xl font-black text-emerald-600 mt-0.5">5.59건</div>
             <span class="text-[10px] text-slate-400">246명 접수 (총 1,376건 수시 카드)</span>
           </div>
@@ -1016,21 +1016,21 @@
             <tbody class="divide-y divide-slate-200/80 font-medium">
               <tr class="hover:bg-slate-50/70">
                 <td class="py-2 px-3 font-bold text-indigo-700">설·카·포·연·고</td>
-                <td class="py-2 px-3 text-slate-600">서울대, KAIST, 포항공대, 연세대, 고려대 (본교)</td>
+                <td class="py-2 px-3 text-slate-600">서울대, KAIST, 포항공대, 연세대, 고려대</td>
                 <td class="py-2 px-3 text-center font-black text-slate-900">33건</td>
                 <td class="py-2 px-3 text-center font-bold text-indigo-600 font-mono">1.69등급</td>
                 <td class="py-2 px-3 text-slate-500 text-[11px]">학교장추천 + 과학중점 심화 학종</td>
               </tr>
               <tr class="hover:bg-slate-50/70">
                 <td class="py-2 px-3 font-bold text-indigo-700">서·성·한·이</td>
-                <td class="py-2 px-3 text-slate-600">서강대, 성균관대, 한양대(서울), 이화여대</td>
+                <td class="py-2 px-3 text-slate-600">서강대, 성균관대, 한양대, 이화여대</td>
                 <td class="py-2 px-3 text-center font-black text-slate-900">44건</td>
                 <td class="py-2 px-3 text-center font-bold text-indigo-600 font-mono">1.79등급</td>
                 <td class="py-2 px-3 text-slate-500 text-[11px]">교과 지역균형 & 학생부종합 투트랙</td>
               </tr>
               <tr class="hover:bg-slate-50/70">
                 <td class="py-2 px-3 font-bold text-sky-700">과기원 특화</td>
-                <td class="py-2 px-3 text-slate-600">GIST, UNIST, DGIST, 한국에너지공대</td>
+                <td class="py-2 px-3 text-slate-600">GIST, UNIST, DGIST, 한국에너지공대 (KAIST제외)</td>
                 <td class="py-2 px-3 text-center font-black text-slate-900">24건</td>
                 <td class="py-2 px-3 text-center font-bold text-sky-600 font-mono">1.60등급</td>
                 <td class="py-2 px-3 text-slate-500 text-[11px]">과학중점 실험 및 과제연구 세특 최적화</td>
@@ -1040,18 +1040,18 @@
                 <td class="py-2 px-3 text-slate-600">의예, 치의예, 한의예, 약학, 수의예</td>
                 <td class="py-2 px-3 text-center font-black text-slate-900">1건</td>
                 <td class="py-2 px-3 text-center font-bold text-rose-600 font-mono">1.52등급</td>
-                <td class="py-2 px-3 text-slate-500 text-[11px]">상지대 한의예과 수시 출원</td>
+                <td class="py-2 px-3 text-slate-500 text-[11px]">상지대 한의예과 수시 지원</td>
               </tr>
               <tr class="hover:bg-slate-50/70">
                 <td class="py-2 px-3 font-bold text-slate-800">수도권 주요 15개대</td>
                 <td class="py-2 px-3 text-slate-600">중앙·경희·외대·시립·건국·동국·홍익·국민 등</td>
                 <td class="py-2 px-3 text-center font-black text-slate-900">213건</td>
                 <td class="py-2 px-3 text-center font-bold text-slate-700 font-mono">3.26등급</td>
-                <td class="py-2 px-3 text-slate-500 text-[11px]">농어촌 정원 외 & 일반 학종 다수 출원</td>
+                <td class="py-2 px-3 text-slate-500 text-[11px]">농어촌 정원 외 & 일반 학종 다수 지원</td>
               </tr>
               <tr class="hover:bg-slate-50/70">
                 <td class="py-2 px-3 font-bold text-slate-800">경기권 거점/선호대</td>
-                <td class="py-2 px-3 text-slate-600">아주·인하·경기·가천·강남·명지·수원·용인 등</td>
+                <td class="py-2 px-3 text-slate-600">아주대·인하대·한양대(에리카)·경기대·가천대·강남대·명지대·수원대·용인대 등</td>
                 <td class="py-2 px-3 text-center font-black text-slate-900">315건</td>
                 <td class="py-2 px-3 text-center font-bold text-slate-700 font-mono">3.85등급</td>
                 <td class="py-2 px-3 text-slate-500 text-[11px]">학생부교과 및 면접 전형 안정권 지원</td>
@@ -1086,7 +1086,7 @@
               중3 학부모님이 가장 궁금해하시는 질문 BEST 6
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 07 / 08</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 07 / 07</span>
         </div>
 
         <!-- 6 FAQ Accordion Cards Grid -->
@@ -1130,68 +1130,6 @@
         <span class="font-semibold text-slate-600">포곡고등학교</span>
       </div>
     </section>
-
-    <!-- ========================================================================================= -->
-    <!-- [SLIDE 8] 고입 전형 일정 & 맞춤형 입학 상담 안내 -->
-    <!-- ========================================================================================= -->
-    <section id="slide-8" class="presentation-slide a4-landscape-page bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden flex flex-col justify-between">
-      <div class="relative z-10">
-        <div class="flex items-center justify-between pb-3 border-b border-white/15">
-          <div class="flex items-center gap-2">
-            <span class="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-400 text-slate-950">
-              📝 고입 전형 & 입학 상담
-            </span>
-            <span class="text-xs font-bold text-indigo-200">2026학년도 신입생 모집</span>
-          </div>
-          <span class="text-xs font-bold text-amber-300">SLIDE 08 / 08</span>
-        </div>
-
-        <h2 class="text-2xl sm:text-3xl font-black text-white mt-3 m-0">
-          포곡고등학교에서 시작될 자녀의 빛나는 3년,<br />
-          <span class="text-amber-300">믿고 맡겨주시면 최고의 대입 결과로 증명하겠습니다.</span>
-        </h2>
-
-        <!-- Action Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-          <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15">
-            <div class="text-amber-300 text-sm font-bold mb-1">📅 원서 접수 일정</div>
-            <div class="text-sm font-black text-white">2025년 12월 초순 예정</div>
-            <p class="text-[11px] text-slate-300 mt-1 m-0">
-              경기도 고등학교 입학전형 기본계획에 따라 중학교 담임교사를 통한 온라인 원서 접수
-            </p>
-          </div>
-
-          <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15">
-            <div class="text-sky-300 text-sm font-bold mb-1">📞 1:1 개별 진학 상담</div>
-            <div class="text-sm font-black text-white">진로진학상담부 운영</div>
-            <p class="text-[11px] text-slate-300 mt-1 m-0">
-              중학교 성적표 지참 시 포곡고 5등급제 예상 석차 및 맞춤형 진로 트랙 심층 상담 제공
-            </p>
-          </div>
-
-          <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15">
-            <div class="text-emerald-300 text-sm font-bold mb-1">📍 학교 위치 & 교통</div>
-            <div class="text-sm font-black text-white">용인 에버라인 둔전역 인근</div>
-            <p class="text-[11px] text-slate-300 mt-1 m-0">
-              처인구 및 인근 지역 대중교통 노선 다수 운행, 안전하고 쾌적한 통학 환경
-            </p>
-          </div>
-        </div>
-
-        <!-- Final Message -->
-        <div class="mt-6 p-4 rounded-2xl bg-white/15 border border-white/20 text-center">
-          <p class="text-xs sm:text-sm text-amber-200 font-bold m-0">
-            "포곡고등학교는 모든 학생의 꿈을 존중하며, 학생의 잠재력을 대학 입시에서 가장 빛나는 실적으로 완성합니다."
-          </p>
-        </div>
-      </div>
-
-      <!-- Slide Footer -->
-      <div class="relative z-10 pt-4 border-t border-white/15 text-[11px] text-slate-300 flex items-center justify-between">
-        <span>교무실 / 진학상담실 문의: 031-329-0100 (내선 진로진학상담부)</span>
-        <span class="font-bold text-amber-400">포곡고등학교</span>
-      </div>
-    </section>
   </div>
 </template>
 
@@ -1206,8 +1144,7 @@ const slideList = [
   { id: 'slide-4', shortTitle: '처인구 고교 비교', emoji: '🏫' },
   { id: 'slide-5', shortTitle: '농어촌&비대상 전략', emoji: '🌲' },
   { id: 'slide-6', shortTitle: '대입 성과 Fact', emoji: '🏆' },
-  { id: 'slide-7', shortTitle: '학부모 Q&A', emoji: '💬' },
-  { id: 'slide-8', shortTitle: '고입 일정 안내', emoji: '📝' }
+  { id: 'slide-7', shortTitle: '학부모 Q&A', emoji: '💬' }
 ]
 
 const activeSlideId = ref('slide-1')
@@ -1654,7 +1591,7 @@ const faqList = ref([
 }
 
 /* ========================================================================= */
-/* A4 Landscape Print Styles (A4 가로 8페이지 책자 인쇄 규격)                  */
+/* A4 Landscape Print Styles (A4 가로 7페이지 책자 인쇄 규격)                  */
 /* ========================================================================= */
 @media print {
   @page {

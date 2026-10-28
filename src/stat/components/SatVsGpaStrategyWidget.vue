@@ -564,88 +564,318 @@
         </div>
       </div>
 
-      <!-- 탐구 과목별 응시자 수 & 평균 등급 상세 그리드 -->
+      <!-- 탐구 과목별 응시자 수 & 평균 등급 상세 그리드 (인포그래픽 막대 그래프 & 차트) -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- 사회탐구 과목별 현황 -->
-        <div class="bg-slate-50/70 rounded-3xl p-5 border border-slate-200/90 shadow-2xs">
-          <div class="flex items-center justify-between mb-3">
-            <div>
-              <h4 class="text-sm font-black text-slate-900 m-0 flex items-center gap-1.5">
-                <span>📚</span>
-                <span>사회탐구 과목별 응시자 수 & 평균 등급</span>
-              </h4>
-              <p class="text-[11px] text-slate-500 m-0">사회·문화와 생활과 윤리로 쏠림 현상 뚜렷</p>
-            </div>
-            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800">
-              사탐 전체
-            </span>
-          </div>
-
-          <div class="space-y-2 mt-3">
-            <div
-              v-for="s in satamList"
-              :key="s.name"
-              class="bg-white p-3 rounded-2xl border border-slate-200/80 flex items-center justify-between text-xs hover:border-blue-300 transition-colors"
-            >
-              <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: s.color }"></span>
-                <span class="font-bold text-slate-800">{{ s.name }}</span>
-                <span v-if="s.count >= 100" class="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800">
-                  최다 응시
+        <div class="bg-slate-50/70 rounded-3xl p-5 border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div>
+                <h4 class="text-sm font-black text-slate-900 m-0 flex items-center gap-1.5">
+                  <span>📚</span>
+                  <span>사회탐구 과목별 응시자 수 & 평균 등급</span>
+                </h4>
+                <p class="text-[11px] text-slate-500 m-0">사회·문화와 생활과 윤리로 쏠림 현상 뚜렷</p>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <!-- 정렬 기준 토글 -->
+                <div class="inline-flex rounded-xl bg-slate-200/80 p-0.5 text-[10px]">
+                  <button
+                    type="button"
+                    @click="satamSortMode = 'count'"
+                    :class="[
+                      'px-2 py-0.5 rounded-lg font-bold transition-all cursor-pointer border-none',
+                      satamSortMode === 'count' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                    ]"
+                  >
+                    인원순
+                  </button>
+                  <button
+                    type="button"
+                    @click="satamSortMode = 'grade'"
+                    :class="[
+                      'px-2 py-0.5 rounded-lg font-bold transition-all cursor-pointer border-none',
+                      satamSortMode === 'grade' ? 'bg-white text-emerald-800 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                    ]"
+                  >
+                    성적순
+                  </button>
+                </div>
+                <!-- 뷰 모드 토글 -->
+                <div class="inline-flex rounded-xl bg-slate-200/80 p-0.5 text-[10px]">
+                  <button
+                    type="button"
+                    @click="satamViewType = 'bars'"
+                    :class="[
+                      'px-2 py-0.5 rounded-lg font-bold transition-all cursor-pointer border-none',
+                      satamViewType === 'bars' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                    ]"
+                  >
+                    막대
+                  </button>
+                  <button
+                    type="button"
+                    @click="satamViewType = 'chart'"
+                    :class="[
+                      'px-2 py-0.5 rounded-lg font-bold transition-all cursor-pointer border-none',
+                      satamViewType === 'chart' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                    ]"
+                  >
+                    차트
+                  </button>
+                </div>
+                <span class="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800">
+                  사탐 {{ totalSatamCount }}건
                 </span>
               </div>
-              <div class="flex items-center gap-4">
-                <div class="text-right">
-                  <span class="text-[10px] text-slate-400 block">응시 인원</span>
-                  <span class="font-mono font-bold text-slate-700">{{ s.count }}명</span>
+            </div>
+
+            <!-- 상단 누적 응시 점유율 띠 그래프 (100% Stacked Distribution) -->
+            <div class="p-3 bg-white rounded-2xl border border-slate-200/80 shadow-2xs space-y-1.5 mb-3.5">
+              <div class="flex items-center justify-between text-[11px] font-bold text-slate-600">
+                <span class="flex items-center gap-1.5">
+                  <span>📊</span>
+                  <span>과목별 점유율 띠 그래프</span>
+                </span>
+                <span class="text-slate-400 font-normal">
+                  상위 2개(사문·생윤): <strong class="text-emerald-700 font-black">76.3%</strong>
+                </span>
+              </div>
+              <!-- 100% Stacked Segmented Bar -->
+              <div class="w-full h-3.5 rounded-full flex overflow-hidden bg-slate-100 border border-slate-200/60 p-0.5 gap-0.5">
+                <div
+                  v-for="s in satamList"
+                  :key="s.name"
+                  :style="{ width: ((s.count / totalSatamCount) * 100) + '%', backgroundColor: s.color }"
+                  class="h-full rounded-full transition-all hover:brightness-110 cursor-pointer"
+                  :title="`${s.name}: ${s.count}명 (${((s.count / totalSatamCount) * 100).toFixed(1)}%)`"
+                ></div>
+              </div>
+              <!-- 하위 레전드 요약 -->
+              <div class="flex flex-wrap items-center justify-between pt-0.5 text-[10px] text-slate-500 font-medium">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span v-for="s in satamList.slice(0, 4)" :key="s.name" class="inline-flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: s.color }"></span>
+                    <span class="text-slate-700 font-bold">{{ s.name }}</span>
+                    <span class="text-slate-400 font-mono">{{ ((s.count / totalSatamCount) * 100).toFixed(0) }}%</span>
+                  </span>
+                  <span class="text-slate-400">외 {{ satamList.length - 4 }}과목</span>
                 </div>
-                <div class="text-right min-w-16">
-                  <span class="text-[10px] text-slate-400 block">평균 등급</span>
-                  <span class="font-mono font-black text-blue-600 text-sm">{{ s.grade }}</span>
+                <span class="text-slate-400 font-mono text-[9px]">* 마우스 오버 시 과목별 인원 표출</span>
+              </div>
+            </div>
+
+            <!-- 막대 모드: 과목별 시각적 가로 비례 막대 그래프 리스트 -->
+            <div v-if="satamViewType === 'bars'" class="space-y-2 mt-2">
+              <div
+                v-for="(s, idx) in processedSatamList"
+                :key="s.name"
+                class="bg-white p-3 rounded-2xl border border-slate-200/90 hover:border-emerald-400 hover:shadow-xs transition-all space-y-2 group"
+              >
+                <!-- 상단: 순위, 과목명, 뱃지, 응시인원, 평균등급 -->
+                <div class="flex items-center justify-between text-xs">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span
+                      class="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black shrink-0 font-mono"
+                      :class="idx < 2 ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-600'"
+                    >
+                      {{ idx + 1 }}
+                    </span>
+                    <span class="w-2.5 h-2.5 rounded-full shrink-0" :style="{ backgroundColor: s.color }"></span>
+                    <span class="font-extrabold text-slate-900 truncate">{{ s.name }}</span>
+                    <span v-if="s.count >= 100" class="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-200 shrink-0">
+                      최다 응시
+                    </span>
+                  </div>
+
+                  <div class="flex items-center gap-3 shrink-0">
+                    <div class="text-right">
+                      <span class="text-[10px] text-slate-400 mr-1 hidden sm:inline">응시</span>
+                      <span class="font-mono font-black text-slate-900 text-xs sm:text-sm">{{ s.count }}명</span>
+                      <span class="text-[10px] font-mono text-slate-400 ml-1">({{ s.pct }}%)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 pl-2.5 border-l border-slate-100">
+                      <span class="text-[10px] text-slate-400 font-medium">평균</span>
+                      <span :class="['px-2 py-0.5 rounded-md text-xs font-black font-mono border shadow-2xs', s.gradeBadgeClass]">
+                        {{ s.grade }}등급
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 하단: 시각적 가로 비례 막대 바 (Horizontal Proportional Bar) -->
+                <div class="relative w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    class="h-full rounded-full transition-all duration-700 ease-out"
+                    :style="{
+                      width: s.barWidth,
+                      background: `linear-gradient(90deg, ${s.color}bb 0%, ${s.color} 100%)`
+                    }"
+                  ></div>
                 </div>
               </div>
+            </div>
+
+            <!-- 차트 모드: Chart.js Bar Chart -->
+            <div v-else class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs h-[450px]">
+              <Bar :data="satamChartData" :options="satamChartOptions" />
             </div>
           </div>
         </div>
 
         <!-- 과학탐구 과목별 현황 -->
-        <div class="bg-slate-50/70 rounded-3xl p-5 border border-slate-200/90 shadow-2xs">
-          <div class="flex items-center justify-between mb-3">
-            <div>
-              <h4 class="text-sm font-black text-slate-900 m-0 flex items-center gap-1.5">
-                <span>🔬</span>
-                <span>과학탐구 과목별 응시자 수 & 평균 등급</span>
-              </h4>
-              <p class="text-[11px] text-slate-500 m-0">생명과학Ⅰ과 지구과학Ⅰ 위주, Ⅱ과목은 극소수</p>
-            </div>
-            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-sky-100 text-sky-800">
-              과탐 전체
-            </span>
-          </div>
-
-          <div class="space-y-2 mt-3">
-            <div
-              v-for="q in gwatamList"
-              :key="q.name"
-              class="bg-white p-3 rounded-2xl border border-slate-200/80 flex items-center justify-between text-xs hover:border-indigo-300 transition-colors"
-            >
-              <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: q.color }"></span>
-                <span class="font-bold text-slate-800">{{ q.name }}</span>
-                <span v-if="q.count >= 30" class="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-indigo-100 text-indigo-800">
-                  주력 응시
+        <div class="bg-slate-50/70 rounded-3xl p-5 border border-slate-200/90 shadow-2xs flex flex-col justify-between">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div>
+                <h4 class="text-sm font-black text-slate-900 m-0 flex items-center gap-1.5">
+                  <span>🔬</span>
+                  <span>과학탐구 과목별 응시자 수 & 평균 등급</span>
+                </h4>
+                <p class="text-[11px] text-slate-500 m-0">생명과학Ⅰ과 지구과학Ⅰ 위주, Ⅱ과목은 극소수</p>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <!-- 정렬 기준 토글 -->
+                <div class="inline-flex rounded-xl bg-slate-200/80 p-0.5 text-[10px]">
+                  <button
+                    type="button"
+                    @click="gwatamSortMode = 'count'"
+                    :class="[
+                      'px-2 py-0.5 rounded-lg font-bold transition-all cursor-pointer border-none',
+                      gwatamSortMode === 'count' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                    ]"
+                  >
+                    인원순
+                  </button>
+                  <button
+                    type="button"
+                    @click="gwatamSortMode = 'grade'"
+                    :class="[
+                      'px-2 py-0.5 rounded-lg font-bold transition-all cursor-pointer border-none',
+                      gwatamSortMode === 'grade' ? 'bg-white text-indigo-800 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                    ]"
+                  >
+                    성적순
+                  </button>
+                </div>
+                <!-- 뷰 모드 토글 -->
+                <div class="inline-flex rounded-xl bg-slate-200/80 p-0.5 text-[10px]">
+                  <button
+                    type="button"
+                    @click="gwatamViewType = 'bars'"
+                    :class="[
+                      'px-2 py-0.5 rounded-lg font-bold transition-all cursor-pointer border-none',
+                      gwatamViewType === 'bars' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                    ]"
+                  >
+                    막대
+                  </button>
+                  <button
+                    type="button"
+                    @click="gwatamViewType = 'chart'"
+                    :class="[
+                      'px-2 py-0.5 rounded-lg font-bold transition-all cursor-pointer border-none',
+                      gwatamViewType === 'chart' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                    ]"
+                  >
+                    차트
+                  </button>
+                </div>
+                <span class="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-sky-100 text-sky-800">
+                  과탐 {{ totalGwatamCount }}건
                 </span>
               </div>
-              <div class="flex items-center gap-4">
-                <div class="text-right">
-                  <span class="text-[10px] text-slate-400 block">응시 인원</span>
-                  <span class="font-mono font-bold text-slate-700">{{ q.count }}명</span>
+            </div>
+
+            <!-- 상단 누적 응시 점유율 띠 그래프 (100% Stacked Distribution) -->
+            <div class="p-3 bg-white rounded-2xl border border-slate-200/80 shadow-2xs space-y-1.5 mb-3.5">
+              <div class="flex items-center justify-between text-[11px] font-bold text-slate-600">
+                <span class="flex items-center gap-1.5">
+                  <span>📊</span>
+                  <span>과목별 점유율 띠 그래프</span>
+                </span>
+                <span class="text-slate-400 font-normal">
+                  상위 2개(생명Ⅰ·지구Ⅰ): <strong class="text-indigo-700 font-black">53.1%</strong>
+                </span>
+              </div>
+              <!-- 100% Stacked Segmented Bar -->
+              <div class="w-full h-3.5 rounded-full flex overflow-hidden bg-slate-100 border border-slate-200/60 p-0.5 gap-0.5">
+                <div
+                  v-for="q in gwatamList"
+                  :key="q.name"
+                  :style="{ width: ((q.count / totalGwatamCount) * 100) + '%', backgroundColor: q.color }"
+                  class="h-full rounded-full transition-all hover:brightness-110 cursor-pointer"
+                  :title="`${q.name}: ${q.count}명 (${((q.count / totalGwatamCount) * 100).toFixed(1)}%)`"
+                ></div>
+              </div>
+              <!-- 하위 레전드 요약 -->
+              <div class="flex flex-wrap items-center justify-between pt-0.5 text-[10px] text-slate-500 font-medium">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span v-for="q in gwatamList.slice(0, 4)" :key="q.name" class="inline-flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: q.color }"></span>
+                    <span class="text-slate-700 font-bold">{{ q.name }}</span>
+                    <span class="text-slate-400 font-mono">{{ ((q.count / totalGwatamCount) * 100).toFixed(0) }}%</span>
+                  </span>
+                  <span class="text-slate-400">외 {{ gwatamList.length - 4 }}과목</span>
                 </div>
-                <div class="text-right min-w-16">
-                  <span class="text-[10px] text-slate-400 block">평균 등급</span>
-                  <span class="font-mono font-black text-indigo-600 text-sm">{{ q.grade }}</span>
+                <span class="text-slate-400 font-mono text-[9px]">* 마우스 오버 시 과목별 인원 표출</span>
+              </div>
+            </div>
+
+            <!-- 막대 모드: 과목별 시각적 가로 비례 막대 그래프 리스트 -->
+            <div v-if="gwatamViewType === 'bars'" class="space-y-2 mt-2">
+              <div
+                v-for="(q, idx) in processedGwatamList"
+                :key="q.name"
+                class="bg-white p-3 rounded-2xl border border-slate-200/90 hover:border-indigo-400 hover:shadow-xs transition-all space-y-2 group"
+              >
+                <!-- 상단: 순위, 과목명, 뱃지, 응시인원, 평균등급 -->
+                <div class="flex items-center justify-between text-xs">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span
+                      class="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black shrink-0 font-mono"
+                      :class="idx < 2 ? 'bg-indigo-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-600'"
+                    >
+                      {{ idx + 1 }}
+                    </span>
+                    <span class="w-2.5 h-2.5 rounded-full shrink-0" :style="{ backgroundColor: q.color }"></span>
+                    <span class="font-extrabold text-slate-900 truncate">{{ q.name }}</span>
+                    <span v-if="q.count >= 30" class="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-900 border border-indigo-200 shrink-0">
+                      주력 응시
+                    </span>
+                  </div>
+
+                  <div class="flex items-center gap-3 shrink-0">
+                    <div class="text-right">
+                      <span class="text-[10px] text-slate-400 mr-1 hidden sm:inline">응시</span>
+                      <span class="font-mono font-black text-slate-900 text-xs sm:text-sm">{{ q.count }}명</span>
+                      <span class="text-[10px] font-mono text-slate-400 ml-1">({{ q.pct }}%)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 pl-2.5 border-l border-slate-100">
+                      <span class="text-[10px] text-slate-400 font-medium">평균</span>
+                      <span :class="['px-2 py-0.5 rounded-md text-xs font-black font-mono border shadow-2xs', q.gradeBadgeClass]">
+                        {{ q.grade }}등급
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 하단: 시각적 가로 비례 막대 바 (Horizontal Proportional Bar) -->
+                <div class="relative w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    class="h-full rounded-full transition-all duration-700 ease-out"
+                    :style="{
+                      width: q.barWidth,
+                      background: `linear-gradient(90deg, ${q.color}bb 0%, ${q.color} 100%)`
+                    }"
+                  ></div>
                 </div>
               </div>
+            </div>
+
+            <!-- 차트 모드: Chart.js Bar Chart -->
+            <div v-else class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs h-[450px]">
+              <Bar :data="gwatamChartData" :options="gwatamChartOptions" />
             </div>
           </div>
         </div>
@@ -1083,6 +1313,174 @@ const gwatamList = [
   { name: '지구 과학 Ⅱ', count: 3, grade: '7.67', color: '#65a30d' },
   { name: '화학 Ⅱ', count: 2, grade: '6.50', color: '#9a3412' }
 ]
+
+// -------------------------------------------------------------
+// 탐구 과목별 그래프 시각화 및 정렬 상태
+// -------------------------------------------------------------
+const satamSortMode = ref('count') // 'count' | 'grade'
+const gwatamSortMode = ref('count') // 'count' | 'grade'
+const satamViewType = ref('bars') // 'bars' | 'chart'
+const gwatamViewType = ref('bars') // 'bars' | 'chart'
+
+const totalSatamCount = computed(() => satamList.reduce((acc, c) => acc + c.count, 0))
+const maxSatamCount = computed(() => Math.max(...satamList.map(s => s.count)))
+
+const processedSatamList = computed(() => {
+  const tot = totalSatamCount.value || 1
+  const max = maxSatamCount.value || 1
+  
+  const mapped = satamList.map(s => {
+    const numGrade = parseFloat(s.grade)
+    const pct = ((s.count / tot) * 100).toFixed(1)
+    const barWidth = Math.max(3, Math.round((s.count / max) * 100)) + '%'
+    let gradeBadgeClass = 'bg-slate-50 text-slate-700 border-slate-200'
+    if (numGrade < 6.0) {
+      gradeBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    } else if (numGrade < 6.5) {
+      gradeBadgeClass = 'bg-blue-50 text-blue-700 border-blue-200'
+    } else {
+      gradeBadgeClass = 'bg-amber-50 text-amber-700 border-amber-200'
+    }
+
+    return {
+      ...s,
+      numGrade,
+      pct,
+      barWidth,
+      gradeBadgeClass
+    }
+  })
+
+  if (satamSortMode.value === 'grade') {
+    return [...mapped].sort((a, b) => a.numGrade - b.numGrade) // 성적 우수순
+  }
+  return [...mapped].sort((a, b) => b.count - a.count)
+})
+
+const totalGwatamCount = computed(() => gwatamList.reduce((acc, c) => acc + c.count, 0))
+const maxGwatamCount = computed(() => Math.max(...gwatamList.map(q => q.count)))
+
+const processedGwatamList = computed(() => {
+  const tot = totalGwatamCount.value || 1
+  const max = maxGwatamCount.value || 1
+  
+  const mapped = gwatamList.map(q => {
+    const numGrade = parseFloat(q.grade)
+    const pct = ((q.count / tot) * 100).toFixed(1)
+    const barWidth = Math.max(3, Math.round((q.count / max) * 100)) + '%'
+    let gradeBadgeClass = 'bg-slate-50 text-slate-700 border-slate-200'
+    if (numGrade < 6.0) {
+      gradeBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    } else if (numGrade < 6.5) {
+      gradeBadgeClass = 'bg-indigo-50 text-indigo-700 border-indigo-200'
+    } else {
+      gradeBadgeClass = 'bg-amber-50 text-amber-700 border-amber-200'
+    }
+
+    return {
+      ...q,
+      numGrade,
+      pct,
+      barWidth,
+      gradeBadgeClass
+    }
+  })
+
+  if (gwatamSortMode.value === 'grade') {
+    return [...mapped].sort((a, b) => a.numGrade - b.numGrade) // 성적 우수순
+  }
+  return [...mapped].sort((a, b) => b.count - a.count)
+})
+
+// Chart.js 수직 바 차트 데이터
+const satamChartData = computed(() => {
+  const list = processedSatamList.value
+  return {
+    labels: list.map(s => s.name),
+    datasets: [
+      {
+        label: '응시자 수 (명)',
+        data: list.map(s => s.count),
+        backgroundColor: list.map(s => s.color + 'dd'),
+        borderColor: list.map(s => s.color),
+        borderWidth: 1.5,
+        borderRadius: 8
+      }
+    ]
+  }
+})
+
+const satamChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (ctx) => {
+          const item = processedSatamList.value[ctx.dataIndex]
+          return [` 응시자: ${item.count}명 (${item.pct}%)`, ` 평균 등급: ${item.grade}등급`]
+        }
+      }
+    }
+  },
+  scales: {
+    x: {
+      grid: { display: false },
+      ticks: { font: { size: 10, weight: 'bold' } }
+    },
+    y: {
+      beginAtZero: true,
+      grid: { color: '#f1f5f9' },
+      ticks: { font: { size: 10 } }
+    }
+  }
+}
+
+const gwatamChartData = computed(() => {
+  const list = processedGwatamList.value
+  return {
+    labels: list.map(q => q.name),
+    datasets: [
+      {
+        label: '응시자 수 (명)',
+        data: list.map(q => q.count),
+        backgroundColor: list.map(q => q.color + 'dd'),
+        borderColor: list.map(q => q.color),
+        borderWidth: 1.5,
+        borderRadius: 8
+      }
+    ]
+  }
+})
+
+const gwatamChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (ctx) => {
+          const item = processedGwatamList.value[ctx.dataIndex]
+          return [` 응시자: ${item.count}명 (${item.pct}%)`, ` 평균 등급: ${item.grade}등급`]
+        }
+      }
+    }
+  },
+  scales: {
+    x: {
+      grid: { display: false },
+      ticks: { font: { size: 10, weight: 'bold' } }
+    },
+    y: {
+      beginAtZero: true,
+      grid: { color: '#f1f5f9' },
+      ticks: { font: { size: 10 } }
+    }
+  }
+}
+
 
 // -------------------------------------------------------------
 // 2-1. 사탐런 모의고사 원자료 분석 모드 상태 및 로직

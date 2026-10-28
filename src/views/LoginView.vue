@@ -115,6 +115,7 @@
         </button>
 
         <button
+          v-if="isGraduateTabVisible"
           type="button"
           @click="switchTab('graduate')"
           :class="[
@@ -345,7 +346,7 @@
                 style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; box-sizing: border-box;"
               >
                 <option :value="true">재학생</option>
-                <option :value="false">졸업생</option>
+                <option v-if="isGraduateTabVisible" :value="false">졸업생</option>
               </select>
             </div>
             <div>
@@ -636,8 +637,11 @@ import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
 import { checkExamIntentSystemEnabled } from '../api/examIntentApi.js'
-import { fetchLoginSystemName, loginSystemName, fetchSuiteModules, DEFAULT_SYSTEM_NAME } from '../api/suiteModulesApi.js'
+import { checkJuniorCollegeSystemEnabled } from '../api/juniorCollegeApi.js'
+import { fetchLoginSystemName, loginSystemName, fetchSuiteModules, getModuleStatus, DEFAULT_SYSTEM_NAME } from '../api/suiteModulesApi.js'
 import { setStatSessionPassword } from '../api/statApi.js'
+import { supabase } from '../utils/supabaseClient'
+import { fetchRoundSchedulesMap, parseKstDate } from '../utils/roundSchedule'
 
 const router = useRouter()
 const route = useRoute()
@@ -711,6 +715,120 @@ function handleCalendarRefresh() {
 
 // 활성화된 역할 탭: 'student' (재학생), 'graduate' (졸업생), 'teacher' (교사/관리자)
 const activeTab = ref('student')
+
+// ── 졸업생 로그인 탭 노출 제어 ──────────────────────────────────────────
+// 관리자가 학교장 추천자 선발, 농어촌 추천, 전문대학 추천 중 1개 이상을 오픈했을 때만 졸업생 탭 노출
+const isPrincipalOpen = ref(false)
+const isRuralOpen = ref(false)
+const isJuniorCollegeOpen = ref(false)
+
+// 1. 초기 로컬 스토리지 캐시 기반 빠른 사전 동기화 (깜빡임 방지)
+try {
+  const cachedModulesRaw = localStorage.getItem('suite_modules_cache')
+  if (cachedModulesRaw) {
+    const cachedMods = JSON.parse(cachedModulesRaw)
+    if (Array.isArray(cachedMods)) {
+      const pMod = cachedMods.find(m => m.id === 'principal')
+      if (pMod) {
+        const pStatus = getModuleStatus(pMod)
+        const pForGrad = !pMod.targetRoles || pMod.targetRoles.includes('graduate')
+        isPrincipalOpen.value = pMod.isEnabled !== false && pStatus.isOpen && pForGrad
+      }
+      const rMod = cachedMods.find(m => m.id === 'rural')
+      const rEnabled = localStorage.getItem('pcm_enable_rural_system') === 'true'
+      if (rMod) {
+        const rStatus = getModuleStatus(rMod)
+        const rForGrad = !rMod.targetRoles || rMod.targetRoles.includes('graduate')
+        isRuralOpen.value = rMod.isEnabled !== false && rEnabled && rStatus.isOpen && rForGrad
+      }
+      const jcMod = cachedMods.find(m => m.id === 'junior_college')
+      const jcEnabled = localStorage.getItem('pcm_enable_junior_college_system') !== 'false'
+      if (jcMod) {
+        const jcStatus = getModuleStatus(jcMod)
+        const jcForGrad = !jcMod.targetRoles || jcMod.targetRoles.includes('graduate')
+        isJuniorCollegeOpen.value = jcMod.isEnabled !== false && jcEnabled && jcStatus.isOpen && jcForGrad
+      }
+    }
+  }
+} catch (e) {}
+
+const isGraduateTabVisible = computed(() => {
+  return isPrincipalOpen.value || isRuralOpen.value || isJuniorCollegeOpen.value
+})
+
+watch(isGraduateTabVisible, (visible) => {
+  if (!visible) {
+    if (activeTab.value === 'graduate') {
+      activeTab.value = 'student'
+    }
+    if (!signupIsEnrolled.value) {
+      signupIsEnrolled.value = true
+    }
+  }
+})
+
+async function updateGraduateSystemsOpenStatus() {
+  try {
+    const mods = suiteModules.value && suiteModules.value.length > 0 ? suiteModules.value : await fetchSuiteModules()
+    if (mods && mods.length > 0) {
+      suiteModules.value = mods
+    }
+
+    // 1. 전문대학 학교장 추천 시스템 점검
+    try {
+      const jcEnabled = await checkJuniorCollegeSystemEnabled()
+      const mJc = suiteModules.value.find(m => m.id === 'junior_college')
+      const jcModOpen = mJc ? (mJc.isEnabled !== false && getModuleStatus(mJc).isOpen && (!mJc.targetRoles || mJc.targetRoles.includes('graduate'))) : true
+      isJuniorCollegeOpen.value = jcModOpen && (mJc ? mJc.isEnabled !== false : jcEnabled)
+    } catch (e) {
+      console.warn('Failed to check JC status for graduate tab:', e)
+    }
+
+    // 2. 농어촌(기회균형) 전형 추천 등록 시스템 점검
+    try {
+      const ruralStatus = await checkRuralSystemOpenStatus()
+      const mRural = suiteModules.value.find(m => m.id === 'rural')
+      isRuralSystemEnabled.value = mRural ? mRural.isEnabled : (ruralStatus.isEnabled === true)
+      const ruralModOpen = mRural ? (mRural.isEnabled !== false && getModuleStatus(mRural).isOpen && (!mRural.targetRoles || mRural.targetRoles.includes('graduate'))) : true
+      isRuralOpen.value = ruralModOpen && (ruralStatus?.isEnabled === true && ruralStatus?.isOpen === true)
+    } catch (e) {
+      console.warn('Failed to check rural status for graduate tab:', e)
+    }
+
+    // 3. 학교장 추천자 선발 시스템 점검
+    try {
+      const mPrincipal = suiteModules.value.find(m => m.id === 'principal')
+      const principalModOpen = mPrincipal ? (mPrincipal.isEnabled !== false && getModuleStatus(mPrincipal).isOpen && (!mPrincipal.targetRoles || mPrincipal.targetRoles.includes('graduate'))) : true
+
+      let isPrincipalAllEnded = false
+      let totalRounds = 3
+      if (supabase) {
+        const { data: cfg } = await supabase.from('config').select('value').eq('key', 'total_rounds').maybeSingle()
+        if (cfg && cfg.value) totalRounds = parseInt(cfg.value, 10) || 3
+      }
+      const schedulesMap = await fetchRoundSchedulesMap()
+      const lastRoundId = totalRounds
+      const lastSched = schedulesMap[lastRoundId]
+      const now = new Date()
+      if (lastSched) {
+        const announceTarget = lastSched.announce_end || lastSched.announce_date
+        const announceEndDt = parseKstDate(announceTarget, true)
+        if (announceEndDt && now > announceEndDt) {
+          isPrincipalAllEnded = true
+        }
+      }
+      isPrincipalOpen.value = principalModOpen && !isPrincipalAllEnded
+    } catch (e) {
+      console.warn('Failed to check principal status for graduate tab:', e)
+    }
+
+    if (!isGraduateTabVisible.value && activeTab.value === 'graduate') {
+      activeTab.value = 'student'
+    }
+  } catch (err) {
+    console.warn('Failed to update graduate systems open status:', err)
+  }
+}
 
 const isRuralSystemEnabled = ref(localStorage.getItem('pcm_enable_rural_system') === 'true')
 const isExamIntentSystemEnabled = ref(localStorage.getItem('pcm_enable_exam_intent_system') !== 'false')
@@ -786,9 +904,14 @@ onMounted(async () => {
   try {
     isExamIntentSystemEnabled.value = await checkExamIntentSystemEnabled()
   } catch (e) {}
+
+  await updateGraduateSystemsOpenStatus()
 })
 
 function switchTab(tab) {
+  if (tab === 'graduate' && !isGraduateTabVisible.value) {
+    return
+  }
   activeTab.value = tab
   error.value = null
   success.value = null
@@ -799,7 +922,7 @@ function switchTab(tab) {
 }
 
 function openSignUpFor(type) {
-  if (type === 'graduate') {
+  if (type === 'graduate' && isGraduateTabVisible.value) {
     signupIsEnrolled.value = false
   } else {
     signupIsEnrolled.value = true
@@ -829,6 +952,9 @@ async function handleLogin() {
         await auth.loginTeacher(id, pw)
       }
     } else if (activeTab.value === 'graduate') {
+      if (!isGraduateTabVisible.value) {
+        throw new Error('현재 졸업생 대상 추천 신청 시스템(학교장 추천, 농어촌, 전문대 추천)이 모두 오픈 기간이 아닙니다.')
+      }
       const code = loginStudentCode.value.trim()
       const pw = loginPassword.value
       if (!/^\d{5}$/.test(code)) {

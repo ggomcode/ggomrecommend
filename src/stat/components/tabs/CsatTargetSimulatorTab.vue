@@ -576,17 +576,44 @@ const hasActiveScore = computed(() => {
   return !!(activeExamRecord.korGrade || activeExamRecord.mathGrade || activeExamRecord.engGrade || activeExamRecord.inq1Grade)
 })
 
-// 3. 학생 목록 옵션 (모의고사 데이터 기반)
+// 3. 학생 목록 옵션 (모의고사 데이터 기반 - 학급, 번호 숫자 오름차순 정렬)
 const studentOptionList = computed(() => {
   const list = []
   studentMockExamsMap.value.forEach((examList, key) => {
     if (examList && examList.length > 0) {
       const first = examList[0]
-      const label = `${first.classNum || ''}반 ${first.studentNum || ''}번 ${first.name || '학생'}`
-      list.push({ key, label, examCount: examList.length, exams: examList })
+      const classNum = parseInt(String(first.classNum || '').replace(/[^0-9]/g, ''), 10) || 0
+      const studentNum = parseInt(String(first.studentNum || '').replace(/[^0-9]/g, ''), 10) || 0
+      const name = String(first.name || '학생').trim()
+      const label = `${first.classNum || ''}반 ${first.studentNum || ''}번 ${name}`
+      list.push({
+        key,
+        label,
+        classNum,
+        studentNum,
+        name,
+        examCount: examList.length,
+        exams: examList
+      })
     }
   })
-  return list.sort((a, b) => a.label.localeCompare(b.label, 'ko'))
+
+  return list.sort((a, b) => {
+    // 1. 학급(반) 숫자 오름차순 (1반 -> 2반 -> ... -> 10반 -> 11반)
+    if (a.classNum !== b.classNum) {
+      if (a.classNum === 0) return 1
+      if (b.classNum === 0) return -1
+      return a.classNum - b.classNum
+    }
+    // 2. 출석번호 숫자 오름차순 (1번 -> 2번 -> ... -> 10번 -> 19번 -> 20번)
+    if (a.studentNum !== b.studentNum) {
+      if (a.studentNum === 0) return 1
+      if (b.studentNum === 0) return -1
+      return a.studentNum - b.studentNum
+    }
+    // 3. 동명이인/동일 번호인 경우 이름 가나다순
+    return a.name.localeCompare(b.name, 'ko', { numeric: true })
+  })
 })
 
 const selectedStudentExams = computed(() => {

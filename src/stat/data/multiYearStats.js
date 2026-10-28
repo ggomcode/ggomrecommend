@@ -159,19 +159,19 @@ export const MULTI_YEAR_STATS = {
   targetUnivComparison: [
     {
       groupName: '설·카·포·연·고',
-      note: '서울대, KAIST, 포항공대, 연세대, 고려대 (본교)',
+      note: '서울대, KAIST, 포항공대, 연세대, 고려대',
       data: { '2023': null, '2024': null, '2025': null, '2026': 14, '2027': 33 },
       avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 1.89, '2027': 1.69 }
     },
     {
       groupName: '서·성·한·이',
-      note: '서강대, 성균관대, 한양대(서울), 이화여대',
+      note: '서강대, 성균관대, 한양대, 이화여대',
       data: { '2023': null, '2024': null, '2025': null, '2026': 53, '2027': 44 },
       avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 2.11, '2027': 1.79 }
     },
     {
       groupName: '과기원',
-      note: 'GIST, UNIST, DGIST, KENTECH',
+      note: 'GIST, UNIST, DGIST, 한국에너지공대 (KAIST제외)',
       data: { '2023': null, '2024': null, '2025': null, '2026': 6, '2027': 24 },
       avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 1.68, '2027': 1.60 }
     },
@@ -189,7 +189,7 @@ export const MULTI_YEAR_STATS = {
     },
     {
       groupName: '경기권 거점/선호대',
-      note: '아주·인하·경기·가천·강남·명지·수원·용인·평택 등',
+      note: '아주대·인하대·한양대(에리카)·경기대·가천대·강남대·명지대·수원대·용인대 등',
       data: { '2023': null, '2024': null, '2025': null, '2026': 408, '2027': 315 },
       avgGrade: { '2023': null, '2024': null, '2025': null, '2026': 4.07, '2027': 3.85 }
     }
@@ -219,8 +219,8 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
   const g5Univs = ['중앙대학교', '경희대학교', '한국외국어대학교', '서울시립대학교', '건국대학교', '동국대학교', '홍익대학교', '숙명여자대학교', '국민대학교', '숭실대학교', '세종대학교', '단국대학교']
   const isG5 = u => g5Univs.some(name => u.includes(name)) && !u.includes('동국대학교(WISE)')
 
-  const g6Univs = ['아주대학교', '인하대학교', '경기대학교', '가천대학교', '강남대학교', '명지대학교', '상명대학교', '수원대학교', '용인대학교', '성결대학교', '안양대학교', '평택대학교', '한신대학교', '한국공학대학교', '한국항공대학교']
-  const isG6 = u => g6Univs.some(name => u.includes(name))
+  const g6Univs = ['아주대학교', '인하대학교', '한양대학교(ERICA)', '한양대학교(에리카)', '경기대학교', '가천대학교', '강남대학교', '명지대학교', '상명대학교', '수원대학교', '용인대학교', '성결대학교', '안양대학교', '평택대학교', '한신대학교', '한국공학대학교', '한국항공대학교']
+  const isG6 = u => g6Univs.some(name => u.includes(name)) || u.includes('ERICA') || u.includes('에리카')
 
   const targetStats = {
     '설·카·포·연·고': { count: 0, grades: [] },

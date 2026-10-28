@@ -15,7 +15,10 @@
     </div>
 
     <!-- 0-1. 학생/학급 맞춤 대입일정 선택 바 (교사/관리자: 학급 및 학생 드롭다운 선택, 학생: 본인 맞춤 안내) -->
-    <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/90 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div
+      v-if="auth.isStudent || auth.isTeacher || auth.isAdmin"
+      class="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/90 flex flex-col md:flex-row md:items-center justify-between gap-4"
+    >
       <!-- 좌측: 모드 안내 타이틀 및 학생 정보 배지 -->
       <div class="flex flex-wrap items-center gap-2 sm:gap-3">
         <div class="flex items-center gap-1.5">
@@ -87,12 +90,7 @@
           </span>
         </template>
 
-        <!-- 게스트 / 미로그인 모드일 때 -->
-        <template v-else>
-          <span class="text-xs text-slate-500 font-medium">
-            (전체 학교 학사일정 및 전국 대입일정이 종합 표시됩니다)
-          </span>
-        </template>
+
       </div>
 
       <!-- 우측: 등록된 지원 대학 툴팁/안내 -->
