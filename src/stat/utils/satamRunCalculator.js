@@ -340,8 +340,8 @@ export function parseMockExamWorkbook(workbook) {
 
   const records = []
 
-  // Case 1: 시트명이 '3월', '6월', '10월' 등 회차별로 나뉜 경우
-  const monthSheets = workbook.SheetNames.filter(name => extractExamMonthOrder(name) > 0)
+  // Case 1: 시트명이 '3월', '6월', '10월', '수능' 등 회차별로 나뉜 경우
+  const monthSheets = workbook.SheetNames.filter(name => extractExamMonthOrder(name) > 0 || name.includes('수능'))
 
   if (monthSheets.length >= 2) {
     monthSheets.forEach(sheetName => {
@@ -366,6 +366,13 @@ export function parseMockExamWorkbook(workbook) {
         const inquiry1 = getCell(r, colMap, ['탐구1', '선택과목1', '탐구과목1', '사탐/과탐1', '제1선택']) || ''
         const inquiry2 = getCell(r, colMap, ['탐구2', '선택과목2', '탐구과목2', '사탐/과탐2', '제2선택']) || ''
 
+        const parseGrade = (keys) => {
+          const v = getCell(r, colMap, keys)
+          if (!v) return null
+          const n = Number(v)
+          return (!isNaN(n) && n >= 1 && n <= 9) ? n : null
+        }
+
         records.push({
           examName: sheetName,
           monthOrder,
@@ -375,7 +382,12 @@ export function parseMockExamWorkbook(workbook) {
           studentKey: `${classNum}-${studentNum}_${name}`,
           mathSubject,
           inquiry1,
-          inquiry2
+          inquiry2,
+          korGrade: parseGrade(['국어등급', '국어(등급)', '국어_등급', '국어']),
+          mathGrade: parseGrade(['수학등급', '수학(등급)', '수학_등급', '수학']),
+          engGrade: parseGrade(['영어등급', '영어(등급)', '영어_등급', '영어']),
+          inq1Grade: parseGrade(['탐구1등급', '탐구1(등급)', '탐구1_등급', '제1선택_등급', '탐구1']),
+          inq2Grade: parseGrade(['탐구2등급', '탐구2(등급)', '탐구2_등급', '제2선택_등급', '탐구2'])
         })
       }
     })
@@ -391,9 +403,9 @@ export function parseMockExamWorkbook(workbook) {
   const colMap = buildColumnMap(headers)
 
   // 회차/월 컬럼이 있는지 확인
-  const hasExamCol = ['회차', '시험명', '모의고사', '월', '시험구분'].some(k => colMap[k] !== undefined)
+  const hasExamCol = ['회차', '시험명', '모의고사', '월', '시험구분', '구분', '시험'].some(k => colMap[k] !== undefined)
 
-  if (hasExamCol) {
+  if (hasExamCol || (rows[1] && rows[1][0])) {
     // 롱 포맷
     for (let i = 1; i < rows.length; i++) {
       const r = rows[i]
@@ -402,12 +414,19 @@ export function parseMockExamWorkbook(workbook) {
       const name = getCell(r, colMap, ['이름', '성명', '학생명'])
       if (!name) continue
 
-      const examName = getCell(r, colMap, ['회차', '시험명', '모의고사', '월', '시험구분']) || '모의고사'
+      const examName = getCell(r, colMap, ['회차', '시험명', '모의고사', '월', '시험구분', '구분', '시험']) || (r[0] ? String(r[0]).trim() : '모의고사')
       const classNum = getCell(r, colMap, ['반', '학급']) || ''
       const studentNum = getCell(r, colMap, ['번호', '출석번호']) || ''
       const mathSubject = getCell(r, colMap, ['수학', '수학선택', '수학과목']) || ''
       const inquiry1 = getCell(r, colMap, ['탐구1', '선택과목1', '탐구과목1', '사탐/과탐1', '제1선택']) || ''
       const inquiry2 = getCell(r, colMap, ['탐구2', '선택과목2', '탐구과목2', '사탐/과탐2', '제2선택']) || ''
+
+      const parseGrade = (keys) => {
+        const v = getCell(r, colMap, keys)
+        if (!v) return null
+        const n = Number(v)
+        return (!isNaN(n) && n >= 1 && n <= 9) ? n : null
+      }
 
       records.push({
         examName,
@@ -418,7 +437,12 @@ export function parseMockExamWorkbook(workbook) {
         studentKey: `${classNum}-${studentNum}_${name}`,
         mathSubject,
         inquiry1,
-        inquiry2
+        inquiry2,
+        korGrade: parseGrade(['국어등급', '국어(등급)', '국어_등급', '국어']),
+        mathGrade: parseGrade(['수학등급', '수학(등급)', '수학_등급', '수학']),
+        engGrade: parseGrade(['영어등급', '영어(등급)', '영어_등급', '영어']),
+        inq1Grade: parseGrade(['탐구1등급', '탐구1(등급)', '탐구1_등급', '제1선택_등급', '탐구1']),
+        inq2Grade: parseGrade(['탐구2등급', '탐구2(등급)', '탐구2_등급', '제2선택_등급', '탐구2'])
       })
     }
   } else {

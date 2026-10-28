@@ -1611,6 +1611,169 @@ const calendarYearApplicationsMap = ref({
 })
 const currentModalAdmissionYear = ref('2027')
 
+// 날짜 상세 모달 제어 상태
+const selectedDateModal = ref(null)
+const modalFilterSearch = ref('')
+
+const activeModalCollegeYear = computed(() => {
+  if (!selectedDateModal.value?.dateStr) return currentModalAdmissionYear.value || '2027'
+  return getCollegeAdmissionYearFromDate(selectedDateModal.value.dateStr)
+})
+
+const allApplications = computed(() => {
+  const targetYear = activeModalCollegeYear.value || currentModalAdmissionYear.value || '2027'
+  return calendarYearApplicationsMap.value[targetYear] || calendarYearApplicationsMap.value['2027'] || rawAppsData || []
+})
+
+/**
+ * 4년제 일정 전형(track)에서 개별 하위 전형 세부 분리
+ * 예: "고른기회·다문화·재직자" -> ["고른기회", "다문화", "재직자"]
+ * 예: "학생부교과(지역균형)·학생부종합(학교장추천)" -> ["학생부교과(지역균형)", "학생부종합(학교장추천)"]
+ */
+function extractSubTracks(trackStr) {
+  if (!trackStr) return []
+  const s = String(trackStr).trim()
+  const cleanOverall = s.replace(/[\s\-_()\/,·•ㆍ∙]/g, '').toLowerCase()
+  if (['수시전체', '전체', '수시', '해당자', '공통', '전원서접수자', '모든전형'].includes(cleanOverall)) {
+    return ['전체']
+  }
+  return s.split(/[\u00B7\u2022\u318D\u2219·,\/&+\n|]|\s+및\s+|\s+외\s+/).map(p => p.trim()).filter(Boolean)
+}
+
+/**
+ * 텍스트 및 괄호 내부/외부에서 비교용 핵심 단어 추출
+ */
+function extractCoreKeywords(text) {
+  if (!text) return []
+  const s = String(text).trim()
+  const parens = [...s.matchAll(/\(([^)]+)\)/g)].map(m => m[1])
+  const outside = s.replace(/\([^)]*\)/g, ' ').trim()
+
+  const words = []
+  if (parens.length > 0) {
+    parens.forEach(p => {
+      p.split(/[\s,·•ㆍ∙/]/).forEach(w => {
+        const cw = w.trim().replace(/[\s\-_()\/,·•ㆍ∙]/g, '')
+        if (cw.length >= 2) words.push(cw)
+        const stripped = cw.replace(/전형|선발|모집/g, '')
+        if (stripped.length >= 2 && stripped !== cw) words.push(stripped)
+      })
+    })
+  }
+
+  if (outside) {
+    outside.split(/[\s,·•ㆍ∙/]/).forEach(w => {
+      const cw = w.trim().replace(/[\s\-_()\/,·•ㆍ∙]/g, '')
+      if (cw.length >= 2) words.push(cw)
+      const stripped = cw.replace(/전형|선발|모집/g, '')
+      if (stripped.length >= 2 && stripped !== cw) words.push(stripped)
+    })
+  }
+
+  const rawClean = s.replace(/[\s\-_()\/,·•ㆍ∙]/g, '')
+  if (rawClean.length >= 2) words.push(rawClean)
+  const rawStripped = rawClean.replace(/전형|선발|모집/g, '')
+  if (rawStripped.length >= 2 && rawStripped !== rawClean) words.push(rawStripped)
+
+  const excludeWords = new Set(['1단계', '2단계', '해당', '대상', '기타', '일정', '안내', '공통', '실시', '서류제출', '입력', '확인', '전형'])
+  return Array.from(new Set(words)).filter(w => w.length >= 2 && !excludeWords.has(w))
+}
+
+/**
+ * 캘린더 일정(item.track)과 학생 지원 정보(app)의 전형 부합 여부 판단
+ * 단어 포함 여부(Inclusion) 및 하위 전형 단위 분할을 통한 스마트 매칭
+ */
+function isTrackMatch(itemTrack, app) {
+  if (!itemTrack) return true
+  const subTracks = extractSubTracks(itemTrack)
+  if (subTracks.length === 0 || subTracks.includes('전체')) return true
+
+  const appDetail = (app.admissionDetailType || '').replace(/[\s\-_()\/,·•ㆍ∙]/g, '').toLowerCase()
+  const appMajor = (app.admissionMajorType || '').replace(/[\s\-_()\/,·•ㆍ∙]/g, '').toLowerCase()
+  const appType = (app.admissionType || '').replace(/[\s\-_()\/,·•ㆍ∙]/g, '').toLowerCase()
+  const appDept = (app.dept || '').replace(/[\s\-_()\/,·•ㆍ∙]/g, '').toLowerCase()
+  const combinedApp = `${appDetail} ${appMajor} ${appType} ${appDept}`
+
+  // 각 세부 전형 단위(subTrack)별로 포함 여부 검사
+  for (const st of subTracks) {
+    const cleanSt = st.replace(/[\s\-_()\/,·•ㆍ∙]/g, '').toLowerCase()
+    const stStripped = cleanSt.replace(/전형|선발|모집/g, '')
+
+    // 1) 세부 전형 명칭 자체가 학생 지원 정보에 포함되거나 학생 정보가 세부전형에 포함되는 경우
+    if (cleanSt.length >= 2 && (combinedApp.includes(cleanSt) || cleanSt.includes(appDetail))) {
+      return true
+    }
+    if (stStripped.length >= 2 && (combinedApp.includes(stStripped) || stStripped.includes(appDetail))) {
+      return true
+    }
+
+    // 2) 세부 전형에서 추출된 핵심 키워드 검사 (예: 괄호 안 '지역균형', '성악' 등)
+    const kwList = extractCoreKeywords(st)
+    for (const kw of kwList) {
+      const lkw = kw.toLowerCase()
+      if (appDetail.includes(lkw) || appMajor.includes(lkw) || appDept.includes(lkw) || appType.includes(lkw)) {
+        return true
+      }
+    }
+  }
+
+  // 3) 학생 지원 전형의 핵심 특기/자격 단어가 세부 전형 문자열에 포함되는지 검사 (역방향)
+  const appCore = [
+    appDetail.replace(/학생부|위주|교과|종합|전형|선발|모집|실기|실적/g, ''),
+    appMajor.replace(/선발|대상자|우수자|특별전형|모집/g, '')
+  ].filter(s => s && s.length >= 2)
+
+  const cleanItemTrack = itemTrack.replace(/[\s\-_()\/,·•ㆍ∙]/g, '').toLowerCase()
+  for (const ac of appCore) {
+    if (cleanItemTrack.includes(ac.toLowerCase())) {
+      return true
+    }
+  }
+
+  return false
+}
+
+function isStudentApplication(app, student) {
+  if (!student || !app) return false
+  if (student.student_code && (app.studentCode === student.student_code || app.studentKey?.startsWith(student.student_code))) return true
+  if (student.id && (app.student_id === student.id || app.studentCode === student.id || app.studentKey?.startsWith(student.id))) return true
+  if (student.name && app.name === student.name) {
+    if (student.class_no && app.classNum) {
+      return Number(student.class_no) === Number(app.classNum)
+    }
+    return true
+  }
+  return false
+}
+
+const activeStudentApplications = computed(() => {
+  if (!activeStudent.value) return []
+  const st = activeStudent.value
+  const list = allApplications.value || []
+  return list.filter(app => isStudentApplication(app, st))
+})
+
+function isItemMatchingStudent(item) {
+  if (!isStudentFilterActive.value || !activeStudentUniversities.value) return true
+  if (!isUniversityMatch(item.university, activeStudentUniversities.value)) return false
+
+  // 대학 일치 확인 후, 해당 학생의 이 대학 지원 내역이 allApplications에 있는지 검사
+  const studentAppsForUni = activeStudentApplications.value.filter(app =>
+    isUniversityMatch(item.university, [app.univName])
+  )
+
+  // allApplications에 지원 기록이 있는 경우: 전형 세부 매칭 검사
+  if (studentAppsForUni.length > 0) {
+    if (!item.track) return true
+    const subTracks = extractSubTracks(item.track)
+    if (subTracks.length === 0 || subTracks.includes('전체')) return true
+    return studentAppsForUni.some(app => isTrackMatch(item.track, app))
+  }
+
+  // Supabase 추천 테이블(농어촌, 전문대 등)에만 존재하는 경우 대학 일치 시 인정
+  return true
+}
+
 
 // 오늘 날짜 문자열
 const todayStr = computed(() => {
@@ -1815,9 +1978,9 @@ const todayFourYear = computed(() => {
   if (!rawData.value?.fourYearByDate) return null
   const fy = rawData.value.fourYearByDate[todayStr.value]
   if (!fy || !fy.items) return null
-  if (!isStudentFilterActive.value || !activeStudentUniversities.value) return fy
+  if (!isStudentFilterActive.value) return fy
 
-  const filteredItems = fy.items.filter(it => isUniversityMatch(it.university, activeStudentUniversities.value))
+  const filteredItems = fy.items.filter(it => isItemMatchingStudent(it))
   if (filteredItems.length === 0) return null
 
   const typeCounts = {}
@@ -1975,8 +2138,8 @@ function createCalendarCell(dateObj, isCurrentMonth) {
   const fy = rawData.value?.fourYearByDate?.[dateStr]
   if (fy && fy.items.length > 0) {
     let items = fy.items
-    if (isStudentFilterActive.value && activeStudentUniversities.value) {
-      items = items.filter(it => isUniversityMatch(it.university, activeStudentUniversities.value))
+    if (isStudentFilterActive.value) {
+      items = items.filter(it => isItemMatchingStudent(it))
     }
 
     if (items.length > 0) {
@@ -2061,9 +2224,6 @@ function createCalendarCell(dateObj, isCurrentMonth) {
 }
 
 // ── 날짜 상세 모달 제어 ───────────────────────────────────────
-const selectedDateModal = ref(null)
-const modalFilterSearch = ref('')
-
 function openModalForDate(dateStr) {
   if (!dateStr) return
   const parts = dateStr.split('-')
@@ -2105,7 +2265,7 @@ function openModalForDate(dateStr) {
 
   if (isStudentFilterActive.value && activeStudentUniversities.value) {
     deadlines = deadlines.filter(d => isUniversityMatch(d.university, activeStudentUniversities.value))
-    fourYearItems = fourYearItems.filter(it => isUniversityMatch(it.university, activeStudentUniversities.value))
+    fourYearItems = fourYearItems.filter(it => isItemMatchingStudent(it))
     juniorItems = juniorItems.filter(it => isUniversityMatch(it.university, activeStudentUniversities.value))
   }
 
@@ -2136,16 +2296,6 @@ const filteredFourYearItems = computed(() => {
 })
 
 // ── 모달 내 대학별/전형별 지원 학생 인라인 아코디언 상태 및 로직 ──
-const activeModalCollegeYear = computed(() => {
-  if (!selectedDateModal.value?.dateStr) return currentModalAdmissionYear.value || '2027'
-  return getCollegeAdmissionYearFromDate(selectedDateModal.value.dateStr)
-})
-
-const allApplications = computed(() => {
-  const targetYear = activeModalCollegeYear.value || currentModalAdmissionYear.value || '2027'
-  return calendarYearApplicationsMap.value[targetYear] || calendarYearApplicationsMap.value['2027'] || rawAppsData || []
-})
-
 const canViewStudents = computed(() => {
   return auth.isAdmin || auth.isTeacher || auth.isStudent
 })
@@ -2199,37 +2349,14 @@ function getApplicantsForItem(item, mode = 'univ') {
     return uniMatched
   }
   
-  // 2. 전형명 매칭
+  // 2. 전형명 매칭 (스마트 단어 분리 및 포함 판정)
   if (!item.track) return uniMatched
-  const cleanTrack = item.track.trim().replace(/[\s\-_()\/,]/g, '').toLowerCase()
+  const cleanTrack = item.track.trim().replace(/[\s\-_()\/,·•ㆍ∙]/g, '').toLowerCase()
   if (cleanTrack === '수시전체' || cleanTrack === '전체' || cleanTrack === '수시') {
     return uniMatched
   }
   
-  const keywords = item.track
-    .split(/[\/,\(\)\s+]/)
-    .map(k => k.trim())
-    .filter(k => k.length >= 2 && !['전형', '수시', '학생부', '1단계', '2단계'].includes(k))
-    
-  const trackMatched = uniMatched.filter(app => {
-    const detail = (app.admissionDetailType || '').replace(/[\s\-_()\/,]/g, '').toLowerCase()
-    const major = (app.admissionMajorType || '').replace(/[\s\-_()\/,]/g, '').toLowerCase()
-    const dept = (app.dept || '').replace(/[\s\-_()\/,]/g, '').toLowerCase()
-    
-    if (detail && (detail.includes(cleanTrack) || cleanTrack.includes(detail))) return true
-    if (major && (major.includes(cleanTrack) || cleanTrack.includes(major))) return true
-    if (dept && cleanTrack.includes(dept)) return true
-    
-    for (const kw of keywords) {
-      const lkw = kw.toLowerCase()
-      if (detail.includes(lkw) || major.includes(lkw) || dept.includes(lkw)) {
-        return true
-      }
-    }
-    return false
-  })
-  
-  return trackMatched
+  return uniMatched.filter(app => isTrackMatch(item.track, app))
 }
 
 function getVisibleStudents(item, mode = 'univ') {
@@ -2260,12 +2387,8 @@ function getVisibleStudents(item, mode = 'univ') {
     }
   }
   
-  if (selectedStudentId.value && selectedStudentId.value !== 'ALL') {
-    applicants = applicants.filter(a => 
-      a.studentCode === selectedStudentId.value || 
-      a.name === selectedStudentId.value ||
-      a.studentKey === selectedStudentId.value
-    )
+  if (selectedStudentId.value && selectedStudentId.value !== 'ALL' && activeStudent.value) {
+    applicants = applicants.filter(a => isStudentApplication(a, activeStudent.value))
   }
   
   // 반, 번호 순 정렬

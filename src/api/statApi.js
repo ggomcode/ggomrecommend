@@ -818,7 +818,20 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
 
     const classNum = getVal('반', '학급') || ''
     const studentNum = getVal('번호', '출석번호') || ''
-    const examName = getVal('시험명', '회차', '모의고사', '월', '구분') || targetTab
+    let examName = getVal('시험명', '회차', '모의고사', '월', '구분', '시험구분', '시험', '학평', '모의평가')
+    if (!examName && r && r[0] != null && String(r[0]).trim()) {
+      examName = String(r[0]).trim()
+    }
+    if (!examName && rowData) {
+      for (const [k, v] of Object.entries(rowData)) {
+        const strV = String(v || '').trim()
+        if (strV.includes('수능') || /([0-9]{1,2})\s*월/.test(strV)) {
+          examName = strV
+          break
+        }
+      }
+    }
+    if (!examName) examName = targetTab
     const mathSubject = getVal('수학(과목)', '수학', '수학선택', '수학과목', '선택_수학') || ''
     const inquiry1 = getVal('탐구1(과목)', '탐구1', '선택과목1', '탐구과목1', '사탐/과탐1', '제1선택', '탐구1과목') || ''
     const inquiry2 = getVal('탐구2(과목)', '탐구2', '선택과목2', '탐구과목2', '사탐/과탐2', '제2선택', '탐구2과목') || ''
