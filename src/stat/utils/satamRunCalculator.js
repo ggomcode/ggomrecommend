@@ -373,6 +373,26 @@ export function parseMockExamWorkbook(workbook) {
           return (!isNaN(n) && n >= 1 && n <= 9) ? n : null
         }
 
+        const parseEngGrade = (keys) => {
+          const v = getCell(r, colMap, keys)
+          if (!v) return null
+          const n = Number(v)
+          if (isNaN(n) || n <= 0) return null
+          if (n >= 1 && n <= 9) return n
+          if (n > 9 && n <= 100) {
+            if (n >= 90) return 1
+            if (n >= 80) return 2
+            if (n >= 70) return 3
+            if (n >= 60) return 4
+            if (n >= 50) return 5
+            if (n >= 40) return 6
+            if (n >= 30) return 7
+            if (n >= 20) return 8
+            return 9
+          }
+          return null
+        }
+
         records.push({
           examName: sheetName,
           monthOrder,
@@ -383,11 +403,11 @@ export function parseMockExamWorkbook(workbook) {
           mathSubject,
           inquiry1,
           inquiry2,
-          korGrade: parseGrade(['국어등급', '국어(등급)', '국어_등급', '국어']),
-          mathGrade: parseGrade(['수학등급', '수학(등급)', '수학_등급', '수학']),
-          engGrade: parseGrade(['영어등급', '영어(등급)', '영어_등급', '영어']),
-          inq1Grade: parseGrade(['탐구1등급', '탐구1(등급)', '탐구1_등급', '제1선택_등급', '탐구1']),
-          inq2Grade: parseGrade(['탐구2등급', '탐구2(등급)', '탐구2_등급', '제2선택_등급', '탐구2'])
+          korGrade: parseGrade(['국어등급', '국어(등급)', '국어_등급', '국어 등급', '국어']),
+          mathGrade: parseGrade(['수학등급', '수학(등급)', '수학_등급', '수학 등급', '수학']),
+          engGrade: parseEngGrade(['영어등급', '영어(등급)', '영어_등급', '영어 등급', '영어', '영']),
+          inq1Grade: parseGrade(['탐구1등급', '탐구1(등급)', '탐구1_등급', '제1선택_등급', '탐구1 등급', '탐구1']),
+          inq2Grade: parseGrade(['탐구2등급', '탐구2(등급)', '탐구2_등급', '제2선택_등급', '탐구2 등급', '탐구2'])
         })
       }
     })
@@ -428,6 +448,26 @@ export function parseMockExamWorkbook(workbook) {
         return (!isNaN(n) && n >= 1 && n <= 9) ? n : null
       }
 
+      const parseEngGrade = (keys) => {
+        const v = getCell(r, colMap, keys)
+        if (!v) return null
+        const n = Number(v)
+        if (isNaN(n) || n <= 0) return null
+        if (n >= 1 && n <= 9) return n
+        if (n > 9 && n <= 100) {
+          if (n >= 90) return 1
+          if (n >= 80) return 2
+          if (n >= 70) return 3
+          if (n >= 60) return 4
+          if (n >= 50) return 5
+          if (n >= 40) return 6
+          if (n >= 30) return 7
+          if (n >= 20) return 8
+          return 9
+        }
+        return null
+      }
+
       records.push({
         examName,
         monthOrder: extractExamMonthOrder(examName),
@@ -438,11 +478,11 @@ export function parseMockExamWorkbook(workbook) {
         mathSubject,
         inquiry1,
         inquiry2,
-        korGrade: parseGrade(['국어등급', '국어(등급)', '국어_등급', '국어']),
-        mathGrade: parseGrade(['수학등급', '수학(등급)', '수학_등급', '수학']),
-        engGrade: parseGrade(['영어등급', '영어(등급)', '영어_등급', '영어']),
-        inq1Grade: parseGrade(['탐구1등급', '탐구1(등급)', '탐구1_등급', '제1선택_등급', '탐구1']),
-        inq2Grade: parseGrade(['탐구2등급', '탐구2(등급)', '탐구2_등급', '제2선택_등급', '탐구2'])
+        korGrade: parseGrade(['국어등급', '국어(등급)', '국어_등급', '국어 등급', '국어']),
+        mathGrade: parseGrade(['수학등급', '수학(등급)', '수학_등급', '수학 등급', '수학']),
+        engGrade: parseEngGrade(['영어등급', '영어(등급)', '영어_등급', '영어 등급', '영어', '영']),
+        inq1Grade: parseGrade(['탐구1등급', '탐구1(등급)', '탐구1_등급', '제1선택_등급', '탐구1 등급', '탐구1']),
+        inq2Grade: parseGrade(['탐구2등급', '탐구2(등급)', '탐구2_등급', '제2선택_등급', '탐구2 등급', '탐구2'])
       })
     }
   } else {
@@ -579,6 +619,12 @@ export function generateRealisticMockSample() {
     const chosenSoc1 = popularSocial[idx % 2 === 0 ? 0 : 1] // 사문 or 생윤
     const chosenSoc2 = popularSocial[idx % 2 === 0 ? 1 : 0]
 
+    const baseKor = ((idx * 3 + 1) % 5) + 3
+    const baseMath = ((idx * 2) % 4) + 3
+    const baseEng = ((idx * 4 + 2) % 4) + 3
+    const baseInq1 = ((idx * 2 + 1) % 5) + 3
+    const baseInq2 = ((idx * 3 + 2) % 5) + 3
+
     // 1) 3월 학평: 전원 미적분 + 과탐 2과목 (정통 이과로 출발)
     sampleRecords.push({
       examName: '3월 학평',
@@ -589,7 +635,12 @@ export function generateRealisticMockSample() {
       studentKey: `${stu.classNum}-${stu.studentNum}_${stu.name}`,
       mathSubject: '미적분',
       inquiry1: primarySci,
-      inquiry2: secondarySci
+      inquiry2: secondarySci,
+      korGrade: baseKor,
+      mathGrade: baseMath,
+      engGrade: baseEng,
+      inq1Grade: baseInq1,
+      inq2Grade: baseInq2
     })
 
     // 2) 6월 모평: 일부 고민 시작
@@ -602,7 +653,12 @@ export function generateRealisticMockSample() {
       studentKey: `${stu.classNum}-${stu.studentNum}_${stu.name}`,
       mathSubject: '미적분',
       inquiry1: primarySci,
-      inquiry2: stu.type === 'RUN_2' && idx % 2 === 0 ? chosenSoc1 : secondarySci
+      inquiry2: stu.type === 'RUN_2' && idx % 2 === 0 ? chosenSoc1 : secondarySci,
+      korGrade: Math.min(9, baseKor + (idx % 3 === 0 ? 1 : 0)),
+      mathGrade: baseMath,
+      engGrade: baseEng,
+      inq1Grade: Math.min(9, baseInq1 + 1),
+      inq2Grade: Math.min(9, baseInq2 + 1)
     })
 
     // 3) 9월 모평: 전향 본격화
@@ -615,7 +671,12 @@ export function generateRealisticMockSample() {
       studentKey: `${stu.classNum}-${stu.studentNum}_${stu.name}`,
       mathSubject: '미적분',
       inquiry1: stu.type === 'RUN_2' ? chosenSoc1 : primarySci,
-      inquiry2: stu.type === 'KEPT' ? secondarySci : (stu.type === 'RUN_1' ? chosenSoc1 : chosenSoc2)
+      inquiry2: stu.type === 'KEPT' ? secondarySci : (stu.type === 'RUN_1' ? chosenSoc1 : chosenSoc2),
+      korGrade: baseKor,
+      mathGrade: baseMath,
+      engGrade: baseEng,
+      inq1Grade: baseInq1,
+      inq2Grade: baseInq2
     })
 
     // 4) 10월 학평 (최종): 확정된 사탐런 응시
@@ -638,7 +699,12 @@ export function generateRealisticMockSample() {
       studentKey: `${stu.classNum}-${stu.studentNum}_${stu.name}`,
       mathSubject: '미적분',
       inquiry1: finalInq1,
-      inquiry2: finalInq2
+      inquiry2: finalInq2,
+      korGrade: baseKor,
+      mathGrade: baseMath,
+      engGrade: baseEng,
+      inq1Grade: baseInq1,
+      inq2Grade: baseInq2
     })
   })
 

@@ -1317,10 +1317,39 @@ const currentSatAnalysis = computed(() => {
   }
 
   // 학생별로 시험 성적 그룹화 및 학생별 평균 계산
+  // 학생별로 시험 성적 그룹화 및 학생별 평균 계산
   const byStudent = new Map()
   let unmaeGrades = [], hwajakGrades = []
   let mijukGrades = [], hwaktongGrades = []
   let engAllGrades = []
+
+  // 등급 유효성 검증 및 절대평가 원점수 환산 헬퍼 (1~9등급 보장)
+  const normalizeGrade = (val) => {
+    if (val === null || val === undefined || val === '') return null
+    const n = Number(val)
+    if (isNaN(n) || n < 1 || n > 9) return null
+    return n
+  }
+
+  const normalizeEngGrade = (val) => {
+    if (val === null || val === undefined || val === '') return null
+    const n = Number(val)
+    if (isNaN(n) || n <= 0) return null
+    if (n >= 1 && n <= 9) return n
+    // 영어 원점수(10~100) 절대평가 등급 환산
+    if (n > 9 && n <= 100) {
+      if (n >= 90) return 1
+      if (n >= 80) return 2
+      if (n >= 70) return 3
+      if (n >= 60) return 4
+      if (n >= 50) return 5
+      if (n >= 40) return 6
+      if (n >= 30) return 7
+      if (n >= 20) return 8
+      return 9
+    }
+    return null
+  }
 
   targetRecords.forEach(r => {
     const key = r.studentKey || r.name
@@ -1329,33 +1358,45 @@ const currentSatAnalysis = computed(() => {
       byStudent.set(key, { kor: [], math: [], eng: [], soc: [], sci: [] })
     }
     const entry = byStudent.get(key)
-    if (r.korGrade && !isNaN(r.korGrade)) entry.kor.push(Number(r.korGrade))
-    if (r.mathGrade && !isNaN(r.mathGrade)) entry.math.push(Number(r.mathGrade))
-    if (r.engGrade && !isNaN(r.engGrade)) {
-      entry.eng.push(Number(r.engGrade))
-      engAllGrades.push(Number(r.engGrade))
+    
+    const kG = normalizeGrade(r.korGrade)
+    if (kG) entry.kor.push(kG)
+
+    const mG = normalizeGrade(r.mathGrade)
+    if (mG) entry.math.push(mG)
+
+    const eG = normalizeEngGrade(r.engGrade)
+    if (eG) {
+      entry.eng.push(eG)
+      engAllGrades.push(eG)
     }
 
     // 선택과목별 분류
     const rawMathSub = String(r.mathSubject || '')
-    if (r.mathGrade && !isNaN(r.mathGrade)) {
-      if (/미적|기하/.test(rawMathSub)) mijukGrades.push(Number(r.mathGrade))
-      else if (/확률|확통/.test(rawMathSub)) hwaktongGrades.push(Number(r.mathGrade))
+    if (mG) {
+      if (/미적|기하/.test(rawMathSub)) mijukGrades.push(mG)
+      else if (/확률|확통/.test(rawMathSub)) hwaktongGrades.push(mG)
     }
 
-    // 탐구 1
+    const rawKorSub = String(r.korSubject || '')
+    if (kG) {
+      if (/언매|언어/.test(rawKorSub)) unmaeGrades.push(kG)
+      else if (/화작|화법/.test(rawKorSub)) hwajakGrades.push(kG)
+    }
+
+    // 탐구 1 (1~9등급 검증)
     const inq1 = String(r.inquiry1 || '')
-    const inq1G = Number(r.inq1Grade)
-    if (inq1G && !isNaN(inq1G) && inq1G >= 1 && inq1G <= 9) {
+    const inq1G = normalizeGrade(r.inq1Grade)
+    if (inq1G) {
       const norm1 = normalizeSubject(inq1)
       if (norm1?.field === '과탐' || /생명|물리|화학|지구/.test(inq1)) entry.sci.push(inq1G)
       else if (norm1?.field === '사탐' || /윤리|사회|지리|역사|사|경제|정치/.test(inq1)) entry.soc.push(inq1G)
     }
 
-    // 탐구 2
+    // 탐구 2 (1~9등급 검증)
     const inq2 = String(r.inquiry2 || '')
-    const inq2G = Number(r.inq2Grade)
-    if (inq2G && !isNaN(inq2G) && inq2G >= 1 && inq2G <= 9) {
+    const inq2G = normalizeGrade(r.inq2Grade)
+    if (inq2G) {
       const norm2 = normalizeSubject(inq2)
       if (norm2?.field === '과탐' || /생명|물리|화학|지구/.test(inq2)) entry.sci.push(inq2G)
       else if (norm2?.field === '사탐' || /윤리|사회|지리|역사|사|경제|정치/.test(inq2)) entry.soc.push(inq2G)
@@ -1378,11 +1419,17 @@ const currentSatAnalysis = computed(() => {
     const sc = calcAvg(s.sci); if (sc !== null) { totalSci += sc; cntSci++ }
   })
 
-  const finalKor = cntKor ? Number((totalKor / cntKor).toFixed(2)) : 5.85
-  const finalMath = cntMath ? Number((totalMath / cntMath).toFixed(2)) : 5.65
-  const finalEng = cntEng ? Number((totalEng / cntEng).toFixed(2)) : 4.85
-  const finalSoc = cntSoc ? Number((totalSoc / cntSoc).toFixed(2)) : 5.88
-  const finalSci = cntSci ? Number((totalSci / cntSci).toFixed(2)) : 6.20
+  const clampGrade = (val, fallback) => {
+    const n = Number(val)
+    if (isNaN(n) || n < 1 || n > 9) return fallback
+    return Number(n.toFixed(2))
+  }
+
+  const finalKor = clampGrade(cntKor ? totalKor / cntKor : null, 5.85)
+  const finalMath = clampGrade(cntMath ? totalMath / cntMath : null, 5.65)
+  const finalEng = clampGrade(cntEng ? totalEng / cntEng : null, 4.85)
+  const finalSoc = clampGrade(cntSoc ? totalSoc / cntSoc : null, 5.88)
+  const finalSci = clampGrade(cntSci ? totalSci / cntSci : null, 6.20)
 
   const studentCount = byStudent.size
   const subText = isCsat 
@@ -1428,12 +1475,19 @@ const radarChartData = computed(() => {
   const gpaRaw = currentGpaRaw.value
   const satRaw = currentSatAnalysis.value.grades
 
+  // 차트 반경 계산: 1등급=9, 9등급=1 (0~10 스케일 내 안전하게 클램핑하여 방사형 역방향 빔 방지)
+  const toChartRadius = (grade) => {
+    const n = Number(grade)
+    const valid = (!isNaN(n) && n >= 1 && n <= 9) ? n : 5.0
+    return Number(Math.max(0.5, Math.min(9.5, 10 - valid)).toFixed(2))
+  }
+
   return {
     labels: ['국어', '수학', '영어', '사탐', '과탐'],
     datasets: [
       {
         label: '내신 평균 등급',
-        data: gpaRaw.map(v => Number((10 - v).toFixed(2))),
+        data: gpaRaw.map(toChartRadius),
         rawGrades: gpaRaw,
         backgroundColor: 'rgba(37, 99, 235, 0.22)',
         borderColor: '#2563eb',
@@ -1445,7 +1499,7 @@ const radarChartData = computed(() => {
       },
       {
         label: currentSatAnalysis.value.label,
-        data: satRaw.map(v => Number((10 - v).toFixed(2))),
+        data: satRaw.map(toChartRadius),
         rawGrades: satRaw,
         backgroundColor: 'rgba(245, 158, 11, 0.25)',
         borderColor: '#f59e0b',

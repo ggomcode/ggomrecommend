@@ -813,6 +813,51 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
       return isNaN(n) ? null : n
     }
 
+    // 등급 파싱 함수 (1~9 등급 검증 및 절대평가 과목 원점수 등급 자동 환산)
+    const parseGradeValue = (val, subjectType = 'NORMAL') => {
+      if (val === '' || val === null || val === undefined) return null
+      const n = Number(val)
+      if (isNaN(n) || n <= 0) return null
+      // 1~9 범위의 유효 등급
+      if (n >= 1 && n <= 9) return Math.round(n * 100) / 100
+      
+      // 영어 절대평가 원점수(10~100) -> 1~9 등급 환산
+      if (subjectType === 'ENG' && n > 9 && n <= 100) {
+        if (n >= 90) return 1
+        if (n >= 80) return 2
+        if (n >= 70) return 3
+        if (n >= 60) return 4
+        if (n >= 50) return 5
+        if (n >= 40) return 6
+        if (n >= 30) return 7
+        if (n >= 20) return 8
+        return 9
+      }
+
+      // 한국사 절대평가 원점수(10~50) -> 1~9 등급 환산
+      if (subjectType === 'HIST' && n > 9 && n <= 50) {
+        if (n >= 40) return 1
+        if (n >= 35) return 2
+        if (n >= 30) return 3
+        if (n >= 25) return 4
+        if (n >= 20) return 5
+        if (n >= 15) return 6
+        if (n >= 10) return 7
+        if (n >= 5) return 8
+        return 9
+      }
+      return null
+    }
+
+    const getGradeNum = (keys, subjectType = 'NORMAL') => {
+      for (const k of keys) {
+        const v = getVal(k)
+        const parsed = parseGradeValue(v, subjectType)
+        if (parsed !== null) return parsed
+      }
+      return null
+    }
+
     const name = getVal('이름', '성명', '학생명')
     if (!name) continue
 
@@ -836,14 +881,14 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
     const inquiry1 = getVal('탐구1(과목)', '탐구1', '선택과목1', '탐구과목1', '사탐/과탐1', '제1선택', '탐구1과목') || ''
     const inquiry2 = getVal('탐구2(과목)', '탐구2', '선택과목2', '탐구과목2', '사탐/과탐2', '제2선택', '탐구2과목') || ''
 
-    // 등급 파싱 (수능최저학력기준 판정용)
-    const korGrade = getNum('국어(등급)', '국어등급', '국어_등급', '국어')
-    const mathGrade = getNum('수학(등급)', '수학등급', '수학_등급', '수학')
-    const engGrade = getNum('영어(등급)', '영어등급', '영어_등급', '영어')
-    const inq1Grade = getNum('탐구1(등급)', '탐구1등급', '탐구1_등급', '제1선택_등급', '탐구1')
-    const inq2Grade = getNum('탐구2(등급)', '탐구2등급', '탐구2_등급', '제2선택_등급', '탐구2')
-    const histGrade = getNum('한국사(등급)', '한국사등급', '한국사_등급', '한국사')
-    const secondLangGrade = getNum('제2외국어(등급)', '제2외국어등급', '제2외국어')
+    // 등급 파싱 (수능최저학력기준 판정용 & 과목별 통계용, 1~9등급 보장)
+    const korGrade = getGradeNum(['국어(등급)', '국어등급', '국어_등급', '국어 등급', '국(등급)', '국등급', '국어'], 'NORMAL')
+    const mathGrade = getGradeNum(['수학(등급)', '수학등급', '수학_등급', '수학 등급', '수(등급)', '수등급', '수학'], 'NORMAL')
+    const engGrade = getGradeNum(['영어(등급)', '영어등급', '영어_등급', '영어 등급', '영(등급)', '영등급', '영어', '영'], 'ENG')
+    const inq1Grade = getGradeNum(['탐구1(등급)', '탐구1등급', '탐구1_등급', '제1선택_등급', '탐구1 등급', '탐구1'], 'NORMAL')
+    const inq2Grade = getGradeNum(['탐구2(등급)', '탐구2등급', '탐구2_등급', '제2선택_등급', '탐구2 등급', '탐구2'], 'NORMAL')
+    const histGrade = getGradeNum(['한국사(등급)', '한국사등급', '한국사_등급', '한국사 등급', '한(등급)', '한등급', '한국사'], 'HIST')
+    const secondLangGrade = getGradeNum(['제2외국어(등급)', '제2외국어등급', '제2외국어_등급', '제2외국어'], 'NORMAL')
 
     records.push({
       examName,
