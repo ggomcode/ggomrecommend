@@ -407,7 +407,7 @@ export function parseMockExamWorkbook(workbook) {
           mathGrade: parseGrade(['수학등급', '수학(등급)', '수학_등급', '수학 등급', '수학']),
           engGrade: parseEngGrade(['영어등급', '영어(등급)', '영어_등급', '영어 등급', '영어', '영']),
           inq1Grade: parseGrade(['탐구1등급', '탐구1(등급)', '탐구1_등급', '제1선택_등급', '탐구1 등급', '탐구1']),
-          inq2Grade: parseGrade(['탐구2등급', '탐구2(등급)', '탐구2_등급', '제2선택_등급', '탐구2 등급', '탐구2'])
+          inq2Grade: parseGrade(['탐구2등급', '탐구2(등급)', '탐구2_등급', '제2선택_등급', '탐구2 등급', '탐구2']),
         })
       }
     })
@@ -482,7 +482,7 @@ export function parseMockExamWorkbook(workbook) {
         mathGrade: parseGrade(['수학등급', '수학(등급)', '수학_등급', '수학 등급', '수학']),
         engGrade: parseEngGrade(['영어등급', '영어(등급)', '영어_등급', '영어 등급', '영어', '영']),
         inq1Grade: parseGrade(['탐구1등급', '탐구1(등급)', '탐구1_등급', '제1선택_등급', '탐구1 등급', '탐구1']),
-        inq2Grade: parseGrade(['탐구2등급', '탐구2(등급)', '탐구2_등급', '제2선택_등급', '탐구2 등급', '탐구2'])
+        inq2Grade: parseGrade(['탐구2등급', '탐구2(등급)', '탐구2_등급', '제2선택_등급', '탐구2 등급', '탐구2']),
       })
     }
   } else {
@@ -640,7 +640,7 @@ export function generateRealisticMockSample() {
       mathGrade: baseMath,
       engGrade: baseEng,
       inq1Grade: baseInq1,
-      inq2Grade: baseInq2
+      inq2Grade: baseInq2,
     })
 
     // 2) 6월 모평: 일부 고민 시작
@@ -658,7 +658,7 @@ export function generateRealisticMockSample() {
       mathGrade: baseMath,
       engGrade: baseEng,
       inq1Grade: Math.min(9, baseInq1 + 1),
-      inq2Grade: Math.min(9, baseInq2 + 1)
+      inq2Grade: Math.min(9, baseInq2 + 1),
     })
 
     // 3) 9월 모평: 전향 본격화
@@ -676,7 +676,7 @@ export function generateRealisticMockSample() {
       mathGrade: baseMath,
       engGrade: baseEng,
       inq1Grade: baseInq1,
-      inq2Grade: baseInq2
+      inq2Grade: baseInq2,
     })
 
     // 4) 10월 학평 (최종): 확정된 사탐런 응시
@@ -704,7 +704,7 @@ export function generateRealisticMockSample() {
       mathGrade: baseMath,
       engGrade: baseEng,
       inq1Grade: baseInq1,
-      inq2Grade: baseInq2
+      inq2Grade: baseInq2,
     })
   })
 
