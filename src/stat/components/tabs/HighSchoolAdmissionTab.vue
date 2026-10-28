@@ -24,7 +24,7 @@
           type="button"
           @click="triggerPrint"
           class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-black text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-all shadow-xs cursor-pointer border-none"
-          title="A4 가로 방향 7페이지 설명회 자료 인쇄 또는 PDF 저장"
+          title="A4 가로 방향 8페이지 설명회 책자 인쇄 또는 PDF 저장"
         >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
           <span>A4 가로 책자 인쇄 / PDF</span>
@@ -95,12 +95,12 @@
       <!-- Bottom Banner Footnote -->
       <div class="relative z-10 pt-3 border-t border-white/15 flex items-center justify-between text-[11px] text-slate-300">
         <span>📍 경기도 용인시 처인구 포곡읍 | 포곡고등학교 진로진학상담부</span>
-        <span class="font-bold text-amber-300">SLIDE 01 / 07</span>
+        <span class="font-bold text-amber-300">SLIDE 01 / 08</span>
       </div>
     </section>
 
     <!-- ========================================================================================= -->
-    <!-- [SLIDE 2] 2028 대입 개편안 완벽 해부 & 포곡고 유불리 진단 시뮬레이터 -->
+    <!-- [SLIDE 2] 2028 대입 개편안 완벽 해부 & 포곡고 유불리 진단 -->
     <!-- ========================================================================================= -->
     <section id="slide-2" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
       <div>
@@ -117,7 +117,7 @@
               내신 5등급제 개편 & 2028 통합수능, 포곡고가 완벽한 기회인 이유
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 02 / 07</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 02 / 08</span>
         </div>
 
         <!-- 9등급 vs 5등급 구조 비교 그래프 & 인터랙티브 등급 유불리 분석 (좌우 배치) -->
@@ -195,7 +195,7 @@
                 </div>
 
                 <!-- Bars Container (여유 있는 높이 480px~520px 적용) -->
-                <div class="relative grid grid-cols-12 gap-2 h-[480px] sm:h-[500px] select-none">
+                <div class="relative grid grid-cols-12 gap-2 h-[480px] sm:h-[500px] select-none chart-bars-container">
                   <!-- Left: 9-Grade Column (1~9 All Displayed) -->
                   <div class="col-span-5 flex flex-col h-full rounded-xl overflow-hidden border border-slate-200/90 bg-slate-100/50 shadow-inner">
                     <div
@@ -455,27 +455,89 @@
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- [ROW 2]: 중3 내신 기반 2028 5등급제 진단기 (하단 배치로 좌우 균형 완성) -->
-        <div class="mt-4 bg-gradient-to-r from-indigo-50/70 via-white to-sky-50/70 rounded-2xl p-4 border border-indigo-200/80 shadow-2xs">
-          <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+      <!-- Slide Footer -->
+      <div class="pt-3 border-t border-slate-100 text-[11px] text-slate-400 flex items-center justify-between">
+        <span>* 포곡고 1개 학년 약 334명 기준 등급별 인원 산출 | 교육부 2028 개편안</span>
+        <span class="font-semibold text-slate-600">포곡고등학교</span>
+      </div>
+    </section>
+
+    <!-- ========================================================================================= -->
+    <!-- [SLIDE 3] 중3 내신 기반 2028 5등급제 진단기 & 포곡고 진학/목표 대학 시뮬레이터 -->
+    <!-- ========================================================================================= -->
+    <section id="slide-3" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
+      <div>
+        <!-- Title Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
             <div class="flex items-center gap-2">
-              <span class="text-base">🧮</span>
-              <h3 class="text-xs sm:text-sm font-bold text-indigo-950 m-0">
-                중3 내신 기반 2028 5등급제 진단기
-              </h3>
-              <span class="text-[10px] font-bold text-indigo-600 bg-white px-2 py-0.5 rounded-full border border-indigo-200 shadow-2xs">
-                체험형 시뮬레이터
+              <span class="text-lg">🧮</span>
+              <span class="text-xs font-extrabold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                2028 내신 시뮬레이터 & 진학 로드맵
               </span>
             </div>
-            <span class="text-[11px] text-slate-500 hidden sm:inline">
-              슬라이더를 움직여 중3 석차 백분율에 따른 포곡고 진학 시 예상 등급과 목표 대학군을 확인하세요
-            </span>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1 m-0">
+              중3 내신 백분율별 2028 5등급제 예측 & 포곡고 진학 시 목표 대학 진단
+            </h2>
+          </div>
+          <span class="text-xs font-bold text-slate-400">SLIDE 03 / 08</span>
+        </div>
+
+        <p class="text-xs text-slate-600 mt-2 max-w-3xl leading-relaxed m-0">
+          포곡고는 학년당 약 330여 명의 넉넉한 학생 수를 보유하여 <strong>1등급(상위 10%) 약 33명</strong>을 확보합니다.<br class="hidden sm:inline" />
+          중학교 성적 백분율에 따라 포곡고 입학 후 예상 등급과 추천 대학군, 맞춤 진학 전략을 실시간으로 시뮬레이션합니다.
+        </p>
+
+        <!-- Top: Interactive Simulator Panel -->
+        <div class="mt-4 bg-gradient-to-r from-indigo-50/70 via-white to-sky-50/70 rounded-2xl p-4 sm:p-5 border border-indigo-200/80 shadow-2xs">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-black text-indigo-950">
+                중3 석차 백분율 맞춤 시뮬레이션
+              </span>
+              <span class="text-[10px] font-bold text-indigo-600 bg-white px-2 py-0.5 rounded-full border border-indigo-200 shadow-2xs">
+                실시간 연동 진단
+              </span>
+            </div>
+            <!-- Preset Buttons -->
+            <div class="flex flex-wrap items-center gap-1.5 text-xs no-print">
+              <span class="text-[10px] text-slate-400 font-bold">빠른 예시:</span>
+              <button
+                type="button"
+                @click="simPercent = 3"
+                :class="['px-2 py-0.5 rounded text-[11px] font-bold transition-all border cursor-pointer', simPercent === 3 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50']"
+              >
+                상위 3%
+              </button>
+              <button
+                type="button"
+                @click="simPercent = 8"
+                :class="['px-2 py-0.5 rounded text-[11px] font-bold transition-all border cursor-pointer', simPercent === 8 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50']"
+              >
+                상위 8% (1등급 안정)
+              </button>
+              <button
+                type="button"
+                @click="simPercent = 15"
+                :class="['px-2 py-0.5 rounded text-[11px] font-bold transition-all border cursor-pointer', simPercent === 15 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50']"
+              >
+                상위 15% (1등급 도약)
+              </button>
+              <button
+                type="button"
+                @click="simPercent = 25"
+                :class="['px-2 py-0.5 rounded text-[11px] font-bold transition-all border cursor-pointer', simPercent === 25 ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50']"
+              >
+                상위 25% (2등급)
+              </button>
+            </div>
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-center">
             <!-- Left: Slider (5 cols) -->
-            <div class="lg:col-span-5 bg-white p-3 rounded-xl border border-indigo-100 shadow-2xs space-y-1.5">
+            <div class="lg:col-span-5 bg-white p-3.5 rounded-xl border border-indigo-100 shadow-2xs space-y-2">
               <div class="flex items-center justify-between text-xs font-bold">
                 <span class="text-slate-700">중학교 석차 백분율</span>
                 <span class="text-indigo-600 text-sm font-black">상위 {{ simPercent }}%</span>
@@ -490,7 +552,7 @@
               />
               <div class="flex justify-between text-[10px] text-slate-400 font-mono">
                 <span>상위 1% (최상위)</span>
-                <span>상위 10%</span>
+                <span>상위 10% (1등급컷)</span>
                 <span>상위 25%</span>
                 <span>상위 50%</span>
               </div>
@@ -498,7 +560,7 @@
 
             <!-- Right: Results (7 cols) -->
             <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-              <div class="p-2.5 rounded-xl bg-white border border-indigo-100 shadow-2xs space-y-1 flex flex-col justify-center">
+              <div class="p-3 rounded-xl bg-white border border-indigo-100 shadow-2xs space-y-1.5 flex flex-col justify-center">
                 <div class="flex items-center justify-between">
                   <span class="text-slate-500 text-[11px]">2028 고교 예상 등급:</span>
                   <span :class="['px-2.5 py-0.5 rounded-md font-black text-xs text-white shadow-2xs', simResult.badgeClass]">
@@ -514,11 +576,85 @@
                   <span class="font-extrabold text-indigo-700 text-xs truncate block">{{ simResult.targetUniv }}</span>
                 </div>
               </div>
-              <div class="p-2.5 rounded-xl bg-indigo-600 text-white text-[11px] leading-relaxed flex flex-col justify-center shadow-2xs">
+              <div class="p-3 rounded-xl bg-indigo-600 text-white text-[11px] leading-relaxed flex flex-col justify-center shadow-2xs">
                 <div>
-                  <strong class="text-amber-300 block mb-0.5">📢 포곡고 전략 가이드</strong>
-                  <span class="leading-snug block text-white/95">{{ simResult.advice }}</span>
+                  <strong class="text-amber-300 block mb-0.5 text-xs font-black">📢 포곡고 전략 가이드</strong>
+                  <span class="leading-snug block text-white/95 text-[11px]">{{ simResult.advice }}</span>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom: 5-Tier 2028 Roadmap Matrix -->
+        <div class="mt-4">
+          <div class="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5">
+            <span>🗺️</span>
+            <span>2028 5등급제 등급별 포곡고 인원 & 추천 대입 진학 로드맵</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-5 gap-2 text-xs">
+            <!-- 1등급 -->
+            <div class="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200/90 shadow-2xs flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-black text-emerald-800 text-xs">1등급</span>
+                  <span class="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.2 rounded">상위 10%</span>
+                </div>
+                <span class="text-[11px] text-slate-500 block">포곡고 약 33명</span>
+                <p class="font-bold text-slate-800 text-[11px] mt-1.5 m-0 leading-tight">서울대·카이스트·의약학·연고대</p>
+                <p class="text-[10px] text-slate-600 mt-1 m-0 leading-snug">학교장추천 우선 배정 및 과중 심화 세특 학종 합격</p>
+              </div>
+            </div>
+
+            <!-- 2등급 -->
+            <div class="p-3 rounded-xl bg-indigo-50/80 border border-indigo-200/90 shadow-2xs flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-black text-indigo-800 text-xs">2등급</span>
+                  <span class="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-100/80 px-1.5 py-0.2 rounded">~34%</span>
+                </div>
+                <span class="text-[11px] text-slate-500 block">포곡고 약 80명</span>
+                <p class="font-bold text-slate-800 text-[11px] mt-1.5 m-0 leading-tight">서성한·중경외시·과기원·이대</p>
+                <p class="text-[10px] text-slate-600 mt-1 m-0 leading-snug">농어촌 정원 외 + 수도권 지균 교과 수능최저 충족</p>
+              </div>
+            </div>
+
+            <!-- 3등급 -->
+            <div class="p-3 rounded-xl bg-sky-50/80 border border-sky-200/90 shadow-2xs flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-black text-sky-800 text-xs">3등급</span>
+                  <span class="text-[10px] font-mono font-bold text-sky-700 bg-sky-100/80 px-1.5 py-0.2 rounded">~66%</span>
+                </div>
+                <span class="text-[11px] text-slate-500 block">포곡고 약 107명</span>
+                <p class="font-bold text-slate-800 text-[11px] mt-1.5 m-0 leading-tight">건동홍·국숭세단·거점국립대</p>
+                <p class="text-[10px] text-slate-600 mt-1 m-0 leading-snug">농어촌 특별전형 역전 및 경기권 선호대 교과 안정 지원</p>
+              </div>
+            </div>
+
+            <!-- 4등급 -->
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 shadow-2xs flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-black text-slate-700 text-xs">4등급</span>
+                  <span class="text-[10px] font-mono font-bold text-slate-600 bg-slate-200 px-1.5 py-0.2 rounded">~90%</span>
+                </div>
+                <span class="text-[11px] text-slate-500 block">포곡고 약 80명</span>
+                <p class="font-bold text-slate-800 text-[11px] mt-1.5 m-0 leading-tight">광명상가·경기권 주요 4년제</p>
+                <p class="text-[10px] text-slate-600 mt-1 m-0 leading-snug">학생부 면접 전형 및 진로 특성화 학과 전략 지원</p>
+              </div>
+            </div>
+
+            <!-- 5등급 -->
+            <div class="p-3 rounded-xl bg-zinc-50 border border-zinc-200 shadow-2xs flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-black text-zinc-700 text-xs">5등급</span>
+                  <span class="text-[10px] font-mono font-bold text-zinc-600 bg-zinc-200 px-1.5 py-0.2 rounded">~100%</span>
+                </div>
+                <span class="text-[11px] text-slate-500 block">포곡고 약 33명</span>
+                <p class="font-bold text-slate-800 text-[11px] mt-1.5 m-0 leading-tight">수도권 전문대 유망학과</p>
+                <p class="text-[10px] text-slate-600 mt-1 m-0 leading-snug">취업률 우수 보건/IT/항공/호텔 특성화 전형 연계</p>
               </div>
             </div>
           </div>
@@ -533,9 +669,9 @@
     </section>
 
     <!-- ========================================================================================= -->
-    <!-- [SLIDE 3] 과학중점학교 & 2027 혁신자치예비학교 교육과정 로드맵 -->
+    <!-- [SLIDE 4] 과학중점학교 & 2027 혁신자치예비학교 교육과정 로드맵 -->
     <!-- ========================================================================================= -->
-    <section id="slide-3" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
+    <section id="slide-4" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
       <div>
         <!-- Title Header -->
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -550,7 +686,7 @@
               과학중점학교 × 2027 혁신자치예비학교, 학생의 진로를 입시 성과로!
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 03 / 07</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 04 / 08</span>
         </div>
 
         <!-- 2 Big Engines Grid -->
@@ -684,9 +820,9 @@
     </section>
 
     <!-- ========================================================================================= -->
-    <!-- [SLIDE 4] 용인시 처인구 내 고교 지형도 & 포곡고의 독보적 비교 우위 -->
+    <!-- [SLIDE 5] 용인시 처인구 내 고교 지형도 & 포곡고의 독보적 비교 우위 -->
     <!-- ========================================================================================= -->
-    <section id="slide-4" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
+    <section id="slide-5" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
       <div>
         <!-- Title Header -->
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -701,7 +837,7 @@
               용인시 처인구 내 고교 지형도, 왜 포곡고가 가장 안정적인 선택인가?
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 04 / 07</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 05 / 08</span>
         </div>
 
         <p class="text-xs text-slate-600 mt-2 max-w-3xl leading-relaxed m-0">
@@ -821,9 +957,9 @@
     </section>
 
     <!-- ========================================================================================= -->
-    <!-- [SLIDE 5] 농어촌 전형의 진실 & 비대상자(30~40%) 필승 전략 -->
+    <!-- [SLIDE 6] 농어촌 전형의 진실 & 비대상자(30~40%) 필승 전략 -->
     <!-- ========================================================================================= -->
-    <section id="slide-5" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
+    <section id="slide-6" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
       <div>
         <!-- Title Header -->
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -838,7 +974,7 @@
               농어촌 전형의 위력 & [농어촌 비대상자 30~40%] 필승 성공 전략
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 05 / 07</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 06 / 08</span>
         </div>
 
         <p class="text-xs text-slate-600 mt-2 max-w-3xl leading-relaxed m-0">
@@ -873,7 +1009,7 @@
         </div>
 
         <!-- Track 1: Non-Rural Strategy (농어촌 비대상자 30~40% 전략) -->
-        <div v-show="activeTrackTab === 'nonRural' || isPrinting" class="mt-4 p-5 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/60 border border-indigo-200">
+        <div v-show="activeTrackTab === 'nonRural' || isPrinting" class="mt-4 p-5 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/60 border border-indigo-200 print-show-all">
           <div class="flex items-center justify-between mb-3">
             <h3 class="text-sm font-black text-indigo-950 flex items-center gap-2 m-0">
               <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
@@ -912,7 +1048,7 @@
         </div>
 
         <!-- Track 2: Rural Benefit (농어촌 대상자 혜택) -->
-        <div v-show="activeTrackTab === 'rural' || isPrinting" class="mt-4 p-5 rounded-2xl bg-gradient-to-br from-amber-50/80 via-white to-orange-50/60 border border-amber-200">
+        <div v-show="activeTrackTab === 'rural' || isPrinting" class="mt-4 p-5 rounded-2xl bg-gradient-to-br from-amber-50/80 via-white to-orange-50/60 border border-amber-200 print-show-all">
           <div class="flex items-center justify-between mb-3">
             <h3 class="text-sm font-black text-amber-950 flex items-center gap-2 m-0">
               <span class="w-2.5 h-2.5 rounded-full bg-amber-600"></span>
@@ -954,9 +1090,9 @@
     </section>
 
     <!-- ========================================================================================= -->
-    <!-- [SLIDE 6] 실제 수시 대입 성과 (Data-Driven Fact) -->
+    <!-- [SLIDE 7] 실제 수시 대입 성과 (Data-Driven Fact) -->
     <!-- ========================================================================================= -->
-    <section id="slide-6" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
+    <section id="slide-7" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
       <div>
         <!-- Title Header -->
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -971,7 +1107,7 @@
               수치로 입증된 포곡고의 수시 경쟁력, 최상위권부터 수도권까지!
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 06 / 07</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 07 / 08</span>
         </div>
 
         <!-- 4 Stat Highlight Cards -->
@@ -1069,9 +1205,9 @@
     </section>
 
     <!-- ========================================================================================= -->
-    <!-- [SLIDE 7] 중3 학부모가 가장 많이 묻는 질문 BEST 6 (인터랙티브 FAQ) -->
+    <!-- [SLIDE 8] 중3 학부모가 가장 많이 묻는 질문 BEST 6 (인터랙티브 FAQ) -->
     <!-- ========================================================================================= -->
-    <section id="slide-7" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
+    <section id="slide-8" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
       <div>
         <!-- Title Header -->
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -1086,7 +1222,7 @@
               중3 학부모님이 가장 궁금해하시는 질문 BEST 6
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 07 / 07</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 08 / 08</span>
         </div>
 
         <!-- 6 FAQ Accordion Cards Grid -->
@@ -1114,7 +1250,7 @@
               <!-- Answer content (Always visible in print) -->
               <p
                 v-show="faq.isOpen || isPrinting"
-                class="text-[11px] text-slate-600 mt-2.5 m-0 leading-relaxed border-t border-slate-200/60 pt-2 animate-fade-in"
+                class="text-[11px] text-slate-600 mt-2.5 m-0 leading-relaxed border-t border-slate-200/60 pt-2 animate-fade-in print-show-all"
               >
                 <strong class="text-indigo-700 block mb-0.5">답변:</strong>
                 {{ faq.a }}
@@ -1139,12 +1275,13 @@ import { ref, computed } from 'vue'
 // Quick Slide Jump Navigation
 const slideList = [
   { id: 'slide-1', shortTitle: '대입격변 인트로', emoji: '🚀' },
-  { id: 'slide-2', shortTitle: '2028 개편 진단', emoji: '📊' },
-  { id: 'slide-3', shortTitle: '과중·혁신 로드맵', emoji: '🔬' },
-  { id: 'slide-4', shortTitle: '처인구 고교 비교', emoji: '🏫' },
-  { id: 'slide-5', shortTitle: '농어촌&비대상 전략', emoji: '🌲' },
-  { id: 'slide-6', shortTitle: '대입 성과 Fact', emoji: '🏆' },
-  { id: 'slide-7', shortTitle: '학부모 Q&A', emoji: '💬' }
+  { id: 'slide-2', shortTitle: '2028 개편 비교', emoji: '📊' },
+  { id: 'slide-3', shortTitle: '5등급제 진단기', emoji: '🧮' },
+  { id: 'slide-4', shortTitle: '과중·혁신 로드맵', emoji: '🔬' },
+  { id: 'slide-5', shortTitle: '처인구 고교 비교', emoji: '🏫' },
+  { id: 'slide-6', shortTitle: '농어촌&비대상 전략', emoji: '🌲' },
+  { id: 'slide-7', shortTitle: '대입 성과 Fact', emoji: '🏆' },
+  { id: 'slide-8', shortTitle: '학부모 Q&A', emoji: '💬' }
 ]
 
 const activeSlideId = ref('slide-1')
@@ -1159,7 +1296,13 @@ function scrollToSlide(id) {
 }
 
 function triggerPrint() {
-  window.print()
+  isPrinting.value = true
+  setTimeout(() => {
+    window.print()
+    setTimeout(() => {
+      isPrinting.value = false
+    }, 500)
+  }, 60)
 }
 
 // -------------------------------------------------------------
@@ -1591,47 +1734,78 @@ const faqList = ref([
 }
 
 /* ========================================================================= */
-/* A4 Landscape Print Styles (A4 가로 7페이지 책자 인쇄 규격)                  */
+/* A4 Landscape Print Styles (A4 가로 8페이지 책자 인쇄 규격)                  */
 /* ========================================================================= */
 @media print {
   @page {
     size: A4 landscape;
-    margin: 8mm 10mm;
+    margin: 6mm 8mm;
   }
 
-  /* Hide app navigation and headers */
+  /* Hide app navigation, headers and sidebars globally */
+  :global(aside),
+  :global(header),
+  :global(nav),
+  :global(.no-print),
   .no-print {
     display: none !important;
   }
 
-  /* Force full opacity & clean rendering */
-  body, html, #app {
+  /* Force full opacity, unclipped rendering on parent containers */
+  :global(body),
+  :global(html),
+  :global(#app),
+  :global(main),
+  :global(.overflow-hidden),
+  :global(.overflow-y-auto) {
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: 11pt !important;
+    height: auto !important;
+    overflow: visible !important;
+    font-size: 10pt !important;
   }
 
   .highschool-admission-container {
     padding: 0 !important;
     margin: 0 !important;
     gap: 0 !important;
+    width: 100% !important;
   }
 
   .highschool-admission-container > * + * {
     margin-top: 0 !important;
   }
 
-  /* Each slide becomes an exact A4 Landscape page */
+  /* Each slide becomes an exact A4 Landscape page (297mm x 210mm) */
   .a4-landscape-page {
     page-break-after: always !important;
     break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
     box-shadow: none !important;
     border: 1px solid #cbd5e1 !important;
-    margin-bottom: 0 !important;
-    min-height: 185mm !important;
-    max-height: 195mm !important;
-    padding: 10mm !important;
-    border-radius: 12px !important;
+    margin: 0 !important;
+    min-height: 190mm !important;
+    max-height: 197mm !important;
+    height: 194mm !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 7mm 9mm !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+  }
+
+  /* Scale chart bars to fit within A4 landscape */
+  .chart-bars-container {
+    height: 118mm !important;
+  }
+
+  /* Always show all tracks and answers during print */
+  .print-show-all {
+    display: block !important;
   }
 
   /* Prevent background color clipping on modern browsers */

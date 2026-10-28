@@ -3,7 +3,7 @@
 
     <!-- 사이드바 (학추 시스템 스타일) -->
     <aside
-      class="flex flex-col shrink-0 bg-white overflow-hidden z-30"
+      class="flex flex-col shrink-0 bg-white overflow-hidden z-30 no-print"
       :style="{
         width: collapsed ? '64px' : '240px',
         borderRight: '1px solid #d4d0cc',
@@ -176,10 +176,10 @@
     <!-- 메인 콘텐츠 영역 -->
     <main class="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden bg-slate-100">
       <!-- 상단 헤더 배너 (고정, 학추 시스템 헤더 규격) -->
-      <StatHeader :currentTabItem="currentTabItem" />
+      <StatHeader :currentTabItem="currentTabItem" class="no-print" />
 
       <!-- 필터 바 (상단 고정, 고입 설명회, 학생별 6장 카드 및 수능최저 시뮬레이터 탭은 자체 컨트롤 사용으로 제외) -->
-      <StatFilterBar v-if="currentTab !== 'admission' && currentTab !== 'student' && currentTab !== 'csatTarget'" />
+      <StatFilterBar v-if="currentTab !== 'admission' && currentTab !== 'student' && currentTab !== 'csatTarget'" class="no-print" />
 
       <!-- 스크롤 가능한 본문 영역 -->
       <div class="flex-1 min-h-0 flex flex-col overflow-y-auto" style="scrollbar-gutter: stable;">
@@ -412,5 +412,45 @@ async function handleLogout() {
 .fade-leave-to {
   opacity: 0;
   transform: translateY(4px);
+}
+
+@media print {
+  .no-print,
+  aside,
+  header,
+  nav {
+    display: none !important;
+  }
+
+  .flex.h-screen.overflow-hidden {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+    background: #ffffff !important;
+  }
+
+  main {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .flex-1.min-h-0.overflow-y-auto {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .max-w-7xl {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
 }
 </style>

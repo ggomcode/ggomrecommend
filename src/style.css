@@ -46,3 +46,18 @@
         font-weight: 370;
     }
 }
+
+
+/* 글로벌 인쇄 스타일 (A4 가로 책자 및 공통 인쇄 최적화) */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    body, html, #app {
+        background: #ffffff !important;
+        color: #000000 !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+}
