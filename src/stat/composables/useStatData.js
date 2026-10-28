@@ -1,6 +1,7 @@
 import { ref, computed, reactive } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import rawAppsData from '../data/applications.json'
+export { rawAppsData }
 import { MULTI_YEAR_STATS, computeYearMultiYearStats } from '../data/multiYearStats.js'
 import { 
   getKcueSheetId, 
@@ -315,6 +316,45 @@ async function loadPeriodData(year, period = '수시', forceReload = false) {
 /**
  * 학년도 및 스코프(모집시기/대학구분) 동시 적용 및 데이터 갱신
  */
+/**
+ * 특정 대입 학년도의 전체 지원자 데이터(수시+정시) 독립 조회
+ * StatView의 전역 applications.value를 변형시키지 않고, 캘린더나 외부 위젯에서 특정 학년도 원자료를 안전하게 조회
+ */
+export async function getApplicationsForAcademicYear(targetYear = '2027', forceReload = false) {
+  const strYear = String(targetYear)
+  const combinedKey = `${strYear}_ALL_COMBINED`
+
+  if (!forceReload && yearlyApplicationsCache.value[combinedKey] && yearlyApplicationsCache.value[combinedKey].length > 0) {
+    return yearlyApplicationsCache.value[combinedKey]
+  }
+
+  const hasPassword = !!getStatSessionPassword()
+  // 2027 기본 데모 fallback (구글시트 세션 비밀번호 미입력 시 번들된 2027 원자료 즉시 반환)
+  if (strYear === '2027' && !hasPassword && !forceReload) {
+    yearlyApplicationsCache.value[combinedKey] = rawAppsData
+    return rawAppsData
+  }
+
+  try {
+    const susiApps = await loadPeriodData(strYear, '수시', forceReload)
+    const jungsiApps = await loadPeriodData(strYear, '정시', forceReload)
+    const combined = [...(susiApps || []), ...(jungsiApps || [])]
+    if (combined.length > 0) {
+      yearlyApplicationsCache.value[combinedKey] = combined
+      return combined
+    }
+  } catch (e) {
+    console.warn(`[getApplicationsForAcademicYear] Failed for ${strYear}:`, e)
+  }
+
+  if (strYear === '2027') {
+    yearlyApplicationsCache.value[combinedKey] = rawAppsData
+    return rawAppsData
+  }
+
+  return []
+}
+
 async function applyYearAndScope(year, scope, forceReload = false) {
   const strYear = String(year)
   selectedAcademicYear.value = strYear

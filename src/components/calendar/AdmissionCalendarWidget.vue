@@ -717,7 +717,7 @@
           <div class="flex items-center gap-3">
             <span class="text-2xl">📅</span>
             <div>
-              <span class="text-xs text-blue-300 font-bold block">{{ collegeAdmissionYear }}학년도 대입 일정 상세</span>
+              <span class="text-xs text-blue-300 font-bold block">{{ activeModalCollegeYear }}학년도 대입 일정 상세</span>
               <h3 class="text-lg sm:text-xl font-black text-white m-0">
                 {{ selectedDateModal.formattedLong }}
               </h3>
@@ -1282,8 +1282,9 @@ import { fetchAdmissionCalendarData } from '../../services/admissionCalendarServ
 import { useAuthStore } from '../../stores/auth.js'
 import { supabase } from '../../utils/supabaseClient.js'
 import { decryptText } from '../../utils/cryptoUtils.js'
+import rawAppsData from '../../stat/data/applications.json'
 import { 
-  applications, 
+  getApplicationsForAcademicYear, 
   maskName, 
   adminMaskMode, 
   cycleAdminMaskMode, 
@@ -1577,6 +1578,14 @@ const initMonth = (now.getFullYear() === 2026 || now.getFullYear() === 2027) ? (
 const currentYear = ref(initYear)
 const currentMonth = ref(initMonth)
 
+// 현재 화면에 표시 중인 연/월 기준 학년도 및 대입 학년도 계산
+const activeViewSchoolYear = computed(() => {
+  const y = currentYear.value
+  const m = currentMonth.value
+  return m >= 3 ? y : y - 1
+})
+const activeViewCollegeYear = computed(() => activeViewSchoolYear.value + 1)
+
 // 오늘 날짜 기준 현 학년도 및 대입 학년도 동적 계산 (3월 1일 ~ 이듬해 2월 말일 기준)
 const schoolAcademicYear = computed(() => {
   const d = new Date()
@@ -1585,7 +1594,29 @@ const schoolAcademicYear = computed(() => {
   return m >= 3 ? y : y - 1
 })
 const collegeAdmissionYear = computed(() => schoolAcademicYear.value + 1)
-const calendarTitle = computed(() => `${schoolAcademicYear.value}학년도 학사일정 & ${collegeAdmissionYear.value}대입 캘린더`)
+const calendarTitle = computed(() => `${activeViewSchoolYear.value}학년도 학사일정 & ${activeViewCollegeYear.value}대입 캘린더`)
+
+/**
+ * 캘린더 날짜(YYYY-MM-DD) 기준 대입 학년도 계산
+ * 한국 학사일정: 3월 1일 ~ 이듬해 2월 말일이 동일 고3 대입학년도에 해당 (예: 2026.03 ~ 2027.02 -> 2027학년도 대입)
+ */
+function getCollegeAdmissionYearFromDate(dateStr) {
+  if (!dateStr) return '2027'
+  const parts = String(dateStr).split('-')
+  if (parts.length < 2) return '2027'
+  const y = parseInt(parts[0], 10)
+  const m = parseInt(parts[1], 10)
+  if (isNaN(y) || isNaN(m)) return '2027'
+  const schoolYear = m >= 3 ? y : y - 1
+  return String(schoolYear + 1)
+}
+
+// 캘린더 전용 학년도별 대입 지원 데이터 캐시 (기본 2027학년도 원자료 탑재)
+// 종합 대시보드(StatView)의 연도 필터 변경에 영향을 받지 않고 독립 관리됨
+const calendarYearApplicationsMap = ref({
+  '2027': rawAppsData || []
+})
+const currentModalAdmissionYear = ref('2027')
 
 
 // 오늘 날짜 문자열
@@ -2044,6 +2075,21 @@ function openModalForDate(dateStr) {
   const days = ['일', '월', '화', '수', '목', '금', '토']
   const formattedLong = `${parts[0]}년 ${parseInt(parts[1], 10)}월 ${parseInt(parts[2], 10)}일 (${days[d.getDay()]}요일)`
 
+  // 선택한 날짜에 해당하는 대입 학년도 자동 결정 및 전용 지원자 데이터 준비
+  const targetYear = getCollegeAdmissionYearFromDate(dateStr)
+  currentModalAdmissionYear.value = targetYear
+
+  // 해당 학년도 데이터가 캐시에 없다면 비동기로 로드 (종합 대시보드 상태와 완전 격리)
+  if (!calendarYearApplicationsMap.value[targetYear]) {
+    getApplicationsForAcademicYear(targetYear).then(data => {
+      if (data && data.length > 0) {
+        calendarYearApplicationsMap.value[targetYear] = data
+      }
+    }).catch(e => {
+      console.warn(`[Calendar] Failed to load applications for ${targetYear}:`, e)
+    })
+  }
+
   // 해당 날짜 학사일정
   const academicItems = rawData.value?.academicByDate?.[dateStr] || []
 
@@ -2094,8 +2140,14 @@ const filteredFourYearItems = computed(() => {
 })
 
 // ── 모달 내 대학별/전형별 지원 학생 인라인 아코디언 상태 및 로직 ──
+const activeModalCollegeYear = computed(() => {
+  if (!selectedDateModal.value?.dateStr) return currentModalAdmissionYear.value || '2027'
+  return getCollegeAdmissionYearFromDate(selectedDateModal.value.dateStr)
+})
+
 const allApplications = computed(() => {
-  return applications.value || []
+  const targetYear = activeModalCollegeYear.value || currentModalAdmissionYear.value || '2027'
+  return calendarYearApplicationsMap.value[targetYear] || calendarYearApplicationsMap.value['2027'] || rawAppsData || []
 })
 
 const canViewStudents = computed(() => {
@@ -2256,6 +2308,12 @@ defineExpose({
 onMounted(() => {
   refreshData()
   loadStudentsAndApplications()
+  // 2027학년도 정규화 데이터 백그라운드 동기화 (구글시트 세션 인증 시)
+  getApplicationsForAcademicYear('2027').then(data => {
+    if (data && data.length > 0) {
+      calendarYearApplicationsMap.value['2027'] = data
+    }
+  }).catch(() => {})
 })
 </script>
 
