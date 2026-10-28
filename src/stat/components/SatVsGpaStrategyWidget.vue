@@ -1324,10 +1324,17 @@ const currentSatAnalysis = computed(() => {
   let engAllGrades = []
 
   // 등급 유효성 검증 및 절대평가/원점수/표준점수 환산 헬퍼 (1~9등급 보장)
-  const normalizeKorGrade = (val) => {
+  const cleanNum = (val) => {
     if (val === null || val === undefined || val === '') return null
-    const n = Number(val)
-    if (isNaN(n) || n <= 0) return null
+    const clean = String(val).replace(/[^0-9.]/g, '')
+    if (!clean) return null
+    const n = Number(clean)
+    return (isNaN(n) || n <= 0) ? null : n
+  }
+
+  const normalizeKorGrade = (val) => {
+    const n = cleanNum(val)
+    if (n === null) return null
     if (n >= 1 && n <= 9) return Math.round(n * 100) / 100
     // 표준점수 (n > 100)
     if (n > 100) {
@@ -1354,9 +1361,8 @@ const currentSatAnalysis = computed(() => {
   }
 
   const normalizeMathGrade = (val) => {
-    if (val === null || val === undefined || val === '') return null
-    const n = Number(val)
-    if (isNaN(n) || n <= 0) return null
+    const n = cleanNum(val)
+    if (n === null) return null
     if (n >= 1 && n <= 9) return Math.round(n * 100) / 100
     // 표준점수 (n > 100)
     if (n > 100) {
@@ -1383,9 +1389,8 @@ const currentSatAnalysis = computed(() => {
   }
 
   const normalizeEngGrade = (val) => {
-    if (val === null || val === undefined || val === '') return null
-    const n = Number(val)
-    if (isNaN(n) || n <= 0) return null
+    const n = cleanNum(val)
+    if (n === null) return null
     if (n >= 1 && n <= 9) return Math.round(n * 100) / 100
     // 영어 원점수(10~100) 절대평가 등급 환산
     if (n > 9 && n <= 100) {
@@ -1403,9 +1408,8 @@ const currentSatAnalysis = computed(() => {
   }
 
   const normalizeInqGrade = (val) => {
-    if (val === null || val === undefined || val === '') return null
-    const n = Number(val)
-    if (isNaN(n) || n <= 0) return null
+    const n = cleanNum(val)
+    if (n === null) return null
     if (n >= 1 && n <= 9) return Math.round(n * 100) / 100
     // 탐구 원점수(10~50)
     if (n > 9 && n <= 50) {

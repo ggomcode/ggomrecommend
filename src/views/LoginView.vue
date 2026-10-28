@@ -98,6 +98,17 @@
         </h1>
       </div>
 
+      <!-- 학교 관리자 Secret 접속 통로 닫힘 안내 배너 -->
+      <div v-if="route.query.error === 'secret_closed'" class="mb-5 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5 shadow-2xs">
+        <span class="text-base shrink-0 mt-0.5">🔒</span>
+        <div class="leading-relaxed">
+          <strong class="font-black text-amber-950 block">학교 관리자 Secret 접속 통로가 닫혀 있습니다.</strong>
+          <span class="text-[11px] text-amber-800">
+            현재 해당 서비스의 임시 게스트 열람이 비활성화(닫힘) 상태입니다. 열람이 필요하신 경우 학교 관리자(대입 담당 선생님)에게 문의하여 통로를 열어달라고 요청해 주세요.
+          </span>
+        </div>
+      </div>
+
       <!-- 3가지 역할 구분 탭 (재학생 / 졸업생 / 교사) -->
       <div v-if="!isSignUp" class="flex p-1.5 bg-slate-100/90 rounded-2xl mb-6 border border-slate-200/80">
         <button

@@ -4,6 +4,7 @@ import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
 import { checkExamIntentSystemEnabled } from '../api/examIntentApi.js'
 import { checkJuniorCollegeSystemEnabled } from '../api/juniorCollegeApi.js'
 import { isKcueStatSystemEnabled } from '../api/statApi.js'
+import { isModuleSecretAccessEnabled, getModuleIdByPath, MODULE_ROUTE_MAP } from '../api/suiteModulesApi.js'
 
 const routes = [
   { path: '/', redirect: '/login' },
@@ -18,14 +19,22 @@ const routes = [
   {
     path: '/login',
     component: () => import('../views/LoginView.vue'),
-    beforeEnter: () => {
+    beforeEnter: (to) => {
       const auth = useAuthStore()
+      if (to.query.error === 'secret_closed') return true
+      if (auth.isGuest && auth.guestModule) {
+        return MODULE_ROUTE_MAP[auth.guestModule] || '/stat'
+      }
       if (auth.isAdmin || auth.isTeacher || auth.isStudent) return '/select-system'
     },
   },
   {
     path: '/calendar',
     alias: '/calendar/',
+    component: () => import('../views/LoginView.vue'),
+  },
+  {
+    path: '/guest/:moduleId',
     component: () => import('../views/LoginView.vue'),
   },
   {
@@ -101,6 +110,52 @@ router.beforeEach(async to => {
 
   await auth.checkStatus()
 
+  // ── 0. 학교 관리자 Secret 접속 통로 (비밀번호 없는 임시 게스트 열람) ──
+  const isGuestEntryPath = to.path.startsWith('/guest/')
+  const hasSecretQuery = to.query.secret === 'guest' || to.query.guest === 'true' || to.query.secret === 'manager'
+  
+  if (isGuestEntryPath || hasSecretQuery) {
+    const targetModuleId = isGuestEntryPath
+      ? (to.path.replace(/^\/guest\/?/, '').split('/')[0] || 'stat')
+      : (getModuleIdByPath(to.path) || 'stat')
+    
+    const isSecretOpen = await isModuleSecretAccessEnabled(targetModuleId)
+    if (isSecretOpen) {
+      if (!auth.isAdmin && !auth.isTeacher) {
+        auth.loginAsGuest(targetModuleId)
+      }
+      if (isGuestEntryPath) {
+        const destPath = MODULE_ROUTE_MAP[targetModuleId] || '/stat'
+        return { path: destPath, query: { secret: 'guest' } }
+      }
+      // 이미 해당 모듈 URL에 쿼리로 진입한 경우 진행 허용
+      return true
+    } else {
+      // Secret 통로가 비활성화(닫힘)되어 있는 경우
+      if (auth.isGuest && auth.guestModule === targetModuleId) {
+        auth.logout()
+      }
+      return { path: '/login', query: { error: 'secret_closed', module: targetModuleId } }
+    }
+  }
+
+  // 0-1. 활성화된 게스트 세션의 모듈 내부 탭 이동 및 새로고침 검증
+  if (auth.isGuest) {
+    const curModuleId = getModuleIdByPath(to.path)
+    if (curModuleId && curModuleId === auth.guestModule) {
+      const isSecretOpen = await isModuleSecretAccessEnabled(auth.guestModule)
+      if (isSecretOpen) {
+        return true
+      } else {
+        auth.logout()
+        return { path: '/login', query: { error: 'secret_closed', module: auth.guestModule } }
+      }
+    } else if (to.path !== '/login') {
+      const allowedPath = MODULE_ROUTE_MAP[auth.guestModule] || '/stat'
+      return allowedPath
+    }
+  }
+
   if (auth.initialized === false && to.path !== '/welcome') {
     return '/welcome'
   }
@@ -138,8 +193,10 @@ router.beforeEach(async to => {
     }
   }
 
-  if (to.meta.requiresTeacherOrAdmin && !auth.isAdmin && !auth.isTeacher) return '/login'
-  if (to.meta.requiresAuth && !auth.isAdmin && !auth.isTeacher && !auth.isStudent) return '/login'
+  const isGuestAuthorized = auth.isGuest && auth.guestModule === getModuleIdByPath(to.path)
+
+  if (to.meta.requiresTeacherOrAdmin && !auth.isAdmin && !auth.isTeacher && !isGuestAuthorized) return '/login'
+  if (to.meta.requiresAuth && !auth.isAdmin && !auth.isTeacher && !auth.isStudent && !isGuestAuthorized) return '/login'
   if (to.meta.requiresAdmin && !auth.isAdmin) return '/login'
   if (to.meta.requiresTeacher && !auth.isTeacher) return '/login'
   if (to.meta.requiresStudent && !auth.isStudent) return '/login'

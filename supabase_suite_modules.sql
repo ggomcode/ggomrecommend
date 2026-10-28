@@ -15,10 +15,14 @@ CREATE TABLE IF NOT EXISTS public.system_modules (
     end_at TIMESTAMP WITH TIME ZONE,                               -- 마감 종료 일시
     target_roles TEXT[] DEFAULT '{"student", "teacher", "admin"}', -- 표시 대상 권한
     sort_order INTEGER DEFAULT 0,                                  -- 정렬 순서
+    secret_access_enabled BOOLEAN DEFAULT FALSE,                   -- 학교 관리자 Secret 접속 통로 활성화 여부
     extra_config JSONB DEFAULT '{}'::jsonb,                        -- 추가 확장 옵션 (JSON)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+
+-- 기존 테이블에 secret_access_enabled 컬럼 추가 (안전 실행)
+ALTER TABLE public.system_modules ADD COLUMN IF NOT EXISTS secret_access_enabled BOOLEAN DEFAULT FALSE;
 
 -- RLS 활성화 및 권한 부여
 ALTER TABLE public.system_modules ENABLE ROW LEVEL SECURITY;

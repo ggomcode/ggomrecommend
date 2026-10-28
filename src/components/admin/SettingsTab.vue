@@ -478,7 +478,7 @@
               </a>
             </div>
             <p class="text-[11px] text-slate-500 m-0">
-              주요일정, 원서접수마감, 4년제일정, 전문대일정, 학사일정 총 5개 시트가 포함된 시트 ID를 등록합니다. (기본값: {{ DEFAULT_ADMISSION_SHEET_ID }})
+              주요일정, 원서접수마감, 4년제일정, 전문대일정, 학사일정 총 5개 시트가 포함된 시트 ID를 등록합니다.
             </p>
             <div class="flex gap-2">
               <input
@@ -704,6 +704,75 @@
                   </div>
                 </div>
               </div>
+
+              <!-- 🔑 학교 관리자 Secret 접속경로 (비밀번호 없는 임시 게스트 열람) -->
+              <div 
+                class="mt-3 p-3 rounded-xl border transition-all"
+                :class="m.secretAccessEnabled
+                  ? 'bg-amber-50/80 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 ring-1 ring-amber-300/40 shadow-xs'
+                  : 'bg-slate-50 dark:bg-slate-900/40 border-slate-200/70 dark:border-slate-800'"
+              >
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <span class="text-sm">🔑</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                      학교 관리자 Secret 접속경로
+                    </span>
+                    <span
+                      class="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border shrink-0"
+                      :class="m.secretAccessEnabled
+                        ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-900/50 dark:text-amber-300'
+                        : 'bg-slate-100 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400'"
+                    >
+                      {{ m.secretAccessEnabled ? '🔓 열림 (접속 허용)' : '🔒 닫힘 (차단)' }}
+                    </span>
+                  </div>
+
+                  <!-- 토글 스위치 -->
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      @click.stop="toggleSecretAccess(m)"
+                      class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                      :class="m.secretAccessEnabled ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'"
+                      :title="m.secretAccessEnabled ? 'Secret 접속경로 닫기' : 'Secret 접속경로 열기'"
+                    >
+                      <span
+                        class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                        :class="m.secretAccessEnabled ? 'translate-x-4' : 'translate-x-0'"
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 열림 상태일 때: 전용 Secret URL 및 복사 버튼 -->
+                <div v-if="m.secretAccessEnabled" class="mt-2.5 pt-2 border-t border-amber-200/80 dark:border-amber-800/50 space-y-1.5">
+                  <div class="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      readonly
+                      :value="getSecretAccessUrl(m.id)"
+                      class="flex-1 text-[11px] font-mono bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 rounded px-2 py-1 text-slate-800 dark:text-slate-200 select-all focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      @click.stop="copySecretUrl(m.id)"
+                      class="shrink-0 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-amber-600 hover:bg-amber-700 text-white transition-colors cursor-pointer border-none shadow-2xs flex items-center gap-1"
+                    >
+                      <span>📋</span>
+                      <span>URL 복사</span>
+                    </button>
+                  </div>
+                  <p class="text-[10px] text-amber-900 dark:text-amber-200/90 m-0 leading-relaxed">
+                    💡 <strong>비밀번호 없이 링크만으로 즉시 접속</strong> 가능합니다 (성명 마스킹 <code>**동</code> 영구 보호 적용). 하루 이틀 학교 관리자(교장·교감·부장 등) 열람 후 필요 시 토글을 꺼서 즉시 닫으실 수 있습니다.
+                  </p>
+                </div>
+                <div v-else class="mt-1">
+                  <p class="text-[10px] text-slate-400 m-0 leading-relaxed">
+                    현재 게스트 접속이 차단되어 있습니다. 학교 관리자에게 임시 열람을 제공할 때 토글을 켜세요.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -768,7 +837,7 @@ import { fetchSchoolName, setSchoolNameConfig } from '../../utils/schoolConfig'
 import { getDisclosureCount, setDisclosureCount, syncRegionalToUniversities, syncPrincipalUnivsFromGoogleSheet } from '../../api/admin.js'
 import { syncRuralTracksFromGoogleSheet } from '../../api/ruralApi.js'
 import { getKcueSheetId, extractSheetId, saveKcueSheetId, KCUE_SHEET_KEY } from '../../api/statApi.js'
-import { getAdmissionSheetId, saveAdmissionSheetId, DEFAULT_ADMISSION_SHEET_ID, fetchAdmissionCalendarData } from '../../services/admissionCalendarService.js'
+import { getAdmissionSheetId, saveAdmissionSheetId, fetchAdmissionCalendarData } from '../../services/admissionCalendarService.js'
 import { dialog } from '../common/dialog.js'
 import { useAuthStore } from '../../stores/auth'
 import { clearAllApplicationStorage, clearAllRuralStorage } from '../../utils/storageUtils'
@@ -778,6 +847,7 @@ import {
   fetchSuiteModules,
   saveSuiteModules,
   getModuleStatus,
+  getModuleSecretUrl,
   RECOMMENDED_SYSTEM_NAMES,
   SUITE_TARGET_GROUPS
 } from '../../api/suiteModulesApi.js'
@@ -897,6 +967,39 @@ async function toggleModuleGroup(m, groupKey) {
     await saveSuiteModules(suiteModules.value)
   } catch (err) {
     console.error('Failed to auto-save group toggle:', err)
+  }
+}
+
+function getSecretAccessUrl(moduleId) {
+  return getModuleSecretUrl(moduleId)
+}
+
+async function copySecretUrl(moduleId) {
+  const url = getSecretAccessUrl(moduleId)
+  try {
+    await navigator.clipboard.writeText(url)
+    dialog.alert({
+      title: 'Secret 접속 URL 복사 완료',
+      message: `학교 관리자 전용 Secret 접속 링크가 클립보드에 복사되었습니다.\n\n[Secret 접속 URL]\n${url}\n\n아이디와 비밀번호 없이 링크를 아는 학교 관리자만 즉시 접속할 수 있으며, 학생 성명 마스킹(**동)이 영구 유지됩니다. 임시 열람이 끝난 후 토글을 끄면 접속이 즉시 차단됩니다.`
+    })
+  } catch (e) {
+    window.prompt('아래 Secret 접속 URL을 복사(Ctrl+C)하세요:', url)
+  }
+}
+
+async function toggleSecretAccess(m) {
+  m.secretAccessEnabled = !m.secretAccessEnabled
+  try {
+    localStorage.setItem('suite_modules_cache', JSON.stringify(suiteModules.value))
+    await saveSuiteModules(suiteModules.value)
+    if (m.secretAccessEnabled) {
+      dialog.alert({
+        title: 'Secret 접속 통로 활성화 (열림)',
+        message: `'${m.name}' 모듈의 학교 관리자 Secret 접속 통로가 열렸습니다.\n\n[URL 복사] 버튼을 눌러 링크를 학교 관리자(교장·교감·부장 등)에게 전달하시면, 비밀번호 없이 즉시 열람하실 수 있습니다.\n\n* 학생 개인정보 보호를 위한 성명 마스킹(**동)이 영구 적용됩니다.\n* 하루 이틀 열어두셨다가 언제든 토글을 꺼서 닫으실 수 있습니다.`
+      })
+    }
+  } catch (err) {
+    console.error('Failed to toggle secret access:', err)
   }
 }
 const draggedModuleIndex = ref(null)
@@ -1139,7 +1242,7 @@ async function loadConfig() {
     hasGoogleSheetKcueId.value = !!dbKcueId
     googleSheetKcueId.value = dbKcueId ? maskGoogleSheetId(dbKcueId) : ''
 
-    const dbAdmissionId = await getAdmissionSheetId()
+    const dbAdmissionId = await getAdmissionSheetId(false)
     realAdmissionSheetId.value = dbAdmissionId
     hasAdmissionSheetId.value = !!dbAdmissionId
     admissionSheetIdInput.value = dbAdmissionId ? maskGoogleSheetId(dbAdmissionId) : ''
@@ -1294,7 +1397,7 @@ async function handleSaveAdmissionSheetId() {
     await saveAdmissionSheetId(targetVal)
     hasAdmissionSheetId.value = !!targetVal
     admissionSheetIdInput.value = targetVal ? maskGoogleSheetId(targetVal) : ''
-    alert(targetVal ? '2027 대입 일정 구글 스프레드시트 ID가 저장되었습니다.' : '기본 시트 ID로 초기화되었습니다.')
+    alert(targetVal ? '2027 대입 일정 구글 스프레드시트 ID가 저장되었습니다.' : '대입 일정 시트 ID가 삭제(초기화)되었습니다.')
   } catch (e) {
     console.error(e)
     alert('대입 일정 시트 ID 저장 중 오류가 발생했습니다.')

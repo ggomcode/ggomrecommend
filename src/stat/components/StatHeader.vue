@@ -86,24 +86,24 @@
         <div class="flex items-center space-x-2 sm:space-x-2.5">
           <!-- Role Badge -->
           <div class="hidden md:flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-xs font-medium text-slate-700">
-            <span>{{ auth.isAdmin ? '👑' : '👨‍🏫' }}</span>
-            <span class="font-bold">{{ auth.isAdmin ? '관리자' : (auth.teacherName || auth.user?.user_metadata?.name || '교과 교사') }}</span>
+            <span>{{ auth.isAdmin ? '👑' : (auth.isGuest ? '🔑' : '👨‍🏫') }}</span>
+            <span class="font-bold">{{ auth.isAdmin ? '관리자' : (auth.isGuest ? '학교 관리자 (게스트)' : (auth.teacherName || auth.user?.user_metadata?.name || '교과 교사')) }}</span>
             <span :class="[
               'text-[10px] font-bold px-1.5 py-0.2 rounded-full',
-              auth.isAdmin ? 'bg-indigo-100 text-indigo-800' : 'bg-amber-100 text-amber-900'
+              auth.isAdmin ? 'bg-indigo-100 text-indigo-800' : (auth.isGuest ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-amber-100 text-amber-900')
             ]">
-              {{ auth.isAdmin ? '관리자 권한' : '교과 교사' }}
+              {{ auth.isAdmin ? '관리자 권한' : (auth.isGuest ? 'Secret 열람' : '교과 교사') }}
             </span>
           </div>
 
           <!-- Privacy Mask Control:
-               - Teacher: Fixed/Locked message (**동만 표시, 마스킹 해제 불가)
+               - Teacher/Guest: Fixed/Locked message (**동만 표시, 마스킹 해제 불가)
                - Admin: 3-Stage Cycle Toggle (1단계 **동 -> 2단계 홍*동 -> 3단계 홍길동 -> 1단계)
           -->
           <div 
-            v-if="auth.isTeacher" 
+            v-if="!auth.isAdmin" 
             class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-amber-50 text-amber-800 border border-amber-300 select-none shadow-2xs" 
-            title="교사는 학생 개인정보 보호를 위해 맨 뒷글자만 표시되는 기본 마스킹(**동)으로 고정됩니다 (마스킹 해제 불가)."
+            :title="auth.isGuest ? '학교 관리자 임시 열람 모드에서는 학생 개인정보 보호를 위해 성명 마스킹(**동)이 영구 고정됩니다.' : '교사는 학생 개인정보 보호를 위해 맨 뒷글자만 표시되는 기본 마스킹(**동)으로 고정됩니다 (마스킹 해제 불가).'"
           >
             <span class="mr-1">🔒</span>
             <span>마스킹 고정 (**동)</span>

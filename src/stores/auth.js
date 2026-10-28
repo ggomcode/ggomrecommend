@@ -33,13 +33,17 @@ export const useAuthStore = defineStore('auth', () => {
   const gradYear = ref(localStorage.getItem('pcm_grad_year') != null ? Number(localStorage.getItem('pcm_grad_year')) : null)
   const hasDisciplinary = ref(localStorage.getItem('pcm_has_disciplinary') === 'true')
 
+  // 게스트(학교 관리자 Secret 접속) 상태
+  const guestModule = ref(localStorage.getItem('pcm_guest_module') || null)
+
   // null = 아직 체크 안함 / false = 미설정(Supabase 없음) / true = 설정 완료
   const initialized = ref(null)
 
   const isAdmin = computed(() => role.value === 'admin')
   const isTeacher = computed(() => role.value === 'teacher')
   const isStudent = computed(() => role.value === 'student')
-  const isAuthenticated = computed(() => isAdmin.value || isTeacher.value || isStudent.value || !!userId.value || !!role.value)
+  const isGuest = computed(() => role.value === 'guest')
+  const isAuthenticated = computed(() => isAdmin.value || isTeacher.value || isStudent.value || isGuest.value || !!userId.value || !!role.value)
 
   // Supabase 세션 상태 동기화 및 런타임 체크
   async function checkStatus() {
@@ -66,13 +70,17 @@ export const useAuthStore = defineStore('auth', () => {
           } catch (e) {
             console.warn('Student profile sync fallback on checkStatus:', e)
           }
+        } else if (role.value === 'guest') {
+          // 학교 관리자 Secret 접속(게스트) 상태 유지
+          guestModule.value = localStorage.getItem('pcm_guest_module') || 'stat'
+          teacherName.value = localStorage.getItem('pcm_teacher_name') || '학교 관리자 (게스트)'
         } else {
           clearAuthStates()
         }
       }
     } catch (e) {
       console.error('Session sync error:', e)
-      if (role.value !== 'student') {
+      if (role.value !== 'student' && role.value !== 'guest') {
         clearAuthStates()
       }
     }
@@ -277,6 +285,10 @@ export const useAuthStore = defineStore('auth', () => {
     else localStorage.removeItem('pcm_grad_year')
 
     localStorage.setItem('pcm_has_disciplinary', hasDisciplinary.value ? 'true' : 'false')
+
+    if (guestModule.value) localStorage.setItem('pcm_guest_module', guestModule.value)
+    else localStorage.removeItem('pcm_guest_module')
+
     if (token.value) {
       localStorage.setItem('pcm_last_activity', String(Date.now()))
     }
@@ -287,6 +299,7 @@ export const useAuthStore = defineStore('auth', () => {
     userId.value = null
     role.value = null
     status.value = null
+    guestModule.value = null
     grade.value = null
     classNo.value = null
     teacherName.value = null
@@ -299,7 +312,20 @@ export const useAuthStore = defineStore('auth', () => {
     isEnrolled.value = true
     gradYear.value = null
     hasDisciplinary.value = false
+    localStorage.removeItem('pcm_guest_module')
     localStorage.removeItem('pcm_last_activity')
+    _persist()
+  }
+
+  // 학교 관리자 Secret 접속 (임시 게스트 로그인)
+  function loginAsGuest(moduleId = 'stat', moduleName = '수시 지원 통계 분석 (꼼스탯)') {
+    clearAuthStates()
+    role.value = 'guest'
+    guestModule.value = moduleId
+    teacherName.value = '학교 관리자 (게스트)'
+    status.value = 'approved'
+    userId.value = `guest_${moduleId}`
+    isEnrolled.value = false
     _persist()
   }
 
@@ -638,7 +664,8 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     token, userId, user, role, status, grade, classNo, teacherName,
     studentCode, studentName, studentPhone, gpaOverall, phoneLast4, seqNo, isEnrolled, gradYear, hasDisciplinary,
-    initialized, isAdmin, isTeacher, isStudent, isAuthenticated,
+    initialized, isAdmin, isTeacher, isStudent, isGuest, isAuthenticated,
+    guestModule, loginAsGuest,
     checkStatus, loginAdmin, loginTeacher, loginStudent, signUpStudent, logout
   }
 })

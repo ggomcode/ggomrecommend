@@ -816,7 +816,9 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
     // 등급 파싱 함수 (1~9 등급 검증 및 원점수/표준점수 등급 자동 환산)
     const parseGradeValue = (val, subjectType = 'NORMAL') => {
       if (val === '' || val === null || val === undefined) return null
-      const n = Number(val)
+      const cleanStr = String(val).replace(/[^0-9.]/g, '')
+      if (!cleanStr) return null
+      const n = Number(cleanStr)
       if (isNaN(n) || n <= 0) return null
       // 1~9 범위의 유효 등급
       if (n >= 1 && n <= 9) return Math.round(n * 100) / 100

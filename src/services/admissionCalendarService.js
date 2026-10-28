@@ -32,11 +32,12 @@ export function extractSheetId(input) {
 
 /**
  * 관리자 설정된 시트 ID 조회 (DB -> localStorage -> 기본값)
+ * @param {boolean} allowDefault - 커스텀 설정이 없을 때 내장 기본값 반환 여부 (관리자 설정 UI에서는 false로 조회하여 빈 값 유지)
  */
-export async function getAdmissionSheetId() {
+export async function getAdmissionSheetId(allowDefault = true) {
   const localVal = localStorage.getItem('pcm_admission_sheet_id')
   const cleanLocal = extractSheetId(localVal)
-  if (!supabase) return cleanLocal || DEFAULT_ADMISSION_SHEET_ID
+  if (!supabase) return cleanLocal || (allowDefault ? DEFAULT_ADMISSION_SHEET_ID : '')
 
   try {
     const { data } = await supabase
@@ -56,15 +57,19 @@ export async function getAdmissionSheetId() {
     console.warn('Failed to load admission_calendar_sheet_id from DB:', e)
   }
 
-  return cleanLocal || DEFAULT_ADMISSION_SHEET_ID
+  return cleanLocal || (allowDefault ? DEFAULT_ADMISSION_SHEET_ID : '')
 }
 
 /**
  * 관리자 설정 시트 ID 저장
  */
 export async function saveAdmissionSheetId(rawInput) {
-  const cleanId = extractSheetId(rawInput) || DEFAULT_ADMISSION_SHEET_ID
-  localStorage.setItem('pcm_admission_sheet_id', cleanId)
+  const cleanId = extractSheetId(rawInput)
+  if (cleanId) {
+    localStorage.setItem('pcm_admission_sheet_id', cleanId)
+  } else {
+    localStorage.removeItem('pcm_admission_sheet_id')
+  }
   // 이전/현재 캐시 모두 무효화
   try {
     ['pcm_admission_calendar_cache_v6', 'pcm_admission_calendar_cache_time_v6',
@@ -73,10 +78,17 @@ export async function saveAdmissionSheetId(rawInput) {
   } catch {}
 
   if (supabase) {
-    const { error } = await supabase
-      .from('config')
-      .upsert({ key: 'admission_calendar_sheet_id', value: cleanId }, { onConflict: 'key' })
-    if (error) throw error
+    if (cleanId) {
+      const { error } = await supabase
+        .from('config')
+        .upsert({ key: 'admission_calendar_sheet_id', value: cleanId }, { onConflict: 'key' })
+      if (error) throw error
+    } else {
+      await supabase
+        .from('config')
+        .delete()
+        .eq('key', 'admission_calendar_sheet_id')
+    }
   }
   return cleanId
 }

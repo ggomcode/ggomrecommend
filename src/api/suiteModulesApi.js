@@ -34,7 +34,8 @@ export const DEFAULT_SUITE_MODULES = [
     startAt: '',
     endAt: '',
     sortOrder: 1,
-    targetRoles: ['student', 'graduate', 'admin']
+    targetRoles: ['student', 'graduate', 'admin'],
+    secretAccessEnabled: false
   },
   {
     id: 'rural',
@@ -49,7 +50,8 @@ export const DEFAULT_SUITE_MODULES = [
     startAt: '',
     endAt: '',
     sortOrder: 2,
-    targetRoles: ['student', 'graduate', 'admin']
+    targetRoles: ['student', 'graduate', 'admin'],
+    secretAccessEnabled: false
   },
   {
     id: 'exam_intent',
@@ -64,7 +66,8 @@ export const DEFAULT_SUITE_MODULES = [
     startAt: '',
     endAt: '',
     sortOrder: 3,
-    targetRoles: ['student', 'teacher', 'admin']
+    targetRoles: ['student', 'teacher', 'admin'],
+    secretAccessEnabled: false
   },
   {
     id: 'junior_college',
@@ -79,7 +82,8 @@ export const DEFAULT_SUITE_MODULES = [
     startAt: '',
     endAt: '',
     sortOrder: 4,
-    targetRoles: ['student', 'graduate', 'admin']
+    targetRoles: ['student', 'graduate', 'admin'],
+    secretAccessEnabled: false
   },
   {
     id: 'rollbook',
@@ -94,7 +98,8 @@ export const DEFAULT_SUITE_MODULES = [
     startAt: '',
     endAt: '',
     sortOrder: 5,
-    targetRoles: ['teacher', 'admin']
+    targetRoles: ['teacher', 'admin'],
+    secretAccessEnabled: false
   },
   {
     id: 'stat',
@@ -109,9 +114,72 @@ export const DEFAULT_SUITE_MODULES = [
     startAt: '',
     endAt: '',
     sortOrder: 6,
-    targetRoles: ['teacher', 'admin']
+    targetRoles: ['teacher', 'admin'],
+    secretAccessEnabled: false
   }
 ]
+
+// ── 모듈별 내부 라우트 경로 매핑 ─────────────────────────────────────
+export const MODULE_ROUTE_MAP = {
+  stat: '/stat',
+  rollbook: '/rollbook',
+  rural: '/rural',
+  junior_college: '/junior-college',
+  exam_intent: '/exam-intent-manage',
+  principal: '/admin'
+}
+
+/**
+ * 라우트 URL 경로로부터 해당 모듈 ID를 역산
+ */
+export function getModuleIdByPath(path) {
+  if (!path) return null
+  const cleanPath = path.split('?')[0].replace(/\/+$/, '')
+  if (cleanPath === '/stat') return 'stat'
+  if (cleanPath === '/rollbook') return 'rollbook'
+  if (cleanPath === '/rural') return 'rural'
+  if (cleanPath === '/junior-college') return 'junior_college'
+  if (cleanPath === '/exam-intent' || cleanPath === '/exam-intent-manage') return 'exam_intent'
+  if (cleanPath === '/admin' || cleanPath === '/teacher' || cleanPath === '/student') return 'principal'
+  if (cleanPath.startsWith('/guest/')) {
+    return cleanPath.replace(/^\/guest\/?/, '').split('/')[0]
+  }
+  return null
+}
+
+/**
+ * 모듈별 학교 관리자 Secret 접속 전체 URL 생성
+ */
+export function getModuleSecretUrl(moduleId) {
+  if (!moduleId) return ''
+  const route = MODULE_ROUTE_MAP[moduleId] || `/${moduleId}`
+  const base = import.meta.env.BASE_URL || '/'
+  const normalizedBase = base.endsWith('/') ? base : `${base}/`
+  const cleanRoute = route.startsWith('/') ? route.slice(1) : route
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  return `${origin}${normalizedBase}${cleanRoute}?secret=guest`
+}
+
+let _cachedModulesList = null
+let _cachedModulesListTime = 0
+
+/**
+ * 특정 모듈의 학교 관리자 Secret 접속 통로 활성화 여부 확인
+ */
+export async function isModuleSecretAccessEnabled(moduleId) {
+  if (!moduleId) return false
+  const now = Date.now()
+  if (_cachedModulesList && (now - _cachedModulesListTime < 8000)) {
+    const mod = _cachedModulesList.find(m => m.id === moduleId)
+    if (mod) return !!(mod.secretAccessEnabled || mod.extraConfig?.secretAccessEnabled)
+  }
+
+  const modules = await fetchSuiteModules()
+  _cachedModulesList = modules
+  _cachedModulesListTime = now
+  const target = modules.find(m => m.id === moduleId)
+  return !!(target?.secretAccessEnabled || target?.extraConfig?.secretAccessEnabled)
+}
 
 // ── 추천 시스템 이름 목록 (관리자 편의 퀵픽) ───────────────────────────
 export const RECOMMENDED_SYSTEM_NAMES = [
@@ -211,9 +279,12 @@ export async function fetchSuiteModules() {
         endAt: item.end_at ? item.end_at.slice(0, 16) : '',
         sortOrder: item.sort_order ?? 0,
         targetRoles: item.target_roles || ['student', 'teacher', 'admin'],
-        extraConfig: item.extra_config || {}
+        extraConfig: item.extra_config || {},
+        secretAccessEnabled: !!(item.secret_access_enabled ?? item.extra_config?.secretAccessEnabled ?? false)
       }))
       modules = mergeModulesWithDefaults(dbModules, DEFAULT_SUITE_MODULES)
+      _cachedModulesList = modules
+      _cachedModulesListTime = Date.now()
       localStorage.setItem(CONFIG_KEY_MODULES_CACHE, JSON.stringify(modules))
       syncLegacyLocalStorageFlags(modules)
       return modules
@@ -250,6 +321,8 @@ export async function saveSuiteModules(modulesList) {
   if (!Array.isArray(modulesList)) return
 
   // 로컬 및 레거시 플래그 동기화
+  _cachedModulesList = modulesList
+  _cachedModulesListTime = Date.now()
   localStorage.setItem(CONFIG_KEY_MODULES_CACHE, JSON.stringify(modulesList))
   syncLegacyLocalStorageFlags(modulesList)
   syncLegacyDatabaseFlags(modulesList)
@@ -273,7 +346,10 @@ export async function saveSuiteModules(modulesList) {
       end_at: (m.endAt && String(m.endAt).trim()) ? new Date(m.endAt).toISOString() : null,
       sort_order: m.sortOrder || 0,
       target_roles: m.targetRoles || ['student', 'teacher', 'admin'],
-      extra_config: m.extraConfig || {},
+      extra_config: {
+        ...(m.extraConfig || {}),
+        secretAccessEnabled: !!m.secretAccessEnabled
+      },
       updated_at: new Date().toISOString()
     }))
 
@@ -376,6 +452,7 @@ function mergeModulesWithDefaults(savedList, defaults) {
       result.push({
         ...def,
         ...saved,
+        secretAccessEnabled: !!(saved?.secretAccessEnabled ?? saved?.extraConfig?.secretAccessEnabled ?? def.secretAccessEnabled ?? false),
         // 보존할 고유 메타데이터
         icon: def.icon,
         colorTheme: def.colorTheme
@@ -388,7 +465,10 @@ function mergeModulesWithDefaults(savedList, defaults) {
 
   // 추가로 동적 생성된 모듈이 있으면 추가
   for (const extra of savedMap.values()) {
-    result.push(extra)
+    result.push({
+      ...extra,
+      secretAccessEnabled: !!(extra?.secretAccessEnabled ?? extra?.extraConfig?.secretAccessEnabled ?? false)
+    })
   }
 
   return result.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
