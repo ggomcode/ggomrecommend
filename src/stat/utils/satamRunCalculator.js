@@ -362,24 +362,36 @@ export function parseMockExamWorkbook(workbook) {
 
         const classNum = getCell(r, colMap, ['반', '학급']) || ''
         const studentNum = getCell(r, colMap, ['번호', '출석번호']) || ''
-        const mathSubject = getCell(r, colMap, ['수학', '수학선택', '수학과목']) || ''
+
+        let korSubject = getCell(r, colMap, [
+          '국어(과목)', '국어(선택)', '국어선택', '국어과목', '선택_국어',
+          '선택과목(국어)', '선택과목_국어', '국어선택과목', '국어_선택', '선택(국어)'
+        ]) || ''
+        if (!korSubject) {
+          const guk = getCell(r, colMap, ['국어', '국'])
+          if (guk && /화작|화법|언매|언어/.test(guk)) korSubject = guk
+        }
+
+        let mathSubject = getCell(r, colMap, [
+          '수학(과목)', '수학(선택)', '수학선택', '수학과목', '선택_수학',
+          '선택과목(수학)', '선택과목_수학', '수학선택과목', '수학_선택', '선택(수학)'
+        ]) || ''
+        if (!mathSubject) {
+          const su = getCell(r, colMap, ['수학', '수'])
+          if (su && /미적|기하|확률|확통/.test(su)) mathSubject = su
+        }
+
         const inquiry1 = getCell(r, colMap, ['탐구1', '선택과목1', '탐구과목1', '사탐/과탐1', '제1선택']) || ''
         const inquiry2 = getCell(r, colMap, ['탐구2', '선택과목2', '탐구과목2', '사탐/과탐2', '제2선택']) || ''
 
-        const parseGrade = (keys) => {
-          const v = getCell(r, colMap, keys)
-          if (!v) return null
-          const n = Number(v)
-          return (!isNaN(n) && n >= 1 && n <= 9) ? n : null
-        }
-
-        const parseEngGrade = (keys) => {
+        const parseUniversalGrade = (keys, type = 'NORMAL') => {
           const v = getCell(r, colMap, keys)
           if (!v) return null
           const n = Number(v)
           if (isNaN(n) || n <= 0) return null
           if (n >= 1 && n <= 9) return n
-          if (n > 9 && n <= 100) {
+          
+          if (type === 'ENG' && n > 9 && n <= 100) {
             if (n >= 90) return 1
             if (n >= 80) return 2
             if (n >= 70) return 3
@@ -389,6 +401,78 @@ export function parseMockExamWorkbook(workbook) {
             if (n >= 30) return 7
             if (n >= 20) return 8
             return 9
+          }
+          if (type === 'KOR') {
+            if (n > 100) {
+              if (n >= 132) return 1
+              if (n >= 124) return 2
+              if (n >= 115) return 3
+              if (n >= 104) return 4
+              if (n >= 92) return 5
+              if (n >= 80) return 6
+              if (n >= 68) return 7
+              if (n >= 56) return 8
+              return 9
+            }
+            if (n > 9 && n <= 100) {
+              if (n >= 88) return 1
+              if (n >= 80) return 2
+              if (n >= 70) return 3
+              if (n >= 58) return 4
+              if (n >= 46) return 5
+              if (n >= 34) return 6
+              if (n >= 22) return 7
+              if (n >= 12) return 8
+              return 9
+            }
+          }
+          if (type === 'MATH') {
+            if (n > 100) {
+              if (n >= 133) return 1
+              if (n >= 124) return 2
+              if (n >= 115) return 3
+              if (n >= 104) return 4
+              if (n >= 91) return 5
+              if (n >= 79) return 6
+              if (n >= 67) return 7
+              if (n >= 55) return 8
+              return 9
+            }
+            if (n > 9 && n <= 100) {
+              if (n >= 84) return 1
+              if (n >= 74) return 2
+              if (n >= 62) return 3
+              if (n >= 50) return 4
+              if (n >= 38) return 5
+              if (n >= 26) return 6
+              if (n >= 16) return 7
+              if (n >= 8) return 8
+              return 9
+            }
+          }
+          if (type === 'INQ') {
+            if (n > 9 && n <= 50) {
+              if (n >= 42) return 1
+              if (n >= 36) return 2
+              if (n >= 30) return 3
+              if (n >= 23) return 4
+              if (n >= 17) return 5
+              if (n >= 11) return 6
+              if (n >= 6) return 7
+              if (n >= 3) return 8
+              return 9
+            }
+            if (n > 50) {
+              if (n >= 66) return 1
+              if (n >= 61) return 2
+              if (n >= 55) return 3
+              if (n >= 48) return 4
+              if (n >= 42) return 5
+              if (n >= 35) return 6
+              if (n >= 29) return 7
+              if (n >= 22) return 8
+              return 9
+            }
           }
           return null
         }
@@ -400,14 +484,15 @@ export function parseMockExamWorkbook(workbook) {
           classNum,
           studentNum,
           studentKey: `${classNum}-${studentNum}_${name}`,
+          korSubject,
           mathSubject,
           inquiry1,
           inquiry2,
-          korGrade: parseGrade(['국어등급', '국어(등급)', '국어_등급', '국어 등급', '국어']),
-          mathGrade: parseGrade(['수학등급', '수학(등급)', '수학_등급', '수학 등급', '수학']),
-          engGrade: parseEngGrade(['영어등급', '영어(등급)', '영어_등급', '영어 등급', '영어', '영']),
-          inq1Grade: parseGrade(['탐구1등급', '탐구1(등급)', '탐구1_등급', '제1선택_등급', '탐구1 등급', '탐구1']),
-          inq2Grade: parseGrade(['탐구2등급', '탐구2(등급)', '탐구2_등급', '제2선택_등급', '탐구2 등급', '탐구2']),
+          korGrade: parseUniversalGrade(['국어등급', '국어(등급)', '국어_등급', '국어 등급', '국어원점수', '국어(원점수)', '국어(표준점수)', '국어점수', '국어'], 'KOR'),
+          mathGrade: parseUniversalGrade(['수학등급', '수학(등급)', '수학_등급', '수학 등급', '수학원점수', '수학(원점수)', '수학(표준점수)', '수학점수', '수학'], 'MATH'),
+          engGrade: parseUniversalGrade(['영어등급', '영어(등급)', '영어_등급', '영어 등급', '영어원점수', '영어(원점수)', '영어점수', '영어', '영'], 'ENG'),
+          inq1Grade: parseUniversalGrade(['탐구1등급', '탐구1(등급)', '탐구1_등급', '제1선택_등급', '탐구1 등급', '탐구1원점수', '탐구1(원점수)', '탐구1'], 'INQ'),
+          inq2Grade: parseUniversalGrade(['탐구2등급', '탐구2(등급)', '탐구2_등급', '제2선택_등급', '탐구2 등급', '탐구2원점수', '탐구2(원점수)', '탐구2'], 'INQ'),
         })
       }
     })
@@ -437,24 +522,36 @@ export function parseMockExamWorkbook(workbook) {
       const examName = getCell(r, colMap, ['회차', '시험명', '모의고사', '월', '시험구분', '구분', '시험']) || (r[0] ? String(r[0]).trim() : '모의고사')
       const classNum = getCell(r, colMap, ['반', '학급']) || ''
       const studentNum = getCell(r, colMap, ['번호', '출석번호']) || ''
-      const mathSubject = getCell(r, colMap, ['수학', '수학선택', '수학과목']) || ''
+
+      let korSubject = getCell(r, colMap, [
+        '국어(과목)', '국어(선택)', '국어선택', '국어과목', '선택_국어',
+        '선택과목(국어)', '선택과목_국어', '국어선택과목', '국어_선택', '선택(국어)'
+      ]) || ''
+      if (!korSubject) {
+        const guk = getCell(r, colMap, ['국어', '국'])
+        if (guk && /화작|화법|언매|언어/.test(guk)) korSubject = guk
+      }
+
+      let mathSubject = getCell(r, colMap, [
+        '수학(과목)', '수학(선택)', '수학선택', '수학과목', '선택_수학',
+        '선택과목(수학)', '선택과목_수학', '수학선택과목', '수학_선택', '선택(수학)'
+      ]) || ''
+      if (!mathSubject) {
+        const su = getCell(r, colMap, ['수학', '수'])
+        if (su && /미적|기하|확률|확통/.test(su)) mathSubject = su
+      }
+
       const inquiry1 = getCell(r, colMap, ['탐구1', '선택과목1', '탐구과목1', '사탐/과탐1', '제1선택']) || ''
       const inquiry2 = getCell(r, colMap, ['탐구2', '선택과목2', '탐구과목2', '사탐/과탐2', '제2선택']) || ''
 
-      const parseGrade = (keys) => {
-        const v = getCell(r, colMap, keys)
-        if (!v) return null
-        const n = Number(v)
-        return (!isNaN(n) && n >= 1 && n <= 9) ? n : null
-      }
-
-      const parseEngGrade = (keys) => {
+      const parseUniversalGrade = (keys, type = 'NORMAL') => {
         const v = getCell(r, colMap, keys)
         if (!v) return null
         const n = Number(v)
         if (isNaN(n) || n <= 0) return null
         if (n >= 1 && n <= 9) return n
-        if (n > 9 && n <= 100) {
+        
+        if (type === 'ENG' && n > 9 && n <= 100) {
           if (n >= 90) return 1
           if (n >= 80) return 2
           if (n >= 70) return 3
@@ -464,6 +561,78 @@ export function parseMockExamWorkbook(workbook) {
           if (n >= 30) return 7
           if (n >= 20) return 8
           return 9
+        }
+        if (type === 'KOR') {
+          if (n > 100) {
+            if (n >= 132) return 1
+            if (n >= 124) return 2
+            if (n >= 115) return 3
+            if (n >= 104) return 4
+            if (n >= 92) return 5
+            if (n >= 80) return 6
+            if (n >= 68) return 7
+            if (n >= 56) return 8
+            return 9
+          }
+          if (n > 9 && n <= 100) {
+            if (n >= 88) return 1
+            if (n >= 80) return 2
+            if (n >= 70) return 3
+            if (n >= 58) return 4
+            if (n >= 46) return 5
+            if (n >= 34) return 6
+            if (n >= 22) return 7
+            if (n >= 12) return 8
+            return 9
+          }
+        }
+        if (type === 'MATH') {
+          if (n > 100) {
+            if (n >= 133) return 1
+            if (n >= 124) return 2
+            if (n >= 115) return 3
+            if (n >= 104) return 4
+            if (n >= 91) return 5
+            if (n >= 79) return 6
+            if (n >= 67) return 7
+            if (n >= 55) return 8
+            return 9
+          }
+          if (n > 9 && n <= 100) {
+            if (n >= 84) return 1
+            if (n >= 74) return 2
+            if (n >= 62) return 3
+            if (n >= 50) return 4
+            if (n >= 38) return 5
+            if (n >= 26) return 6
+            if (n >= 16) return 7
+            if (n >= 8) return 8
+            return 9
+          }
+        }
+        if (type === 'INQ') {
+          if (n > 9 && n <= 50) {
+            if (n >= 42) return 1
+            if (n >= 36) return 2
+            if (n >= 30) return 3
+            if (n >= 23) return 4
+            if (n >= 17) return 5
+            if (n >= 11) return 6
+            if (n >= 6) return 7
+            if (n >= 3) return 8
+            return 9
+          }
+          if (n > 50) {
+            if (n >= 66) return 1
+            if (n >= 61) return 2
+            if (n >= 55) return 3
+            if (n >= 48) return 4
+            if (n >= 42) return 5
+            if (n >= 35) return 6
+            if (n >= 29) return 7
+            if (n >= 22) return 8
+            return 9
+          }
         }
         return null
       }
@@ -475,14 +644,15 @@ export function parseMockExamWorkbook(workbook) {
         classNum,
         studentNum,
         studentKey: `${classNum}-${studentNum}_${name}`,
+        korSubject,
         mathSubject,
         inquiry1,
         inquiry2,
-        korGrade: parseGrade(['국어등급', '국어(등급)', '국어_등급', '국어 등급', '국어']),
-        mathGrade: parseGrade(['수학등급', '수학(등급)', '수학_등급', '수학 등급', '수학']),
-        engGrade: parseEngGrade(['영어등급', '영어(등급)', '영어_등급', '영어 등급', '영어', '영']),
-        inq1Grade: parseGrade(['탐구1등급', '탐구1(등급)', '탐구1_등급', '제1선택_등급', '탐구1 등급', '탐구1']),
-        inq2Grade: parseGrade(['탐구2등급', '탐구2(등급)', '탐구2_등급', '제2선택_등급', '탐구2 등급', '탐구2']),
+        korGrade: parseUniversalGrade(['국어등급', '국어(등급)', '국어_등급', '국어 등급', '국어원점수', '국어(원점수)', '국어(표준점수)', '국어점수', '국어'], 'KOR'),
+        mathGrade: parseUniversalGrade(['수학등급', '수학(등급)', '수학_등급', '수학 등급', '수학원점수', '수학(원점수)', '수학(표준점수)', '수학점수', '수학'], 'MATH'),
+        engGrade: parseUniversalGrade(['영어등급', '영어(등급)', '영어_등급', '영어 등급', '영어원점수', '영어(원점수)', '영어점수', '영어', '영'], 'ENG'),
+        inq1Grade: parseUniversalGrade(['탐구1등급', '탐구1(등급)', '탐구1_등급', '제1선택_등급', '탐구1 등급', '탐구1원점수', '탐구1(원점수)', '탐구1'], 'INQ'),
+        inq2Grade: parseUniversalGrade(['탐구2등급', '탐구2(등급)', '탐구2_등급', '제2선택_등급', '탐구2 등급', '탐구2원점수', '탐구2(원점수)', '탐구2'], 'INQ'),
       })
     }
   } else {
@@ -624,6 +794,7 @@ export function generateRealisticMockSample() {
     const baseEng = ((idx * 4 + 2) % 4) + 3
     const baseInq1 = ((idx * 2 + 1) % 5) + 3
     const baseInq2 = ((idx * 3 + 2) % 5) + 3
+    const sampleKorSub = idx % 5 === 0 ? '언어와 매체' : '화법과 작문'
 
     // 1) 3월 학평: 전원 미적분 + 과탐 2과목 (정통 이과로 출발)
     sampleRecords.push({
@@ -633,6 +804,7 @@ export function generateRealisticMockSample() {
       classNum: stu.classNum,
       studentNum: stu.studentNum,
       studentKey: `${stu.classNum}-${stu.studentNum}_${stu.name}`,
+      korSubject: sampleKorSub,
       mathSubject: '미적분',
       inquiry1: primarySci,
       inquiry2: secondarySci,
@@ -651,6 +823,7 @@ export function generateRealisticMockSample() {
       classNum: stu.classNum,
       studentNum: stu.studentNum,
       studentKey: `${stu.classNum}-${stu.studentNum}_${stu.name}`,
+      korSubject: sampleKorSub,
       mathSubject: '미적분',
       inquiry1: primarySci,
       inquiry2: stu.type === 'RUN_2' && idx % 2 === 0 ? chosenSoc1 : secondarySci,
@@ -669,6 +842,7 @@ export function generateRealisticMockSample() {
       classNum: stu.classNum,
       studentNum: stu.studentNum,
       studentKey: `${stu.classNum}-${stu.studentNum}_${stu.name}`,
+      korSubject: sampleKorSub,
       mathSubject: '미적분',
       inquiry1: stu.type === 'RUN_2' ? chosenSoc1 : primarySci,
       inquiry2: stu.type === 'KEPT' ? secondarySci : (stu.type === 'RUN_1' ? chosenSoc1 : chosenSoc2),
@@ -697,6 +871,7 @@ export function generateRealisticMockSample() {
       classNum: stu.classNum,
       studentNum: stu.studentNum,
       studentKey: `${stu.classNum}-${stu.studentNum}_${stu.name}`,
+      korSubject: sampleKorSub,
       mathSubject: '미적분',
       inquiry1: finalInq1,
       inquiry2: finalInq2,

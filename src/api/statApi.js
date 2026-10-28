@@ -813,7 +813,7 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
       return isNaN(n) ? null : n
     }
 
-    // 등급 파싱 함수 (1~9 등급 검증 및 절대평가 과목 원점수 등급 자동 환산)
+    // 등급 파싱 함수 (1~9 등급 검증 및 원점수/표준점수 등급 자동 환산)
     const parseGradeValue = (val, subjectType = 'NORMAL') => {
       if (val === '' || val === null || val === undefined) return null
       const n = Number(val)
@@ -846,6 +846,85 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
         if (n >= 5) return 8
         return 9
       }
+
+      // 국어 원점수(10~100) 또는 표준점수(>100) -> 등급 환산
+      if (subjectType === 'KOR') {
+        if (n > 100) {
+          if (n >= 132) return 1
+          if (n >= 124) return 2
+          if (n >= 115) return 3
+          if (n >= 104) return 4
+          if (n >= 92) return 5
+          if (n >= 80) return 6
+          if (n >= 68) return 7
+          if (n >= 56) return 8
+          return 9
+        }
+        if (n > 9 && n <= 100) {
+          if (n >= 88) return 1
+          if (n >= 80) return 2
+          if (n >= 70) return 3
+          if (n >= 58) return 4
+          if (n >= 46) return 5
+          if (n >= 34) return 6
+          if (n >= 22) return 7
+          if (n >= 12) return 8
+          return 9
+        }
+      }
+
+      // 수학 원점수(10~100) 또는 표준점수(>100) -> 등급 환산
+      if (subjectType === 'MATH') {
+        if (n > 100) {
+          if (n >= 133) return 1
+          if (n >= 124) return 2
+          if (n >= 115) return 3
+          if (n >= 104) return 4
+          if (n >= 91) return 5
+          if (n >= 79) return 6
+          if (n >= 67) return 7
+          if (n >= 55) return 8
+          return 9
+        }
+        if (n > 9 && n <= 100) {
+          if (n >= 84) return 1
+          if (n >= 74) return 2
+          if (n >= 62) return 3
+          if (n >= 50) return 4
+          if (n >= 38) return 5
+          if (n >= 26) return 6
+          if (n >= 16) return 7
+          if (n >= 8) return 8
+          return 9
+        }
+      }
+
+      // 탐구 원점수(10~50) 또는 표준점수(>50) -> 등급 환산
+      if (subjectType === 'INQ') {
+        if (n > 9 && n <= 50) {
+          if (n >= 42) return 1
+          if (n >= 36) return 2
+          if (n >= 30) return 3
+          if (n >= 23) return 4
+          if (n >= 17) return 5
+          if (n >= 11) return 6
+          if (n >= 6) return 7
+          if (n >= 3) return 8
+          return 9
+        }
+        if (n > 50) {
+          if (n >= 66) return 1
+          if (n >= 61) return 2
+          if (n >= 55) return 3
+          if (n >= 48) return 4
+          if (n >= 42) return 5
+          if (n >= 35) return 6
+          if (n >= 29) return 7
+          if (n >= 22) return 8
+          return 9
+        }
+      }
+
       return null
     }
 
@@ -877,18 +956,63 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
       }
     }
     if (!examName) examName = targetTab
-    const mathSubject = getVal('수학(과목)', '수학', '수학선택', '수학과목', '선택_수학') || ''
+
+    // 국어 선택과목 (숫자 점수 오인식 방지)
+    let korSubject = getVal(
+      '국어(과목)', '국어(선택)', '국어선택', '국어과목', '선택_국어',
+      '선택과목(국어)', '선택과목_국어', '국어선택과목', '국어_선택', '선택(국어)'
+    ) || ''
+    if (!korSubject) {
+      const gukVal = getVal('국어', '국')
+      if (gukVal && /화작|화법|언매|언어/.test(gukVal)) {
+        korSubject = gukVal
+      }
+    }
+
+    // 수학 선택과목 (숫자 점수 오인식 방지)
+    let mathSubject = getVal(
+      '수학(과목)', '수학(선택)', '수학선택', '수학과목', '선택_수학',
+      '선택과목(수학)', '선택과목_수학', '수학선택과목', '수학_선택', '선택(수학)'
+    ) || ''
+    if (!mathSubject) {
+      const suVal = getVal('수학', '수')
+      if (suVal && /미적|기하|확률|확통/.test(suVal)) {
+        mathSubject = suVal
+      }
+    }
+
     const inquiry1 = getVal('탐구1(과목)', '탐구1', '선택과목1', '탐구과목1', '사탐/과탐1', '제1선택', '탐구1과목') || ''
     const inquiry2 = getVal('탐구2(과목)', '탐구2', '선택과목2', '탐구과목2', '사탐/과탐2', '제2선택', '탐구2과목') || ''
 
-    // 등급 파싱 (수능최저학력기준 판정용 & 과목별 통계용, 1~9등급 보장)
-    const korGrade = getGradeNum(['국어(등급)', '국어등급', '국어_등급', '국어 등급', '국(등급)', '국등급', '국어'], 'NORMAL')
-    const mathGrade = getGradeNum(['수학(등급)', '수학등급', '수학_등급', '수학 등급', '수(등급)', '수등급', '수학'], 'NORMAL')
-    const engGrade = getGradeNum(['영어(등급)', '영어등급', '영어_등급', '영어 등급', '영(등급)', '영등급', '영어', '영'], 'ENG')
-    const inq1Grade = getGradeNum(['탐구1(등급)', '탐구1등급', '탐구1_등급', '제1선택_등급', '탐구1 등급', '탐구1'], 'NORMAL')
-    const inq2Grade = getGradeNum(['탐구2(등급)', '탐구2등급', '탐구2_등급', '제2선택_등급', '탐구2 등급', '탐구2'], 'NORMAL')
-    const histGrade = getGradeNum(['한국사(등급)', '한국사등급', '한국사_등급', '한국사 등급', '한(등급)', '한등급', '한국사'], 'HIST')
-    const secondLangGrade = getGradeNum(['제2외국어(등급)', '제2외국어등급', '제2외국어_등급', '제2외국어'], 'NORMAL')
+    // 등급 파싱 (수능최저학력기준 판정용 & 과목별 통계용, 1~9등급 보장 및 원점수/표준점수 자동 환산)
+    const korGrade = getGradeNum([
+      '국어(등급)', '국어등급', '국어_등급', '국어 등급', '국(등급)', '국등급',
+      '국어(원점수)', '국어원점수', '국어_원점수', '국어(표준점수)', '국어(표점)', '국어(백분위)', '국어점수', '국어', '국'
+    ], 'KOR')
+    const mathGrade = getGradeNum([
+      '수학(등급)', '수학등급', '수학_등급', '수학 등급', '수(등급)', '수등급',
+      '수학(원점수)', '수학원점수', '수학_원점수', '수학(표준점수)', '수학(표점)', '수학(백분위)', '수학점수', '수학', '수'
+    ], 'MATH')
+    const engGrade = getGradeNum([
+      '영어(등급)', '영어등급', '영어_등급', '영어 등급', '영(등급)', '영등급',
+      '영어(원점수)', '영어원점수', '영어_원점수', '영어(표준점수)', '영어(표점)', '영어점수', '영어', '영'
+    ], 'ENG')
+    const inq1Grade = getGradeNum([
+      '탐구1(등급)', '탐구1등급', '탐구1_등급', '제1선택_등급', '탐구1 등급',
+      '탐구1(원점수)', '탐구1원점수', '탐구1(표준점수)', '탐구1(표점)', '탐구1(백분위)', '탐구1점수', '탐구1'
+    ], 'INQ')
+    const inq2Grade = getGradeNum([
+      '탐구2(등급)', '탐구2등급', '탐구2_등급', '제2선택_등급', '탐구2 등급',
+      '탐구2(원점수)', '탐구2원점수', '탐구2(표준점수)', '탐구2(표점)', '탐구2(백분위)', '탐구2점수', '탐구2'
+    ], 'INQ')
+    const histGrade = getGradeNum([
+      '한국사(등급)', '한국사등급', '한국사_등급', '한국사 등급', '한(등급)', '한등급',
+      '한국사(원점수)', '한국사원점수', '한국사(표준점수)', '한국사점수', '한국사'
+    ], 'HIST')
+    const secondLangGrade = getGradeNum([
+      '제2외국어(등급)', '제2외국어등급', '제2외국어_등급', '제2외국어',
+      '제2외국어(원점수)', '제2외국어(표준점수)'
+    ], 'NORMAL')
 
     records.push({
       examName,
@@ -896,6 +1020,7 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
       classNum,
       studentNum,
       studentKey: `${classNum}-${studentNum}_${name}`,
+      korSubject,
       mathSubject,
       inquiry1,
       inquiry2,
