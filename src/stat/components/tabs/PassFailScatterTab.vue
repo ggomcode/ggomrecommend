@@ -52,10 +52,10 @@
             type="button"
             @click="triggerPrint"
             class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-extrabold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-all shadow-xs cursor-pointer border-none"
-            title="A4 가로 방향 9페이지 전체 인쇄 또는 PDF 저장"
+            :title="`A4 가로 방향 ${totalPages}페이지 전체 인쇄 또는 PDF 저장`"
           >
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-            <span>A4 가로 9페이지 인쇄 / PDF</span>
+            <span>A4 가로 {{ totalPages }}페이지 인쇄 / PDF</span>
           </button>
         </div>
       </div>
@@ -789,7 +789,7 @@ function triggerPrint() {
 @media print {
   @page {
     size: A4 landscape;
-    margin: 8mm 8mm 8mm 8mm;
+    margin: 15mm 15mm 15mm 15mm !important;
   }
 
   .no-print {
@@ -810,21 +810,30 @@ function triggerPrint() {
     page-break-inside: avoid;
     break-inside: avoid;
     width: 100%;
-    box-sizing: border-box;
-    padding: 0;
+    height: 180mm !important;
+    max-height: 180mm !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
   .print-page-header {
     text-align: center;
-    margin-bottom: 8px;
+    margin-bottom: 2mm !important;
+    flex-shrink: 0 !important;
   }
 
   .print-page-title {
-    font-size: 16pt;
-    font-weight: 900;
-    color: #111827;
-    margin: 0 0 6px 0;
-    letter-spacing: -0.5px;
+    font-size: 15pt !important;
+    font-weight: 900 !important;
+    color: #111827 !important;
+    margin: 0 !important;
+    letter-spacing: -0.5px !important;
+    line-height: 1.2 !important;
   }
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="scatter-grid-wrapper select-none">
+  <div class="scatter-grid-wrapper select-none" :class="{ 'is-print-mode': isPrintMode }">
     <!-- Top Numbers Axis (1 to 9) -->
     <div class="grid-header-row flex items-end">
       <!-- Left corner (above university names) -->
@@ -11,6 +11,10 @@
           v-for="num in [1, 2, 3, 4, 5, 6, 7, 8, 9]" 
           :key="num"
           class="axis-num-label"
+          :class="{
+            'axis-num-first': num === 1,
+            'axis-num-last': num === 9
+          }"
           :style="{ left: `${((num - 1) / 8) * 100}%` }"
         >
           {{ num }}
@@ -380,6 +384,7 @@ function handleUnivMouseLeave() {
 
 .plot-header-area {
   height: 100%;
+  overflow: visible;
 }
 
 .axis-num-label {
@@ -390,6 +395,14 @@ function handleUnivMouseLeave() {
   font-weight: 700;
   color: #1e293b;
   line-height: 1;
+}
+
+.axis-num-label.axis-num-first {
+  transform: translateX(0%);
+}
+
+.axis-num-label.axis-num-last {
+  transform: translateX(-100%);
 }
 
 /* Outer Chart Box */
@@ -536,7 +549,16 @@ function handleUnivMouseLeave() {
 }
 
 /* Print Exact Rendering */
+.is-print-mode .univ-row-label,
+.is-print-mode .univ-plot-row {
+  height: 8.0mm !important;
+}
+
 @media print {
+  .univ-row-label,
+  .univ-plot-row {
+    height: 8.0mm !important;
+  }
   .chart-outer-box {
     border: 1px solid #94a3b8 !important;
   }
