@@ -246,7 +246,8 @@ export function getIsoDateFromTimestamp(ts) {
 
 /**
  * 모듈별 비밀 접속 단축 AES-256-GCM 암호화 토큰 생성
- * 포맷: {modCode(2)}{date(8)}_{base64url(iv + tag + ciphertext)}
+ * - 모듈 식별자(modCode)와 발급일자(dateStr), 만료시각(expiresAt) 및 난수(nonce)를 모두 암호문 내부에 봉인
+ * - URL 파라미터에는 어떠한 평문 정보(st, 20261029 등)도 노출되지 않고 순수 암호문만 포함
  * - expiresAtOrTtl: 유효 만료일자("YYYY-MM-DD") 또는 타임스탬프 (미지정 시 내일 23:59:59 KST)
  */
 export async function generateSecretAccessToken(moduleId, dateStr = null, expiresAtOrTtl = null) {
@@ -262,12 +263,13 @@ export async function generateSecretAccessToken(moduleId, dateStr = null, expire
   }
 
   const enc = new TextEncoder()
-  const keySeed = enc.encode(`${SECRET_KEY_STR}_${modCode}_${dStr}`)
+  const keySeed = enc.encode(`${SECRET_KEY_STR}_unified_token`)
   const keyHash = await cryptoObj.subtle.digest('SHA-256', keySeed)
   const key = await cryptoObj.subtle.importKey('raw', keyHash, { name: 'AES-GCM' }, false, ['encrypt'])
 
   const iv = cryptoObj.getRandomValues(new Uint8Array(12))
-  const payload = enc.encode(`${modCode}:${dStr}:${expiresAt}`)
+  const nonce = Math.random().toString(36).slice(2, 8)
+  const payload = enc.encode(`${modCode}:${dStr}:${expiresAt}:${nonce}`)
   const encryptedBuf = await cryptoObj.subtle.encrypt({ name: 'AES-GCM', iv }, key, payload)
 
   const combined = new Uint8Array(iv.length + encryptedBuf.byteLength)
@@ -278,11 +280,12 @@ export async function generateSecretAccessToken(moduleId, dateStr = null, expire
   for (let i = 0; i < combined.length; i++) binary += String.fromCharCode(combined[i])
   const b64url = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 
-  return `${modCode}${dStr}_${b64url}`
+  return b64url
 }
 
 /**
  * 비밀 접속 AES-256-GCM 토큰 검증 및 복호화
+ * - 완전 암호화 토큰 및 기존 레거시 포맷({modCode}{dateStr}_...) 동시 호환 지원
  */
 export async function verifySecretAccessToken(token, expectedModuleId = null) {
   if (!token || typeof token !== 'string') {
@@ -290,27 +293,69 @@ export async function verifySecretAccessToken(token, expectedModuleId = null) {
   }
 
   const clean = token.trim()
-  const underIdx = clean.indexOf('_')
-  if (underIdx < 10) {
-    return { valid: false, reason: 'invalid_format' }
+  const cryptoObj = typeof window !== 'undefined' ? window.crypto : globalThis.crypto
+  if (!cryptoObj?.subtle) {
+    return { valid: false, reason: 'crypto_unavailable' }
   }
 
-  const prefix = clean.slice(0, underIdx)
-  const modCode = prefix.slice(0, 2)
-  const dateStr = prefix.slice(2)
-  const rawCipher = clean.slice(underIdx + 1)
+  const enc = new TextEncoder()
 
-  const mappedModuleId = CODE_TO_MODULE_MAP[modCode]
-  if (!mappedModuleId) {
-    return { valid: false, reason: 'unknown_module' }
+  // 1) 레거시 포맷 지원: 정확히 10글자(모듈코드2+날짜8) 뒤에 언더스코어(_)가 있는 경우
+  if (/^[a-z]{2}\d{8}_/i.test(clean)) {
+    try {
+      const underIdx = clean.indexOf('_')
+      const prefix = clean.slice(0, underIdx)
+      const modCode = prefix.slice(0, 2).toLowerCase()
+      const dateStr = prefix.slice(2)
+      const rawCipher = clean.slice(underIdx + 1)
+
+      const mappedModuleId = CODE_TO_MODULE_MAP[modCode]
+      if (!mappedModuleId) {
+        return { valid: false, reason: 'unknown_module' }
+      }
+
+      if (expectedModuleId && mappedModuleId !== expectedModuleId) {
+        return { valid: false, reason: 'module_mismatch' }
+      }
+
+      let str = rawCipher.replace(/-/g, '+').replace(/_/g, '/')
+      while (str.length % 4) str += '='
+      const binary = atob(str)
+      const rawBytes = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) rawBytes[i] = binary.charCodeAt(i)
+
+      if (rawBytes.length >= 28) {
+        const iv = rawBytes.slice(0, 12)
+        const cipherData = rawBytes.slice(12)
+        const keySeed = enc.encode(`${SECRET_KEY_STR}_${modCode}_${dateStr}`)
+        const keyHash = await cryptoObj.subtle.digest('SHA-256', keySeed)
+        const key = await cryptoObj.subtle.importKey('raw', keyHash, { name: 'AES-GCM' }, false, ['decrypt'])
+        const decryptedBuf = await cryptoObj.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipherData)
+        const payloadText = new TextDecoder().decode(decryptedBuf)
+        const [decMod, decDate, decExp] = payloadText.split(':')
+
+        if (decMod === modCode && decDate === dateStr) {
+          const expiresAt = Number(decExp)
+          if (isNaN(expiresAt) || Date.now() > expiresAt) {
+            return { valid: false, reason: 'expired', expiresAt, dateStr }
+          }
+          return {
+            valid: true,
+            moduleId: mappedModuleId,
+            modCode,
+            dateStr,
+            expiresAt
+          }
+        }
+      }
+    } catch (e) {
+      // 레거시 해석 실패 시 신규 완전 암호화 해석으로 계속 시도
+    }
   }
 
-  if (expectedModuleId && mappedModuleId !== expectedModuleId) {
-    return { valid: false, reason: 'module_mismatch' }
-  }
-
+  // 2) 신규 완전 암호화 포맷 (어떠한 평문 접두사 없이 전체가 AES-256-GCM 암호문)
   try {
-    let str = rawCipher.replace(/-/g, '+').replace(/_/g, '/')
+    let str = clean.replace(/-/g, '+').replace(/_/g, '/')
     while (str.length % 4) str += '='
     const binary = atob(str)
     const rawBytes = new Uint8Array(binary.length)
@@ -323,9 +368,7 @@ export async function verifySecretAccessToken(token, expectedModuleId = null) {
     const iv = rawBytes.slice(0, 12)
     const cipherData = rawBytes.slice(12)
 
-    const cryptoObj = typeof window !== 'undefined' ? window.crypto : globalThis.crypto
-    const enc = new TextEncoder()
-    const keySeed = enc.encode(`${SECRET_KEY_STR}_${modCode}_${dateStr}`)
+    const keySeed = enc.encode(`${SECRET_KEY_STR}_unified_token`)
     const keyHash = await cryptoObj.subtle.digest('SHA-256', keySeed)
     const key = await cryptoObj.subtle.importKey('raw', keyHash, { name: 'AES-GCM' }, false, ['decrypt'])
 
@@ -333,20 +376,25 @@ export async function verifySecretAccessToken(token, expectedModuleId = null) {
     const payloadText = new TextDecoder().decode(decryptedBuf)
     const [decMod, decDate, decExp] = payloadText.split(':')
 
-    if (decMod !== modCode || decDate !== dateStr) {
-      return { valid: false, reason: 'payload_mismatch' }
+    const mappedModuleId = CODE_TO_MODULE_MAP[decMod]
+    if (!mappedModuleId) {
+      return { valid: false, reason: 'unknown_module' }
+    }
+
+    if (expectedModuleId && mappedModuleId !== expectedModuleId) {
+      return { valid: false, reason: 'module_mismatch' }
     }
 
     const expiresAt = Number(decExp)
     if (isNaN(expiresAt) || Date.now() > expiresAt) {
-      return { valid: false, reason: 'expired', expiresAt, dateStr }
+      return { valid: false, reason: 'expired', expiresAt, dateStr: decDate }
     }
 
     return {
       valid: true,
       moduleId: mappedModuleId,
-      modCode,
-      dateStr,
+      modCode: decMod,
+      dateStr: decDate,
       expiresAt
     }
   } catch (err) {
@@ -397,6 +445,11 @@ export async function getOrGenerateModuleSecretUrl(module, customExpireDate = nu
 
   let token = typeof module === 'object' ? module?.secretAccessToken : null
   let needRegenerate = !token
+
+  // 기존에 발급된 토큰이 구버전 포맷(st20261029_...)인 경우 신규 완전 암호화 포맷으로 자동 갱신
+  if (token && token.includes('_')) {
+    needRegenerate = true
+  }
 
   // 날짜가 명시적으로 변경되었을 때
   if (token && customExpireDate && module?.secretAccessExpireDate !== customExpireDate) {
