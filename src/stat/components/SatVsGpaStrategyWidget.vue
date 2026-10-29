@@ -75,7 +75,7 @@
           </div>
 
           <!-- Radar Chart Container -->
-          <div class="h-68 relative flex items-center justify-center my-2">
+          <div class="h-[340px] sm:h-[370px] relative flex items-center justify-center my-2">
             <Radar :data="radarChartData" :options="radarChartOptions" />
           </div>
 
@@ -1442,7 +1442,18 @@ const currentSatAnalysis = computed(() => {
     const key = r.studentKey || r.name
     if (!key) return
     if (!byStudent.has(key)) {
-      byStudent.set(key, { kor: [], math: [], eng: [], soc: [], sci: [], isNaturalTrack: false })
+      byStudent.set(key, { 
+        kor: [], 
+        math: [], 
+        eng: [], 
+        soc: [], 
+        sci: [], 
+        isNaturalTrack: false,
+        korUnmaeGrades: [],
+        korHwajakGrades: [],
+        mathMijukGrades: [],
+        mathHwaktongGrades: []
+      })
     }
     const entry = byStudent.get(key)
     
@@ -1492,8 +1503,10 @@ const currentSatAnalysis = computed(() => {
     // 수학 선택과목별 분류 (미지정 시 자연/인문 트랙 기반 스마트 판별)
     if (mG) {
       if (isNaturalMath || (isNatural && !isHumanitiesMath)) {
+        entry.mathMijukGrades.push(mG)
         mijukGrades.push(mG)
       } else {
+        entry.mathHwaktongGrades.push(mG)
         hwaktongGrades.push(mG)
       }
     }
@@ -1502,14 +1515,18 @@ const currentSatAnalysis = computed(() => {
     const rawKorSub = String(r.korSubject || '').trim()
     if (kG) {
       if (/언매|언어/.test(rawKorSub)) {
+        entry.korUnmaeGrades.push(kG)
         unmaeGrades.push(kG)
       } else if (/화작|화법/.test(rawKorSub)) {
+        entry.korHwajakGrades.push(kG)
         hwajakGrades.push(kG)
       } else {
         // 과목명이 미기재된 경우: 자연계열 상위권(kG <= 3.5)은 언매, 그 외 화작으로 자연스럽게 분필
         if (isNatural && kG <= 3.5) {
+          entry.korUnmaeGrades.push(kG)
           unmaeGrades.push(kG)
         } else {
+          entry.korHwajakGrades.push(kG)
           hwajakGrades.push(kG)
         }
       }
@@ -1524,12 +1541,49 @@ const currentSatAnalysis = computed(() => {
   let totalSoc = 0, cntSoc = 0
   let totalSci = 0, cntSci = 0
 
+  // 학생별 고유 인원(명) 기준 선택과목 집계
+  let korUnmaeStudentCnt = 0
+  let korHwajakStudentCnt = 0
+  const korUnmaeStudentAvgs = []
+  const korHwajakStudentAvgs = []
+
+  let mathMijukStudentCnt = 0
+  let mathHwaktongStudentCnt = 0
+  const mathMijukStudentAvgs = []
+  const mathHwaktongStudentAvgs = []
+
   byStudent.forEach(s => {
     const k = calcAvg(s.kor); if (k !== null) { totalKor += k; cntKor++ }
     const m = calcAvg(s.math); if (m !== null) { totalMath += m; cntMath++ }
     const e = calcAvg(s.eng); if (e !== null) { totalEng += e; cntEng++ }
     const so = calcAvg(s.soc); if (so !== null) { totalSoc += so; cntSoc++ }
     const sc = calcAvg(s.sci); if (sc !== null) { totalSci += sc; cntSci++ }
+
+    // 국어 주력 선택과목 학생 1인 1명 배정
+    if (s.kor.length > 0) {
+      const uCnt = s.korUnmaeGrades.length
+      const hCnt = s.korHwajakGrades.length
+      if (uCnt > hCnt || (uCnt === hCnt && uCnt > 0 && s.isNaturalTrack)) {
+        korUnmaeStudentCnt++
+        if (k !== null) korUnmaeStudentAvgs.push(k)
+      } else {
+        korHwajakStudentCnt++
+        if (k !== null) korHwajakStudentAvgs.push(k)
+      }
+    }
+
+    // 수학 주력 선택과목 학생 1인 1명 배정
+    if (s.math.length > 0) {
+      const mCnt = s.mathMijukGrades.length
+      const hCnt = s.mathHwaktongGrades.length
+      if (mCnt > hCnt || (mCnt === hCnt && mCnt > 0 && s.isNaturalTrack)) {
+        mathMijukStudentCnt++
+        if (m !== null) mathMijukStudentAvgs.push(m)
+      } else {
+        mathHwaktongStudentCnt++
+        if (m !== null) mathHwaktongStudentAvgs.push(m)
+      }
+    }
   })
 
   const clampGrade = (val, fallback) => {
@@ -1558,35 +1612,29 @@ const currentSatAnalysis = computed(() => {
 
   const avgArray = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2) : '-'
 
-  // 선택과목 카운트 및 평균 (0명 방지 및 스마트 폴백)
-  let korUnmaeCnt = unmaeGrades.length
-  let korUnmaeAvg = avgArray(unmaeGrades)
-  let korHwajakCnt = hwajakGrades.length
-  let korHwajakAvg = avgArray(hwajakGrades)
+  // 선택과목 카운트 및 평균 (학생 고유 인원 수 기준: 언매+화작 = 전체 국어, 미적+확통 = 전체 수학)
+  let korUnmaeCnt = korUnmaeStudentCnt
+  let korUnmaeAvg = korUnmaeStudentAvgs.length ? (korUnmaeStudentAvgs.reduce((a, b) => a + b, 0) / korUnmaeStudentAvgs.length).toFixed(2) : avgArray(unmaeGrades)
+  let korHwajakCnt = korHwajakStudentCnt
+  let korHwajakAvg = korHwajakStudentAvgs.length ? (korHwajakStudentAvgs.reduce((a, b) => a + b, 0) / korHwajakStudentAvgs.length).toFixed(2) : avgArray(hwajakGrades)
 
   if (korUnmaeCnt === 0 && korHwajakCnt === 0 && effectiveKorCount > 0) {
     korUnmaeCnt = Math.round(effectiveKorCount * 0.17)
     korHwajakCnt = effectiveKorCount - korUnmaeCnt
     korUnmaeAvg = (finalKor - 0.75).toFixed(2)
     korHwajakAvg = (finalKor + 0.16).toFixed(2)
-  } else if (korUnmaeCnt === 0 && effectiveKorCount > 0) {
-    korUnmaeCnt = Math.max(1, Math.round(effectiveKorCount * 0.17))
-    korUnmaeAvg = (finalKor - 0.75).toFixed(2)
   }
 
-  let mathMijukCnt = mijukGrades.length
-  let mathMijukAvg = avgArray(mijukGrades)
-  let mathHwaktongCnt = hwaktongGrades.length
-  let mathHwaktongAvg = avgArray(hwaktongGrades)
+  let mathMijukCnt = mathMijukStudentCnt
+  let mathMijukAvg = mathMijukStudentAvgs.length ? (mathMijukStudentAvgs.reduce((a, b) => a + b, 0) / mathMijukStudentAvgs.length).toFixed(2) : avgArray(mijukGrades)
+  let mathHwaktongCnt = mathHwaktongStudentCnt
+  let mathHwaktongAvg = mathHwaktongStudentAvgs.length ? (mathHwaktongStudentAvgs.reduce((a, b) => a + b, 0) / mathHwaktongStudentAvgs.length).toFixed(2) : avgArray(hwaktongGrades)
 
   if (mathMijukCnt === 0 && mathHwaktongCnt === 0 && effectiveMathCount > 0) {
     mathMijukCnt = Math.round(effectiveMathCount * 0.32)
     mathHwaktongCnt = effectiveMathCount - mathMijukCnt
     mathMijukAvg = (finalMath - 1.03).toFixed(2)
     mathHwaktongAvg = (finalMath + 0.50).toFixed(2)
-  } else if (mathMijukCnt === 0 && effectiveMathCount > 0) {
-    mathMijukCnt = Math.max(1, Math.round(effectiveMathCount * 0.32))
-    mathMijukAvg = (finalMath - 1.03).toFixed(2)
   }
 
   return {
@@ -1708,11 +1756,16 @@ const radarChartOptions = {
         color: '#94a3b8'
       },
       grid: {
+        color: '#e2e8f0',
+        circular: true
+      },
+      angleLines: {
         color: '#e2e8f0'
       },
       pointLabels: {
-        font: { family: 'Pretendard', size: 12, weight: 'bold' },
-        color: '#0f172a'
+        font: { family: 'Pretendard', size: 13, weight: 'bold' },
+        color: '#0f172a',
+        padding: 10
       }
     }
   },
