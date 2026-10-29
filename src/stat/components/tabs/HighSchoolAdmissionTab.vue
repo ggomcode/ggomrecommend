@@ -1992,9 +1992,7 @@ const faqListPart2 = computed(() => faqList.value.slice(3, 6))
   :global(body),
   :global(html),
   :global(#app),
-  :global(main),
-  :global(.overflow-hidden),
-  :global(.overflow-y-auto) {
+  :global(main) {
     background: #ffffff !important;
     color: #000000 !important;
     height: auto !important;
@@ -2249,12 +2247,19 @@ const faqListPart2 = computed(() => faqList.value.slice(3, 6))
   }
 
   .chart-bars-container {
-    height: 95mm !important;
+    height: 105mm !important;
+  }
+
+  .chart-bars-container > div,
+  .chart-bars-container .h-full {
+    height: 100% !important;
+    min-height: 100% !important;
   }
 
   .grade-bar-box {
     border: 1px solid rgba(0, 0, 0, 0.25) !important;
     box-sizing: border-box !important;
+    flex-shrink: 0 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
