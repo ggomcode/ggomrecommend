@@ -28,7 +28,14 @@
           class="univ-row-label flex items-center justify-end"
           :class="{ 'has-border-bottom': idx < 19 }"
         >
-          <div v-if="univ" class="univ-name-wrap">
+          <div 
+            v-if="univ" 
+            class="univ-name-wrap"
+            :class="{ 'cursor-pointer hover:bg-slate-100/90 rounded px-1 -mr-1 transition-colors': !isPrintMode }"
+            @mouseenter="handleUnivMouseEnter(univ, $event)"
+            @mousemove="handleUnivMouseMove(univ, $event)"
+            @mouseleave="handleUnivMouseLeave"
+          >
             <span
               :class="[
                 'univ-badge-text',
@@ -127,7 +134,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['point-hover'])
+const emit = defineEmits(['point-hover', 'univ-hover'])
 
 // Always pad universities to exactly 20 rows to keep identical page proportions
 const paddedUniversities = computed(() => {
@@ -330,6 +337,29 @@ function handleMouseLeave() {
   if (props.isPrintMode) return
   emit('point-hover', null)
 }
+
+function handleUnivMouseEnter(univ, event) {
+  if (props.isPrintMode || !univ) return
+  emit('univ-hover', {
+    univName: univ,
+    clientX: event.clientX,
+    clientY: event.clientY
+  })
+}
+
+function handleUnivMouseMove(univ, event) {
+  if (props.isPrintMode || !univ) return
+  emit('univ-hover', {
+    univName: univ,
+    clientX: event.clientX,
+    clientY: event.clientY
+  })
+}
+
+function handleUnivMouseLeave() {
+  if (props.isPrintMode) return
+  emit('univ-hover', null)
+}
 </script>
 
 <style scoped>
@@ -392,6 +422,11 @@ function handleMouseLeave() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.univ-name-wrap:hover .univ-badge-text {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .univ-badge-text {

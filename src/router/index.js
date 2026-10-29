@@ -116,7 +116,13 @@ router.beforeEach(async to => {
 
   await auth.checkStatus()
 
-  // ── 0. 학교 관리자 Secret 접속 통로 (AES 암호화 1일 한정 토큰 검증) ──
+  // ── 0. 학교 관리자 Secret 접속 통로 (AES 암호화 토큰 검증) ──
+  // 🚫 폐기된 단순 파라미터(?secret=guest 등) 접근 시도는 기존 게스트 세션까지 즉시 파기하고 원천 차단
+  if (to.query.secret !== undefined) {
+    if (auth.isGuest) auth.logout()
+    return { path: '/login', query: { error: 'secret_invalid' } }
+  }
+
   const secretToken = to.query.sec || to.query.token || null
   const isGuestEntryPath = to.path.startsWith('/guest/')
   

@@ -24,10 +24,10 @@
           type="button"
           @click="triggerPrint"
           class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-black text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-all shadow-xs cursor-pointer border-none"
-          title="A4 가로 방향 8페이지 설명회 책자 인쇄 또는 PDF 저장"
+          title="A4 가로 방향 10페이지 설명회 책자 인쇄 또는 PDF 저장"
         >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-          <span>A4 가로 책자 인쇄 / PDF</span>
+          <span>A4 가로 책자 인쇄 / PDF (10P)</span>
         </button>
       </div>
     </div>
@@ -95,7 +95,7 @@
       <!-- Bottom Banner Footnote -->
       <div class="relative z-10 pt-3 border-t border-white/15 flex items-center justify-between text-[11px] text-slate-300">
         <span>📍 경기도 용인시 처인구 포곡읍 | 포곡고등학교 진로진학상담부</span>
-        <span class="font-bold text-amber-300">SLIDE 01 / 08</span>
+        <span class="font-bold text-amber-300">SLIDE 01 / 10</span>
       </div>
     </section>
 
@@ -117,11 +117,11 @@
               내신 5등급제 개편 & 2028 통합수능, 포곡고가 완벽한 기회인 이유
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 02 / 08</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 02 / 10</span>
         </div>
 
         <!-- 9등급 vs 5등급 구조 비교 그래프 & 인터랙티브 등급 유불리 분석 (좌우 배치) -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 mt-5">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 mt-5 grid-comparison">
           <!-- Left (lg:col-span-7): 9등급 vs 5등급 높이 비교 그래프 -->
           <div class="lg:col-span-7 bg-slate-50/90 rounded-2xl p-4 border border-slate-200/90 flex flex-col justify-between shadow-xs">
             <div>
@@ -203,9 +203,9 @@
                       :key="'9-' + item.grade"
                       @mouseenter="hoverGrade('9', item.grade)"
                       @click="selectGrade('9', item.grade)"
-                      :style="{ height: item.span + '%' }"
+                      :style="{ height: item.span + '%', backgroundColor: item.printColor, borderColor: item.borderColor }"
                       :class="[
-                        'w-full flex items-center justify-between px-2.5 sm:px-3 cursor-pointer transition-all duration-150 relative border-b border-white/20 last:border-b-0 overflow-hidden',
+                        'grade-bar-box w-full flex items-center justify-between px-2.5 sm:px-3 cursor-pointer transition-all duration-150 relative border-b last:border-b-0 overflow-hidden',
                         item.bgColor,
                         selectedGradeKey === '9-' + item.grade 
                           ? 'ring-2 ring-indigo-600 z-10 brightness-110 shadow-sm' 
@@ -214,17 +214,17 @@
                     >
                       <!-- Left: Grade Title & Range indicator -->
                       <div class="flex items-center gap-1.5 min-w-0">
-                        <span class="font-black text-xs sm:text-[13px] leading-none text-white drop-shadow-xs shrink-0">
+                        <span class="grade-bar-text font-black text-xs sm:text-[13px] leading-none text-white drop-shadow-xs shrink-0">
                           {{ item.grade }}등급
                         </span>
-                        <span class="text-[10px] text-white/80 font-mono hidden sm:inline shrink-0">
+                        <span class="grade-bar-text text-[10px] text-white/90 font-mono hidden sm:inline shrink-0">
                           (↕{{ item.span }}%p)
                         </span>
                       </div>
                       <!-- Right: Cumulative Cut & Count -->
-                      <div class="text-right text-[10px] sm:text-xs font-bold text-white/95 leading-none shrink-0 font-mono flex items-center gap-1">
+                      <div class="grade-bar-text text-right text-[10px] sm:text-xs font-bold text-white/95 leading-none shrink-0 font-mono flex items-center gap-1">
                         <span>~{{ item.cumEnd }}%</span>
-                        <span class="text-[10px] text-white/75 hidden md:inline">({{ item.count }}명)</span>
+                        <span class="grade-bar-text text-[10px] text-white/85 hidden md:inline">({{ item.count }}명)</span>
                       </div>
                     </div>
                   </div>
@@ -309,9 +309,9 @@
                       :key="'5-' + item.grade"
                       @mouseenter="hoverGrade('5', item.grade)"
                       @click="selectGrade('5', item.grade)"
-                      :style="{ height: item.span + '%' }"
+                      :style="{ height: item.span + '%', backgroundColor: item.printColor, borderColor: item.borderColor }"
                       :class="[
-                        'w-full flex items-center justify-between px-3 sm:px-4 cursor-pointer transition-all duration-150 relative border-b border-white/20 last:border-b-0 overflow-hidden',
+                        'grade-bar-box w-full flex items-center justify-between px-3 sm:px-4 cursor-pointer transition-all duration-150 relative border-b last:border-b-0 overflow-hidden',
                         item.bgColor,
                         selectedGradeKey === '5-' + item.grade 
                           ? 'ring-2 ring-indigo-600 z-10 brightness-110 shadow-sm' 
@@ -319,22 +319,22 @@
                       ]"
                     >
                       <!-- Special Top border warning for Grade 2 (10~11% boundary) -->
-                      <div v-if="item.grade === 2" class="absolute top-0 inset-x-0 h-1.5 bg-amber-400/90 z-20" title="10~11% 경계 위험선"></div>
+                      <div v-if="item.grade === 2" class="absolute top-0 inset-x-0 h-1.5 bg-amber-400 z-20" title="10~11% 경계 위험선"></div>
 
-                      <!-- Left: Grade Title & Arrow indicator (노란색 2.7배 확대 뱃지 제거 완료) -->
+                      <!-- Left: Grade Title & Arrow indicator -->
                       <div class="flex items-center gap-2 min-w-0">
-                        <span class="font-black text-xs sm:text-sm leading-none text-white drop-shadow-xs shrink-0">
+                        <span class="grade-bar-text font-black text-xs sm:text-sm leading-none text-white drop-shadow-xs shrink-0">
                           {{ item.grade }}등급
                         </span>
-                        <span class="text-[10px] sm:text-[11px] text-white/80 font-mono hidden sm:inline shrink-0">
+                        <span class="grade-bar-text text-[10px] sm:text-[11px] text-white/90 font-mono hidden sm:inline shrink-0">
                           (↕{{ item.span }}%p)
                         </span>
                       </div>
 
                       <!-- Right: Cumulative Cut & Count -->
-                      <div class="text-right text-xs sm:text-sm font-black text-white/95 leading-none shrink-0 font-mono flex items-center gap-1">
+                      <div class="grade-bar-text text-right text-xs sm:text-sm font-black text-white leading-none shrink-0 font-mono flex items-center gap-1">
                         <span>~{{ item.cumEnd }}%</span>
-                        <span class="text-[10px] sm:text-xs font-bold text-white/80 hidden md:inline">({{ item.count }}명)</span>
+                        <span class="grade-bar-text text-[10px] sm:text-xs font-bold text-white/85 hidden md:inline">({{ item.count }}명)</span>
                       </div>
                     </div>
                   </div>
@@ -482,7 +482,7 @@
               중3 내신 백분율별 2028 5등급제 예측 & 포곡고 진학 시 목표 대학 진단
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 03 / 08</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 03 / 10</span>
         </div>
 
         <p class="text-xs text-slate-600 mt-2 max-w-3xl leading-relaxed m-0">
@@ -535,7 +535,7 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-center">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-center grid-sim-container">
             <!-- Left: Slider (5 cols) -->
             <div class="lg:col-span-5 bg-white p-3.5 rounded-xl border border-indigo-100 shadow-2xs space-y-2">
               <div class="flex items-center justify-between text-xs font-bold">
@@ -669,7 +669,7 @@
     </section>
 
     <!-- ========================================================================================= -->
-    <!-- [SLIDE 4] 과학중점학교 & 2027 혁신자치예비학교 교육과정 로드맵 -->
+    <!-- [SLIDE 4] 과학중점학교 & 2027 혁신자치예비학교 교육과정 혁신 -->
     <!-- ========================================================================================= -->
     <section id="slide-4" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
       <div>
@@ -686,7 +686,7 @@
               과학중점학교 × 2027 혁신자치예비학교, 학생의 진로를 입시 성과로!
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 04 / 08</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 04 / 10</span>
         </div>
 
         <!-- 2 Big Engines Grid -->
@@ -786,29 +786,18 @@
           </div>
         </div>
 
-        <!-- 3-Year Growth Timeline Bar -->
-        <div class="mt-5 p-3 rounded-2xl bg-slate-50 border border-slate-200">
-          <div class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
-            <span>🚀</span>
-            <span>포곡고 3개년 대입 로드맵: 1학년 입학부터 3학년 수시 합격까지</span>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-            <div class="p-2.5 rounded-xl bg-white border border-slate-200">
-              <span class="text-[10px] font-black text-indigo-600">1학년 [기초 & 전공 탐색]</span>
-              <p class="font-bold text-slate-800 m-0 mt-1">공통과목 1등급 선점 & 과중 탐색</p>
-              <p class="text-[11px] text-slate-500 m-0 mt-0.5">통합사회·통합과학 탄탄한 기초 확립 및 학생회·동아리 자치 활동 시작</p>
-            </div>
-            <div class="p-2.5 rounded-xl bg-white border border-slate-200">
-              <span class="text-[10px] font-black text-sky-600">2학년 [심화 & 세특 차별화]</span>
-              <p class="font-bold text-slate-800 m-0 mt-1">과중 심화실험 & 자치 프로젝트</p>
-              <p class="text-[11px] text-slate-500 m-0 mt-0.5">수학·과학 심화과목 선택, 과제연구 보고서 완성 및 수능 최저 준비</p>
-            </div>
-            <div class="p-2.5 rounded-xl bg-white border border-slate-200">
-              <span class="text-[10px] font-black text-emerald-600">3학년 [수시 완성 & 파이널]</span>
-              <p class="font-bold text-slate-800 m-0 mt-1">1:1 맞춤형 6장 카드 포트폴리오</p>
-              <p class="text-[11px] text-slate-500 m-0 mt-0.5">꼼스탯 대입 빅데이터 기반 모의면접, 학교장추천·농어촌·학종 황금비율 구성</p>
+        <!-- Synergy Highlight Banner (하단 로드맵 대신 두 혁신 트랙 시너지 안내로 인쇄 여백 완벽 확보) -->
+        <div class="mt-5 p-4 rounded-2xl bg-gradient-to-r from-sky-50 via-indigo-50 to-emerald-50 border border-indigo-200/80 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">✨</span>
+            <div>
+              <h4 class="text-xs font-black text-slate-900 m-0">포곡고만의 문·이과 균형 성장 특화 시스템</h4>
+              <p class="text-[11px] text-slate-600 m-0 mt-0.5">이공계는 과학중점과정으로 심화 역량 극대화, 인문·사회계열은 혁신자치 아카데미로 학생부 종합 우위 확보!</p>
             </div>
           </div>
+          <span class="px-3 py-1 rounded-xl text-xs font-black bg-indigo-600 text-white shrink-0 shadow-2xs">
+            맞춤형 진로 100% 보장
+          </span>
         </div>
       </div>
 
@@ -820,9 +809,172 @@
     </section>
 
     <!-- ========================================================================================= -->
-    <!-- [SLIDE 5] 용인시 처인구 내 고교 지형도 & 포곡고의 독보적 비교 우위 -->
+    <!-- [SLIDE 5] 포곡고 3개년 대입 성공 로드맵: 학년별 수시·정시 필승 전략 (독립 분할 슬라이드) -->
     <!-- ========================================================================================= -->
     <section id="slide-5" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
+      <div>
+        <!-- Title Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-lg">🗺️</span>
+              <span class="text-xs font-extrabold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                입학부터 대입 합격까지 3개년 맞춤 설계
+              </span>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1 m-0">
+              포곡고 3개년 대입 성공 로드맵: 1학년 입학부터 3학년 수시 합격까지
+            </h2>
+          </div>
+          <span class="text-xs font-bold text-slate-400">SLIDE 05 / 10</span>
+        </div>
+
+        <p class="text-xs text-slate-600 mt-2 max-w-3xl leading-relaxed m-0">
+          체계적인 학년별 진학 관리 시스템을 통해 1학년 공통과목 1등급 선점부터 3학년 수시 6장 최적 배분까지 빈틈없이 안내합니다.
+        </p>
+
+        <!-- 3-Year Cards Grid (3 Columns) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
+          <!-- 1학년 -->
+          <div class="p-4 sm:p-5 rounded-2xl bg-indigo-50/50 border border-indigo-200 flex flex-col justify-between shadow-2xs">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="px-2.5 py-1 rounded-lg text-xs font-black bg-indigo-600 text-white shadow-2xs">
+                  1학년 [기초 & 전공 탐색]
+                </span>
+                <span class="text-xs font-bold text-indigo-700">공통과목 1등급 선점</span>
+              </div>
+              <h3 class="text-sm font-black text-slate-900 mb-2">탄탄한 내신 기초와 진로 탐색의 첫 단추</h3>
+              <ul class="space-y-2 text-xs text-slate-700 list-none p-0 m-0">
+                <li class="flex items-start gap-1.5">
+                  <span class="text-indigo-600 font-bold">✓</span>
+                  <span><strong>공통과목 집중 관리:</strong> 국·영·수·통사·통과 상위 10% 1등급 확보</span>
+                </li>
+                <li class="flex items-start gap-1.5">
+                  <span class="text-indigo-600 font-bold">✓</span>
+                  <span><strong>과중 진로 탐색 워크숍:</strong> 첨단 과학 실험실 체험 및 진로 흥미 발견</span>
+                </li>
+                <li class="flex items-start gap-1.5">
+                  <span class="text-indigo-600 font-bold">✓</span>
+                  <span><strong>자치 활동 첫걸음:</strong> 학생회, 정규·자율 동아리 주도적 참여</span>
+                </li>
+                <li class="flex items-start gap-1.5">
+                  <span class="text-indigo-600 font-bold">✓</span>
+                  <span><strong>꼼스탯 1차 진로 진단:</strong> 중3 성적 연계 고1 학습 진단 및 로드맵 설계</span>
+                </li>
+              </ul>
+            </div>
+            <div class="mt-4 pt-2.5 border-t border-indigo-100 text-[11px] font-bold text-indigo-900">
+              🎯 핵심 목표: 1학년 공통과목 1등급 선점 & 기초 역량 구축
+            </div>
+          </div>
+
+          <!-- 2학년 -->
+          <div class="p-4 sm:p-5 rounded-2xl bg-sky-50/50 border border-sky-200 flex flex-col justify-between shadow-2xs">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="px-2.5 py-1 rounded-lg text-xs font-black bg-sky-600 text-white shadow-2xs">
+                  2학년 [심화 & 세특 차별화]
+                </span>
+                <span class="text-xs font-bold text-sky-700">과중 심화 & 학종 우위</span>
+              </div>
+              <h3 class="text-sm font-black text-slate-900 mb-2">전공 심화 탐구와 수능 최저 기반 완성</h3>
+              <ul class="space-y-2 text-xs text-slate-700 list-none p-0 m-0">
+                <li class="flex items-start gap-1.5">
+                  <span class="text-sky-600 font-bold">✓</span>
+                  <span><strong>과학중점 심화과정:</strong> 고급 물리/화학/생명/지구과학 & R&E 과제연구</span>
+                </li>
+                <li class="flex items-start gap-1.5">
+                  <span class="text-sky-600 font-bold">✓</span>
+                  <span><strong>혁신자치 아카데미:</strong> 인문·사회계열 주도적 전공 심화 프로젝트 보고서</span>
+                </li>
+                <li class="flex items-start gap-1.5">
+                  <span class="text-sky-600 font-bold">✓</span>
+                  <span><strong>학생부 세특 집중 기록:</strong> 교과 담당 교사와 1:1 탐구 주제 밀착 지도</span>
+                </li>
+                <li class="flex items-start gap-1.5">
+                  <span class="text-sky-600 font-bold">✓</span>
+                  <span><strong>수능 최저 대비:</strong> 2028 통합수능 대비 정기 전국연합학력평가 취약점 클리닉</span>
+                </li>
+              </ul>
+            </div>
+            <div class="mt-4 pt-2.5 border-t border-sky-100 text-[11px] font-bold text-sky-900">
+              🎯 핵심 목표: 학생부 세특 차별화 & 최상위권 수능 최저 기반
+            </div>
+          </div>
+
+          <!-- 3학년 -->
+          <div class="p-4 sm:p-5 rounded-2xl bg-emerald-50/50 border border-emerald-200 flex flex-col justify-between shadow-2xs">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <span class="px-2.5 py-1 rounded-lg text-xs font-black bg-emerald-600 text-white shadow-2xs">
+                  3학년 [수시 완성 & 파이널]
+                </span>
+                <span class="text-xs font-bold text-emerald-700">1:1 맞춤형 6장 원서</span>
+              </div>
+              <h3 class="text-sm font-black text-slate-900 mb-2">빅데이터 기반 원서 포트폴리오와 합격</h3>
+              <ul class="space-y-2 text-xs text-slate-700 list-none p-0 m-0">
+                <li class="flex items-start gap-1.5">
+                  <span class="text-emerald-600 font-bold">✓</span>
+                  <span><strong>꼼스탯 대입 빅데이터:</strong> 전수 합불 통계 기반 정밀 합격선 산출 및 6장 조합</span>
+                </li>
+                <li class="flex items-start gap-1.5">
+                  <span class="text-emerald-600 font-bold">✓</span>
+                  <span><strong>투트랙 원서 최적화:</strong> 학교장추천(지균) + 농어촌특별 + 일반학종 황금비 구성</span>
+                </li>
+                <li class="flex items-start gap-1.5">
+                  <span class="text-emerald-600 font-bold">✓</span>
+                  <span><strong>실전 모의면접 캠프:</strong> 전공 적합성 및 제시문 면접 교내 전문가 심층 피드백</span>
+                </li>
+                <li class="flex items-start gap-1.5">
+                  <span class="text-emerald-600 font-bold">✓</span>
+                  <span><strong>수능 파이널 관리:</strong> 전용 면학실 야간 자율학습으로 수능 최저 100% 충족</span>
+                </li>
+              </ul>
+            </div>
+            <div class="mt-4 pt-2.5 border-t border-emerald-100 text-[11px] font-bold text-emerald-900">
+              🎯 핵심 목표: 수시 6장 최적 배분 & 최상위권 대입 최종 합격
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 Great Infrastructure Highlights -->
+        <div class="mt-4 p-3 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">
+          <div class="flex items-center gap-2 p-2 rounded-xl bg-white border border-slate-100">
+            <span class="text-base">📊</span>
+            <div>
+              <strong class="text-slate-800 block text-[11px]">꼼스탯 자체 대입 분석기</strong>
+              <span class="text-slate-500 text-[10px]">수시 1,376건 전수 빅데이터 기반 컨설팅</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 p-2 rounded-xl bg-white border border-slate-100">
+            <span class="text-base">🏛️</span>
+            <div>
+              <strong class="text-slate-800 block text-[11px]">프리미엄 면학실 자율학습</strong>
+              <span class="text-slate-500 text-[10px]">최신 독서실 환경 & 전담 교사 출결 관리</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 p-2 rounded-xl bg-white border border-slate-100">
+            <span class="text-base">👨‍🏫</span>
+            <div>
+              <strong class="text-slate-800 block text-[11px]">진로진학상담부 1:1 밀착 코칭</strong>
+              <span class="text-slate-500 text-[10px]">상시 열려있는 진학 상담 및 면접 지도</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide Footer -->
+      <div class="pt-3 border-t border-slate-100 text-[11px] text-slate-400 flex items-center justify-between">
+        <span>포곡고등학교 진로진학상담부 3개년 대입 지도 체계</span>
+        <span class="font-semibold text-slate-600">포곡고등학교</span>
+      </div>
+    </section>
+
+    <!-- ========================================================================================= -->
+    <!-- [SLIDE 6] 용인시 처인구 내 고교 지형도 & 포곡고의 독보적 비교 우위 -->
+    <!-- ========================================================================================= -->
+    <section id="slide-6" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
       <div>
         <!-- Title Header -->
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -837,7 +989,7 @@
               용인시 처인구 내 고교 지형도, 왜 포곡고가 가장 안정적인 선택인가?
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 05 / 08</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 06 / 10</span>
         </div>
 
         <p class="text-xs text-slate-600 mt-2 max-w-3xl leading-relaxed m-0">
@@ -957,9 +1109,9 @@
     </section>
 
     <!-- ========================================================================================= -->
-    <!-- [SLIDE 6] 농어촌 전형의 진실 & 비대상자(30~40%) 필승 전략 -->
+    <!-- [SLIDE 7] 농어촌 전형의 진실 & 비대상자(30~40%) 필승 전략 -->
     <!-- ========================================================================================= -->
-    <section id="slide-6" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
+    <section id="slide-7" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
       <div>
         <!-- Title Header -->
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -974,7 +1126,7 @@
               농어촌 전형의 위력 & [농어촌 비대상자 30~40%] 필승 성공 전략
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 06 / 08</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 07 / 10</span>
         </div>
 
         <p class="text-xs text-slate-600 mt-2 max-w-3xl leading-relaxed m-0">
@@ -1090,9 +1242,9 @@
     </section>
 
     <!-- ========================================================================================= -->
-    <!-- [SLIDE 7] 실제 수시 대입 성과 (Data-Driven Fact) -->
+    <!-- [SLIDE 8] 실제 수시 대입 성과 (Data-Driven Fact) -->
     <!-- ========================================================================================= -->
-    <section id="slide-7" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
+    <section id="slide-8" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
       <div>
         <!-- Title Header -->
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -1107,7 +1259,7 @@
               수치로 입증된 포곡고의 수시 경쟁력, 최상위권부터 수도권까지!
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 07 / 08</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 08 / 10</span>
         </div>
 
         <!-- 4 Stat Highlight Cards -->
@@ -1205,9 +1357,9 @@
     </section>
 
     <!-- ========================================================================================= -->
-    <!-- [SLIDE 8] 중3 학부모가 가장 많이 묻는 질문 BEST 6 (인터랙티브 FAQ) -->
+    <!-- [SLIDE 9] 중3 학부모가 가장 많이 묻는 질문 BEST 6 [Part 1: 교육과정 & 고교 선택] -->
     <!-- ========================================================================================= -->
-    <section id="slide-8" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
+    <section id="slide-9" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
       <div>
         <!-- Title Header -->
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -1215,46 +1367,52 @@
             <div class="flex items-center gap-2">
               <span class="text-lg">💬</span>
               <span class="text-xs font-extrabold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
-                중3 학부모 진로 Q&A
+                중3 학부모 진로 Q&A [Part 1]
               </span>
             </div>
             <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1 m-0">
-              중3 학부모님이 가장 궁금해하시는 질문 BEST 6
+              중3 학부모님이 가장 궁금해하시는 질문 BEST 6 (Q1 ~ Q3)
             </h2>
           </div>
-          <span class="text-xs font-bold text-slate-400">SLIDE 08 / 08</span>
+          <span class="text-xs font-bold text-slate-400">SLIDE 09 / 10</span>
         </div>
 
-        <!-- 6 FAQ Accordion Cards Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 mt-4">
+        <p class="text-xs text-slate-600 mt-2 max-w-3xl leading-relaxed m-0">
+          고입 설명회 현장 질의와 1:1 진학 상담에서 학부모님들께서 가장 많이 물어보시는 핵심 질문들을 정리했습니다.
+        </p>
+
+        <!-- 3 FAQ Cards Column (Part 1: Q1~Q3) -->
+        <div class="space-y-3 mt-4">
           <div
-            v-for="(faq, i) in faqList"
-            :key="i"
+            v-for="(faq, i) in faqListPart1"
+            :key="'p1-' + i"
             @click="faq.isOpen = !faq.isOpen"
-            class="p-4 rounded-2xl border transition-all duration-150 cursor-pointer text-left flex flex-col justify-between"
+            class="p-4 rounded-2xl border transition-all duration-150 cursor-pointer text-left flex flex-col justify-between shadow-2xs"
             :class="[
               faq.isOpen || isPrinting 
-                ? 'bg-indigo-50/40 border-indigo-300 ring-2 ring-indigo-500/10' 
-                : 'bg-slate-50/70 border-slate-200/80 hover:bg-slate-100/70'
+                ? 'bg-indigo-50/50 border-indigo-300 ring-2 ring-indigo-500/10' 
+                : 'bg-slate-50/80 border-slate-200 hover:bg-slate-100/80'
             ]"
           >
             <div>
               <div class="flex items-start justify-between gap-2">
-                <h3 class="text-xs font-bold text-slate-900 flex items-start gap-1.5 m-0 leading-snug">
-                  <span class="text-indigo-600 font-black shrink-0">Q{{ i + 1 }}.</span>
+                <h3 class="text-xs sm:text-sm font-black text-slate-900 flex items-start gap-2 m-0 leading-snug">
+                  <span class="px-2 py-0.5 rounded-md bg-indigo-600 text-white font-black text-xs shrink-0">Q{{ i + 1 }}</span>
                   <span>{{ faq.q }}</span>
                 </h3>
                 <span class="text-slate-400 text-xs shrink-0 no-print">{{ faq.isOpen ? '▲' : '▼' }}</span>
               </div>
 
               <!-- Answer content (Always visible in print) -->
-              <p
+              <div
                 v-show="faq.isOpen || isPrinting"
-                class="text-[11px] text-slate-600 mt-2.5 m-0 leading-relaxed border-t border-slate-200/60 pt-2 animate-fade-in print-show-all"
+                class="text-xs text-slate-700 mt-3 m-0 leading-relaxed border-t border-indigo-100 pt-2.5 animate-fade-in print-show-all bg-white/90 p-3 rounded-xl"
               >
-                <strong class="text-indigo-700 block mb-0.5">답변:</strong>
-                {{ faq.a }}
-              </p>
+                <div class="flex items-start gap-2">
+                  <span class="font-black text-indigo-700 shrink-0 text-xs">답변 :</span>
+                  <span class="leading-relaxed">{{ faq.a }}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1262,7 +1420,76 @@
 
       <!-- Slide Footer -->
       <div class="pt-3 border-t border-slate-100 text-[11px] text-slate-400 flex items-center justify-between">
-        <span>설명회 현장 및 1:1 상담 다빈도 질의 기반 작성</span>
+        <span>설명회 현장 및 1:1 상담 다빈도 질의 기반 작성 [Part 1]</span>
+        <span class="font-semibold text-slate-600">포곡고등학교</span>
+      </div>
+    </section>
+
+    <!-- ========================================================================================= -->
+    <!-- [SLIDE 10] 중3 학부모가 가장 많이 묻는 질문 BEST 6 [Part 2: 대입전형 & 학교생활] -->
+    <!-- ========================================================================================= -->
+    <section id="slide-10" class="presentation-slide a4-landscape-page bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-sm flex flex-col justify-between">
+      <div>
+        <!-- Title Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-lg">❓</span>
+              <span class="text-xs font-extrabold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                중3 학부모 진로 Q&A [Part 2]
+              </span>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1 m-0">
+              중3 학부모님이 가장 궁금해하시는 질문 BEST 6 (Q4 ~ Q6)
+            </h2>
+          </div>
+          <span class="text-xs font-bold text-slate-400">SLIDE 10 / 10</span>
+        </div>
+
+        <p class="text-xs text-slate-600 mt-2 max-w-3xl leading-relaxed m-0">
+          2028 통합수능 대비, 고교학점제 선택 과목 개설 역량 및 면학실 야간 자율학습 환경에 대한 답변입니다.
+        </p>
+
+        <!-- 3 FAQ Cards Column (Part 2: Q4~Q6) -->
+        <div class="space-y-3 mt-4">
+          <div
+            v-for="(faq, i) in faqListPart2"
+            :key="'p2-' + i"
+            @click="faq.isOpen = !faq.isOpen"
+            class="p-4 rounded-2xl border transition-all duration-150 cursor-pointer text-left flex flex-col justify-between shadow-2xs"
+            :class="[
+              faq.isOpen || isPrinting 
+                ? 'bg-indigo-50/50 border-indigo-300 ring-2 ring-indigo-500/10' 
+                : 'bg-slate-50/80 border-slate-200 hover:bg-slate-100/80'
+            ]"
+          >
+            <div>
+              <div class="flex items-start justify-between gap-2">
+                <h3 class="text-xs sm:text-sm font-black text-slate-900 flex items-start gap-2 m-0 leading-snug">
+                  <span class="px-2 py-0.5 rounded-md bg-indigo-600 text-white font-black text-xs shrink-0">Q{{ i + 4 }}</span>
+                  <span>{{ faq.q }}</span>
+                </h3>
+                <span class="text-slate-400 text-xs shrink-0 no-print">{{ faq.isOpen ? '▲' : '▼' }}</span>
+              </div>
+
+              <!-- Answer content (Always visible in print) -->
+              <div
+                v-show="faq.isOpen || isPrinting"
+                class="text-xs text-slate-700 mt-3 m-0 leading-relaxed border-t border-indigo-100 pt-2.5 animate-fade-in print-show-all bg-white/90 p-3 rounded-xl"
+              >
+                <div class="flex items-start gap-2">
+                  <span class="font-black text-indigo-700 shrink-0 text-xs">답변 :</span>
+                  <span class="leading-relaxed">{{ faq.a }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide Footer -->
+      <div class="pt-3 border-t border-slate-100 text-[11px] text-slate-400 flex items-center justify-between">
+        <span>설명회 현장 및 1:1 상담 다빈도 질의 기반 작성 [Part 2]</span>
         <span class="font-semibold text-slate-600">포곡고등학교</span>
       </div>
     </section>
@@ -1277,11 +1504,13 @@ const slideList = [
   { id: 'slide-1', shortTitle: '대입격변 인트로', emoji: '🚀' },
   { id: 'slide-2', shortTitle: '2028 개편 비교', emoji: '📊' },
   { id: 'slide-3', shortTitle: '5등급제 진단기', emoji: '🧮' },
-  { id: 'slide-4', shortTitle: '과중·혁신 로드맵', emoji: '🔬' },
-  { id: 'slide-5', shortTitle: '처인구 고교 비교', emoji: '🏫' },
-  { id: 'slide-6', shortTitle: '농어촌&비대상 전략', emoji: '🌲' },
-  { id: 'slide-7', shortTitle: '대입 성과 Fact', emoji: '🏆' },
-  { id: 'slide-8', shortTitle: '학부모 Q&A', emoji: '💬' }
+  { id: 'slide-4', shortTitle: '과중·혁신 엔진', emoji: '🔬' },
+  { id: 'slide-5', shortTitle: '3개년 대입 로드맵', emoji: '🗺️' },
+  { id: 'slide-6', shortTitle: '처인구 고교 비교', emoji: '🏫' },
+  { id: 'slide-7', shortTitle: '농어촌&비대상 전략', emoji: '🌲' },
+  { id: 'slide-8', shortTitle: '대입 성과 Fact', emoji: '🏆' },
+  { id: 'slide-9', shortTitle: '학부모 Q&A (Part 1)', emoji: '💬' },
+  { id: 'slide-10', shortTitle: '학부모 Q&A (Part 2)', emoji: '❓' }
 ]
 
 const activeSlideId = ref('slide-1')
@@ -1320,24 +1549,24 @@ function selectGrade(system, grade) {
 
 // 9등급제 높이 데이터 (1~9 All)
 const nineGradeList = [
-  { grade: 1, span: 4, cumEnd: 4, count: 13, bgColor: 'bg-emerald-600' },
-  { grade: 2, span: 7, cumEnd: 11, count: 24, bgColor: 'bg-teal-600' },
-  { grade: 3, span: 12, cumEnd: 23, count: 40, bgColor: 'bg-sky-600' },
-  { grade: 4, span: 17, cumEnd: 40, count: 57, bgColor: 'bg-blue-600' },
-  { grade: 5, span: 20, cumEnd: 60, count: 66, bgColor: 'bg-slate-500' },
-  { grade: 6, span: 17, cumEnd: 77, count: 57, bgColor: 'bg-slate-600' },
-  { grade: 7, span: 12, cumEnd: 89, count: 40, bgColor: 'bg-slate-700' },
-  { grade: 8, span: 7, cumEnd: 96, count: 24, bgColor: 'bg-zinc-700' },
-  { grade: 9, span: 4, cumEnd: 100, count: 13, bgColor: 'bg-zinc-800' }
+  { grade: 1, span: 4, cumEnd: 4, count: 13, bgColor: 'bg-emerald-600', printColor: '#059669', borderColor: '#047857' },
+  { grade: 2, span: 7, cumEnd: 11, count: 24, bgColor: 'bg-teal-600', printColor: '#0d9488', borderColor: '#0f766e' },
+  { grade: 3, span: 12, cumEnd: 23, count: 40, bgColor: 'bg-sky-600', printColor: '#0284c7', borderColor: '#0369a1' },
+  { grade: 4, span: 17, cumEnd: 40, count: 57, bgColor: 'bg-blue-600', printColor: '#2563eb', borderColor: '#1d4ed8' },
+  { grade: 5, span: 20, cumEnd: 60, count: 66, bgColor: 'bg-slate-500', printColor: '#64748b', borderColor: '#475569' },
+  { grade: 6, span: 17, cumEnd: 77, count: 57, bgColor: 'bg-slate-600', printColor: '#475569', borderColor: '#334155' },
+  { grade: 7, span: 12, cumEnd: 89, count: 40, bgColor: 'bg-slate-700', printColor: '#334155', borderColor: '#1e293b' },
+  { grade: 8, span: 7, cumEnd: 96, count: 24, bgColor: 'bg-zinc-700', printColor: '#27272a', borderColor: '#18181b' },
+  { grade: 9, span: 4, cumEnd: 100, count: 13, bgColor: 'bg-zinc-800', printColor: '#18181b', borderColor: '#09090b' }
 ]
 
 // 2028 개편 5등급제 높이 데이터 (1~5 All)
 const fiveGradeList = [
-  { grade: 1, span: 10, cumEnd: 10, count: 33, bgColor: 'bg-gradient-to-r from-emerald-600 to-teal-700' },
-  { grade: 2, span: 24, cumEnd: 34, count: 80, bgColor: 'bg-gradient-to-r from-indigo-600 to-violet-700' },
-  { grade: 3, span: 32, cumEnd: 66, count: 107, bgColor: 'bg-gradient-to-r from-sky-600 to-blue-700' },
-  { grade: 4, span: 24, cumEnd: 90, count: 80, bgColor: 'bg-gradient-to-r from-slate-500 to-slate-600' },
-  { grade: 5, span: 10, cumEnd: 100, count: 33, bgColor: 'bg-gradient-to-r from-zinc-700 to-zinc-800' }
+  { grade: 1, span: 10, cumEnd: 10, count: 33, bgColor: 'bg-emerald-600', printColor: '#059669', borderColor: '#047857' },
+  { grade: 2, span: 24, cumEnd: 34, count: 80, bgColor: 'bg-indigo-600', printColor: '#4f46e5', borderColor: '#4338ca' },
+  { grade: 3, span: 32, cumEnd: 66, count: 107, bgColor: 'bg-sky-600', printColor: '#0284c7', borderColor: '#0369a1' },
+  { grade: 4, span: 24, cumEnd: 90, count: 80, bgColor: 'bg-slate-600', printColor: '#64748b', borderColor: '#475569' },
+  { grade: 5, span: 10, cumEnd: 100, count: 33, bgColor: 'bg-zinc-800', printColor: '#27272a', borderColor: '#18181b' }
 ]
 
 // 각 등급별 유불리 진단 & 필독 주의사항 맵
@@ -1725,6 +1954,9 @@ const faqList = ref([
     isOpen: false
   }
 ])
+
+const faqListPart1 = computed(() => faqList.value.slice(0, 3))
+const faqListPart2 = computed(() => faqList.value.slice(3, 6))
 </script>
 
 <style scoped>
@@ -1733,13 +1965,18 @@ const faqList = ref([
   scroll-margin-top: 80px;
 }
 
+/* Grade Bar Visual Tuning */
+.grade-bar-text {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 1px #000;
+}
+
 /* ========================================================================= */
-/* A4 Landscape Print Styles (A4 가로 8페이지 책자 인쇄 규격)                  */
+/* A4 Landscape Print Styles (A4 가로 10페이지 책자 인쇄 규격)                 */
 /* ========================================================================= */
 @media print {
   @page {
     size: A4 landscape;
-    margin: 6mm 8mm;
+    margin: 5mm 7mm;
   }
 
   /* Hide app navigation, headers and sidebars globally */
@@ -1790,7 +2027,7 @@ const faqList = ref([
     height: 194mm !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    padding: 7mm 9mm !important;
+    padding: 6mm 8mm !important;
     border-radius: 6px !important;
     overflow: hidden !important;
     display: flex !important;
@@ -1798,9 +2035,142 @@ const faqList = ref([
     justify-content: space-between !important;
   }
 
-  /* Scale chart bars to fit within A4 landscape */
+  /* ========================================================================= */
+  /* [SLIDE 1] 인쇄 시 명확하고 또렷한 고대비 화이트 테마 완전 강제               */
+  /* ========================================================================= */
+  #slide-1 {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: 1.5px solid #cbd5e1 !important;
+  }
+
+  #slide-1 .bg-amber-400 {
+    background-color: #fef3c7 !important;
+    color: #92400e !important;
+    border: 1.5px solid #d97706 !important;
+    font-weight: 900 !important;
+  }
+
+  #slide-1 .border-white\/20,
+  #slide-1 .bg-white\/10 {
+    background-color: #f1f5f9 !important;
+    color: #1e293b !important;
+    border: 1.5px solid #94a3b8 !important;
+    font-weight: 700 !important;
+  }
+
+  #slide-1 h1 {
+    color: #0f172a !important;
+    text-shadow: none !important;
+  }
+
+  #slide-1 h1 span {
+    background: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    -webkit-text-fill-color: #1e3a8a !important;
+    color: #1e3a8a !important;
+    font-weight: 900 !important;
+    text-shadow: none !important;
+  }
+
+  #slide-1 p {
+    color: #334155 !important;
+    font-weight: 600 !important;
+  }
+
+  #slide-1 p strong {
+    color: #0f172a !important;
+    font-weight: 900 !important;
+  }
+
+  /* 4개 핵심 기둥 카드 (슬라이드 1) */
+  #slide-1 .grid > div {
+    background: #f8fafc !important;
+    border: 1.5px solid #cbd5e1 !important;
+    box-shadow: none !important;
+  }
+
+  #slide-1 .grid > div .text-amber-300 {
+    color: #b45309 !important;
+    font-weight: 900 !important;
+  }
+
+  #slide-1 .grid > div .text-sky-300 {
+    color: #0369a1 !important;
+    font-weight: 900 !important;
+  }
+
+  #slide-1 .grid > div .text-emerald-300 {
+    color: #047857 !important;
+    font-weight: 900 !important;
+  }
+
+  #slide-1 .grid > div .text-purple-300 {
+    color: #6b21a8 !important;
+    font-weight: 900 !important;
+  }
+
+  #slide-1 .grid > div .text-white {
+    color: #0f172a !important;
+    font-weight: 900 !important;
+  }
+
+  #slide-1 .grid > div .text-slate-300 {
+    color: #334155 !important;
+    font-weight: 600 !important;
+  }
+
+  #slide-1 .border-t {
+    border-color: #e2e8f0 !important;
+    color: #475569 !important;
+    font-weight: 600 !important;
+  }
+
+  #slide-1 .border-t .text-amber-300 {
+    color: #b45309 !important;
+    font-weight: 900 !important;
+  }
+
+  /* ========================================================================= */
+  /* [SLIDE 2] 좌우 7:5 그리드 강제 유지 & 차트 바 인쇄 최적화                   */
+  /* ========================================================================= */
+  #slide-2 .grid-comparison {
+    display: grid !important;
+    grid-template-columns: 7fr 5fr !important;
+    gap: 12px !important;
+  }
+
+  #slide-2 .grid-comparison > div {
+    min-width: 0 !important;
+  }
+
   .chart-bars-container {
-    height: 118mm !important;
+    height: 112mm !important;
+  }
+
+  .grade-bar-box {
+    border: 1px solid rgba(0, 0, 0, 0.25) !important;
+    box-sizing: border-box !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .grade-bar-text {
+    color: #ffffff !important;
+    font-weight: 900 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 1px #000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* ========================================================================= */
+  /* [SLIDE 3] 시뮬레이터 5:7 그리드 강제 유지                                  */
+  /* ========================================================================= */
+  #slide-3 .grid-sim-container {
+    display: grid !important;
+    grid-template-columns: 5fr 7fr !important;
+    gap: 10px !important;
   }
 
   /* Always show all tracks and answers during print */
