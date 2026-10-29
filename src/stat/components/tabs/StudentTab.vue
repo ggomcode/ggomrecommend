@@ -179,10 +179,10 @@
             <div 
               v-for="(app, index) in currentStudent.apps" 
               :key="app.id"
-              class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:border-indigo-300 transition-colors flex flex-col justify-between relative overflow-hidden"
+              class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:border-indigo-300 transition-colors flex flex-col justify-between relative"
             >
               <!-- Card Index Ribbon -->
-              <div class="absolute top-0 right-0 w-8 h-8 flex items-center justify-center bg-indigo-50 text-indigo-700 font-bold text-xs rounded-bl-xl border-l border-b border-indigo-100">
+              <div class="absolute top-0 right-0 w-8 h-8 flex items-center justify-center bg-indigo-50 text-indigo-700 font-bold text-xs rounded-tr-2xl rounded-bl-xl border-l border-b border-indigo-100">
                 #{{ index + 1 }}
               </div>
 

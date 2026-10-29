@@ -931,10 +931,52 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
     }
 
     const getGradeNum = (keys, subjectType = 'NORMAL') => {
+      // 1) 명시된 키 리스트 우선 탐색
       for (const k of keys) {
         const v = getVal(k)
         const parsed = parseGradeValue(v, subjectType)
         if (parsed !== null) return parsed
+      }
+
+      // 2) rowData 또는 colMap 키 패턴 fallback 탐색
+      let pattern = null
+      if (subjectType === 'KOR') pattern = /(?:^|[^가-힣])(?:국어|언어|국)(?:$|[^가-힣]|.*?(?:등급|석차|표점|원점수|성적))/i
+      else if (subjectType === 'MATH') pattern = /(?:^|[^가-힣])(?:수학|수리|수)(?:$|[^가-힣]|.*?(?:등급|석차|표점|원점수|성적))/i
+      else if (subjectType === 'ENG') pattern = /(?:^|[^가-힣])(?:영어|외국어|영)(?:$|[^가-힣]|.*?(?:등급|석차|표점|원점수|성적))/i
+      else if (subjectType === 'HIST') pattern = /(?:^|[^가-힣])(?:한국사|국사|한)(?:$|[^가-힣]|.*?(?:등급|석차|표점|원점수|성적))/i
+
+      if (pattern && rowData) {
+        for (const [rk, rv] of Object.entries(rowData)) {
+          if (pattern.test(rk)) {
+            const parsed = parseGradeValue(rv, subjectType)
+            if (parsed !== null) return parsed
+          }
+        }
+      }
+      return null
+    }
+
+    const getInqGrade = (inqIndex) => {
+      const specificKeys = inqIndex === 1
+        ? ['탐구1(등급)', '탐구1등급', '탐구1_등급', '제1선택_등급', '탐구1 등급', '사/과(1)_등급', '사탐1_등급', '과탐1_등급', '탐1_등급', '탐구1(원점수)', '탐구1원점수', '탐구1(표준점수)', '탐구1(표점)', '탐구1(백분위)', '탐구1점수', '탐구1']
+        : ['탐구2(등급)', '탐구2등급', '탐구2_등급', '제2선택_등급', '탐구2 등급', '사/과(2)_등급', '사탐2_등급', '과탐2_등급', '탐2_등급', '탐구2(원점수)', '탐구2원점수', '탐구2(표준점수)', '탐구2(표점)', '탐구2(백분위)', '탐구2점수', '탐구2']
+      
+      for (const k of specificKeys) {
+        const v = getVal(k)
+        const parsed = parseGradeValue(v, 'INQ')
+        if (parsed !== null) return parsed
+      }
+
+      if (rowData) {
+        const regex = inqIndex === 1 
+          ? /(?:탐구\s*1|선택\s*1|사탐\s*1|과탐\s*1|제1선택|1선택).*?(?:등급|표점|점수|성적)?/i
+          : /(?:탐구\s*2|선택\s*2|사탐\s*2|과탐\s*2|제2선택|2선택).*?(?:등급|표점|점수|성적)?/i
+        for (const [rk, rv] of Object.entries(rowData)) {
+          if (regex.test(rk)) {
+            const parsed = parseGradeValue(rv, 'INQ')
+            if (parsed !== null) return parsed
+          }
+        }
       }
       return null
     }
@@ -999,14 +1041,8 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
       '영어(등급)', '영어등급', '영어_등급', '영어 등급', '영(등급)', '영등급',
       '영어(원점수)', '영어원점수', '영어_원점수', '영어(표준점수)', '영어(표점)', '영어점수', '영어', '영'
     ], 'ENG')
-    const inq1Grade = getGradeNum([
-      '탐구1(등급)', '탐구1등급', '탐구1_등급', '제1선택_등급', '탐구1 등급',
-      '탐구1(원점수)', '탐구1원점수', '탐구1(표준점수)', '탐구1(표점)', '탐구1(백분위)', '탐구1점수', '탐구1'
-    ], 'INQ')
-    const inq2Grade = getGradeNum([
-      '탐구2(등급)', '탐구2등급', '탐구2_등급', '제2선택_등급', '탐구2 등급',
-      '탐구2(원점수)', '탐구2원점수', '탐구2(표준점수)', '탐구2(표점)', '탐구2(백분위)', '탐구2점수', '탐구2'
-    ], 'INQ')
+    const inq1Grade = getInqGrade(1)
+    const inq2Grade = getInqGrade(2)
     const histGrade = getGradeNum([
       '한국사(등급)', '한국사등급', '한국사_등급', '한국사 등급', '한(등급)', '한등급',
       '한국사(원점수)', '한국사원점수', '한국사(표준점수)', '한국사점수', '한국사'

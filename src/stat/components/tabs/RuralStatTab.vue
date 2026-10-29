@@ -80,7 +80,7 @@
               (최종등록 <strong class="text-teal-600 font-bold">{{ kpi.registeredCount }}</strong>건)
             </template>
             <template v-else>
-              농어촌 희망 학생 <strong class="text-emerald-700 font-bold">{{ kpi.uniqueStudents }}명</strong> 전원 연동
+              실제 농어촌 지원 <strong class="text-emerald-700 font-bold">{{ kpi.uniqueStudents }}명</strong> (총 {{ kpi.totalCount }}건)
             </template>
           </p>
         </div>
@@ -305,15 +305,29 @@
           </select>
 
           <!-- Privacy Masking Toggle -->
+          <div v-if="!auth.isAdmin" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-1.5 select-none" title="교사는 개인정보 보호를 위해 마스킹이 항상 유지됩니다.">
+            <span>🔒</span>
+            <span>마스킹: **동 (1단계)</span>
+          </div>
           <button
+            v-else
             type="button"
-            @click="isMasked = !isMasked"
+            @click="cycleAdminMaskMode"
             :class="[
-              'px-3 py-2 rounded-xl text-xs font-bold border transition-colors cursor-pointer flex items-center gap-1.5',
-              isMasked ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              'px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs select-none',
+              adminMaskMode === 0 
+                ? 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 ring-1 ring-rose-200' 
+                : adminMaskMode === 1
+                ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 ring-1 ring-amber-200'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-1 ring-emerald-200'
             ]"
+            :title="adminMaskTooltip"
           >
-            <span>{{ isMasked ? '🔒 학생명 마스킹' : '🔓 학생명 전체보기' }}</span>
+            <span>{{ adminMaskMode === 0 ? '🔒' : (adminMaskMode === 1 ? '🔓' : '👁️') }}</span>
+            <span>{{ adminMaskLabel }}</span>
+            <span class="text-[10px] px-1 py-0.2 rounded-full font-black bg-white border border-current shadow-2xs">
+              {{ adminMaskMode === 0 ? '1단계' : (adminMaskMode === 1 ? '2단계' : '3단계') }}
+            </span>
           </button>
 
           <!-- Export Excel CSV -->
@@ -417,7 +431,7 @@
 
     <!-- Student Detail Records List -->
     <div class="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 mb-4 gap-2">
         <div class="flex items-center gap-2">
           <span class="text-base">👤</span>
           <h3 class="text-sm font-black text-slate-800 m-0">
@@ -427,9 +441,31 @@
             총 {{ rawRuralList.length }}건
           </span>
         </div>
-        <span class="text-xs text-slate-400">
-          * 개인정보 보호를 위해 학생명 마스킹 기능이 기본 적용됩니다.
-        </span>
+        <div class="flex items-center gap-2">
+          <button 
+            v-if="auth.isAdmin"
+            type="button"
+            @click="cycleAdminMaskMode"
+            :class="[
+              'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all border cursor-pointer shadow-2xs select-none',
+              adminMaskMode === 0 
+                ? 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 ring-1 ring-rose-200' 
+                : adminMaskMode === 1
+                ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 ring-1 ring-amber-200'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-1 ring-emerald-200'
+            ]"
+            :title="adminMaskTooltip"
+          >
+            <span>{{ adminMaskMode === 0 ? '🔒' : (adminMaskMode === 1 ? '🔓' : '👁️') }}</span>
+            <span>{{ adminMaskLabel }}</span>
+            <span class="text-[10px] px-1 py-0.2 rounded-full font-black bg-white border border-current shadow-2xs">
+              {{ adminMaskMode === 0 ? '1단계' : (adminMaskMode === 1 ? '2단계' : '3단계') }}
+            </span>
+          </button>
+          <span v-else class="text-xs text-slate-400">
+            * 개인정보 보호를 위해 1단계(**동) 마스킹이 상시 적용됩니다.
+          </span>
+        </div>
       </div>
 
       <div class="overflow-x-auto max-h-[460px] overflow-y-auto">
@@ -484,16 +520,38 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { useStatData } from '../../composables/useStatData'
+import { 
+  useStatData, 
+  maskName, 
+  adminMaskMode, 
+  cycleAdminMaskMode 
+} from '../../composables/useStatData'
+import { useAuthStore } from '../../../stores/auth'
 import { schoolName } from '../../../utils/schoolConfig'
 import { getAllRuralApplications, getRuralEligibilityList, getRuralTracks } from '../../../api/ruralApi'
 import { decryptText } from '../../../utils/cryptoUtils'
 
+const auth = useAuthStore()
 const { selectedAcademicYear, applications } = useStatData()
 
 const searchQuery = ref('')
 const sortBy = ref('count')
-const isMasked = ref(true)
+
+const adminMaskLabel = computed(() => {
+  if (adminMaskMode.value === 0) return '마스킹: **동'
+  if (adminMaskMode.value === 1) return '마스킹: 홍*동'
+  return '이름 전체공개'
+})
+
+const adminMaskTooltip = computed(() => {
+  if (adminMaskMode.value === 0) {
+    return '1단계 [기본 마스킹]: 맨 뒷글자(**동)만 표시 (2글자 이름은 ** 전체 마스킹). 클릭 시 2단계(성과 맨뒷글자 총 2개 표시: 홍*동)로 전환됩니다.'
+  }
+  if (adminMaskMode.value === 1) {
+    return '2단계 [부분 마스킹]: 성+맨뒷글자(홍*동) 2글자 표시 중. 클릭 시 3단계(이름 전체 공개: 홍길동)로 전환됩니다.'
+  }
+  return '3단계 [이름 전체공개]: 모든 이름이 표시 중. 클릭 시 다시 1단계(디폴트 마스킹: **동)로 되돌아갑니다.'
+})
 
 // 2027 농어촌 시스템 데이터 상태
 const sys2027RuralApps = ref([])
@@ -504,16 +562,6 @@ const isLoadingSys2027 = ref(false)
 const is2027Mode = computed(() => {
   return String(selectedAcademicYear.value) === '2027'
 })
-
-// 이름 마스킹 헬퍼
-function maskName(name) {
-  if (!name) return '-'
-  if (!isMasked.value) return name
-  const str = String(name).trim()
-  if (str.length <= 1) return str
-  if (str.length === 2) return str[0] + '*'
-  return str[0] + '*'.repeat(str.length - 2) + str[str.length - 1]
-}
 
 // 2027학년도 농어촌 시스템 데이터 로드
 async function load2027RuralData() {
@@ -630,7 +678,16 @@ const kpi = computed(() => {
   const metroRatio = totalCount > 0 ? Math.round((metroCount / totalCount) * 100) : 0
 
   if (is2027Mode.value) {
-    const eligibleStudentsCount = sys2027Students.value.length || uniqueStudents
+    // 334명(전교생 전체)이 아닌, 실제 자격 심사를 통과한 적격 학생만 필터링
+    const eligibleStudents = sys2027Students.value.filter(s => {
+      const el = s.eligibility || {}
+      return el.is_eligible === true || 
+             el.is_type1_eligible === true || 
+             el.is_type2_eligible === true || 
+             el.is_manual_approved === true ||
+             s.is_rural_eligible === true
+    })
+    const eligibleStudentsCount = eligibleStudents.length > 0 ? eligibleStudents.length : uniqueStudents
 
     const validGrades = list.map(a => parseFloat(a.grade)).filter(n => !isNaN(n))
     const avgApplyGrade = validGrades.length > 0 ? (validGrades.reduce((a, b) => a + b, 0) / validGrades.length).toFixed(2) : '-'

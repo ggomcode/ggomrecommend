@@ -348,11 +348,28 @@ export function evaluateCsatRequirement(parsedRule, examRecord) {
 
   // 특수 케이스: "각 N등급 이내" 규칙인 경우
   if (parsedRule.isEachRule) {
+    if (availableAreas.length === 0) {
+      return {
+        evaluated: true,
+        status: 'NO_SCORE',
+        isSatisfied: false,
+        examName: examRecord.examName || '모의고사',
+        targetSum: null,
+        needCount,
+        achievedSum: null,
+        gap: null,
+        usedSubjects: [],
+        failReasons: ['모의고사 성적 미입력'],
+        detailText: '성적 데이터 없음',
+        summaryRule: parsedRule.summary
+      }
+    }
     const qualified = availableAreas.filter(a => a.grade <= parsedRule.eachAreaMaxGrade)
     const isSatisfied = qualified.length >= needCount && failReasons.length === 0
     const detail = qualified.slice(0, needCount).map(c => `${c.shortName}(${c.grade})`).join(', ')
     return {
       evaluated: true,
+      status: isSatisfied ? 'SATISFIED' : (availableAreas.length < needCount ? 'INSUFFICIENT' : 'UNSATISFIED'),
       isSatisfied,
       examName: examRecord.examName || '모의고사',
       targetSum: null,
@@ -361,16 +378,52 @@ export function evaluateCsatRequirement(parsedRule, examRecord) {
       gap: isSatisfied ? 0 : 1,
       usedSubjects: qualified.slice(0, needCount),
       failReasons,
-      detailText: isSatisfied ? `${detail} 각 ${parsedRule.eachAreaMaxGrade}등급 충족` : `각 ${parsedRule.eachAreaMaxGrade}등급 이내 영역 부족 (${qualified.length}/${needCount})`,
+      detailText: isSatisfied 
+        ? `${detail} 각 ${parsedRule.eachAreaMaxGrade}등급 충족` 
+        : `각 ${parsedRule.eachAreaMaxGrade}등급 이내 영역 부족 (${qualified.length}/${needCount})`,
       summaryRule: parsedRule.summary
     }
   }
 
-  if (availableAreas.length < needCount) {
-    failReasons.push(`응시 영역 부족 (${availableAreas.length}개 / 필요: ${needCount}개)`)
+  // 성적이 아예 없는 경우
+  if (availableAreas.length === 0) {
+    return {
+      evaluated: true,
+      status: 'NO_SCORE',
+      isSatisfied: false,
+      examName: examRecord.examName || '모의고사',
+      targetSum: parsedRule.targetSum,
+      needCount,
+      achievedSum: null,
+      gap: null,
+      usedSubjects: [],
+      failReasons: ['모의고사 성적 미입력'],
+      detailText: '성적 데이터 없음 (미응시)',
+      summaryRule: parsedRule.summary
+    }
   }
 
-  // 4. 최우수 영역 조합 선택
+  // 영역 수가 기준 필요 개수보다 적은 경우
+  if (availableAreas.length < needCount) {
+    failReasons.push(`응시 영역 부족 (${availableAreas.length}개 / 최소 ${needCount}개 필요)`)
+    const subjectsSummary = availableAreas.map(c => `${c.shortName}(${c.grade})`).join(', ')
+    return {
+      evaluated: true,
+      status: 'INSUFFICIENT',
+      isSatisfied: false,
+      examName: examRecord.examName || '모의고사',
+      targetSum: parsedRule.targetSum,
+      needCount,
+      achievedSum: null,
+      gap: null,
+      usedSubjects: availableAreas,
+      failReasons,
+      detailText: `응시 과목 부족: ${subjectsSummary} (최소 ${needCount}개 영역 필요)`,
+      summaryRule: parsedRule.summary
+    }
+  }
+
+  // 4. 최우수 영역 조합 선택 (availableAreas.length >= needCount)
   let bestCombination = null
   let bestSum = Infinity
 
@@ -385,7 +438,7 @@ export function evaluateCsatRequirement(parsedRule, examRecord) {
     return result
   }
 
-  const combinations = availableAreas.length >= needCount ? combine(availableAreas, needCount) : []
+  const combinations = combine(availableAreas, needCount)
 
   for (const combo of combinations) {
     if (parsedRule.requireKorean && !combo.some(c => c.key === 'KOR')) continue
@@ -408,19 +461,21 @@ export function evaluateCsatRequirement(parsedRule, examRecord) {
       const sumB = b.reduce((acc, c) => acc + c.grade, 0)
       return sumA - sumB
     })[0]
-    bestSum = bestCombination ? bestCombination.reduce((acc, c) => acc + c.grade, 0) : 99
+    bestSum = bestCombination ? bestCombination.reduce((acc, c) => acc + c.grade, 0) : null
   }
 
   const targetSum = parsedRule.targetSum
-  const isSumSatisfied = bestSum <= targetSum
-  if (!isSumSatisfied && targetSum) {
+  const hasBest = bestCombination && bestSum !== null && bestSum !== Infinity
+  const isSumSatisfied = hasBest && targetSum ? bestSum <= targetSum : false
+
+  if (hasBest && !isSumSatisfied && targetSum) {
     failReasons.push(`합산 ${bestSum} (기준: ${targetSum} 이내, ${bestSum - targetSum}등급 부족)`)
   }
 
   const isSatisfied = failReasons.length === 0 && isSumSatisfied
 
   let detailText = ''
-  if (bestCombination && bestSum !== Infinity) {
+  if (hasBest) {
     const formula = bestCombination.map(c => `${c.shortName}(${c.grade})`).join(' + ')
     detailText = `${formula} = ${bestSum} (기준: ${needCount}합 ${targetSum})`
   } else {
@@ -429,12 +484,13 @@ export function evaluateCsatRequirement(parsedRule, examRecord) {
 
   return {
     evaluated: true,
+    status: isSatisfied ? 'SATISFIED' : 'UNSATISFIED',
     isSatisfied,
     examName: examRecord.examName || '모의고사',
     targetSum,
     needCount,
-    achievedSum: bestSum === Infinity ? null : bestSum,
-    gap: (bestSum === Infinity || !targetSum) ? null : bestSum - targetSum,
+    achievedSum: hasBest ? bestSum : null,
+    gap: (hasBest && targetSum) ? bestSum - targetSum : null,
     usedSubjects: bestCombination || [],
     failReasons,
     detailText,

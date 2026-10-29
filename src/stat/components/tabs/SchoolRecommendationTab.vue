@@ -311,15 +311,29 @@
           </select>
 
           <!-- Privacy Masking Toggle -->
+          <div v-if="!auth.isAdmin" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-1.5 select-none" title="교사는 개인정보 보호를 위해 마스킹이 항상 유지됩니다.">
+            <span>🔒</span>
+            <span>마스킹: **동 (1단계)</span>
+          </div>
           <button
+            v-else
             type="button"
-            @click="isMasked = !isMasked"
+            @click="cycleAdminMaskMode"
             :class="[
-              'px-3 py-2 rounded-xl text-xs font-bold border transition-colors cursor-pointer flex items-center gap-1.5',
-              isMasked ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              'px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs select-none',
+              adminMaskMode === 0 
+                ? 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 ring-1 ring-rose-200' 
+                : adminMaskMode === 1
+                ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 ring-1 ring-amber-200'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-1 ring-emerald-200'
             ]"
+            :title="adminMaskTooltip"
           >
-            <span>{{ isMasked ? '🔒 학생명 마스킹' : '🔓 학생명 전체보기' }}</span>
+            <span>{{ adminMaskMode === 0 ? '🔒' : (adminMaskMode === 1 ? '🔓' : '👁️') }}</span>
+            <span>{{ adminMaskLabel }}</span>
+            <span class="text-[10px] px-1 py-0.2 rounded-full font-black bg-white border border-current shadow-2xs">
+              {{ adminMaskMode === 0 ? '1단계' : (adminMaskMode === 1 ? '2단계' : '3단계') }}
+            </span>
           </button>
 
           <!-- Export Excel CSV -->
@@ -424,7 +438,7 @@
 
     <!-- Student Detail Records List -->
     <div class="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 mb-4 gap-2">
         <div class="flex items-center gap-2">
           <span class="text-base">👤</span>
           <h3 class="text-sm font-black text-slate-800 m-0">
@@ -434,9 +448,31 @@
             총 {{ rawRecList.length }}건
           </span>
         </div>
-        <span class="text-xs text-slate-400">
-          * 개인정보 보호를 위해 학생명 마스킹 기능이 기본 적용됩니다.
-        </span>
+        <div class="flex items-center gap-2">
+          <button 
+            v-if="auth.isAdmin"
+            type="button"
+            @click="cycleAdminMaskMode"
+            :class="[
+              'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all border cursor-pointer shadow-2xs select-none',
+              adminMaskMode === 0 
+                ? 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 ring-1 ring-rose-200' 
+                : adminMaskMode === 1
+                ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 ring-1 ring-amber-200'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 ring-1 ring-emerald-200'
+            ]"
+            :title="adminMaskTooltip"
+          >
+            <span>{{ adminMaskMode === 0 ? '🔒' : (adminMaskMode === 1 ? '🔓' : '👁️') }}</span>
+            <span>{{ adminMaskLabel }}</span>
+            <span class="text-[10px] px-1 py-0.2 rounded-full font-black bg-white border border-current shadow-2xs">
+              {{ adminMaskMode === 0 ? '1단계' : (adminMaskMode === 1 ? '2단계' : '3단계') }}
+            </span>
+          </button>
+          <span v-else class="text-xs text-slate-400">
+            * 개인정보 보호를 위해 1단계(**동) 마스킹이 상시 적용됩니다.
+          </span>
+        </div>
       </div>
 
       <div class="overflow-x-auto max-h-[460px] overflow-y-auto">
@@ -491,16 +527,38 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { useStatData } from '../../composables/useStatData'
+import { 
+  useStatData, 
+  maskName, 
+  adminMaskMode, 
+  cycleAdminMaskMode 
+} from '../../composables/useStatData'
+import { useAuthStore } from '../../../stores/auth'
 import { schoolName } from '../../../utils/schoolConfig'
 import { supabase } from '../../../utils/supabaseClient'
 import { decryptText } from '../../../utils/cryptoUtils'
 
+const auth = useAuthStore()
 const { selectedAcademicYear, applications } = useStatData()
 
 const searchQuery = ref('')
 const sortBy = ref('count')
-const isMasked = ref(true)
+
+const adminMaskLabel = computed(() => {
+  if (adminMaskMode.value === 0) return '마스킹: **동'
+  if (adminMaskMode.value === 1) return '마스킹: 홍*동'
+  return '이름 전체공개'
+})
+
+const adminMaskTooltip = computed(() => {
+  if (adminMaskMode.value === 0) {
+    return '1단계 [기본 마스킹]: 맨 뒷글자(**동)만 표시 (2글자 이름은 ** 전체 마스킹). 클릭 시 2단계(성과 맨뒷글자 총 2개 표시: 홍*동)로 전환됩니다.'
+  }
+  if (adminMaskMode.value === 1) {
+    return '2단계 [부분 마스킹]: 성+맨뒷글자(홍*동) 2글자 표시 중. 클릭 시 3단계(이름 전체 공개: 홍길동)로 전환됩니다.'
+  }
+  return '3단계 [이름 전체공개]: 모든 이름이 표시 중. 클릭 시 다시 1단계(디폴트 마스킹: **동)로 되돌아갑니다.'
+})
 
 // 2027 시스템 데이터 상태 (Supabase)
 const sys2027Apps = ref([])
@@ -512,23 +570,13 @@ const is2027Mode = computed(() => {
   return String(selectedAcademicYear.value) === '2027'
 })
 
-// 이름 마스킹 헬퍼
-function maskName(name) {
-  if (!name) return '-'
-  if (!isMasked.value) return name
-  const str = String(name).trim()
-  if (str.length <= 1) return str
-  if (str.length === 2) return str[0] + '*'
-  return str[0] + '*'.repeat(str.length - 2) + str[str.length - 1]
-}
-
 // 2027학년도 Supabase 학교장추천 데이터 로드
 async function load2027SystemData() {
   if (!supabase) return
   isLoadingSys2027.value = true
   try {
     const [appsRes, studentsRes, univsRes] = await Promise.all([
-      supabase.from('applications').select('*, universities:univ_id(*)'),
+      supabase.from('applications').select('*'),
       supabase.from('enrolled_students').select('id, name, student_code, gpa_overall, grad_year, grade, is_enrolled'),
       supabase.from('universities').select('*')
     ])
@@ -552,9 +600,21 @@ async function load2027SystemData() {
       }
     }
 
+    // 추천 선발 확정 여부 판단:
+    // 이미 선발이 마무리되었으므로, 포기하지 않고 제외되지 않은 유효 지원서는 추천 확정으로 인정
+    const anyRecTrue = rawApps.some(a => a.is_recommended === true || a.is_recommended === 'true' || a.is_recommended === 1)
+
     sys2027Apps.value = rawApps.map(a => {
       const st = studentMap[a.student_id] || {}
-      const univ = a.universities || rawUnivs.find(u => u.id === a.univ_id) || {}
+      const univ = rawUnivs.find(u => u.id === a.univ_id) || {}
+      const isAbandoned = !!a.is_abandoned
+      const isExcluded = !!a.is_excluded
+      const isExplicitRec = a.is_recommended === true || a.is_recommended === 'true' || a.is_recommended === 1
+      
+      const isConfirmed = anyRecTrue 
+        ? (!isAbandoned && isExplicitRec) 
+        : (!isAbandoned && !isExcluded)
+
       return {
         id: a.id,
         studentId: a.student_id,
@@ -565,8 +625,9 @@ async function load2027SystemData() {
         dept: a.dept || univ.track_name || '-',
         admissionMajorType: univ.admission_type || '학교장추천',
         grade: st.gpa_overall ? Number(st.gpa_overall).toFixed(2) : '-',
-        isConfirmed: !!a.is_recommended,
-        isAbandoned: !!a.is_abandoned,
+        isConfirmed,
+        isAbandoned,
+        isExcluded,
         round: a.round,
         region: univ.region || '수도권',
         quota: univ.quota || 0,
@@ -586,18 +647,22 @@ async function load2027SystemData() {
 // 2025, 2026학년도 구글시트 applications에서 추천 전형 필터링
 const rawRecList = computed(() => {
   if (is2027Mode.value) {
-    // 2027학년도: 시스템 데이터 우선, 없으면 applications 구글시트 폴백
+    // 2027학년도: 시스템 데이터가 유효하게 있으면 시스템 데이터 우선 사용
     if (sys2027Apps.value.length > 0) {
-      return sys2027Apps.value.map(a => ({
-        ...a,
-        isPass: false, // 2027은 아직 합격여부 미결정
-        isFail: false,
-        statusText: a.isConfirmed ? '추천 확정' : (a.isAbandoned ? '추천 포기' : '지망 신청')
-      }))
+      return sys2027Apps.value.map(a => {
+        const isConf = !a.isAbandoned && a.isConfirmed
+        return {
+          ...a,
+          isConfirmed: isConf,
+          isPass: false, // 2027은 아직 대입 합격여부 미결정
+          isFail: false,
+          statusText: isConf ? '추천 확정' : (a.isAbandoned ? '추천 포기' : '선발 제외')
+        }
+      })
     }
   }
 
-  // 2025, 2026 (또는 2027 구글시트)
+  // 구글 시트 applications (2027 대교협 수시 144건, 2026 수시 72건, 2025 수시 등)
   const list = applications.value || []
   return list.filter(app => {
     if (app.isRecommendation) return true
@@ -610,6 +675,15 @@ const rawRecList = computed(() => {
     const isPass = ['합격', '최초합격', '충원합격', '최초합', '추합', '등록'].some(k => finalSt.includes(k)) || app.registerStatus === 'Y'
     const isFail = ['불합격', '불합'].some(k => finalSt.includes(k))
     const isReg = app.registerStatus === 'Y'
+
+    // 대교협 수시 원서에 접수된 학교장추천 전형은 이미 학교 추천선발이 마무리되어 확정 추천된 건임
+    const isConfirmed = true
+
+    let statusText = '추천 확정'
+    if (isReg) statusText = '최종 등록'
+    else if (isPass) statusText = '최종 합격'
+    else if (isFail) statusText = '불합격'
+    else if (finalSt) statusText = finalSt
 
     return {
       id: app.id,
@@ -627,9 +701,9 @@ const rawRecList = computed(() => {
       isPass,
       isFail,
       isReg,
-      isConfirmed: false,
+      isConfirmed,
       isAbandoned: false,
-      statusText: isReg ? '최종 등록' : (isPass ? '최종 합격' : (isFail ? '불합격' : (finalSt || '결과 미등록')))
+      statusText
     }
   })
 })
