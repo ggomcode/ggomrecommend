@@ -1674,11 +1674,11 @@ const radarChartData = computed(() => {
   const gpaRaw = currentGpaRaw.value
   const satRaw = currentSatAnalysis.value.grades
 
-  // 차트 반경 계산: 1등급=9, 9등급=1 (0~10 스케일 내 안전하게 클램핑하여 방사형 역방향 빔 방지)
+  // 차트 반경 계산: 1등급=9(가장 바깥 원), 9등급=1(가장 안쪽 원) (1~9등급 체계)
   const toChartRadius = (grade) => {
     const n = Number(grade)
     const valid = (!isNaN(n) && n >= 1 && n <= 9) ? n : 5.0
-    return Number(Math.max(0.5, Math.min(9.5, 10 - valid)).toFixed(2))
+    return Number(Math.max(1, Math.min(9, 10 - valid)).toFixed(2))
   }
 
   return {
@@ -1744,14 +1744,14 @@ const radarChartOptions = {
   scales: {
     r: {
       min: 0,
-      max: 10,
+      max: 9,
       ticks: {
-        stepSize: 2,
+        stepSize: 1,
         callback: (val) => {
           if (val === 0) return ''
           return `${10 - val}등급`
         },
-        font: { family: 'Pretendard', size: 10 },
+        font: { family: 'Pretendard', size: 9 },
         backdropColor: 'transparent',
         color: '#94a3b8'
       },
