@@ -272,6 +272,8 @@ import StudentTab from '../stat/components/tabs/StudentTab.vue'
 import DataExplorerTab from '../stat/components/tabs/DataExplorerTab.vue'
 import PrintReportTab from '../stat/components/tabs/PrintReportTab.vue'
 import PassFailScatterTab from '../stat/components/tabs/PassFailScatterTab.vue'
+import SchoolRecommendationTab from '../stat/components/tabs/SchoolRecommendationTab.vue'
+import RuralStatTab from '../stat/components/tabs/RuralStatTab.vue'
 import ParentCounselTab from '../stat/components/tabs/ParentCounselTab.vue'
 import HighSchoolAdmissionTab from '../stat/components/tabs/HighSchoolAdmissionTab.vue'
 import CsatTargetSimulatorTab from '../stat/components/tabs/CsatTargetSimulatorTab.vue'
@@ -294,7 +296,9 @@ import {
   Lock,
   Sparkles,
   GraduationCap,
-  Compass
+  Compass,
+  Award,
+  Trees
 } from 'lucide-vue-next'
 import { clearStatSessionPassword, getStatSessionPassword } from '../api/statApi'
 
@@ -326,6 +330,8 @@ const menuGroups = computed(() => [
     title: '대학 & 전형 심층 분석',
     items: [
       { id: 'scatter', name: '대입 합불 산점도', iconComponent: ChartScatter, badge: 'NEW' },
+      { id: 'schoolRec', name: '학교장추천 전형 분석', iconComponent: Award, badge: '특화' },
+      { id: 'ruralStat', name: '농어촌 전형 분석', iconComponent: Trees, badge: '특화' },
       { id: 'university', name: '대학 그룹별 분석', iconComponent: Building2 },
       { id: 'grade', name: '성적대별 전형 경향', iconComponent: Target }
     ]
@@ -375,6 +381,8 @@ const activeTabComponent = computed(() => {
     case 'admission': return HighSchoolAdmissionTab
     case 'counsel': return ParentCounselTab
     case 'scatter': return PassFailScatterTab
+    case 'schoolRec': return SchoolRecommendationTab
+    case 'ruralStat': return RuralStatTab
     case 'multiYear': return MultiYearTab
     case 'university': return UniversityTab
     case 'grade': return GradeTab

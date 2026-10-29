@@ -144,6 +144,67 @@
       </div>
     </div>
 
+    <!-- 2-1. 특화 전형(학교장추천 & 농어촌 특별전형) 2대 핵심 지표 카드 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Special KPI 1: 학교장추천 전형 지원 -->
+      <div class="bg-gradient-to-br from-violet-50/70 via-white to-purple-50/30 rounded-2xl p-5 border border-violet-100 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between text-violet-800 mb-2">
+          <div class="flex items-center gap-2">
+            <span class="p-1.5 rounded-lg bg-violet-100 text-violet-700 text-sm">🤝</span>
+            <span class="text-xs font-black">학교장추천 전형(학추) 지원 현황</span>
+          </div>
+          <span class="text-[11px] font-bold text-violet-700 bg-violet-100/70 px-2.5 py-0.5 rounded-full border border-violet-200/50">
+            수시 지원 중 {{ (latestYearData?.totalApplications && latestYearData?.recommendationApps) ? ((latestYearData.recommendationApps / latestYearData.totalApplications) * 100).toFixed(1) : '-' }}%
+          </span>
+        </div>
+        <div>
+          <div class="text-2xl sm:text-3xl font-black text-violet-900 tracking-tight">
+            {{ latestYearData?.recommendationApps != null ? latestYearData.recommendationApps.toLocaleString() : '-' }}<span v-if="latestYearData?.recommendationApps != null" class="text-xs font-semibold text-violet-400 ml-1">건</span>
+          </div>
+          <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+            <template v-if="hasMultiYearComparison && previousYearData?.recommendationApps != null">
+              <span :class="recGrowth >= 0 ? 'text-violet-700 font-bold flex items-center' : 'text-slate-600 font-bold flex items-center'">
+                <span>{{ recGrowth >= 0 ? '▲ +' : '▼ ' }}</span>{{ recGrowth }}% ({{ recDiff >= 0 ? '+' : '' }}{{ recDiff }}건)
+              </span>
+              <span>전년({{ previousYearData.year }}년 {{ previousYearData.recommendationApps }}건) 대비</span>
+            </template>
+            <template v-else>
+              <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Special KPI 2: 농어촌 학생 특별전형 지원 -->
+      <div class="bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/30 rounded-2xl p-5 border border-emerald-100 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between text-emerald-800 mb-2">
+          <div class="flex items-center gap-2">
+            <span class="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 text-sm">🌾</span>
+            <span class="text-xs font-black">농어촌 학생 특별전형 지원 현황</span>
+          </div>
+          <span class="text-[11px] font-bold text-emerald-700 bg-emerald-100/70 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
+            수시 지원 중 {{ (latestYearData?.totalApplications && latestYearData?.ruralApps) ? ((latestYearData.ruralApps / latestYearData.totalApplications) * 100).toFixed(1) : '-' }}%
+          </span>
+        </div>
+        <div>
+          <div class="text-2xl sm:text-3xl font-black text-emerald-900 tracking-tight">
+            {{ latestYearData?.ruralApps != null ? latestYearData.ruralApps.toLocaleString() : '-' }}<span v-if="latestYearData?.ruralApps != null" class="text-xs font-semibold text-emerald-400 ml-1">건</span>
+          </div>
+          <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+            <template v-if="hasMultiYearComparison && previousYearData?.ruralApps != null">
+              <span :class="ruralGrowth >= 0 ? 'text-emerald-700 font-bold flex items-center' : 'text-slate-600 font-bold flex items-center'">
+                <span>{{ ruralGrowth >= 0 ? '▲ +' : '▼ ' }}</span>{{ ruralGrowth }}% ({{ ruralDiff >= 0 ? '+' : '' }}{{ ruralDiff }}건)
+              </span>
+              <span>전년({{ previousYearData.year }}년 {{ previousYearData.ruralApps }}건) 대비</span>
+            </template>
+            <template v-else>
+              <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 3. Charts Row 1: 지원 규모 & 1인당 지원 카드 수 추이 -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Chart 1: 연도별 총 지원 건수 및 지원 학생 수 (Bar & Line) -->
@@ -226,6 +287,51 @@
         </div>
         <div class="h-64 sm:h-72">
           <Bar :data="admissionTypeChartData" :options="stackedChartOptions" />
+        </div>
+      </div>
+    </div>
+
+    <!-- 4-1. Charts Row 3: 특화 전형(학교장추천 & 농어촌) 5개년 추이 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Chart 5: 연도별 학교장추천 & 농어촌 지원 건수 추이 (Grouped Bar) -->
+      <div class="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-xs">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-slate-900 m-0 flex items-center gap-2">
+              <span>🤝🌾</span>
+              <span>특화 전형(학교장추천 & 농어촌) 5개년 지원 건수</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5 m-0">
+              연도별 학교장추천 전형 및 농어촌 학생 특별전형 원서접수 건수 비교
+            </p>
+          </div>
+          <span class="text-xs font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md">
+            단위: 건
+          </span>
+        </div>
+        <div class="h-64 sm:h-72">
+          <Bar :data="specialTrackVolumeChartData" :options="specialTrackChartOptions" />
+        </div>
+      </div>
+
+      <!-- Chart 6: 전체 수시 대비 특화 전형 비중 추이 (Line) -->
+      <div class="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-xs">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-slate-900 m-0 flex items-center gap-2">
+              <span>📈</span>
+              <span>수시 원서접수 중 특화 전형 비중(%) 추이</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5 m-0">
+              전체 수시 원서접수 건수 중 학교장추천 및 농어촌 특별전형의 점유율 변화
+            </p>
+          </div>
+          <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+            단위: %
+          </span>
+        </div>
+        <div class="h-64 sm:h-72">
+          <Line :data="specialTrackRatioChartData" :options="specialTrackRatioChartOptions" />
         </div>
       </div>
     </div>
@@ -337,6 +443,8 @@
               <th class="py-3 px-3 text-center">수도권 비율</th>
               <th class="py-3 px-3 text-center">주요대 지원</th>
               <th class="py-3 px-3 text-center">의치한약수 지원</th>
+              <th class="py-3 px-3 text-center text-violet-800 bg-violet-50/50">학교장추천(비율)</th>
+              <th class="py-3 px-3 text-center text-emerald-800 bg-emerald-50/50">농어촌전형(비율)</th>
               <th class="py-3 px-4 text-center">최종 합격률</th>
             </tr>
           </thead>
@@ -389,6 +497,24 @@
               </td>
               <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-rose-700">
                 {{ byYear[y]?.medicalApps != null ? `${byYear[y].medicalApps}건` : '-' }}
+              </td>
+              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-violet-700">
+                <template v-if="byYear[y]?.recommendationApps != null">
+                  <span>{{ byYear[y].recommendationApps }}건</span>
+                  <span v-if="byYear[y]?.totalApplications" class="text-[10px] text-violet-500 font-normal ml-0.5">
+                    ({{ ((byYear[y].recommendationApps / byYear[y].totalApplications) * 100).toFixed(1) }}%)
+                  </span>
+                </template>
+                <template v-else class="text-slate-300 font-bold">-</template>
+              </td>
+              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-emerald-700">
+                <template v-if="byYear[y]?.ruralApps != null">
+                  <span>{{ byYear[y].ruralApps }}건</span>
+                  <span v-if="byYear[y]?.totalApplications" class="text-[10px] text-emerald-500 font-normal ml-0.5">
+                    ({{ ((byYear[y].ruralApps / byYear[y].totalApplications) * 100).toFixed(1) }}%)
+                  </span>
+                </template>
+                <template v-else class="text-slate-300 font-bold">-</template>
               </td>
               <td class="py-3.5 px-4 text-center whitespace-nowrap font-bold text-emerald-700">
                 {{ byYear[y]?.finalPassRate != null ? `${byYear[y].finalPassRate}%` : '-' }}
@@ -467,6 +593,32 @@ const topTierGrowth = computed(() => {
   const cur = latestYearData.value.topTierApps
   const prev = previousYearData.value.topTierApps
   return Number((((cur - prev) / prev) * 100).toFixed(1))
+})
+
+// 학교장추천 전형 지원 건수 증감률 및 편차
+const recGrowth = computed(() => {
+  if (!latestYearData.value?.recommendationApps || !previousYearData.value?.recommendationApps) return 0
+  const cur = latestYearData.value.recommendationApps
+  const prev = previousYearData.value.recommendationApps
+  return Number((((cur - prev) / prev) * 100).toFixed(1))
+})
+
+const recDiff = computed(() => {
+  if (latestYearData.value?.recommendationApps == null || previousYearData.value?.recommendationApps == null) return 0
+  return latestYearData.value.recommendationApps - previousYearData.value.recommendationApps
+})
+
+// 농어촌 특별전형 지원 건수 증감률 및 편차
+const ruralGrowth = computed(() => {
+  if (!latestYearData.value?.ruralApps || !previousYearData.value?.ruralApps) return 0
+  const cur = latestYearData.value.ruralApps
+  const prev = previousYearData.value.ruralApps
+  return Number((((cur - prev) / prev) * 100).toFixed(1))
+})
+
+const ruralDiff = computed(() => {
+  if (latestYearData.value?.ruralApps == null || previousYearData.value?.ruralApps == null) return 0
+  return latestYearData.value.ruralApps - previousYearData.value.ruralApps
 })
 
 const total5YearApps = computed(() => {
@@ -640,23 +792,129 @@ const stackedChartOptions = {
   }
 }
 
+// Chart 5: 특화 전형(학교장추천 & 농어촌) 지원 건수 5개년 Grouped Bar
+const specialTrackVolumeChartData = computed(() => ({
+  labels: years.map(y => `${y}학년도`),
+  datasets: [
+    {
+      label: '학교장추천 전형 (건)',
+      data: years.map(y => byYear[y]?.recommendationApps ?? null),
+      backgroundColor: 'rgba(139, 92, 246, 0.85)', // violet
+      borderRadius: 6
+    },
+    {
+      label: '농어촌 학생 전형 (건)',
+      data: years.map(y => byYear[y]?.ruralApps ?? null),
+      backgroundColor: 'rgba(16, 185, 129, 0.85)', // emerald
+      borderRadius: 6
+    }
+  ]
+}))
+
+const specialTrackChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11, weight: 'bold' } } }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      grid: { color: 'rgba(226, 232, 240, 0.6)' },
+      ticks: { font: { size: 10 } }
+    },
+    x: {
+      grid: { display: false },
+      ticks: { font: { size: 11, weight: 'bold' } }
+    }
+  }
+}
+
+// Chart 6: 전체 수시 원서접수 중 특화 전형 비중(%) 추이 Line
+const specialTrackRatioChartData = computed(() => ({
+  labels: years.map(y => `${y}학년도`),
+  datasets: [
+    {
+      label: '학교장추천 비중 (%)',
+      data: years.map(y => {
+        const rec = byYear[y]?.recommendationApps
+        const tot = byYear[y]?.totalApplications
+        return (rec != null && tot) ? Number(((rec / tot) * 100).toFixed(1)) : null
+      }),
+      borderColor: '#8b5cf6',
+      backgroundColor: 'rgba(139, 92, 246, 0.1)',
+      borderWidth: 3,
+      pointRadius: 5,
+      tension: 0.3,
+      spanGaps: false
+    },
+    {
+      label: '농어촌 전형 비중 (%)',
+      data: years.map(y => {
+        const rural = byYear[y]?.ruralApps
+        const tot = byYear[y]?.totalApplications
+        return (rural != null && tot) ? Number(((rural / tot) * 100).toFixed(1)) : null
+      }),
+      borderColor: '#10b981',
+      backgroundColor: 'rgba(16, 185, 129, 0.1)',
+      borderWidth: 3,
+      pointRadius: 5,
+      tension: 0.3,
+      spanGaps: false
+    }
+  ]
+}))
+
+const specialTrackRatioChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11, weight: 'bold' } } }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      grid: { color: 'rgba(226, 232, 240, 0.6)' },
+      ticks: {
+        callback: (val) => `${val}%`,
+        font: { size: 10 }
+      }
+    },
+    x: {
+      grid: { display: false },
+      ticks: { font: { size: 11, weight: 'bold' } }
+    }
+  }
+}
+
 // 엑셀 내보내기 (데이터 없는 항목은 '-' 처리)
 function exportMultiYearExcel() {
-  const summaryRows = years.map(y => ({
-    '학년도': `${y}학년도`,
-    '전체 재학생(명)': byYear[y]?.totalStudents != null ? byYear[y].totalStudents : '-',
-    '수시 지원자(명)': byYear[y]?.applicantStudents != null ? byYear[y].applicantStudents : '-',
-    '수시 지원율(%)': byYear[y]?.applicantRate != null ? byYear[y].applicantRate : '-',
-    '총 지원 건수(건)': byYear[y]?.totalApplications != null ? byYear[y].totalApplications : '-',
-    '1인당 지원 건수(장)': byYear[y]?.avgAppsPerStudent != null ? byYear[y].avgAppsPerStudent : '-',
-    '지원자 평균 내신(등급)': byYear[y]?.avgGrade != null ? byYear[y].avgGrade : '-',
-    '최고 내신': byYear[y]?.bestGrade != null ? byYear[y].bestGrade : '-',
-    '최저 내신': byYear[y]?.worstGrade != null ? byYear[y].worstGrade : '-',
-    '수도권 대학 비율(%)': byYear[y]?.metroRate != null ? byYear[y].metroRate : '-',
-    '주요대 지원 건수': byYear[y]?.topTierApps != null ? byYear[y].topTierApps : '-',
-    '의치한약수 지원 건수': byYear[y]?.medicalApps != null ? byYear[y].medicalApps : '-',
-    '최종 합격률(%)': byYear[y]?.finalPassRate != null ? byYear[y].finalPassRate : '-'
-  }))
+  const summaryRows = years.map(y => {
+    const rec = byYear[y]?.recommendationApps
+    const rural = byYear[y]?.ruralApps
+    const tot = byYear[y]?.totalApplications
+    return {
+      '학년도': `${y}학년도`,
+      '전체 재학생(명)': byYear[y]?.totalStudents != null ? byYear[y].totalStudents : '-',
+      '수시 지원자(명)': byYear[y]?.applicantStudents != null ? byYear[y].applicantStudents : '-',
+      '수시 지원율(%)': byYear[y]?.applicantRate != null ? byYear[y].applicantRate : '-',
+      '총 지원 건수(건)': byYear[y]?.totalApplications != null ? byYear[y].totalApplications : '-',
+      '1인당 지원 건수(장)': byYear[y]?.avgAppsPerStudent != null ? byYear[y].avgAppsPerStudent : '-',
+      '지원자 평균 내신(등급)': byYear[y]?.avgGrade != null ? byYear[y].avgGrade : '-',
+      '최고 내신': byYear[y]?.bestGrade != null ? byYear[y].bestGrade : '-',
+      '최저 내신': byYear[y]?.worstGrade != null ? byYear[y].worstGrade : '-',
+      '수도권 대학 비율(%)': byYear[y]?.metroRate != null ? byYear[y].metroRate : '-',
+      '주요대 지원 건수': byYear[y]?.topTierApps != null ? byYear[y].topTierApps : '-',
+      '의치한약수 지원 건수': byYear[y]?.medicalApps != null ? byYear[y].medicalApps : '-',
+      '학교장추천 지원 건수(건)': rec != null ? rec : '-',
+      '학교장추천 비중(%)': (rec != null && tot) ? Number(((rec / tot) * 100).toFixed(1)) : '-',
+      '농어촌전형 지원 건수(건)': rural != null ? rural : '-',
+      '농어촌전형 비중(%)': (rural != null && tot) ? Number(((rural / tot) * 100).toFixed(1)) : '-',
+      '최종 합격률(%)': byYear[y]?.finalPassRate != null ? byYear[y].finalPassRate : '-'
+    }
+  })
 
   const targetRows = targetUnivComparison.map(t => ({
     '대학군': t.groupName,
