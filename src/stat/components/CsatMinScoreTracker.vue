@@ -96,10 +96,7 @@
               <template v-else>❌</template>
             </span>
             <span class="text-[10px] font-extrabold tracking-tight mt-0.5 leading-none">
-              <template v-if="ev.status === 'NO_SCORE'">미입력</template>
-              <template v-else-if="ev.status === 'INSUFFICIENT'">부족</template>
-              <template v-else-if="ev.achievedSum !== null">{{ ev.achievedSum }}합</template>
-              <template v-else>{{ ev.isSatisfied ? '충족' : '미충족' }}</template>
+              {{ formatGradeSumLabel(ev) }}
             </span>
           </div>
 
@@ -260,12 +257,26 @@ const satisfiedCount = computed(() => {
   return sortedEvaluations.value.filter(e => e.isSatisfied).length
 })
 
-// '2027학년도 9월 모의평가' -> '9월' 간소화 헬퍼
+// '2027학년도 9월 모의평가' -> '9월' 간소화 헬퍼 (숫자 단독 '3' -> '3월' 자동 보정)
 function formatExamLabel(name = '') {
-  const match = String(name).match(/([0-9]{1,2})\s*월/)
+  const str = String(name || '').trim()
+  const match = str.match(/([0-9]{1,2})\s*월/)
   if (match) return `${match[1]}월`
-  if (name.includes('수능') || name.includes('대수능')) return '수능'
-  return name.slice(0, 4)
+  const numMatch = str.match(/^0?([1-9]|1[0-2])$/)
+  if (numMatch) return `${numMatch[1]}월`
+  if (str.includes('수능') || str.includes('대수능')) return '수능'
+  return str.slice(0, 4)
+}
+
+// 수능최저 등급합 포맷팅 (기준 반영 영역 수 N개와 달성 합 M등급을 결합: '2합9', '2합15')
+function formatGradeSumLabel(ev) {
+  if (ev.status === 'NO_SCORE') return '미입력'
+  if (ev.status === 'INSUFFICIENT') return '부족'
+  if (ev.achievedSum !== null) {
+    const need = ev.needCount || parsedRule.value?.needCount || 2
+    return `${need}합${ev.achievedSum}`
+  }
+  return ev.isSatisfied ? '충족' : '미충족'
 }
 
 // 각 월별 블록 컨테이너 클래스 (상태별 색상 분기)
