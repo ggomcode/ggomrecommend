@@ -190,8 +190,9 @@
             <span class="hidden sm:inline">인쇄</span>
           </button>
 
-          <!-- Portal Return Button -->
+          <!-- Portal Return Button (일반 사용자 전용, 게스트 비노출) -->
           <button 
+            v-if="!auth.isGuest"
             @click="router.push('/select-system')"
             class="inline-flex items-center px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors cursor-pointer"
             title="메인 포털 화면으로 돌아갑니다."
@@ -202,8 +203,9 @@
             <span>포털로 이동</span>
           </button>
 
-          <!-- 캘린더 Button -->
+          <!-- 캘린더 Button (일반 사용자 전용, 게스트 비노출) -->
           <button
+            v-if="!auth.isGuest"
             @click="goToCalendar"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors cursor-pointer"
             title="학사일정 & 대입 캘린더"
@@ -212,8 +214,9 @@
             <span>캘린더</span>
           </button>
 
-          <!-- Logout Button -->
+          <!-- Logout Button (일반 사용자 전용, 게스트 비노출) -->
           <button 
+            v-if="!auth.isGuest"
             @click="handleLogout"
             class="hidden sm:inline-flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
           >

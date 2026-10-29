@@ -174,6 +174,7 @@
         </div>
 
         <button
+          v-if="!auth.isGuest"
           @click="goToPortal"
           class="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
           title="대문(포털)으로 이동"
@@ -183,6 +184,7 @@
         </button>
 
         <button
+          v-if="!auth.isGuest"
           @click="handleLogout"
           class="w-full flex items-center justify-center gap-1.5 py-1 px-2 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer border-none bg-transparent"
         >

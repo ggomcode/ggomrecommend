@@ -4,7 +4,13 @@ import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
 import { checkExamIntentSystemEnabled } from '../api/examIntentApi.js'
 import { checkJuniorCollegeSystemEnabled } from '../api/juniorCollegeApi.js'
 import { isKcueStatSystemEnabled } from '../api/statApi.js'
-import { isModuleSecretAccessEnabled, getModuleIdByPath, MODULE_ROUTE_MAP } from '../api/suiteModulesApi.js'
+import { 
+  isModuleSecretAccessEnabled, 
+  getModuleIdByPath, 
+  MODULE_ROUTE_MAP,
+  verifySecretAccessToken,
+  CODE_TO_MODULE_MAP
+} from '../api/suiteModulesApi.js'
 
 const routes = [
   { path: '/', redirect: '/login' },
@@ -21,7 +27,7 @@ const routes = [
     component: () => import('../views/LoginView.vue'),
     beforeEnter: (to) => {
       const auth = useAuthStore()
-      if (to.query.error === 'secret_closed') return true
+      if (to.query.error) return true
       if (auth.isGuest && auth.guestModule) {
         return MODULE_ROUTE_MAP[auth.guestModule] || '/stat'
       }
@@ -110,39 +116,83 @@ router.beforeEach(async to => {
 
   await auth.checkStatus()
 
-  // ── 0. 학교 관리자 Secret 접속 통로 (비밀번호 없는 임시 게스트 열람) ──
+  // ── 0. 학교 관리자 Secret 접속 통로 (AES 암호화 1일 한정 토큰 검증) ──
+  const secretToken = to.query.sec || to.query.token || null
   const isGuestEntryPath = to.path.startsWith('/guest/')
-  const hasSecretQuery = to.query.secret === 'guest' || to.query.guest === 'true' || to.query.secret === 'manager'
   
-  if (isGuestEntryPath || hasSecretQuery) {
-    const targetModuleId = isGuestEntryPath
-      ? (to.path.replace(/^\/guest\/?/, '').split('/')[0] || 'stat')
-      : (getModuleIdByPath(to.path) || 'stat')
-    
-    const isSecretOpen = await isModuleSecretAccessEnabled(targetModuleId)
-    if (isSecretOpen) {
-      if (!auth.isAdmin && !auth.isTeacher) {
-        auth.loginAsGuest(targetModuleId)
+  if (secretToken || isGuestEntryPath) {
+    let token = secretToken
+    let targetModuleId = null
+
+    if (isGuestEntryPath) {
+      const segs = to.path.replace(/^\/guest\/?/, '').split('/')
+      const rawCodeOrId = segs[0]
+      targetModuleId = CODE_TO_MODULE_MAP[rawCodeOrId] || rawCodeOrId || null
+      if (!token && segs[1]) {
+        token = segs[1]
       }
-      if (isGuestEntryPath) {
-        const destPath = MODULE_ROUTE_MAP[targetModuleId] || '/stat'
-        return { path: destPath, query: { secret: 'guest' } }
-      }
-      // 이미 해당 모듈 URL에 쿼리로 진입한 경우 진행 허용
-      return true
     } else {
-      // Secret 통로가 비활성화(닫힘)되어 있는 경우
-      if (auth.isGuest && auth.guestModule === targetModuleId) {
-        auth.logout()
-      }
-      return { path: '/login', query: { error: 'secret_closed', module: targetModuleId } }
+      targetModuleId = getModuleIdByPath(to.path)
     }
+
+    if (!token) {
+      // 토큰 없는 게스트 접속 시도: 즉시 로그인 차단
+      if (auth.isGuest) auth.logout()
+      return { path: '/login', query: { error: 'secret_invalid' } }
+    }
+
+    // 1) AES-256-GCM 토큰 복호화 및 유효성(모듈코드, 발급일자, 24시간 만료) 검증
+    const verifyResult = await verifySecretAccessToken(token, targetModuleId)
+    if (!verifyResult.valid) {
+      if (auth.isGuest) auth.logout()
+      const errCode = verifyResult.reason === 'expired' ? 'secret_expired' : 'secret_invalid'
+      return { path: '/login', query: { error: errCode, module: targetModuleId || 'stat' } }
+    }
+
+    const verifiedModuleId = verifyResult.moduleId || targetModuleId
+    
+    // 2) 관리자 환경설정에서 해당 모듈의 Secret 통로가 열려있는지(ON 상태) 실시간 확인
+    const isSecretOpen = await isModuleSecretAccessEnabled(verifiedModuleId)
+    if (!isSecretOpen) {
+      if (auth.isGuest) auth.logout()
+      return { path: '/login', query: { error: 'secret_closed', module: verifiedModuleId } }
+    }
+
+    // 3) 검증 통과: 게스트 세션 승인 및 1일 한정 티켓 등록
+    if (!auth.isAdmin && !auth.isTeacher) {
+      auth.loginAsGuest(verifiedModuleId, { ...verifyResult, token })
+    }
+
+    if (isGuestEntryPath) {
+      const destPath = MODULE_ROUTE_MAP[verifiedModuleId] || '/stat'
+      return { path: destPath, query: { sec: token } }
+    }
+
+    return true
   }
 
   // 0-1. 활성화된 게스트 세션의 모듈 내부 탭 이동 및 새로고침 검증
   if (auth.isGuest) {
     const curModuleId = getModuleIdByPath(to.path)
     if (curModuleId && curModuleId === auth.guestModule) {
+      // sessionStorage 티켓 만료 확인 (우연한 접속 또는 1일 경과 접속 차단)
+      let hasValidTicket = false
+      try {
+        const ticketStr = sessionStorage.getItem('pcm_guest_ticket')
+        if (ticketStr) {
+          const t = JSON.parse(ticketStr)
+          if (t && t.moduleId === auth.guestModule && t.expiresAt && Date.now() < t.expiresAt) {
+            hasValidTicket = true
+          }
+        }
+      } catch (e) {}
+
+      if (!hasValidTicket) {
+        auth.logout()
+        return { path: '/login', query: { error: 'secret_expired', module: auth.guestModule } }
+      }
+
+      // 관리자가 중간에 토글을 껐는지 확인
       const isSecretOpen = await isModuleSecretAccessEnabled(auth.guestModule)
       if (isSecretOpen) {
         return true

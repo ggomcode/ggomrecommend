@@ -98,13 +98,33 @@
         </h1>
       </div>
 
-      <!-- 학교 관리자 Secret 접속 통로 닫힘 안내 배너 -->
+      <!-- 학교 관리자 Secret 접속 통로 상태 안내 배너 -->
       <div v-if="route.query.error === 'secret_closed'" class="mb-5 p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5 shadow-2xs">
         <span class="text-base shrink-0 mt-0.5">🔒</span>
         <div class="leading-relaxed">
           <strong class="font-black text-amber-950 block">학교 관리자 Secret 접속 통로가 닫혀 있습니다.</strong>
           <span class="text-[11px] text-amber-800">
             현재 해당 서비스의 임시 게스트 열람이 비활성화(닫힘) 상태입니다. 열람이 필요하신 경우 학교 관리자(대입 담당 선생님)에게 문의하여 통로를 열어달라고 요청해 주세요.
+          </span>
+        </div>
+      </div>
+
+      <div v-else-if="route.query.error === 'secret_expired'" class="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 flex items-start gap-2.5 shadow-2xs">
+        <span class="text-base shrink-0 mt-0.5">⌛</span>
+        <div class="leading-relaxed">
+          <strong class="font-black text-rose-950 block">비밀 접속 링크의 유효기간이 만료되었습니다.</strong>
+          <span class="text-[11px] text-rose-800">
+            해당 비밀 접속 링크는 관리자가 지정한 유효 기간이 경과하여 만료되었습니다. 열람이 필요하신 경우 관리자(대입 담당 선생님)에게 새로운 접속 링크를 요청해 주세요.
+          </span>
+        </div>
+      </div>
+
+      <div v-else-if="route.query.error === 'secret_invalid'" class="mb-5 p-3.5 rounded-2xl bg-slate-100 border border-slate-300 text-xs text-slate-800 flex items-start gap-2.5 shadow-2xs">
+        <span class="text-base shrink-0 mt-0.5">⚠️</span>
+        <div class="leading-relaxed">
+          <strong class="font-black text-slate-900 block">유효하지 않은 비밀 접속 경로입니다.</strong>
+          <span class="text-[11px] text-slate-600">
+            접속 링크의 암호화 키 또는 모듈 코드가 올바르지 않습니다. 전달받으신 원본 비밀 접속 링크를 다시 확인해 주세요.
           </span>
         </div>
       </div>

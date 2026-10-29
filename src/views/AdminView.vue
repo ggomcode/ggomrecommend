@@ -145,7 +145,7 @@
           </div>
 
           <!-- 액션 버튼 -->
-          <div class="pt-2 border-t border-slate-200/80 flex flex-col gap-1.5">
+          <div v-if="!auth.isGuest" class="pt-2 border-t border-slate-200/80 flex flex-col gap-1.5">
             <button
               v-if="isRuralSystemEnabled"
               @click="switchToRuralSystem"

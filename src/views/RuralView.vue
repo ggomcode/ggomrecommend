@@ -36,6 +36,7 @@
           </button>
 
           <button
+            v-if="!auth.isGuest"
             @click="goToPortal"
             class="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1"
           >
@@ -43,6 +44,7 @@
           </button>
 
           <button
+            v-if="!auth.isGuest"
             @click="router.push('/calendar')"
             class="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
             title="학사일정 & 대입 캘린더"
@@ -52,6 +54,7 @@
           </button>
 
           <button
+            v-if="!auth.isGuest"
             @click="handleLogout"
             class="text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer"
           >
@@ -162,7 +165,7 @@
             <p class="text-sm font-bold text-slate-900 m-0">{{ userName }}</p>
             <p class="text-xs text-slate-500 font-medium m-0 mt-0.5">{{ roleLabel }}</p>
           </div>
-          <div class="pt-2 border-t border-slate-200/80 flex flex-col gap-1.5">
+          <div v-if="!auth.isGuest" class="pt-2 border-t border-slate-200/80 flex flex-col gap-1.5">
             <button
               @click="switchToPrincipalSystem"
               class="w-full text-left text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"

@@ -71,9 +71,23 @@ export const useAuthStore = defineStore('auth', () => {
             console.warn('Student profile sync fallback on checkStatus:', e)
           }
         } else if (role.value === 'guest') {
-          // 학교 관리자 Secret 접속(게스트) 상태 유지
-          guestModule.value = localStorage.getItem('pcm_guest_module') || 'stat'
-          teacherName.value = localStorage.getItem('pcm_teacher_name') || '학교 관리자 (게스트)'
+          // 학교 관리자 Secret 접속(게스트) 세션 검증
+          let validGuest = false
+          try {
+            const ticketStr = sessionStorage.getItem('pcm_guest_ticket')
+            if (ticketStr) {
+              const ticket = JSON.parse(ticketStr)
+              if (ticket && ticket.moduleId && ticket.expiresAt && Date.now() < ticket.expiresAt) {
+                guestModule.value = ticket.moduleId
+                teacherName.value = '학교 관리자 (게스트)'
+                validGuest = true
+              }
+            }
+          } catch (e) {}
+
+          if (!validGuest) {
+            clearAuthStates()
+          }
         } else {
           clearAuthStates()
         }
@@ -246,8 +260,23 @@ export const useAuthStore = defineStore('auth', () => {
     if (userId.value) localStorage.setItem('pcm_user_id', userId.value)
     else localStorage.removeItem('pcm_user_id')
 
-    if (role.value) localStorage.setItem('pcm_role', role.value)
-    else localStorage.removeItem('pcm_role')
+    if (role.value === 'guest') {
+      let hasValidTicket = false
+      try {
+        const ticketStr = sessionStorage.getItem('pcm_guest_ticket')
+        if (ticketStr) {
+          const t = JSON.parse(ticketStr)
+          if (t && t.expiresAt && Date.now() < t.expiresAt) hasValidTicket = true
+        }
+      } catch (e) {}
+
+      if (hasValidTicket) localStorage.setItem('pcm_role', 'guest')
+      else localStorage.removeItem('pcm_role')
+    } else if (role.value) {
+      localStorage.setItem('pcm_role', role.value)
+    } else {
+      localStorage.removeItem('pcm_role')
+    }
 
     if (status.value) localStorage.setItem('pcm_status', status.value)
     else localStorage.removeItem('pcm_status')
@@ -314,11 +343,14 @@ export const useAuthStore = defineStore('auth', () => {
     hasDisciplinary.value = false
     localStorage.removeItem('pcm_guest_module')
     localStorage.removeItem('pcm_last_activity')
+    try {
+      sessionStorage.removeItem('pcm_guest_ticket')
+    } catch (e) {}
     _persist()
   }
 
   // 학교 관리자 Secret 접속 (임시 게스트 로그인)
-  function loginAsGuest(moduleId = 'stat', moduleName = '수시 지원 통계 분석 (꼼스탯)') {
+  function loginAsGuest(moduleId = 'stat', tokenData = null) {
     clearAuthStates()
     role.value = 'guest'
     guestModule.value = moduleId
@@ -326,6 +358,18 @@ export const useAuthStore = defineStore('auth', () => {
     status.value = 'approved'
     userId.value = `guest_${moduleId}`
     isEnrolled.value = false
+
+    const expiresAt = tokenData?.expiresAt || (Date.now() + 24 * 60 * 60 * 1000)
+    const token = tokenData?.token || ''
+
+    try {
+      sessionStorage.setItem('pcm_guest_ticket', JSON.stringify({
+        moduleId,
+        token,
+        expiresAt
+      }))
+    } catch (e) {}
+
     _persist()
   }
 

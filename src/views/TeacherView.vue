@@ -147,7 +147,7 @@
           </div>
 
           <!-- 액션 버튼 -->
-          <div class="pt-2 border-t border-slate-200/80 flex flex-col gap-1.5">
+          <div v-if="!auth.isGuest" class="pt-2 border-t border-slate-200/80 flex flex-col gap-1.5">
             <button
               @click="switchToRuralSystem"
               class="w-full text-left text-xs font-semibold text-emerald-600 hover:text-emerald-800 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"

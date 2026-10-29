@@ -709,22 +709,29 @@
               <div 
                 class="mt-3 p-3 rounded-xl border transition-all"
                 :class="m.secretAccessEnabled
-                  ? 'bg-amber-50/80 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 ring-1 ring-amber-300/40 shadow-xs'
+                  ? (isSecretExpired(m) 
+                      ? 'bg-rose-50/70 dark:bg-rose-950/20 border-rose-300 dark:border-rose-800 ring-1 ring-rose-300/40 shadow-xs'
+                      : 'bg-amber-50/80 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 ring-1 ring-amber-300/40 shadow-xs')
                   : 'bg-slate-50 dark:bg-slate-900/40 border-slate-200/70 dark:border-slate-800'"
               >
                 <div class="flex items-center justify-between gap-2">
-                  <div class="flex items-center gap-1.5 min-w-0">
+                  <div class="flex items-center gap-1.5 min-w-0 flex-wrap">
                     <span class="text-sm">🔑</span>
                     <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
                       학교 관리자 Secret 접속경로
                     </span>
+                    <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold shrink-0">
+                      ID: {{ MODULE_CODE_MAP[m.id] || m.id }}
+                    </span>
                     <span
                       class="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border shrink-0"
                       :class="m.secretAccessEnabled
-                        ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-900/50 dark:text-amber-300'
+                        ? (isSecretExpired(m)
+                            ? 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-900/50 dark:text-rose-300'
+                            : 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-900/50 dark:text-amber-300')
                         : 'bg-slate-100 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400'"
                     >
-                      {{ m.secretAccessEnabled ? '🔓 열림 (접속 허용)' : '🔒 닫힘 (차단)' }}
+                      {{ m.secretAccessEnabled ? (isSecretExpired(m) ? '⚠️ 만료됨' : `🔓 열림 (${getSecretDdayLabel(m)})`) : '🔒 닫힘 (차단)' }}
                     </span>
                   </div>
 
@@ -745,31 +752,103 @@
                   </div>
                 </div>
 
-                <!-- 열림 상태일 때: 전용 Secret URL 및 복사 버튼 -->
-                <div v-if="m.secretAccessEnabled" class="mt-2.5 pt-2 border-t border-amber-200/80 dark:border-amber-800/50 space-y-1.5">
+                <!-- 열림 상태일 때: 유효 날짜 지정, 전용 Secret URL 및 복사 버튼 -->
+                <div v-if="m.secretAccessEnabled" class="mt-2.5 pt-2 border-t border-amber-200/80 dark:border-amber-800/50 space-y-2">
+                  <!-- 만료일자 설정 & 빠른 프리셋 버튼 -->
+                  <div class="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-amber-100/60 dark:bg-amber-950/40 border border-amber-200/90 dark:border-amber-800/60 text-xs">
+                    <div class="flex items-center gap-1.5 text-amber-950 dark:text-amber-100 font-semibold">
+                      <span>📅</span>
+                      <span>접속 유효 만료일:</span>
+                      <input
+                        type="date"
+                        :min="todayIsoDate"
+                        :value="m.secretAccessExpireDate || todayIsoDate"
+                        @change="handleSecretExpireDateChange(m, $event.target.value)"
+                        class="px-2 py-0.5 text-xs font-bold font-mono rounded border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-2xs focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                      />
+                      <span class="text-[11px] font-normal text-amber-800 dark:text-amber-300">23:59까지</span>
+                    </div>
+
+                    <!-- 퀵 프리셋 버튼 -->
+                    <div class="flex items-center gap-1 shrink-0">
+                      <span class="text-[10px] text-amber-800 dark:text-amber-300 mr-0.5">빠른 지정:</span>
+                      <button
+                        type="button"
+                        @click.stop="setPresetExpireDate(m, 0)"
+                        class="px-1.5 py-0.5 text-[10px] font-semibold rounded border border-amber-300 dark:border-amber-700 hover:bg-amber-200 bg-white dark:bg-slate-800 text-amber-900 dark:text-amber-200 transition-colors cursor-pointer"
+                        :class="{ '!bg-amber-600 !text-white !border-amber-700': m.secretAccessExpireDate === todayIsoDate }"
+                      >
+                        오늘까지
+                      </button>
+                      <button
+                        type="button"
+                        @click.stop="setPresetExpireDate(m, 1)"
+                        class="px-1.5 py-0.5 text-[10px] font-semibold rounded border border-amber-300 dark:border-amber-700 hover:bg-amber-200 bg-white dark:bg-slate-800 text-amber-900 dark:text-amber-200 transition-colors cursor-pointer"
+                        :class="{ '!bg-amber-600 !text-white !border-amber-700': m.secretAccessExpireDate === getNextDayIsoDate(1) }"
+                      >
+                        내일(+1일)
+                      </button>
+                      <button
+                        type="button"
+                        @click.stop="setPresetExpireDate(m, 2)"
+                        class="px-1.5 py-0.5 text-[10px] font-semibold rounded border border-amber-300 dark:border-amber-700 hover:bg-amber-200 bg-white dark:bg-slate-800 text-amber-900 dark:text-amber-200 transition-colors cursor-pointer"
+                        :class="{ '!bg-amber-600 !text-white !border-amber-700': m.secretAccessExpireDate === getNextDayIsoDate(2) }"
+                      >
+                        모레(+2일)
+                      </button>
+                      <button
+                        type="button"
+                        @click.stop="setPresetExpireDate(m, 6)"
+                        class="px-1.5 py-0.5 text-[10px] font-semibold rounded border border-amber-300 dark:border-amber-700 hover:bg-amber-200 bg-white dark:bg-slate-800 text-amber-900 dark:text-amber-200 transition-colors cursor-pointer"
+                        :class="{ '!bg-amber-600 !text-white !border-amber-700': m.secretAccessExpireDate === getNextDayIsoDate(6) }"
+                      >
+                        7일간
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- 만료 경고 배너 (만료된 경우) -->
+                  <div v-if="isSecretExpired(m)" class="p-2 rounded bg-rose-100 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 text-[11px] text-rose-900 dark:text-rose-200 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-1.5">
+                      <span>⚠️</span>
+                      <strong>설정된 유효 만료일({{ m.secretAccessExpireDate }})이 경과하여 접속이 차단되었습니다.</strong>
+                    </div>
+                    <button
+                      type="button"
+                      @click.stop="setPresetExpireDate(m, 1)"
+                      class="px-2 py-0.5 text-[10px] font-bold rounded bg-rose-600 hover:bg-rose-700 text-white cursor-pointer border-none"
+                    >
+                      내일까지로 연장
+                    </button>
+                  </div>
+
+                  <!-- URL 입력창 & 복사 버튼 -->
                   <div class="flex items-center gap-1.5">
                     <input
                       type="text"
                       readonly
-                      :value="getSecretAccessUrl(m.id)"
+                      :value="moduleSecretUrls[m.id] || '암호화 링크 생성 중...'"
                       class="flex-1 text-[11px] font-mono bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-800 rounded px-2 py-1 text-slate-800 dark:text-slate-200 select-all focus:outline-none"
                     />
                     <button
                       type="button"
-                      @click.stop="copySecretUrl(m.id)"
+                      @click.stop="copySecretUrl(m)"
                       class="shrink-0 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-amber-600 hover:bg-amber-700 text-white transition-colors cursor-pointer border-none shadow-2xs flex items-center gap-1"
                     >
                       <span>📋</span>
                       <span>URL 복사</span>
                     </button>
                   </div>
-                  <p class="text-[10px] text-amber-900 dark:text-amber-200/90 m-0 leading-relaxed">
-                    💡 <strong>비밀번호 없이 링크만으로 즉시 접속</strong> 가능합니다 (성명 마스킹 <code>**동</code> 영구 보호 적용). 하루 이틀 학교 관리자(교장·교감·부장 등) 열람 후 필요 시 토글을 꺼서 즉시 닫으실 수 있습니다.
-                  </p>
+
+                  <div class="flex items-center justify-between text-[10px] text-amber-900 dark:text-amber-200/90 leading-relaxed">
+                    <span>💡 <strong>{{ m.secretAccessExpireDate || '지정일' }} 23:59까지 유효한 AES 암호화 토큰</strong>이 적용된 링크입니다 (성명 마스킹 <code>**동</code> 영구 보호).</span>
+                    <span v-if="m.secretAccessDate" class="text-amber-700 font-mono font-semibold">발급: {{ m.secretAccessDate }}</span>
+                  </div>
                 </div>
+
                 <div v-else class="mt-1">
                   <p class="text-[10px] text-slate-400 m-0 leading-relaxed">
-                    현재 게스트 접속이 차단되어 있습니다. 학교 관리자에게 임시 열람을 제공할 때 토글을 켜세요.
+                    현재 게스트 접속이 차단되어 있습니다. 학교 관리자에게 임시 열람을 제공할 때 토글을 켜면 원하는 유효 날짜를 정해 안전한 AES 암호화 링크를 생성할 수 있습니다.
                   </p>
                 </div>
               </div>
@@ -848,6 +927,14 @@ import {
   saveSuiteModules,
   getModuleStatus,
   getModuleSecretUrl,
+  getOrGenerateModuleSecretUrl,
+  generateSecretAccessToken,
+  getTodayDateString,
+  getTodayIsoDate,
+  getNextDayIsoDate,
+  parseExpireDateToTimestamp,
+  getIsoDateFromTimestamp,
+  MODULE_CODE_MAP,
   RECOMMENDED_SYSTEM_NAMES,
   SUITE_TARGET_GROUPS
 } from '../../api/suiteModulesApi.js'
@@ -970,17 +1057,76 @@ async function toggleModuleGroup(m, groupKey) {
   }
 }
 
-function getSecretAccessUrl(moduleId) {
-  return getModuleSecretUrl(moduleId)
+const moduleSecretUrls = ref({})
+const todayIsoDate = computed(() => getTodayIsoDate())
+
+function isSecretExpired(m) {
+  if (!m || !m.secretAccessEnabled) return false
+  if (m.secretAccessExpiresAt) {
+    return Date.now() > Number(m.secretAccessExpiresAt)
+  }
+  if (m.secretAccessExpireDate) {
+    const ts = parseExpireDateToTimestamp(m.secretAccessExpireDate)
+    return Date.now() > ts
+  }
+  return false
 }
 
-async function copySecretUrl(moduleId) {
-  const url = getSecretAccessUrl(moduleId)
+function getSecretDdayLabel(m) {
+  if (isSecretExpired(m)) return '만료됨'
+  const expDate = m?.secretAccessExpireDate || todayIsoDate.value
+  const today = todayIsoDate.value
+  if (expDate === today) return 'D-Day (오늘까지)'
+
+  try {
+    const t1 = new Date(today + 'T00:00:00+09:00').getTime()
+    const t2 = new Date(expDate + 'T00:00:00+09:00').getTime()
+    const diffDays = Math.round((t2 - t1) / (24 * 60 * 60 * 1000))
+    if (diffDays === 1) return 'D-1 (내일까지)'
+    if (diffDays > 1) return `D-${diffDays} (~${expDate})`
+  } catch (e) {}
+  return '만료됨'
+}
+
+async function refreshModuleSecretUrls() {
+  for (const m of suiteModules.value) {
+    if (m.secretAccessEnabled) {
+      moduleSecretUrls.value[m.id] = await getOrGenerateModuleSecretUrl(m)
+    }
+  }
+}
+
+async function handleSecretExpireDateChange(m, newDateStr) {
+  if (!newDateStr) return
+  const clean = String(newDateStr).trim()
+  m.secretAccessExpireDate = clean
+  const expiresAt = parseExpireDateToTimestamp(clean)
+  m.secretAccessExpiresAt = expiresAt
+
+  // 새 토큰 및 URL 즉시 재발급
+  moduleSecretUrls.value[m.id] = await getOrGenerateModuleSecretUrl(m, clean)
+  try {
+    localStorage.setItem('suite_modules_cache', JSON.stringify(suiteModules.value))
+    await saveSuiteModules(suiteModules.value)
+  } catch (err) {
+    console.error('Failed to save secret expire date change:', err)
+  }
+}
+
+async function setPresetExpireDate(m, days) {
+  const newDate = getNextDayIsoDate(days)
+  await handleSecretExpireDateChange(m, newDate)
+}
+
+async function copySecretUrl(m) {
+  const url = moduleSecretUrls.value[m.id] || await getOrGenerateModuleSecretUrl(m)
+  const dday = getSecretDdayLabel(m)
+  const expStr = m.secretAccessExpireDate || todayIsoDate.value
   try {
     await navigator.clipboard.writeText(url)
     dialog.alert({
       title: 'Secret 접속 URL 복사 완료',
-      message: `학교 관리자 전용 Secret 접속 링크가 클립보드에 복사되었습니다.\n\n[Secret 접속 URL]\n${url}\n\n아이디와 비밀번호 없이 링크를 아는 학교 관리자만 즉시 접속할 수 있으며, 학생 성명 마스킹(**동)이 영구 유지됩니다. 임시 열람이 끝난 후 토글을 끄면 접속이 즉시 차단됩니다.`
+      message: `학교 관리자 전용 Secret 접속 링크가 클립보드에 복사되었습니다.\n\n[Secret 접속 URL]\n${url}\n\n* 모듈 ID: ${MODULE_CODE_MAP[m.id] || m.id}\n* 유효 만료일: ${expStr} 23:59까지 (${dday})\n* AES-256-GCM 암호화 토큰이 적용되어 링크 소지자만 지정 기간 동안 비밀번호 없이 열람 가능합니다.\n* 기간이 경과하면 자동으로 접속이 차단되며, 토글을 꺼서 즉시 비활성화할 수도 있습니다.`
     })
   } catch (e) {
     window.prompt('아래 Secret 접속 URL을 복사(Ctrl+C)하세요:', url)
@@ -989,13 +1135,31 @@ async function copySecretUrl(moduleId) {
 
 async function toggleSecretAccess(m) {
   m.secretAccessEnabled = !m.secretAccessEnabled
+  if (m.secretAccessEnabled) {
+    // 기존에 만료일이 없거나 이미 지난 날짜라면 내일(+1일)로 기본 설정
+    if (!m.secretAccessExpireDate || m.secretAccessExpireDate < todayIsoDate.value) {
+      m.secretAccessExpireDate = getNextDayIsoDate(1)
+    }
+    const expiresAt = parseExpireDateToTimestamp(m.secretAccessExpireDate)
+    m.secretAccessExpiresAt = expiresAt
+    m.secretAccessDate = getTodayDateString()
+    const token = await generateSecretAccessToken(m.id, m.secretAccessDate, expiresAt)
+    m.secretAccessToken = token
+    moduleSecretUrls.value[m.id] = await getOrGenerateModuleSecretUrl(m, m.secretAccessExpireDate)
+  } else {
+    m.secretAccessToken = null
+    m.secretAccessExpiresAt = null
+    delete moduleSecretUrls.value[m.id]
+  }
+
   try {
     localStorage.setItem('suite_modules_cache', JSON.stringify(suiteModules.value))
     await saveSuiteModules(suiteModules.value)
     if (m.secretAccessEnabled) {
+      const expStr = m.secretAccessExpireDate || todayIsoDate.value
       dialog.alert({
-        title: 'Secret 접속 통로 활성화 (열림)',
-        message: `'${m.name}' 모듈의 학교 관리자 Secret 접속 통로가 열렸습니다.\n\n[URL 복사] 버튼을 눌러 링크를 학교 관리자(교장·교감·부장 등)에게 전달하시면, 비밀번호 없이 즉시 열람하실 수 있습니다.\n\n* 학생 개인정보 보호를 위한 성명 마스킹(**동)이 영구 적용됩니다.\n* 하루 이틀 열어두셨다가 언제든 토글을 꺼서 닫으실 수 있습니다.`
+        title: 'Secret 접속 통로 활성화',
+        message: `'${m.name}' 모듈의 학교 관리자 Secret 접속 통로가 열렸습니다.\n\n[모듈 식별 ID: ${MODULE_CODE_MAP[m.id] || m.id}]\n유효 만료일: ${expStr} 23:59까지 (${getSecretDdayLabel(m)})\n\n[URL 복사] 버튼을 눌러 링크를 학교 관리자(교장·교감·부장 등)에게 전달하시면, 비밀번호 없이 지정 기간 동안 즉시 열람하실 수 있습니다.\n\n* 학생 개인정보 보호를 위한 성명 마스킹(**동) 영구 적용\n* 지정 만료일자 자정(23:59:59)이 지나면 링크 자동 만료\n* 하단의 유효 만료일자 또는 빠른 설정 버튼으로 기간을 언제든 연장/변경 가능`
       })
     }
   } catch (err) {
@@ -1189,6 +1353,7 @@ async function loadConfig() {
   inputSchoolName.value = await fetchSchoolName()
   inputLoginSystemName.value = await fetchLoginSystemName()
   suiteModules.value = await fetchSuiteModules()
+  await refreshModuleSecretUrls()
   const localEdit = localStorage.getItem('pcm_allow_area_edit') === 'true'
   allowAreaEdit.value = localEdit
   disclosureCount.value = await getDisclosureCount()

@@ -147,39 +147,27 @@
             </p>
           </div>
 
-          <!-- 액션 링크 -->
-          <div class="pt-2 border-t border-slate-200/80 flex flex-col gap-1">
-            <!-- 게스트 전용 나가기 버튼 -->
+          <!-- 액션 링크 (일반 교사/관리자 전용, 게스트 비노출) -->
+          <div v-if="!auth.isGuest" class="pt-2 border-t border-slate-200/80 flex flex-col gap-1">
             <button
-              v-if="auth.isGuest"
-              @click="handleGuestExit"
-              class="w-full text-left text-xs font-bold text-amber-800 hover:text-amber-950 flex items-center gap-1.5 py-1.5 px-2 rounded-lg bg-amber-50 hover:bg-amber-100/90 border border-amber-200/90 transition-colors cursor-pointer"
-              title="게스트 열람을 종료하고 로그인 화면으로 돌아갑니다"
+              @click="lockAndExit"
+              class="w-full text-left text-xs font-semibold text-amber-700 hover:text-amber-800 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
+              title="복호화 암호를 메모리에서 즉시 삭제하고 포털로 나갑니다"
             >
-              <LogOut :size="14" /> 게스트 열람 종료
+              <Lock :size="14" /> 통계 잠금 (암호화 유지)
             </button>
-
-            <template v-else>
-              <button
-                @click="lockAndExit"
-                class="w-full text-left text-xs font-semibold text-amber-700 hover:text-amber-800 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
-                title="복호화 암호를 메모리에서 즉시 삭제하고 포털로 나갑니다"
-              >
-                <Lock :size="14" /> 통계 잠금 (암호화 유지)
-              </button>
-              <button
-                @click="goToPortal"
-                class="w-full text-left text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
-              >
-                <Home :size="14" /> 포털 (시스템 선택)
-              </button>
-              <button
-                @click="handleLogout"
-                class="w-full text-left text-xs font-medium text-rose-600 hover:text-rose-700 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
-              >
-                <LogOut :size="14" /> 로그아웃
-              </button>
-            </template>
+            <button
+              @click="goToPortal"
+              class="w-full text-left text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
+            >
+              <Home :size="14" /> 포털 (시스템 선택)
+            </button>
+            <button
+              @click="handleLogout"
+              class="w-full text-left text-xs font-medium text-rose-600 hover:text-rose-700 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
+            >
+              <LogOut :size="14" /> 로그아웃
+            </button>
           </div>
         </div>
       </div>

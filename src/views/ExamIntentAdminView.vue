@@ -15,7 +15,7 @@
             <h1 class="text-base font-bold text-slate-900 m-0">수능응시 · 수시/정시 원서접수계획 관리</h1>
           </div>
         </div>
-        <div class="flex items-center gap-3">
+        <div v-if="!auth.isGuest" class="flex items-center gap-3">
           <button @click="$router.push('/select-system')" class="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer">🏠 포털 이동</button>
           <button @click="$router.push('/calendar')" class="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5" title="학사일정 & 대입 캘린더">
             <span>📅</span>

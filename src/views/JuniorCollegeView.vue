@@ -31,6 +31,7 @@
           </div>
 
           <button
+            v-if="!auth.isGuest"
             @click="goToPortal"
             class="text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-300 px-3 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
             title="대문(포털)으로 이동"
@@ -40,6 +41,7 @@
           </button>
 
           <button
+            v-if="!auth.isGuest"
             @click="router.push('/calendar')"
             class="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
             title="학사일정 & 대입 캘린더"
@@ -49,6 +51,7 @@
           </button>
 
           <button
+            v-if="!auth.isGuest"
             @click="handleLogout"
             class="text-xs font-bold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-all cursor-pointer border border-slate-200"
           >

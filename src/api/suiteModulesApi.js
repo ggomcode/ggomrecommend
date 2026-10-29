@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { supabase } from '../utils/supabaseClient'
+import { supabase } from '../utils/supabaseClient.js'
 
 // ── 기본 시스템명 및 캐시 키 ──────────────────────────────────────────
 export const DEFAULT_SYSTEM_NAME = '3학년 진학·학사 통합 포털'
@@ -35,7 +35,11 @@ export const DEFAULT_SUITE_MODULES = [
     endAt: '',
     sortOrder: 1,
     targetRoles: ['student', 'graduate', 'admin'],
-    secretAccessEnabled: false
+    secretAccessEnabled: false,
+    secretAccessExpireDate: '',
+    secretAccessExpiresAt: null,
+    secretAccessDate: '',
+    secretAccessToken: ''
   },
   {
     id: 'rural',
@@ -51,7 +55,11 @@ export const DEFAULT_SUITE_MODULES = [
     endAt: '',
     sortOrder: 2,
     targetRoles: ['student', 'graduate', 'admin'],
-    secretAccessEnabled: false
+    secretAccessEnabled: false,
+    secretAccessExpireDate: '',
+    secretAccessExpiresAt: null,
+    secretAccessDate: '',
+    secretAccessToken: ''
   },
   {
     id: 'exam_intent',
@@ -67,7 +75,11 @@ export const DEFAULT_SUITE_MODULES = [
     endAt: '',
     sortOrder: 3,
     targetRoles: ['student', 'teacher', 'admin'],
-    secretAccessEnabled: false
+    secretAccessEnabled: false,
+    secretAccessExpireDate: '',
+    secretAccessExpiresAt: null,
+    secretAccessDate: '',
+    secretAccessToken: ''
   },
   {
     id: 'junior_college',
@@ -83,7 +95,11 @@ export const DEFAULT_SUITE_MODULES = [
     endAt: '',
     sortOrder: 4,
     targetRoles: ['student', 'graduate', 'admin'],
-    secretAccessEnabled: false
+    secretAccessEnabled: false,
+    secretAccessExpireDate: '',
+    secretAccessExpiresAt: null,
+    secretAccessDate: '',
+    secretAccessToken: ''
   },
   {
     id: 'rollbook',
@@ -99,7 +115,11 @@ export const DEFAULT_SUITE_MODULES = [
     endAt: '',
     sortOrder: 5,
     targetRoles: ['teacher', 'admin'],
-    secretAccessEnabled: false
+    secretAccessEnabled: false,
+    secretAccessExpireDate: '',
+    secretAccessExpiresAt: null,
+    secretAccessDate: '',
+    secretAccessToken: ''
   },
   {
     id: 'stat',
@@ -115,7 +135,11 @@ export const DEFAULT_SUITE_MODULES = [
     endAt: '',
     sortOrder: 6,
     targetRoles: ['teacher', 'admin'],
-    secretAccessEnabled: false
+    secretAccessEnabled: false,
+    secretAccessExpireDate: '',
+    secretAccessExpiresAt: null,
+    secretAccessDate: '',
+    secretAccessToken: ''
   }
 ]
 
@@ -129,8 +153,209 @@ export const MODULE_ROUTE_MAP = {
   principal: '/admin'
 }
 
+// ── 모듈별 2글자 고유 식별 코드 매핑 ──────────────────────────────────
+export const MODULE_CODE_MAP = {
+  stat: 'st',
+  rollbook: 'rb',
+  rural: 'ru',
+  junior_college: 'jc',
+  exam_intent: 'ei',
+  principal: 'pr'
+}
+
+export const CODE_TO_MODULE_MAP = {
+  st: 'stat',
+  rb: 'rollbook',
+  ru: 'rural',
+  jc: 'junior_college',
+  ei: 'exam_intent',
+  pr: 'principal'
+}
+
+const SECRET_KEY_STR = 'ggomrecommend_school_secret_2026!'
+
 /**
- * 라우트 URL 경로로부터 해당 모듈 ID를 역산
+ * 한국 시간 기준 YYYYMMDD 날짜 문자열 반환
+ */
+export function getTodayDateString(d = new Date()) {
+  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000)
+  const y = kst.getUTCFullYear()
+  const m = String(kst.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(kst.getUTCDate()).padStart(2, '0')
+  return `${y}${m}${day}`
+}
+
+/**
+ * 한국 시간(KST) 기준 YYYY-MM-DD 날짜 문자열 반환
+ */
+export function getTodayIsoDate(d = new Date()) {
+  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000)
+  const y = kst.getUTCFullYear()
+  const m = String(kst.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(kst.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/**
+ * 한국 시간(KST) 기준 days 일 후의 YYYY-MM-DD 날짜 문자열 반환
+ */
+export function getNextDayIsoDate(days = 1, baseDate = new Date()) {
+  const target = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000)
+  return getTodayIsoDate(target)
+}
+
+/**
+ * YYYY-MM-DD 또는 YYYYMMDD 날짜 문자열을 해당 일자의 자정 직전(23:59:59.999 KST) 밀리초 타임스탬프로 변환
+ */
+export function parseExpireDateToTimestamp(dateStrOrTs) {
+  if (!dateStrOrTs) {
+    return Date.parse(`${getNextDayIsoDate(1)}T23:59:59.999+09:00`)
+  }
+  if (typeof dateStrOrTs === 'number') {
+    if (dateStrOrTs > 100000000000) return dateStrOrTs
+    return Date.now() + dateStrOrTs
+  }
+  const clean = String(dateStrOrTs).trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+    const ts = Date.parse(`${clean}T23:59:59.999+09:00`)
+    if (!isNaN(ts)) return ts
+  }
+  if (/^\d{8}$/.test(clean)) {
+    const y = clean.slice(0, 4)
+    const m = clean.slice(4, 6)
+    const d = clean.slice(6, 8)
+    const ts = Date.parse(`${y}-${m}-${d}T23:59:59.999+09:00`)
+    if (!isNaN(ts)) return ts
+  }
+  const parsed = Date.parse(clean)
+  if (!isNaN(parsed)) return parsed
+  return Date.now() + 24 * 60 * 60 * 1000
+}
+
+/**
+ * 타임스탬프를 한국 시간(KST) 기준 YYYY-MM-DD 날짜 문자열로 변환
+ */
+export function getIsoDateFromTimestamp(ts) {
+  if (!ts) return ''
+  const kst = new Date(Number(ts) + 9 * 60 * 60 * 1000)
+  const y = kst.getUTCFullYear()
+  const m = String(kst.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(kst.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/**
+ * 모듈별 비밀 접속 단축 AES-256-GCM 암호화 토큰 생성
+ * 포맷: {modCode(2)}{date(8)}_{base64url(iv + tag + ciphertext)}
+ * - expiresAtOrTtl: 유효 만료일자("YYYY-MM-DD") 또는 타임스탬프 (미지정 시 내일 23:59:59 KST)
+ */
+export async function generateSecretAccessToken(moduleId, dateStr = null, expiresAtOrTtl = null) {
+  const modCode = MODULE_CODE_MAP[moduleId]
+  if (!modCode) throw new Error('Unknown module ID for secret token: ' + moduleId)
+
+  const dStr = dateStr || getTodayDateString()
+  const expiresAt = parseExpireDateToTimestamp(expiresAtOrTtl)
+
+  const cryptoObj = typeof window !== 'undefined' ? window.crypto : globalThis.crypto
+  if (!cryptoObj?.subtle) {
+    throw new Error('Web Crypto API is not available')
+  }
+
+  const enc = new TextEncoder()
+  const keySeed = enc.encode(`${SECRET_KEY_STR}_${modCode}_${dStr}`)
+  const keyHash = await cryptoObj.subtle.digest('SHA-256', keySeed)
+  const key = await cryptoObj.subtle.importKey('raw', keyHash, { name: 'AES-GCM' }, false, ['encrypt'])
+
+  const iv = cryptoObj.getRandomValues(new Uint8Array(12))
+  const payload = enc.encode(`${modCode}:${dStr}:${expiresAt}`)
+  const encryptedBuf = await cryptoObj.subtle.encrypt({ name: 'AES-GCM', iv }, key, payload)
+
+  const combined = new Uint8Array(iv.length + encryptedBuf.byteLength)
+  combined.set(iv, 0)
+  combined.set(new Uint8Array(encryptedBuf), iv.length)
+
+  let binary = ''
+  for (let i = 0; i < combined.length; i++) binary += String.fromCharCode(combined[i])
+  const b64url = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+
+  return `${modCode}${dStr}_${b64url}`
+}
+
+/**
+ * 비밀 접속 AES-256-GCM 토큰 검증 및 복호화
+ */
+export async function verifySecretAccessToken(token, expectedModuleId = null) {
+  if (!token || typeof token !== 'string') {
+    return { valid: false, reason: 'missing_token' }
+  }
+
+  const clean = token.trim()
+  const underIdx = clean.indexOf('_')
+  if (underIdx < 10) {
+    return { valid: false, reason: 'invalid_format' }
+  }
+
+  const prefix = clean.slice(0, underIdx)
+  const modCode = prefix.slice(0, 2)
+  const dateStr = prefix.slice(2)
+  const rawCipher = clean.slice(underIdx + 1)
+
+  const mappedModuleId = CODE_TO_MODULE_MAP[modCode]
+  if (!mappedModuleId) {
+    return { valid: false, reason: 'unknown_module' }
+  }
+
+  if (expectedModuleId && mappedModuleId !== expectedModuleId) {
+    return { valid: false, reason: 'module_mismatch' }
+  }
+
+  try {
+    let str = rawCipher.replace(/-/g, '+').replace(/_/g, '/')
+    while (str.length % 4) str += '='
+    const binary = atob(str)
+    const rawBytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) rawBytes[i] = binary.charCodeAt(i)
+
+    if (rawBytes.length < 28) {
+      return { valid: false, reason: 'invalid_cipher_length' }
+    }
+
+    const iv = rawBytes.slice(0, 12)
+    const cipherData = rawBytes.slice(12)
+
+    const cryptoObj = typeof window !== 'undefined' ? window.crypto : globalThis.crypto
+    const enc = new TextEncoder()
+    const keySeed = enc.encode(`${SECRET_KEY_STR}_${modCode}_${dateStr}`)
+    const keyHash = await cryptoObj.subtle.digest('SHA-256', keySeed)
+    const key = await cryptoObj.subtle.importKey('raw', keyHash, { name: 'AES-GCM' }, false, ['decrypt'])
+
+    const decryptedBuf = await cryptoObj.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipherData)
+    const payloadText = new TextDecoder().decode(decryptedBuf)
+    const [decMod, decDate, decExp] = payloadText.split(':')
+
+    if (decMod !== modCode || decDate !== dateStr) {
+      return { valid: false, reason: 'payload_mismatch' }
+    }
+
+    const expiresAt = Number(decExp)
+    if (isNaN(expiresAt) || Date.now() > expiresAt) {
+      return { valid: false, reason: 'expired', expiresAt, dateStr }
+    }
+
+    return {
+      valid: true,
+      moduleId: mappedModuleId,
+      modCode,
+      dateStr,
+      expiresAt
+    }
+  } catch (err) {
+    return { valid: false, reason: 'decryption_failed' }
+  }
+}
+
+/**
+ * 라우트 URL 경로로부터 해당 모듈 ID를 역산 (2글자 코드 및 일반 경로 모두 지원)
  */
 export function getModuleIdByPath(path) {
   if (!path) return null
@@ -142,22 +367,67 @@ export function getModuleIdByPath(path) {
   if (cleanPath === '/exam-intent' || cleanPath === '/exam-intent-manage') return 'exam_intent'
   if (cleanPath === '/admin' || cleanPath === '/teacher' || cleanPath === '/student') return 'principal'
   if (cleanPath.startsWith('/guest/')) {
-    return cleanPath.replace(/^\/guest\/?/, '').split('/')[0]
+    const rawCodeOrId = cleanPath.replace(/^\/guest\/?/, '').split('/')[0]
+    return CODE_TO_MODULE_MAP[rawCodeOrId] || rawCodeOrId || null
   }
   return null
 }
 
 /**
- * 모듈별 학교 관리자 Secret 접속 전체 URL 생성
+ * 모듈별 학교 관리자 Secret 접속 전체 URL 생성 (AES 암호화 토큰 적용)
  */
-export function getModuleSecretUrl(moduleId) {
+export async function getModuleSecretUrl(moduleId, customDateStr = null, customExpireDate = null) {
   if (!moduleId) return ''
+  const token = await generateSecretAccessToken(moduleId, customDateStr, customExpireDate)
   const route = MODULE_ROUTE_MAP[moduleId] || `/${moduleId}`
   const base = import.meta.env.BASE_URL || '/'
   const normalizedBase = base.endsWith('/') ? base : `${base}/`
   const cleanRoute = route.startsWith('/') ? route.slice(1) : route
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  return `${origin}${normalizedBase}${cleanRoute}?secret=guest`
+  return `${origin}${normalizedBase}${cleanRoute}?sec=${token}`
+}
+
+/**
+ * 모듈 객체의 기존 유효 토큰을 재사용하거나 새로 발급하여 URL 반환 (지정 만료일자 지원)
+ */
+export async function getOrGenerateModuleSecretUrl(module, customExpireDate = null) {
+  if (!module) return ''
+  const moduleId = typeof module === 'string' ? module : module.id
+  const targetExpireDate = customExpireDate || (typeof module === 'object' ? module.secretAccessExpireDate : null) || getNextDayIsoDate(1)
+
+  let token = typeof module === 'object' ? module?.secretAccessToken : null
+  let needRegenerate = !token
+
+  // 날짜가 명시적으로 변경되었을 때
+  if (token && customExpireDate && module?.secretAccessExpireDate !== customExpireDate) {
+    needRegenerate = true
+  }
+
+  if (token && !needRegenerate) {
+    const check = await verifySecretAccessToken(token, moduleId)
+    if (!check.valid) {
+      needRegenerate = true
+    }
+  }
+
+  if (needRegenerate) {
+    const expiresAt = parseExpireDateToTimestamp(targetExpireDate)
+    const issuedDate = getTodayDateString()
+    token = await generateSecretAccessToken(moduleId, issuedDate, expiresAt)
+    if (typeof module === 'object' && module) {
+      module.secretAccessToken = token
+      module.secretAccessDate = issuedDate
+      module.secretAccessExpireDate = targetExpireDate
+      module.secretAccessExpiresAt = expiresAt
+    }
+  }
+
+  const route = MODULE_ROUTE_MAP[moduleId] || `/${moduleId}`
+  const base = import.meta.env.BASE_URL || '/'
+  const normalizedBase = base.endsWith('/') ? base : `${base}/`
+  const cleanRoute = route.startsWith('/') ? route.slice(1) : route
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  return `${origin}${normalizedBase}${cleanRoute}?sec=${token}`
 }
 
 let _cachedModulesList = null
@@ -280,7 +550,11 @@ export async function fetchSuiteModules() {
         sortOrder: item.sort_order ?? 0,
         targetRoles: item.target_roles || ['student', 'teacher', 'admin'],
         extraConfig: item.extra_config || {},
-        secretAccessEnabled: !!(item.secret_access_enabled ?? item.extra_config?.secretAccessEnabled ?? false)
+        secretAccessEnabled: !!(item.secret_access_enabled ?? item.extra_config?.secretAccessEnabled ?? false),
+        secretAccessDate: item.extra_config?.secretAccessDate || '',
+        secretAccessExpireDate: item.extra_config?.secretAccessExpireDate || getIsoDateFromTimestamp(item.extra_config?.secretAccessExpiresAt) || '',
+        secretAccessExpiresAt: item.extra_config?.secretAccessExpiresAt || null,
+        secretAccessToken: item.extra_config?.secretAccessToken || ''
       }))
       modules = mergeModulesWithDefaults(dbModules, DEFAULT_SUITE_MODULES)
       _cachedModulesList = modules
@@ -348,7 +622,11 @@ export async function saveSuiteModules(modulesList) {
       target_roles: m.targetRoles || ['student', 'teacher', 'admin'],
       extra_config: {
         ...(m.extraConfig || {}),
-        secretAccessEnabled: !!m.secretAccessEnabled
+        secretAccessEnabled: !!m.secretAccessEnabled,
+        secretAccessDate: m.secretAccessDate || '',
+        secretAccessExpireDate: m.secretAccessExpireDate || '',
+        secretAccessExpiresAt: m.secretAccessExpiresAt || null,
+        secretAccessToken: m.secretAccessToken || ''
       },
       updated_at: new Date().toISOString()
     }))
@@ -453,6 +731,10 @@ function mergeModulesWithDefaults(savedList, defaults) {
         ...def,
         ...saved,
         secretAccessEnabled: !!(saved?.secretAccessEnabled ?? saved?.extraConfig?.secretAccessEnabled ?? def.secretAccessEnabled ?? false),
+        secretAccessDate: saved?.secretAccessDate || saved?.extraConfig?.secretAccessDate || '',
+        secretAccessExpireDate: saved?.secretAccessExpireDate || saved?.extraConfig?.secretAccessExpireDate || getIsoDateFromTimestamp(saved?.secretAccessExpiresAt || saved?.extraConfig?.secretAccessExpiresAt) || '',
+        secretAccessExpiresAt: saved?.secretAccessExpiresAt || saved?.extraConfig?.secretAccessExpiresAt || null,
+        secretAccessToken: saved?.secretAccessToken || saved?.extraConfig?.secretAccessToken || '',
         // 보존할 고유 메타데이터
         icon: def.icon,
         colorTheme: def.colorTheme
@@ -467,7 +749,11 @@ function mergeModulesWithDefaults(savedList, defaults) {
   for (const extra of savedMap.values()) {
     result.push({
       ...extra,
-      secretAccessEnabled: !!(extra?.secretAccessEnabled ?? extra?.extraConfig?.secretAccessEnabled ?? false)
+      secretAccessEnabled: !!(extra?.secretAccessEnabled ?? extra?.extraConfig?.secretAccessEnabled ?? false),
+      secretAccessDate: extra?.secretAccessDate || extra?.extraConfig?.secretAccessDate || '',
+      secretAccessExpireDate: extra?.secretAccessExpireDate || extra?.extraConfig?.secretAccessExpireDate || getIsoDateFromTimestamp(extra?.secretAccessExpiresAt || extra?.extraConfig?.secretAccessExpiresAt) || '',
+      secretAccessExpiresAt: extra?.secretAccessExpiresAt || extra?.extraConfig?.secretAccessExpiresAt || null,
+      secretAccessToken: extra?.secretAccessToken || extra?.extraConfig?.secretAccessToken || ''
     })
   }
 
