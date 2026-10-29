@@ -5,15 +5,15 @@
       <div>
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200/80 mb-2">
           <span>🎯</span>
-          <span>내신 vs 수능 괴리도 & 2027 대입 전략</span>
+          <span>내신 vs 수능 성적 비교 & 2027 대입 전략</span>
           <span class="text-indigo-300">|</span>
-          <span class="text-slate-500 font-semibold">괴리도 & 전략 분석</span>
+          <span class="text-slate-500 font-semibold">성적 분석 & 대입 전략</span>
         </div>
         <h3 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight m-0">
-          내신 vs 수능 불균형(괴리도) 분석 & 2027학년도 5대 대입 핵심 전략
+          내신 vs 수능 성적 비교 분석 & 2027학년도 5대 대입 핵심 전략
         </h3>
         <p class="text-xs text-slate-500 m-0 mt-1 leading-relaxed">
-          내신 대비 수능 과목별 등급 격차(오망성), 사탐런 현황, 수능최저 충족 실질경쟁률 및 2027학년도 5대 대입 전략을 종합 분석합니다.
+          내신 대비 수능 과목별 등급 격차(5개 영역 방사형), 사탐런 현황, 수능최저 충족 실질경쟁률 및 2027학년도 5대 대입 전략을 종합 분석합니다.
         </p>
       </div>
 
@@ -49,10 +49,10 @@
       </button>
     </div>
 
-    <!-- Content 1: 내신 vs 수능 오망성 괴리도 & 선택과목 비교 -->
+    <!-- Content 1: 내신 vs 수능 레이더 성적 비교 & 선택과목 분석 -->
     <div v-if="activeSubTab === 'radar'" class="mt-4 pt-4 border-t border-slate-100 space-y-6">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        <!-- Left: 오망성 방사형 차트 -->
+        <!-- Left: 방사형 레이더 차트 -->
         <div class="lg:col-span-6 bg-slate-50/70 rounded-3xl p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
           <div class="flex items-center justify-between mb-2">
             <div>
@@ -118,7 +118,7 @@
                     <td class="p-2 text-slate-600 font-semibold">전체</td>
                     <td class="p-2 text-center font-mono font-bold text-slate-800">{{ currentSatAnalysis.subjectsDetail.kor.totalCount }}명</td>
                     <td class="p-2 text-center font-mono font-bold text-slate-800">{{ currentSatAnalysis.subjectsDetail.kor.totalAvg }}</td>
-                    <td class="p-2 text-[11px] text-slate-500">내신({{ currentGpaRaw[0] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.kor.totalAvg) - currentGpaRaw[0]).toFixed(2) }}등급 괴리</td>
+                    <td class="p-2 text-[11px] text-slate-500">내신({{ currentGpaRaw[0] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.kor.totalAvg) - currentGpaRaw[0]).toFixed(2) }}등급 차이</td>
                   </tr>
                   <tr class="bg-blue-50/30">
                     <td class="p-2 text-blue-700 font-bold">언어와 매체</td>
@@ -141,7 +141,7 @@
                     <td class="p-2 text-slate-600 font-semibold">전체</td>
                     <td class="p-2 text-center font-mono font-bold text-slate-800">{{ currentSatAnalysis.subjectsDetail.math.totalCount }}명</td>
                     <td class="p-2 text-center font-mono font-bold text-slate-800">{{ currentSatAnalysis.subjectsDetail.math.totalAvg }}</td>
-                    <td class="p-2 text-[11px] text-slate-500">내신({{ currentGpaRaw[1] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.math.totalAvg) - currentGpaRaw[1]).toFixed(2) }}등급 괴리</td>
+                    <td class="p-2 text-[11px] text-slate-500">내신({{ currentGpaRaw[1] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.math.totalAvg) - currentGpaRaw[1]).toFixed(2) }}등급 차이</td>
                   </tr>
                   <tr class="bg-indigo-50/40">
                     <td class="p-2 text-indigo-700 font-bold">미적분/기하</td>
@@ -1177,7 +1177,7 @@ watch(selectedAcademicYear, (newYear) => {
 })
 
 // -------------------------------------------------------------
-// 1. Radar Chart Data (내신 vs 수능 오망성)
+// 1. Radar Chart Data (내신 vs 수능 5개 영역 방사형)
 // - 2026학년도: 보고서 1페이지 2026 수능 vs 내신 고정 데이터
 // - 2027학년도: 3·5·6·7·9·10월 모의고사 누적 성적 기반 자동 계산
 //   (단, '2027모의가채점' A열에 '수능' 입력 시 모의고사 무시 및 수능 성적으로만 전환)

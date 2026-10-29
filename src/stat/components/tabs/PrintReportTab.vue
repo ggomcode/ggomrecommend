@@ -154,7 +154,7 @@
         </table>
       </div>
 
-      <!-- Part 2: 내신 vs 수능 오망성 괴리도 & 영역별 수능 결과 -->
+      <!-- Part 2: 내신 vs 수능 레이더 성적 비교 & 영역별 수능 결과 -->
       <div class="mt-8">
         <h2 class="text-sm font-bold text-slate-900 mb-2 flex items-center">
           <span class="w-2 h-2 bg-slate-900 rounded-full mr-2"></span>

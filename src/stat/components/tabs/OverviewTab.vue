@@ -123,7 +123,7 @@
       </div>
     </div>
 
-    <!-- 🎯 3단계: 내신 vs 수능 괴리도 분석 & 사탐런 & 2027 대입 전략 위젯 (보고서 1, 2, 6페이지 통합) -->
+    <!-- 🎯 3단계: 내신 vs 수능 성적 비교 분석 & 사탐런 & 2027 대입 전략 위젯 (보고서 1, 2, 6페이지 통합) -->
     <SatVsGpaStrategyWidget />
 
     <!-- Charts Row 1: Admission Types & Regional Distribution -->
