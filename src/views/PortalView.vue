@@ -551,7 +551,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
@@ -746,6 +746,7 @@ const statPwInputRef = ref(null)
 const isCheckingStat = ref(false)
 
 async function enterStatSystem() {
+  if (isCheckingStat.value) return
   if (!checkModuleScheduleAccess("stat")) return
   if (!isStatSystemEnabled.value) {
     await dialog.alert({
@@ -758,40 +759,51 @@ async function enterStatSystem() {
 
   const existingPw = getStatSessionPassword()
 
-  // 1. 세션에 암호가 아예 없는 경우: 비동기 지체 없이 즉시(0ms) 모달 오픈!
+  // 1. 세션에 암호가 아예 없는 경우: 모달 오픈하여 사용자 입력 대기
   if (!existingPw) {
     statPasswordError.value = ''
     statInputPassword.value = ''
     isVerifyingPassword.value = false
     showStatPasswordModal.value = true
+    nextTick(() => {
+      statPwInputRef.value?.focus()
+    })
     return
   }
 
   // 2. 세션 암호가 있는 경우:
-  // ★ 대문 클릭 즉시(0ms) 모달을 화면에 띄우고 내부에서 검증 진행!
-  // 지체 현상("왜 아무 반응이 없지?")을 100% 원천 차단
+  // ★ 창을 미리 띄우지 않고 내부적으로 먼저 비교!
+  // 암호가 일치하면 모달을 아예 띄우지 않고 즉시 대시보드(/stat)로 입장.
+  // 암호가 불일치할 때만 모달을 띄워 올바른 암호 입력을 요구.
+  isCheckingStat.value = true
   statPasswordError.value = ''
-  statInputPassword.value = ''
-  isVerifyingPassword.value = true
-  showStatPasswordModal.value = true
 
   try {
     const sheetId = await getKcueSheetId()
     const verifyRes = await verifyStatSheetPassword(sheetId, existingPw)
     if (verifyRes.success) {
-      // ⭕ 일치: 정상 복호화 가능 -> 모달 닫고 즉시 대시보드 입장!
-      showStatPasswordModal.value = false
+      // ⭕ 일치: 모달을 전혀 열지 않고 즉시 대시보드 입장!
       router.push('/stat')
       return
     }
-    // ❌ 불일치: 모달이 이미 열려 있으므로 지체 없이 에러 메시지와 함께 입력 대기
+    // ❌ 불일치: 모달을 띄우고 사유 안내
     statPasswordError.value = '시스템 로그인 암호와 구글 시트 복호화 암호가 일치하지 않습니다. 구글 시트 암호화에 사용한 암호를 입력해 주세요.'
     statInputPassword.value = ''
+    isVerifyingPassword.value = false
+    showStatPasswordModal.value = true
+    nextTick(() => {
+      statPwInputRef.value?.focus()
+    })
   } catch (e) {
     statPasswordError.value = '인증 중 오류가 발생했습니다: ' + (e.message || '')
     statInputPassword.value = ''
-  } finally {
     isVerifyingPassword.value = false
+    showStatPasswordModal.value = true
+    nextTick(() => {
+      statPwInputRef.value?.focus()
+    })
+  } finally {
+    isCheckingStat.value = false
   }
 }
 
