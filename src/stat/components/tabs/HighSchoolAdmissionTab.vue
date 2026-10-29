@@ -1976,7 +1976,7 @@ const faqListPart2 = computed(() => faqList.value.slice(3, 6))
 @media print {
   @page {
     size: A4 landscape;
-    margin: 5mm 7mm;
+    margin: 15mm;
   }
 
   /* Hide app navigation, headers and sidebars globally */
@@ -2013,7 +2013,7 @@ const faqListPart2 = computed(() => faqList.value.slice(3, 6))
     margin-top: 0 !important;
   }
 
-  /* Each slide becomes an exact A4 Landscape page (297mm x 210mm) */
+  /* Each slide becomes an exact A4 Landscape page (297mm x 210mm minus 15mm margins = 267mm x 180mm) */
   .a4-landscape-page {
     page-break-after: always !important;
     break-after: page !important;
@@ -2022,17 +2022,120 @@ const faqListPart2 = computed(() => faqList.value.slice(3, 6))
     box-shadow: none !important;
     border: 1px solid #cbd5e1 !important;
     margin: 0 !important;
-    min-height: 190mm !important;
-    max-height: 197mm !important;
-    height: 194mm !important;
+    height: 180mm !important;
+    max-height: 180mm !important;
+    min-height: 180mm !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    padding: 6mm 8mm !important;
-    border-radius: 6px !important;
+    padding: 5mm 7mm !important;
+    border-radius: 4px !important;
     overflow: hidden !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
+  }
+
+  /* Force all content inside slides to shrink and fit */
+  .a4-landscape-page > div:first-child {
+    flex: 1 1 auto !important;
+    overflow: hidden !important;
+    min-height: 0 !important;
+  }
+
+  /* Scale down large chart areas for print */
+
+  /* Scale down grid gaps and paddings for tighter print fit */
+  .a4-landscape-page .grid {
+    gap: 8px !important;
+  }
+
+  .a4-landscape-page h2 {
+    font-size: 14pt !important;
+    line-height: 1.2 !important;
+    margin-top: 2px !important;
+  }
+
+  .a4-landscape-page h3 {
+    font-size: 10pt !important;
+    line-height: 1.2 !important;
+  }
+
+  .a4-landscape-page p {
+    font-size: 8pt !important;
+    line-height: 1.35 !important;
+    margin-top: 2px !important;
+    margin-bottom: 2px !important;
+  }
+
+  /* Tighten internal card paddings */
+  .a4-landscape-page .rounded-2xl {
+    padding: 8px 10px !important;
+  }
+
+  .a4-landscape-page .rounded-xl {
+    padding: 6px 8px !important;
+  }
+
+  /* Tighten spacing in FAQ cards */
+  .a4-landscape-page .space-y-3 > * + * {
+    margin-top: 6px !important;
+  }
+
+  .a4-landscape-page .space-y-2 > * + * {
+    margin-top: 4px !important;
+  }
+
+  .a4-landscape-page .space-y-2\.5 > * + * {
+    margin-top: 5px !important;
+  }
+
+  .a4-landscape-page .mt-5 {
+    margin-top: 8px !important;
+  }
+
+  .a4-landscape-page .mt-4 {
+    margin-top: 6px !important;
+  }
+
+  .a4-landscape-page .mt-3 {
+    margin-top: 4px !important;
+  }
+
+  .a4-landscape-page .mb-3 {
+    margin-bottom: 4px !important;
+  }
+
+  .a4-landscape-page .pb-3 {
+    padding-bottom: 4px !important;
+  }
+
+  .a4-landscape-page .pt-3 {
+    padding-top: 4px !important;
+  }
+
+  /* Slide footer tighter */
+  .a4-landscape-page > div:last-child {
+    flex-shrink: 0 !important;
+  }
+
+  /* Slide 1: reduce title and tighten vertical margins for print fit */
+  #slide-1 h1 {
+    font-size: 18pt !important;
+    line-height: 1.15 !important;
+  }
+
+  #slide-1 .my-6 {
+    margin-top: 10px !important;
+    margin-bottom: 10px !important;
+  }
+
+  #slide-1 .grid > div {
+    padding: 8px 10px !important;
+  }
+
+  /* Slide 2: tighten analysis panel for print fit */
+  #slide-2 .grid-comparison {
+    margin-top: 6px !important;
   }
 
   /* ========================================================================= */
@@ -2146,7 +2249,7 @@ const faqListPart2 = computed(() => faqList.value.slice(3, 6))
   }
 
   .chart-bars-container {
-    height: 112mm !important;
+    height: 95mm !important;
   }
 
   .grade-bar-box {
