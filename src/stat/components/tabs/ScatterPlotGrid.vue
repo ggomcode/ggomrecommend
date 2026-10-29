@@ -45,7 +45,6 @@
                 'univ-badge-text',
                 isHighlighted(univ) ? 'highlighted-univ' : 'normal-univ'
               ]"
-              :title="univ"
             >
               {{ univ }}
             </span>

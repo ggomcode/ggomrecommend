@@ -344,7 +344,7 @@
         <div class="flex items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
           <div class="flex items-center gap-1.5 min-w-0">
             <span class="text-base shrink-0">🏛️</span>
-            <span class="font-black text-sm text-amber-300 truncate" :title="hoveredUnivData.univName">
+            <span class="font-black text-sm text-amber-300 truncate">
               {{ hoveredUnivData.univName }}
             </span>
           </div>
