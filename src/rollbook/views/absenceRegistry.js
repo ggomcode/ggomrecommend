@@ -177,7 +177,7 @@ export const AbsenceRegistryView = {
           <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
             <div style="display: flex; align-items: center; gap: 6px;">
               <label style="font-weight: bold; font-size: 13px;">조회 월:</label>
-              <select id="registryMonthSelect" class="styled-select" style="padding: 6px 12px; font-size: 13px;">
+              <select id="registryMonthSelect" class="styled-select" style="min-width: 125px; font-size: 13px;">
                 <option value="">전체 기간</option>
                 ${monthOpts}
               </select>
@@ -185,7 +185,7 @@ export const AbsenceRegistryView = {
 
             <div style="display: flex; align-items: center; gap: 6px;">
               <label style="font-weight: bold; font-size: 13px;">학급:</label>
-              <select id="registryBanSelect" class="styled-select" style="padding: 6px 12px; font-size: 13px;">
+              <select id="registryBanSelect" class="styled-select" style="min-width: 110px; font-size: 13px;">
                 <option value="">전체 반</option>
                 ${[1,2,3,4,5,6,7,8,9,10,11].map(b => `<option value="${b}" ${ban == b ? 'selected' : ''}>${b}반</option>`).join('')}
               </select>
@@ -193,7 +193,7 @@ export const AbsenceRegistryView = {
 
             <div style="display: flex; align-items: center; gap: 6px;">
               <label style="font-weight: bold; font-size: 13px;">출력상태:</label>
-              <select id="registryPrintStatusSelect" class="styled-select" style="padding: 6px 12px; font-size: 13px;">
+              <select id="registryPrintStatusSelect" class="styled-select" style="min-width: 110px; font-size: 13px;">
                 <option value="all" ${printStatus === 'all' ? 'selected' : ''}>전체</option>
                 <option value="unprinted" ${printStatus === 'unprinted' ? 'selected' : ''}>미출력만</option>
                 <option value="printed" ${printStatus === 'printed' ? 'selected' : ''}>출력완료만</option>
