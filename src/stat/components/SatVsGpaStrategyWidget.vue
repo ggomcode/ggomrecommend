@@ -40,13 +40,20 @@
             type="button"
             @click="scrollToTab(tab.id)"
             :class="[
-              'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer border-none whitespace-nowrap',
+              'px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 cursor-pointer border-none whitespace-nowrap',
               activeSubTab === tab.id
                 ? 'bg-white text-indigo-950 shadow-xs font-black ring-1 ring-slate-900/5'
                 : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/50'
             ]"
           >
-            <span>{{ tab.emoji }}</span>
+            <span
+              :class="[
+                'w-4 h-4 rounded-full flex items-center justify-center text-[10.5px] font-black',
+                activeSubTab === tab.id ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-700'
+              ]"
+            >
+              {{ tab.num }}
+            </span>
             <span>{{ tab.label }}</span>
           </button>
         </div>
@@ -58,6 +65,15 @@
 
     <!-- Content 1: 내신 vs 수능 레이더 성적 비교 & 선택과목 분석 & 4대 기본 현황 -->
     <div id="sec-radar" class="mt-4 pt-4 space-y-6 scroll-mt-24">
+      <!-- Section 1 Header Badge -->
+      <div class="flex items-center justify-between pb-1">
+        <div class="flex items-center gap-2">
+          <span class="flex items-center justify-center w-7 h-7 rounded-xl bg-blue-50 text-blue-700 text-sm font-black border border-blue-200">1</span>
+          <h3 class="text-base sm:text-lg font-black text-slate-900 m-0">과목별 내신 vs 수능 등급 비교</h3>
+        </div>
+        <span class="text-xs text-slate-400 font-medium hidden sm:inline">5개 영역 방사형 등급 격차 및 수시 4대 기본 지표</span>
+      </div>
+
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         <!-- Left: 방사형 레이더 차트 -->
         <div class="lg:col-span-6 bg-slate-50/70 rounded-3xl p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
@@ -200,7 +216,7 @@
       <!-- Section 2 Header Badge -->
       <div class="flex items-center justify-between pb-1">
         <div class="flex items-center gap-2">
-          <span class="flex items-center justify-center w-7 h-7 rounded-xl bg-pink-50 text-pink-700 text-xs font-black border border-pink-200">🚀 2</span>
+          <span class="flex items-center justify-center w-7 h-7 rounded-xl bg-pink-50 text-pink-700 text-sm font-black border border-pink-200">2</span>
           <h3 class="text-base sm:text-lg font-black text-slate-900 m-0">사탐런 & 탐구 응시 분석</h3>
         </div>
         <span class="text-xs text-slate-400 font-medium hidden sm:inline">2027 모의고사 및 수시 가채점 연계 분석</span>
@@ -904,7 +920,7 @@
       <!-- Section 3 Header Badge -->
       <div class="flex items-center justify-between pb-1">
         <div class="flex items-center gap-2">
-          <span class="flex items-center justify-center w-7 h-7 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-black border border-indigo-200">🎯 3</span>
+          <span class="flex items-center justify-center w-7 h-7 rounded-xl bg-indigo-50 text-indigo-700 text-sm font-black border border-indigo-200">3</span>
           <h3 class="text-base sm:text-lg font-black text-slate-900 m-0">수능최저 충족 실질 경쟁률</h3>
         </div>
         <span class="text-xs text-slate-400 font-medium hidden sm:inline">실질 경쟁률 하락 효과 & 성적대별 전략</span>
@@ -1864,7 +1880,7 @@
       <!-- Section 4 Header Badge -->
       <div class="flex items-center justify-between pb-1">
         <div class="flex items-center gap-2">
-          <span class="flex items-center justify-center w-7 h-7 rounded-xl bg-amber-50 text-amber-700 text-xs font-black border border-amber-200">💡 4</span>
+          <span class="flex items-center justify-center w-7 h-7 rounded-xl bg-amber-50 text-amber-700 text-sm font-black border border-amber-200">4</span>
           <h3 class="text-base sm:text-lg font-black text-slate-900 m-0">2027 대입 5대 핵심 전략</h3>
         </div>
         <span class="text-xs text-slate-400 font-medium hidden sm:inline">수시·정시 대비 5대 핵심 가이드</span>
@@ -1971,12 +1987,12 @@ ChartJS.register(
   Legend
 )
 
-// Sub Tabs
+// Sub Tabs (숫자 기반 명확한 점프 탭)
 const subTabs = [
-  { id: 'radar', emoji: '📊', label: '1. 과목별 내신 vs 수능 등급 비교' },
-  { id: 'satamRun', emoji: '🚀', label: '2. 사탐런 & 탐구 응시 분석' },
-  { id: 'minScoreMagic', emoji: '🎯', label: '3. 수능최저 충족 실질 경쟁률' },
-  { id: 'strategyCards', emoji: '💡', label: '4. 2027 대입 5대 핵심 전략' }
+  { id: 'radar', num: '1', label: '과목별 내신 vs 수능 등급 비교' },
+  { id: 'satamRun', num: '2', label: '사탐런 & 탐구 응시 분석' },
+  { id: 'minScoreMagic', num: '3', label: '수능최저 충족 실질 경쟁률' },
+  { id: 'strategyCards', num: '4', label: '2027 대입 5대 핵심 전략' }
 ]
 
 const activeSubTab = ref('radar')
