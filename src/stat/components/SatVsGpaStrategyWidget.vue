@@ -30,23 +30,25 @@
       </div>
     </div>
 
-    <!-- Sub-tab Navigation Buttons -->
-    <div class="flex flex-wrap items-center gap-2 pt-5 pb-3">
-      <button
-        v-for="tab in subTabs"
-        :key="tab.id"
-        type="button"
-        @click="activeSubTab = tab.id"
-        :class="[
-          'px-4 py-2 rounded-2xl text-xs font-bold transition-all duration-200 flex items-center gap-2 cursor-pointer border',
-          activeSubTab === tab.id
-            ? 'bg-slate-900 text-white border-slate-900 shadow-md scale-[1.02]'
-            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
-        ]"
-      >
-        <span>{{ tab.emoji }}</span>
-        <span>{{ tab.label }}</span>
-      </button>
+    <!-- Modern Integrated Segmented Control (세련된 세그먼트 탭 내비게이션) -->
+    <div class="pt-4 pb-2">
+      <div class="inline-flex p-1 rounded-2xl bg-slate-100/90 border border-slate-200/80 shadow-2xs gap-1 max-w-full overflow-x-auto">
+        <button
+          v-for="tab in subTabs"
+          :key="tab.id"
+          type="button"
+          @click="activeSubTab = tab.id"
+          :class="[
+            'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer border-none whitespace-nowrap',
+            activeSubTab === tab.id
+              ? 'bg-white text-indigo-950 shadow-xs font-black ring-1 ring-slate-900/5'
+              : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/50'
+          ]"
+        >
+          <span>{{ tab.emoji }}</span>
+          <span>{{ tab.label }}</span>
+        </button>
+      </div>
     </div>
 
     <!-- Content 1: 내신 vs 수능 레이더 성적 비교 & 선택과목 분석 -->
@@ -881,15 +883,15 @@
       </div>
     </div>
 
-    <!-- Content 3: 수능 최저 실질경쟁률 마법 시뮬레이터 & 공교육 역전 전략 -->
+    <!-- Content 3: 수능 최저 충족 실질 경쟁률 분석 & 공교육 역전 전략 -->
     <div v-else-if="activeSubTab === 'minScoreMagic'" class="mt-4 pt-4 border-t border-slate-100 space-y-6">
       <!-- 1. Hero Banner: 공교육 가치 중심 헤더 -->
       <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-7 shadow-lg relative overflow-hidden">
         <div class="relative z-10">
           <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-cyan-300 border border-cyan-400/30">
-              <span>✨</span>
-              <span>수능 최저 실질경쟁률 분석 & 공교육 역전 전략</span>
+              <span>🎯</span>
+              <span>수능 최저 충족 실질 경쟁률 분석 & 공교육 역전 전략</span>
             </div>
             <div class="flex items-center gap-2 text-xs">
               <span v-if="csatPassRateTable && csatPassRateTable.length > 0" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 font-semibold">
@@ -909,6 +911,116 @@
             특히 <strong>4~6등급 중·하위권 학생에게 수능최저(2합 7~8, 1개 4등급 등)는 
             경쟁자의 65% 이상이 자동 탈락하여 수도권 및 거점국립대를 뚫는 가장 확실한 기적의 역전 카드</strong>입니다.
           </p>
+        </div>
+      </div>
+
+      <!-- 1-1. 2025학년도 30개 대학 발표 공식 수능최저 충족률 실측 리포트 (전형 유형별 평균) -->
+      <div class="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-2xs space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[11px] font-black">2025학년도 대입 실측</span>
+              <h4 class="text-sm sm:text-base font-black text-slate-900 m-0">
+                전국 30개 대학 발표 '수능최저충족률' 공식 실측 통계
+              </h4>
+            </div>
+            <p class="text-xs text-slate-500 mt-1 m-0">
+              수능최저는 단순 자격 기준이 아니라 실제 경쟁률을 1/2에서 최대 1/11 수준으로 떨어뜨리는 최대 승부처입니다.
+            </p>
+          </div>
+          <span class="text-xs font-bold text-slate-400 font-mono self-start sm:self-auto">
+            기준: 2025 대입 30개 대학 공식 발표치
+          </span>
+        </div>
+
+        <!-- 3개 전형 유형별 공식 충족률 카드 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- 교과 -->
+          <div class="p-4 rounded-2xl bg-gradient-to-br from-blue-50/70 to-indigo-50/40 border border-blue-100 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-black text-blue-900 flex items-center gap-1.5">
+                <span>📘</span>
+                <span>학생부교과전형 (26개 대학)</span>
+              </span>
+              <span class="px-2 py-0.5 rounded-md bg-blue-200/70 text-blue-800 text-[10px] font-bold">
+                129,582명 분석
+              </span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span class="text-3xl font-black text-blue-700 font-mono">58.1%</span>
+              <span class="text-xs text-slate-500 font-semibold">(41.9% 자동 탈락)</span>
+            </div>
+            <div class="text-[11px] text-slate-600 leading-relaxed">
+              최고 <strong>80.7%</strong>(성신여대) ~ 최저 <strong>32.8%</strong>(동국대 WISE).<br>
+              지원자 10명 중 4명 이상이 최저 미달로 서류/내신 상관없이 자동 불합격합니다.
+            </div>
+          </div>
+
+          <!-- 종합 -->
+          <div class="p-4 rounded-2xl bg-gradient-to-br from-emerald-50/70 to-teal-50/40 border border-emerald-100 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-black text-emerald-900 flex items-center gap-1.5">
+                <span>📗</span>
+                <span>학생부종합전형 (8개 대학)</span>
+              </span>
+              <span class="px-2 py-0.5 rounded-md bg-emerald-200/70 text-emerald-800 text-[10px] font-bold">
+                40,808명 분석
+              </span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span class="text-3xl font-black text-emerald-700 font-mono">47.2%</span>
+              <span class="text-xs text-slate-500 font-semibold">(52.8% 과반 탈락)</span>
+            </div>
+            <div class="text-[11px] text-slate-600 leading-relaxed">
+              최고 <strong>66.0%</strong>(한양대) ~ 최저 <strong>33.6%</strong>(강원대).<br>
+              지원자의 절반 이상이 서류 평가 전 최저에서 걸러져 충족 시 합격권에 진입합니다.
+            </div>
+          </div>
+
+          <!-- 논술 -->
+          <div class="p-4 rounded-2xl bg-gradient-to-br from-purple-50/70 to-fuchsia-50/40 border border-purple-100 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-black text-purple-900 flex items-center gap-1.5">
+                <span>📕</span>
+                <span>논술전형 (18개 대학)</span>
+              </span>
+              <span class="px-2 py-0.5 rounded-md bg-purple-200/70 text-purple-800 text-[10px] font-bold">
+                239,542명 분석
+              </span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span class="text-3xl font-black text-purple-700 font-mono">34.2%</span>
+              <span class="text-xs text-slate-500 font-semibold">(65.8% 허수 탈락)</span>
+            </div>
+            <div class="text-[11px] text-slate-600 leading-relaxed">
+              최저 <strong>22.1%</strong>(고려대) ~ 최고 <strong>61.1%</strong>(성신여대).<br>
+              <strong>3명 중 2명이 허수!</strong> 실질경쟁률이 1/3~1/11 토막 납니다.
+            </div>
+          </div>
+        </div>
+
+        <!-- 4대 기적의 실증 팩트 배너 (경희대 한의예, 동국대 WISE 0%, 고대 논술, 한양대 0.18등급 하락) -->
+        <div class="pt-3 border-t border-slate-100">
+          <div class="text-xs font-black text-slate-800 mb-2 flex items-center gap-1.5">
+            <span>⚡</span>
+            <span>2025 입결 분석이 증명한 4대 기적의 실증 팩트</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <div 
+              v-for="(fact, fIdx) in officialSummary.miracleHighlights" 
+              :key="fIdx"
+              class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-indigo-50/40 hover:border-indigo-200 transition-colors"
+            >
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-extrabold text-slate-900 text-xs">{{ fact.univ }}</span>
+                <span class="px-1.5 py-0.2 rounded text-[10px] font-black bg-rose-100 text-rose-700">{{ fact.badge }}</span>
+              </div>
+              <div class="text-[11px] font-semibold text-indigo-700 mb-1">{{ fact.dept }}</div>
+              <p class="text-[10px] text-slate-600 leading-relaxed m-0">
+                {{ fact.desc }}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -957,6 +1069,19 @@
           >
             <span>👑</span>
             <span>1~2등급: 인서울·메디컬 승부</span>
+          </button>
+          <button
+            type="button"
+            @click="selectedMagicBand = 'essay'"
+            :class="[
+              'px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shadow-xs',
+              selectedMagicBand === 'essay'
+                ? 'bg-purple-600 text-white ring-2 ring-purple-400 ring-offset-1'
+                : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200'
+            ]"
+          >
+            <span>✍️</span>
+            <span>논술전형: 경쟁률 1/11 토막 (경희대·고대·중대 등)</span>
           </button>
           <button
             type="button"
@@ -1031,25 +1156,217 @@
         </div>
       </div>
 
-      <!-- 4. 실제 대학·전형별 외형 vs 실질 경쟁률 테이블 -->
+      <!-- 4. 실제 대학·전형별 외형 vs 실질 경쟁률 시각화 & 인터랙티브 분석 -->
       <div class="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-2xs space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+        <!-- Top Header & View Mode Switcher -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div>
             <h4 class="text-sm font-black text-slate-900 m-0 flex items-center gap-2">
               <span>📊</span>
-              <span>대학·전형별 실질 경쟁률 분석 (수능최저충족률 & 충원율 융합)</span>
+              <span>대학·전형별 실질 경쟁률 시각화 분석 (수능최저충족률 & 충원율 융합)</span>
               <span class="text-[11px] font-normal text-slate-500">({{ activePassRateList.length }}개 전형)</span>
             </h4>
             <p class="text-[11px] text-slate-500 m-0 mt-0.5">
-              외형 경쟁률에 최저 충족률과 충원율을 곱해 실제 합격 경쟁 문턱을 정밀 산출합니다.
+              외형 경쟁률 → 최저 통과 실질 경쟁률 → 충원 반영 체감 경쟁률의 급락세를 그래프로 확인하고, 호버/클릭하여 상세 정량 분해를 확인하세요.
             </p>
           </div>
-          <span class="text-[11px] text-slate-400 font-mono">
-            * 체감경쟁률 = (최초경쟁률 × 최저충족률) ÷ (1 + 충원율)
-          </span>
+
+          <!-- View Mode Switcher -->
+          <div class="flex items-center gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200/80 text-xs shrink-0 self-start sm:self-auto">
+            <button
+              type="button"
+              @click="magicDisplayMode = 'cards'"
+              :class="[
+                'px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer',
+                magicDisplayMode === 'cards'
+                  ? 'bg-white text-indigo-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              ]"
+            >
+              <span>🎴</span>
+              <span>비주얼 카드 뷰</span>
+            </button>
+            <button
+              type="button"
+              @click="magicDisplayMode = 'chart'"
+              :class="[
+                'px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer',
+                magicDisplayMode === 'chart'
+                  ? 'bg-white text-indigo-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              ]"
+            >
+              <span>📊</span>
+              <span>3단 비교 차트</span>
+            </button>
+            <button
+              type="button"
+              @click="magicDisplayMode = 'table'"
+              :class="[
+                'px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer',
+                magicDisplayMode === 'table'
+                  ? 'bg-white text-indigo-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              ]"
+            >
+              <span>📋</span>
+              <span>정밀 데이터 표</span>
+            </button>
+          </div>
         </div>
 
-        <div class="overflow-x-auto">
+        <!-- 1) 비주얼 그래프 카드 뷰 (기본값) -->
+        <div v-if="magicDisplayMode === 'cards'" class="space-y-3">
+          <div v-if="activePassRateList.length === 0" class="p-12 text-center text-slate-400 bg-slate-50 rounded-2xl border border-slate-100">
+            선택하신 조건에 일치하는 대학·전형 데이터가 없습니다.
+          </div>
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div 
+              v-for="(item, idx) in activePassRateList" 
+              :key="idx"
+              class="group relative bg-white rounded-2xl p-4.5 border border-slate-200/90 hover:border-indigo-400 hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between"
+              @click="openMagicModal(item)"
+            >
+              <!-- Card Top -->
+              <div>
+                <div class="flex items-center justify-between gap-1.5 mb-2">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span v-if="item.targetGradeBand === '4_6'" class="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-black">🔥 4~6등급 기적</span>
+                    <span v-else-if="item.targetGradeBand === '3_4'" class="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[10px] font-bold">🏛️ 3~4등급 안정</span>
+                    <span v-else-if="item.targetGradeBand === 'essay'" class="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-[10px] font-black">✍️ 논술 1/11토막</span>
+                    <span v-else class="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[10px] font-bold">👑 1~2등급 승부</span>
+                    
+                    <span v-if="item.isAllPass" class="px-2 py-0.5 rounded-md bg-amber-400 text-amber-950 text-[10px] font-black animate-pulse">
+                      ⚡ 전원합격권
+                    </span>
+                  </div>
+                  <span class="text-[10px] font-mono font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                    {{ item.dropTimes }}배 완화
+                  </span>
+                </div>
+
+                <div class="mb-3">
+                  <div class="flex items-center justify-between">
+                    <h5 class="text-base font-black text-slate-900 group-hover:text-indigo-600 transition-colors m-0">
+                      {{ item.univName }}
+                    </h5>
+                    <span class="text-[11px] font-bold text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                      상세 분석 ↗
+                    </span>
+                  </div>
+                  <div class="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    <span class="font-medium text-slate-700">{{ item.admissionType }}</span>
+                    <span class="text-slate-300">•</span>
+                    <span>{{ item.dept }}</span>
+                  </div>
+                  <div class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 text-slate-700 text-[11px] font-medium border border-slate-200/80">
+                    <span class="text-slate-400 font-bold">최저:</span>
+                    <span class="text-slate-900 font-bold">{{ item.minScoreText }}</span>
+                  </div>
+                </div>
+
+                <!-- 3단 가로 비교 그래프 (Visual Triple Progress Bar) -->
+                <div class="p-3 rounded-xl bg-slate-50/80 border border-slate-100 space-y-2.5 my-2">
+                  <!-- ① 최초 외형 경쟁률 -->
+                  <div>
+                    <div class="flex items-center justify-between text-[11px] mb-1">
+                      <span class="text-slate-500 font-medium flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                        <span>최초 외형 경쟁률</span>
+                      </span>
+                      <span class="font-mono font-bold text-slate-600">{{ item.initialRate }}:1</span>
+                    </div>
+                    <div class="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
+                      <div class="h-full bg-slate-400 rounded-full" style="width: 100%"></div>
+                    </div>
+                  </div>
+
+                  <!-- ② 최저 통과 실질 경쟁률 -->
+                  <div>
+                    <div class="flex items-center justify-between text-[11px] mb-1">
+                      <span class="text-indigo-700 font-bold flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+                        <span>수능최저 통과 실질</span>
+                        <span class="text-[10px] text-indigo-500 font-normal">({{ item.passRate }}% 충족)</span>
+                      </span>
+                      <span class="font-mono font-black text-indigo-700">{{ item.realRate }}:1</span>
+                    </div>
+                    <div class="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
+                      <div 
+                        class="h-full bg-gradient-to-r from-indigo-500 to-blue-600 rounded-full transition-all duration-500"
+                        :style="{ width: Math.min(100, Math.max(12, (item.realRate / item.initialRate) * 100)) + '%' }"
+                      ></div>
+                    </div>
+                  </div>
+
+                  <!-- ③ 최종 체감 경쟁률 -->
+                  <div>
+                    <div class="flex items-center justify-between text-[11px] mb-1">
+                      <span class="text-emerald-700 font-bold flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                        <span>추합 감안 최종 체감</span>
+                        <span class="text-[10px] text-emerald-600 font-normal">(충원 {{ item.fillRate }}%)</span>
+                      </span>
+                      <span :class="['font-mono font-black text-xs px-1.5 py-0.2 rounded', item.isAllPass ? 'bg-amber-100 text-amber-800' : 'text-emerald-700']">
+                        {{ item.effectiveRate }}:1
+                      </span>
+                    </div>
+                    <div class="w-full h-2.5 rounded-full bg-slate-200 overflow-hidden">
+                      <div 
+                        :class="[
+                          'h-full rounded-full transition-all duration-500',
+                          item.isAllPass 
+                            ? 'bg-gradient-to-r from-amber-400 to-orange-500' 
+                            : 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                        ]"
+                        :style="{ width: Math.min(100, Math.max(8, (item.effectiveRate / item.initialRate) * 100)) + '%' }"
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card Bottom -->
+              <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span class="truncate max-w-[210px]">{{ item.note }}</span>
+                <span class="text-indigo-600 font-bold text-[10px] shrink-0 ml-1">호버/클릭 상세 ➔</span>
+              </div>
+
+              <!-- Hover Tooltip Popover (Desktop) -->
+              <div class="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-72 p-3 bg-slate-900/95 text-white rounded-xl shadow-xl text-xs opacity-0 pointer-events-none group-hover:opacity-100 transition-all duration-200 z-30 hidden sm:block">
+                <div class="font-black text-amber-300 flex items-center justify-between mb-1.5">
+                  <span>💡 {{ item.univName }} 실질 분석</span>
+                  <span class="text-[10px] text-cyan-300 font-mono">{{ item.dropTimes }}배 완화</span>
+                </div>
+                <p class="text-[11px] text-slate-200 mb-2 leading-relaxed">
+                  {{ item.note }}
+                </p>
+                <div class="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-slate-800 text-[10px]">
+                  <div>최저 미충족 탈락: <span class="font-bold text-rose-300 font-mono">{{ (100 - item.passRate).toFixed(1) }}%</span></div>
+                  <div>추가 합격 회전: <span class="font-bold text-emerald-300 font-mono">{{ item.fillRate }}%</span></div>
+                </div>
+                <div class="mt-2 text-center text-[10px] text-slate-400 font-medium">
+                  👆 클릭 시 정량 계산식 & 상세 모달 오픈
+                </div>
+                <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-slate-900"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2) 3단 종합 비교 차트 뷰 -->
+        <div v-else-if="magicDisplayMode === 'chart'" class="space-y-3">
+          <div class="flex items-center justify-between text-xs text-slate-500 px-1">
+            <span>💡 막대를 클릭하시면 해당 대학·전형의 상세 정량 분석 모달이 열립니다.</span>
+            <span class="font-mono text-[11px]">X축: 경쟁률 (:1)</span>
+          </div>
+          <div :style="{ height: Math.max(380, activePassRateList.length * 42) + 'px' }" class="w-full">
+            <Bar :data="magicChartData" :options="magicChartOptions" />
+          </div>
+        </div>
+
+        <!-- 3) 정밀 데이터 표 뷰 -->
+        <div v-else class="overflow-x-auto">
           <table class="w-full text-xs text-left border-collapse">
             <thead>
               <tr class="bg-slate-100/80 text-slate-700 font-bold border-y border-slate-200">
@@ -1057,12 +1374,12 @@
                 <th class="p-3">전형명</th>
                 <th class="p-3">모집단위</th>
                 <th class="p-3">수능최저기준</th>
-                <th class="p-3 text-center">최초 외형 경쟁률</th>
+                <th class="p-3 text-center">최초 외형</th>
                 <th class="p-3 text-center">최저 충족률</th>
                 <th class="p-3 text-center">실질 경쟁률</th>
                 <th class="p-3 text-center">충원율</th>
                 <th class="p-3 text-center">최종 체감 경쟁률</th>
-                <th class="p-3">입시 지도 포인트</th>
+                <th class="p-3 text-center">분석</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 font-medium">
@@ -1071,14 +1388,16 @@
                 :key="idx"
                 :class="[
                   item.isAllPass ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-slate-50/80',
-                  'transition-colors'
+                  'transition-colors cursor-pointer'
                 ]"
+                @click="openMagicModal(item)"
               >
                 <!-- 대학명 -->
                 <td class="p-3 font-bold text-slate-900 whitespace-nowrap">
                   <div class="flex items-center gap-1.5">
                     <span v-if="item.targetGradeBand === '4_6'" class="px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-black">4~6등급</span>
                     <span v-else-if="item.targetGradeBand === '3_4'" class="px-1.5 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[10px] font-bold">3~4등급</span>
+                    <span v-else-if="item.targetGradeBand === 'essay'" class="px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-800 text-[10px] font-black">논술</span>
                     <span v-else class="px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[10px] font-bold">1~2등급</span>
                     <span>{{ item.univName }}</span>
                   </div>
@@ -1129,9 +1448,15 @@
                     </span>
                   </div>
                 </td>
-                <!-- 비고 / 지도 포인트 -->
-                <td class="p-3 text-[11px] text-slate-600 max-w-xs leading-relaxed">
-                  {{ item.note }}
+                <!-- 상세 버튼 -->
+                <td class="p-3 text-center whitespace-nowrap">
+                  <button
+                    type="button"
+                    @click.stop="openMagicModal(item)"
+                    class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold border border-indigo-200 transition-colors"
+                  >
+                    상세 ↗
+                  </button>
                 </td>
               </tr>
               <tr v-if="activePassRateList.length === 0">
@@ -1143,6 +1468,131 @@
           </table>
         </div>
       </div>
+
+      <!-- [상세 분석 모달] 대학·전형별 3단 정량 분해 팝업 -->
+      <Teleport to="body">
+        <div 
+          v-if="selectedModalItem" 
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs"
+          @click.self="closeMagicModal"
+        >
+          <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto space-y-5">
+            <!-- Modal Header -->
+            <div class="flex items-start justify-between gap-3 pb-4 border-b border-slate-100">
+              <div>
+                <div class="flex items-center gap-2 mb-1.5">
+                  <span v-if="selectedModalItem.targetGradeBand === '4_6'" class="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs font-black">🔥 4~6등급 기적의 역전존</span>
+                  <span v-else-if="selectedModalItem.targetGradeBand === '3_4'" class="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-xs font-bold">🏛️ 3~4등급 안정권</span>
+                  <span v-else-if="selectedModalItem.targetGradeBand === 'essay'" class="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs font-black">✍️ 논술 실질경쟁률 급락</span>
+                  <span v-else class="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-xs font-bold">👑 1~2등급 최상위</span>
+                  <span class="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                    실질 경쟁률 {{ selectedModalItem.dropTimes }}배 완화
+                  </span>
+                </div>
+                <h3 class="text-xl font-black text-slate-900 m-0">
+                  {{ selectedModalItem.univName }}
+                </h3>
+                <p class="text-xs text-slate-500 m-0 mt-0.5">
+                  {{ selectedModalItem.admissionType }} · {{ selectedModalItem.dept }}
+                </p>
+              </div>
+              <button 
+                type="button" 
+                @click="closeMagicModal" 
+                class="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <!-- 1. 3단 경쟁률 급락 시각화 카드 -->
+            <div class="grid grid-cols-3 gap-2.5 p-4 rounded-2xl bg-gradient-to-r from-slate-50 via-indigo-50/40 to-emerald-50/50 border border-slate-200">
+              <div class="text-center">
+                <span class="text-[11px] text-slate-500 block font-medium">① 최초 외형</span>
+                <span class="text-2xl font-black text-slate-400 font-mono mt-0.5 block">{{ selectedModalItem.initialRate }}:1</span>
+                <span class="text-[10px] text-slate-400">지원자 전체</span>
+              </div>
+              <div class="text-center border-x border-slate-200">
+                <span class="text-[11px] text-indigo-700 block font-bold">② 최저 통과</span>
+                <span class="text-2xl font-black text-indigo-700 font-mono mt-0.5 block">{{ selectedModalItem.realRate }}:1</span>
+                <span class="text-[10px] text-indigo-600 font-semibold">{{ selectedModalItem.passRate }}% 충족</span>
+              </div>
+              <div class="text-center">
+                <span class="text-[11px] text-emerald-700 block font-bold">③ 최종 체감</span>
+                <span class="text-2xl font-black text-emerald-600 font-mono mt-0.5 block">{{ selectedModalItem.effectiveRate }}:1</span>
+                <span class="text-[10px] text-emerald-600 font-semibold">충원율 {{ selectedModalItem.fillRate }}%</span>
+              </div>
+            </div>
+
+            <!-- 2. 모집 정원 10명 기준 정량 시뮬레이션 계산 분해 -->
+            <div class="rounded-2xl border border-slate-200 overflow-hidden">
+              <div class="p-3 bg-slate-100/70 border-b border-slate-200 text-xs font-bold text-slate-800 flex items-center justify-between">
+                <span>🧮 모집 정원 10명 기준 실질 경쟁 분해표</span>
+                <span class="text-[11px] font-mono text-indigo-700">체감경쟁률 산출 공식</span>
+              </div>
+              <div class="p-3.5 text-xs space-y-2 font-medium">
+                <div v-if="selectedModalItem.applicantCount" class="flex justify-between items-center py-1.5 bg-amber-50/80 px-2.5 rounded-xl text-amber-950 font-bold border border-amber-200/70">
+                  <span class="flex items-center gap-1"><span>🏛️</span><span>2025 공식 발표 실측 인원</span></span>
+                  <span class="font-mono text-xs text-amber-900">지원 {{ selectedModalItem.applicantCount.toLocaleString() }}명 중 {{ selectedModalItem.passCount.toLocaleString() }}명 충족 ({{ selectedModalItem.passRate }}%)</span>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-slate-100">
+                  <span class="text-slate-600">1. 최초 접수 지원자 수</span>
+                  <span class="font-bold text-slate-800 font-mono">{{ Math.round(selectedModalItem.initialRate * 10) }}명</span>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-slate-100">
+                  <span class="text-rose-600 font-bold">2. 수능최저 미충족 탈락자 수 ({{ (100 - selectedModalItem.passRate).toFixed(1) }}% 탈락)</span>
+                  <span class="font-bold text-rose-600 font-mono">-{{ Math.round(selectedModalItem.initialRate * 10 * (1 - selectedModalItem.passRate / 100)) }}명 자동 탈락</span>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-slate-100">
+                  <span class="text-indigo-700 font-bold">3. 실제 최저 통과 유효 경쟁자 수</span>
+                  <span class="font-bold text-indigo-700 font-mono">{{ Math.round(selectedModalItem.initialRate * 10 * (selectedModalItem.passRate / 100)) }}명</span>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-slate-100">
+                  <span class="text-slate-600">4. 최종 선발 총 인원 (정원 10명 + 충원 {{ Math.round(10 * selectedModalItem.fillRate / 100) }}명)</span>
+                  <span class="font-bold text-emerald-700 font-mono">{{ Math.round(10 * (1 + selectedModalItem.fillRate / 100)) }}명 최종 합격</span>
+                </div>
+                <div class="flex justify-between items-center py-1.5 bg-indigo-50/70 px-2.5 rounded-xl text-indigo-950 font-bold">
+                  <span>5. 최종 체감 경쟁률 (합격 확률)</span>
+                  <span class="font-mono text-sm text-indigo-700">{{ selectedModalItem.effectiveRate }}:1 (합격률 {{ Math.min(100, Number(((1 / selectedModalItem.effectiveRate) * 100).toFixed(1))) }}%)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. 수능 최저학력기준 상세 요강 -->
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
+              <div class="font-bold text-slate-800 flex items-center gap-1.5">
+                <span>📋</span>
+                <span>수능 최저학력기준 공식 요강:</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-white border border-slate-200 font-bold text-slate-800">
+                {{ selectedModalItem.minScoreText }}
+              </div>
+            </div>
+
+            <!-- 4. 공교육 코칭 가이드 -->
+            <div class="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 text-xs text-amber-950 space-y-1.5 leading-relaxed">
+              <div class="font-extrabold flex items-center gap-1.5 text-amber-900">
+                <span>🎯</span>
+                <span>진학 상담 코칭 팁:</span>
+              </div>
+              <p class="m-0 text-[11px] text-amber-900/90 leading-relaxed">
+                {{ selectedModalItem.note }}
+              </p>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="pt-2 text-right">
+              <button
+                type="button"
+                @click="closeMagicModal"
+                class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-colors cursor-pointer"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
 
       <!-- 5. 공교육 감동 실증: 4등급 이하 선배들의 실제 최저 역전 합격 명예의 전당 -->
       <div class="bg-gradient-to-br from-slate-50 via-rose-50/30 to-slate-50 rounded-3xl p-6 border border-rose-200/70 shadow-2xs space-y-4">
@@ -1474,7 +1924,7 @@ import {
   STANDARD_SOCIAL_SUBJECTS,
   normalizeSubject
 } from '../utils/satamRunCalculator.js'
-import { fetchAndParseKcueMockData, DEFAULT_CSAT_PASS_RATE_BENCHMARK } from '../../api/statApi.js'
+import { fetchAndParseKcueMockData, DEFAULT_CSAT_PASS_RATE_BENCHMARK, OFFICIAL_CSAT_PASS_RATE_SUMMARY } from '../../api/statApi.js'
 import { useStatData } from '../composables/useStatData.js'
 
 ChartJS.register(
@@ -1493,7 +1943,7 @@ ChartJS.register(
 const subTabs = [
   { id: 'radar', emoji: '📊', label: '1. 과목별 내신 vs 수능 등급 비교' },
   { id: 'satamRun', emoji: '🚀', label: '2. 사탐런 & 탐구 응시 분석' },
-  { id: 'minScoreMagic', emoji: '✨', label: '3. 수능최저 실질경쟁률 마법' },
+  { id: 'minScoreMagic', emoji: '🎯', label: '3. 수능최저 충족 실질 경쟁률' },
   { id: 'strategyCards', emoji: '💡', label: '4. 2027 대입 5대 핵심 전략' }
 ]
 
@@ -2512,10 +2962,21 @@ const filteredCohortStudents = computed(() => {
 })
 
 // -------------------------------------------------------------
-// 3. 수능 최저 실질경쟁률 마법 & 공교육 역전 전략 (4~6등급 집중 지원)
+// 3. 수능 최저 충족 실질 경쟁률 & 공교육 역전 전략 (4~6등급 집중 지원)
 // -------------------------------------------------------------
 const selectedMagicBand = ref('4_6') // '4_6', '3_4', '1_2', 'all'
 const magicSearchQuery = ref('')
+const magicDisplayMode = ref('cards') // 'cards' (기본값), 'chart', 'table'
+const selectedModalItem = ref(null)
+const officialSummary = OFFICIAL_CSAT_PASS_RATE_SUMMARY
+
+function openMagicModal(item) {
+  selectedModalItem.value = item
+}
+
+function closeMagicModal() {
+  selectedModalItem.value = null
+}
 
 // 시뮬레이터 인터랙티브 상태 (충원율까지 포함한 3단 시뮬레이터)
 const initialCompetition = ref(7.0)
@@ -2592,6 +3053,78 @@ const activePassRateList = computed(() => {
 
   return list
 })
+
+// 3단 통합 비교 가로 막대 차트 데이터 (최초 외형 vs 실질 vs 최종 체감)
+const magicChartData = computed(() => {
+  const list = activePassRateList.value
+  return {
+    labels: list.map(item => `${item.univName} (${item.admissionType.replace(/학생부[교종][과합]\(/, '').replace(')', '') || item.dept})`),
+    datasets: [
+      {
+        label: '최초 외형 경쟁률',
+        data: list.map(item => item.initialRate),
+        backgroundColor: 'rgba(148, 163, 184, 0.55)', // slate-400
+        borderColor: 'rgba(100, 116, 139, 0.9)',
+        borderWidth: 1,
+        borderRadius: 4
+      },
+      {
+        label: '최저 통과 실질 경쟁률',
+        data: list.map(item => item.realRate),
+        backgroundColor: 'rgba(99, 102, 241, 0.85)', // indigo
+        borderColor: 'rgba(79, 70, 229, 1)',
+        borderWidth: 1,
+        borderRadius: 4
+      },
+      {
+        label: '최종 체감 경쟁률 (충원율 반영)',
+        data: list.map(item => item.effectiveRate),
+        backgroundColor: 'rgba(16, 185, 129, 0.9)', // emerald
+        borderColor: 'rgba(5, 150, 105, 1)',
+        borderWidth: 1,
+        borderRadius: 4
+      }
+    ]
+  }
+})
+
+const magicChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  indexAxis: 'y',
+  interaction: { mode: 'index', intersect: false },
+  onClick: (e, elements) => {
+    if (elements && elements.length > 0) {
+      const idx = elements[0].index
+      const item = activePassRateList.value[idx]
+      if (item) {
+        openMagicModal(item)
+      }
+    }
+  },
+  plugins: {
+    legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11, weight: 'bold' } } },
+    tooltip: {
+      callbacks: {
+        label: (ctx) => `${ctx.dataset.label}: ${ctx.raw}:1`
+      }
+    }
+  },
+  scales: {
+    x: {
+      beginAtZero: true,
+      grid: { color: 'rgba(226, 232, 240, 0.6)' },
+      ticks: {
+        callback: (v) => `${v}:1`,
+        font: { size: 10 }
+      }
+    },
+    y: {
+      grid: { display: false },
+      ticks: { font: { size: 10, weight: 'bold' } }
+    }
+  }
+}
 
 // 과거 선배들의 4~6등급 실제 '최저 충족 역전 합격' 명예의 전당 데이터
 const pastSeniorReverseStories = [

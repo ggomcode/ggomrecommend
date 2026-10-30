@@ -45,128 +45,149 @@
         </button>
       </div>
 
-      <!-- 메뉴 내비게이션 (그룹화된 4대 섹션 메뉴) -->
-      <nav class="flex-1 overflow-y-auto px-2 py-3 space-y-3" style="scrollbar-gutter: stable;">
+      <!-- 메뉴 내비게이션 (3대 핵심 허브 & 아코디언 컴팩트 메뉴) -->
+      <nav class="flex-1 overflow-y-auto px-2 py-2 space-y-1.5" style="scrollbar-gutter: stable;">
         <div v-for="(group, gIdx) in menuGroups" :key="group.title" class="space-y-0.5">
-          <!-- 섹션 헤더 (펼침 상태) -->
-          <div 
-            v-if="!collapsed" 
-            class="px-2.5 pt-1.5 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 select-none"
-          >
-            <span>{{ group.emoji }}</span>
-            <span>{{ group.title }}</span>
-          </div>
-
-          <!-- 섹션 구분선 (접힘 상태) -->
-          <div v-else-if="gIdx > 0" class="my-2 border-t border-slate-200/80 mx-1"></div>
-
-          <!-- 메뉴 아이템 목록 -->
+          <!-- 섹션 헤더 (펼침 상태: 클릭 시 아코디언 토글) -->
           <button
-            v-for="item in group.items"
-            :key="item.id"
-            @click="currentTab = item.id"
-            :title="collapsed ? `${group.title} > ${item.name}` : item.name"
-            class="w-full rounded-xl text-xs transition-all duration-150 relative cursor-pointer border-none text-left"
-            :class="[
-              collapsed ? 'p-2.5 flex justify-center items-center' : 'px-3 py-2 flex items-center gap-2.5',
-              currentTab === item.id 
-                ? 'bg-blue-50 text-blue-700 font-bold shadow-2xs' 
-                : 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium'
-            ]"
+            v-if="!collapsed" 
+            type="button"
+            @click="toggleGroup(group.title)"
+            class="w-full px-2 py-1 text-[11px] font-black text-slate-500 uppercase tracking-wider flex items-center justify-between select-none cursor-pointer hover:text-slate-800 rounded-md transition-colors bg-transparent border-none text-left"
           >
-            <!-- 활성 탭 좌측 인디케이터 바 -->
-            <span 
-              v-if="currentTab === item.id && !collapsed" 
-              class="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-blue-600"
-            ></span>
-
-            <!-- 아이콘 & 접힘 시 배지 -->
-            <span class="relative shrink-0 flex items-center justify-center">
-              <component 
-                :is="item.iconComponent" 
-                :size="18" 
-                :class="currentTab === item.id ? 'text-blue-600' : 'text-slate-400'" 
-              />
-              <span
-                v-if="item.badge && collapsed"
-                class="absolute -top-1.5 -right-2 flex h-3.5 min-w-[14px] px-0.5 items-center justify-center rounded-full bg-blue-600 text-[9px] font-black text-white shadow"
-              >
-                {{ item.badge }}
-              </span>
+            <span class="flex items-center gap-1.5">
+              <span>{{ group.emoji }}</span>
+              <span>{{ group.title }}</span>
             </span>
-
-            <!-- 레이블 & 펼침 시 배지 -->
-            <span v-if="!collapsed" class="whitespace-nowrap flex items-center justify-between w-full">
-              <span class="truncate">{{ item.name }}</span>
-              <span
-                v-if="item.badge"
-                :class="[
-                  'ml-auto text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full',
-                  currentTab === item.id 
-                    ? 'bg-blue-600 text-white' 
-                    : item.badge === 'HOT' 
-                      ? 'bg-rose-100 text-rose-700'
-                      : item.badge === 'NEW'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-slate-200 text-slate-600'
-                ]"
-              >
-                {{ item.badge }}
-              </span>
+            <span class="flex items-center gap-1 text-[10px] text-slate-400 font-normal">
+              <span v-if="collapsedGroups[group.title]" class="px-1.5 py-0.2 rounded bg-slate-100 font-mono text-[9px]">{{ group.items.length }}</span>
+              <ChevronDown v-if="!collapsedGroups[group.title]" :size="12" />
+              <ChevronRight v-else :size="12" />
             </span>
           </button>
+
+          <!-- 섹션 구분선 (접힘 상태) -->
+          <div v-else-if="gIdx > 0" class="my-1.5 border-t border-slate-200/80 mx-1"></div>
+
+          <!-- 메뉴 아이템 목록 (접히지 않았을 때 표시) -->
+          <div v-show="!collapsedGroups[group.title] || collapsed" class="space-y-0.5">
+            <button
+              v-for="item in group.items"
+              :key="item.id"
+              @click="currentTab = item.id"
+              :title="collapsed ? `${group.title} > ${item.name}` : item.name"
+              class="w-full rounded-xl text-xs transition-all duration-150 relative cursor-pointer border-none text-left"
+              :class="[
+                collapsed ? 'p-2 flex justify-center items-center' : 'px-2.5 py-1.5 flex items-center gap-2',
+                currentTab === item.id 
+                  ? 'bg-blue-50 text-blue-700 font-bold shadow-2xs' 
+                  : 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium'
+              ]"
+            >
+              <!-- 활성 탭 좌측 인디케이터 바 -->
+              <span 
+                v-if="currentTab === item.id && !collapsed" 
+                class="absolute left-0 top-1 bottom-1 w-1 rounded-r-full bg-blue-600"
+              ></span>
+
+              <!-- 아이콘 & 접힘 시 배지 -->
+              <span class="relative shrink-0 flex items-center justify-center">
+                <component 
+                  :is="item.iconComponent" 
+                  :size="16" 
+                  :class="currentTab === item.id ? 'text-blue-600' : 'text-slate-400'" 
+                />
+                <span
+                  v-if="item.badge && collapsed"
+                  class="absolute -top-1.5 -right-2 flex h-3.5 min-w-[14px] px-0.5 items-center justify-center rounded-full bg-blue-600 text-[9px] font-black text-white shadow"
+                >
+                  {{ item.badge }}
+                </span>
+              </span>
+
+              <!-- 레이블 & 펼침 시 배지 -->
+              <span v-if="!collapsed" class="whitespace-nowrap flex items-center justify-between w-full">
+                <span class="truncate text-[11.5px]">{{ item.name }}</span>
+                <span
+                  v-if="item.badge"
+                  :class="[
+                    'ml-auto text-[9.5px] font-mono font-bold px-1.5 py-0.2 rounded-full',
+                    currentTab === item.id 
+                      ? 'bg-blue-600 text-white' 
+                      : item.badge === 'HOT' 
+                        ? 'bg-rose-100 text-rose-700'
+                        : item.badge === 'NEW'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-slate-100 text-slate-500'
+                  ]"
+                >
+                  {{ item.badge }}
+                </span>
+              </span>
+            </button>
+          </div>
         </div>
       </nav>
 
-      <!-- 사이드바 하단 정보 & 액션 버튼 -->
-      <div class="p-3 border-t border-slate-200 shrink-0 bg-slate-50/50">
-        <!-- 접힘: 아바타 -->
-        <div v-if="collapsed" class="flex justify-center py-1">
-          <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+      <!-- 사이드바 하단: 슬림 프로필 & 빠른 액션 바 (스크롤 방지 42px 컴팩트화) -->
+      <div class="px-2.5 py-2 border-t border-slate-200 shrink-0 bg-slate-50/80">
+        <!-- 접힘 상태 -->
+        <div v-if="collapsed" class="flex flex-col items-center gap-1.5 py-1">
+          <div 
+            class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs"
+            :title="auth.isAdmin ? '관리자' : (auth.teacherName || '교과 교사')"
+          >
             {{ auth.isAdmin ? '관' : (auth.isGuest ? '게' : '교') }}
           </div>
+          <button 
+            @click="handleLogout" 
+            class="text-slate-400 hover:text-rose-600 p-1 cursor-pointer bg-transparent border-none" 
+            title="로그아웃"
+          >
+            <LogOut :size="14" />
+          </button>
         </div>
 
-        <!-- 펼침 -->
-        <div v-else class="space-y-2.5">
-          <!-- 학년도 표시 배지 -->
-          <div class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white border border-slate-200/90 shadow-2xs">
-            <span class="text-[11px] text-slate-500 font-medium">분석 기준</span>
-            <span class="text-[11px] font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
-              {{ selectedAcademicYear }}학년도 대입
-            </span>
+        <!-- 펼침 상태: 한 줄로 깔끔하게 정돈된 프로필 & 3개 미니 액션 아이콘 -->
+        <div v-else class="flex items-center justify-between gap-1.5">
+          <div class="flex items-center gap-2 min-w-0">
+            <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+              {{ auth.isAdmin ? '관' : (auth.isGuest ? '게' : '교') }}
+            </div>
+            <div class="truncate leading-tight">
+              <div class="text-xs font-bold text-slate-800 truncate">
+                {{ auth.isAdmin ? '관리자' : (auth.isGuest ? '게스트' : (auth.teacherName || auth.user?.user_metadata?.name || '교과 교사')) }}
+              </div>
+              <div class="text-[10px] text-slate-400 font-medium">
+                {{ selectedAcademicYear }}학년도 대입
+              </div>
+            </div>
           </div>
 
-          <!-- 사용자 정보 -->
-          <div class="px-0.5">
-            <p class="text-sm font-bold text-slate-900 m-0 leading-tight">
-              {{ auth.isAdmin ? '관리자' : (auth.isGuest ? '학교 관리자 (게스트)' : (auth.teacherName || auth.user?.user_metadata?.name || '교과 교사')) }}
-            </p>
-            <p class="text-xs text-slate-500 font-medium m-0 mt-0.5">
-              {{ auth.isAdmin ? '시스템 관리자' : (auth.isGuest ? '임시 게스트 열람 모드' : '통계 열람 권한') }}
-            </p>
-          </div>
-
-          <!-- 액션 링크 (일반 교사/관리자 전용, 게스트 비노출) -->
-          <div v-if="!auth.isGuest" class="pt-2 border-t border-slate-200/80 flex flex-col gap-1">
+          <!-- 액션 3대 퀵 아이콘 (잠금, 포털, 로그아웃) -->
+          <div class="flex items-center gap-0.5 shrink-0">
             <button
+              v-if="!auth.isGuest"
               @click="lockAndExit"
-              class="w-full text-left text-xs font-semibold text-amber-700 hover:text-amber-800 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
-              title="복호화 암호를 메모리에서 즉시 삭제하고 포털로 나갑니다"
+              class="p-1.5 rounded-lg text-slate-400 hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer border-none bg-transparent"
+              title="통계 잠금 (암호화 유지)"
             >
-              <Lock :size="14" /> 통계 잠금 (암호화 유지)
+              <Lock :size="14" />
             </button>
             <button
+              v-if="!auth.isGuest"
               @click="goToPortal"
-              class="w-full text-left text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
+              class="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-200 transition-colors cursor-pointer border-none bg-transparent"
+              title="포털 메인 화면 (시스템 선택)"
             >
-              <Home :size="14" /> 포털 (시스템 선택)
+              <Home :size="14" />
             </button>
             <button
               @click="handleLogout"
-              class="w-full text-left text-xs font-medium text-rose-600 hover:text-rose-700 flex items-center gap-1.5 py-1 transition-colors cursor-pointer bg-transparent border-none"
+              class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer border-none bg-transparent"
+              title="로그아웃"
             >
-              <LogOut :size="14" /> 로그아웃
+              <LogOut :size="14" />
             </button>
           </div>
         </div>
@@ -289,6 +310,7 @@ import {
   FileSpreadsheet,
   Printer,
   ChevronRight,
+  ChevronDown,
   Menu,
   Home,
   LogOut,
@@ -316,19 +338,19 @@ const {
 const collapsed = ref(false)
 const currentTab = ref('overview')
 
+// 아코디언 그룹 접기/펼치기 상태 관리
+const collapsedGroups = ref({})
+function toggleGroup(title) {
+  collapsedGroups.value[title] = !collapsedGroups.value[title]
+}
+
 const menuGroups = computed(() => [
   {
     emoji: '📊',
-    title: '현황 & 대입 진단',
+    title: '대입 현황 & 분석',
     items: [
       { id: 'overview', name: '종합 대시보드', iconComponent: BarChart3 },
-      { id: 'multiYear', name: '5개년 추이 분석', iconComponent: TrendingUp }
-    ]
-  },
-  {
-    emoji: '🏛️',
-    title: '대학 & 전형 심층 분석',
-    items: [
+      { id: 'multiYear', name: '5개년 추이 분석', iconComponent: TrendingUp },
       { id: 'scatter', name: '대입 합불 산점도', iconComponent: ChartScatter, badge: 'NEW' },
       { id: 'schoolRec', name: '학교장추천 전형 분석', iconComponent: Award, badge: '특화' },
       { id: 'ruralStat', name: '농어촌 전형 분석', iconComponent: Trees, badge: '특화' },
@@ -337,17 +359,10 @@ const menuGroups = computed(() => [
     ]
   },
   {
-    emoji: '👤',
-    title: '학생 지도 & 일정',
+    emoji: '🎯',
+    title: '진학 지도 & 상담',
     items: [
       { id: 'student', name: '학생별 6장 카드', iconComponent: Users },
-      { id: 'calendar', name: '면접·고사 캘린더', iconComponent: CalendarDays }
-    ]
-  },
-  {
-    emoji: '🎓',
-    title: '상담 및 설명회',
-    items: [
       { id: 'csatTarget', name: '수능최저 & 목표진단', iconComponent: Compass, badge: '예비고3' },
       { id: 'counsel', name: '학부모 맞춤 상담', iconComponent: Sparkles, badge: 'HOT' },
       { id: 'admission', name: '고입 설명회 특화', iconComponent: GraduationCap, badge: '중3' }
@@ -355,8 +370,9 @@ const menuGroups = computed(() => [
   },
   {
     emoji: '📁',
-    title: '자료실 & 공식 출력',
+    title: '일정 & 데이터 도구',
     items: [
+      { id: 'calendar', name: '면접·고사 캘린더', iconComponent: CalendarDays },
       { 
         id: 'data', 
         name: '전체 데이터 탐색기', 

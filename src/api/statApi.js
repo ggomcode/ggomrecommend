@@ -1231,9 +1231,129 @@ export function getCsatMinScoreFilterOptions(records = []) {
  * ==========================================================
  */
 
-// 4~6등급 중·하위권 및 주요 대학 표준 벤치마크 데이터 (시트 데이터 부재/로딩 전 Fallback)
+/**
+ * ==========================================================
+ * 수능 최저학력기준 충족률 벤치마크 및 2025학년도 30개 대학 실측 통계
+ * ==========================================================
+ */
+
+// 2025학년도 전국 30개 대학 발표 공식 수능최저 충족률 집계 요약
+export const OFFICIAL_CSAT_PASS_RATE_SUMMARY = {
+  academicYear: '2025학년도',
+  totalUniversities: 30,
+  byAdmissionType: [
+    {
+      type: '학생부교과',
+      univCount: 26,
+      totalApplicants: 129582,
+      passedApplicants: 75277,
+      passRate: 58.1,
+      dropRate: 41.9,
+      minRateText: '동국대(WISE) 32.8%',
+      maxRateText: '성신여대 80.7%',
+      highlight: '지원자의 41.9%가 수능최저 미충족으로 자동 탈락 (실질경쟁률 40% 이상 완화)'
+    },
+    {
+      type: '학생부종합',
+      univCount: 8,
+      totalApplicants: 40808,
+      passedApplicants: 19271,
+      passRate: 47.2,
+      dropRate: 52.8,
+      minRateText: '강원대 33.6%',
+      maxRateText: '한양대 66.0%',
+      highlight: '지원자 절반 이상(52.8%)이 최저 미충족 탈락, 충족 시 합격 확률 2배 이상 급증'
+    },
+    {
+      type: '논술위주',
+      univCount: 18,
+      totalApplicants: 239542,
+      passedApplicants: 81981,
+      passRate: 34.2,
+      dropRate: 65.8,
+      minRateText: '고려대 22.1%',
+      maxRateText: '성신여대 61.1%',
+      highlight: '지원자의 65.8%가 허수 탈락! 실질경쟁률이 명목경쟁률 대비 1/3 ~ 최대 1/11 수준으로 급락'
+    }
+  ],
+  miracleHighlights: [
+    {
+      univ: '경희대학교',
+      dept: '한의예과(인문) 논술',
+      badge: '실질경쟁률 1/11 토막',
+      initialRate: '434.8:1',
+      passRate: '9.1%',
+      realRate: '39.6:1',
+      desc: '5명 모집에 2,174명이 지원(434.8:1)했으나 수능최저 충족자는 단 198명(9.1%)에 불과! 실질경쟁률이 39.6:1로 11배 급락한 역대급 사례.'
+    },
+    {
+      univ: '동국대(WISE) & 가톨릭관동대',
+      dept: '한의예·의예 기회균형',
+      badge: '충족률 0.0% 전원합격',
+      initialRate: '11~14:1',
+      passRate: '0.0%',
+      realRate: '0:1 (미달)',
+      desc: '동국대(WISE) 한의예 기균, 가톨릭관동대 의예 지역기균 지원자 전원이 최저 미충족(0명 충족). 최저만 맞췄다면 내신 상관없이 100% 무조건 전원 합격!'
+    },
+    {
+      univ: '고려대학교',
+      dept: '논술전형 전체',
+      badge: '77.9% 허수 탈락',
+      initialRate: '64.9:1',
+      passRate: '22.1%',
+      realRate: '14.4:1',
+      desc: '361명 모집에 23,421명이 지원했으나 최저 통과자는 5,182명(22.1%)뿐. 18,239명(77.9%)이 자동 탈락하여 실질 경쟁률 14.4:1로 5분의 1 수준 하락.'
+    },
+    {
+      univ: '한양대학교',
+      dept: '학생부교과(추천형)',
+      badge: '합격선 0.18등급 하락',
+      initialRate: '7.5:1',
+      passRate: '69.3%',
+      realRate: '5.2:1',
+      desc: '수능최저(3합 7) 도입 후 49개 모집단위 평균 충족률 69.3%. 48곳 평균 합격 내신선이 약 0.18등급 하락하며 내신 역전 기회 실증.'
+    }
+  ]
+}
+
+// 2025~2026학년도 공식 발표 실측 데이터 및 4~6등급 공교육 특화 벤치마크
 export const DEFAULT_CSAT_PASS_RATE_BENCHMARK = [
-  // [★ 4~6등급: 기적의 역전존] 수도권 및 거점 국립대
+  // -------------------------------------------------------------
+  // [1] ★ 4~6등급: 기적의 역전존 & 거점 국립대 & 충족률 0.0% 전원합격
+  // -------------------------------------------------------------
+  {
+    univName: '동국대(WISE)',
+    admissionType: '학생부교과(기회균형I 지역인재)',
+    targetGradeBand: '4_6',
+    dept: '한의예과',
+    minScoreText: '3개 영역 등급 합 5 이내',
+    initialRate: 11.0,
+    passRate: 0.0,
+    fillRate: 100,
+    note: '★ [충족률 0.0%] 2025 지원자 전원 최저 미충족 탈락! 최저만 맞췄다면 100% 무조건 전원 합격'
+  },
+  {
+    univName: '가톨릭관동대',
+    admissionType: '학생부교과(지역기회균형)',
+    targetGradeBand: '4_6',
+    dept: '의학과(의예과)',
+    minScoreText: '3개 영역 등급 합 5 이내',
+    initialRate: 14.0,
+    passRate: 0.0,
+    fillRate: 100,
+    note: '★ [충족률 0.0%] 2025 지원자 전원 최저 미충족 탈락! 최저 충족자 전원 합격 실증'
+  },
+  {
+    univName: '강원대학교',
+    admissionType: '학생부종합(일반/지역인재)',
+    targetGradeBand: '4_6',
+    dept: '인문·자연 계열',
+    minScoreText: '2개 영역 등급 합 8 이내 (탐구 1)',
+    initialRate: 5.7,
+    passRate: 33.6,
+    fillRate: 140,
+    note: '2025 오피셜 충족률 33.6%(최저군)! 경쟁자의 66.4%가 자동 탈락하여 실질 경쟁률 1.9:1로 급락'
+  },
   {
     univName: '경기대학교',
     admissionType: '학생부교과(교과성적우수자)',
@@ -1243,7 +1363,7 @@ export const DEFAULT_CSAT_PASS_RATE_BENCHMARK = [
     initialRate: 8.9,
     passRate: 38.5,
     fillRate: 155,
-    note: '최저 미충족 탈락율 61.5%! 충원율 1.5바퀴 회전으로 체감 경쟁률 1.3:1 급락'
+    note: '최저 미충족 탈락률 61.5%! 충원율 1.5바퀴 회전으로 체감 경쟁률 1.3:1 급락'
   },
   {
     univName: '가천대학교',
@@ -1301,17 +1421,6 @@ export const DEFAULT_CSAT_PASS_RATE_BENCHMARK = [
     note: '실질 경쟁률 2.48:1, 충원 2바퀴 합산 시 체감 경쟁률 0.86:1 (전원합격권)'
   },
   {
-    univName: '강원대학교',
-    admissionType: '학생부교과(일반전형)',
-    targetGradeBand: '4_6',
-    dept: '춘천·삼척캠퍼스',
-    minScoreText: '2개 영역 등급 합 8 이내 (탐구 1)',
-    initialRate: 5.7,
-    passRate: 35.0,
-    fillRate: 140,
-    note: '거점 국립대, 최저 맞추면 3.5명 중 1명 합격에서 1.2:1로 하락'
-  },
-  {
     univName: '충남·충북대학교',
     admissionType: '학생부교과(일반전형)',
     targetGradeBand: '4_6',
@@ -1334,28 +1443,52 @@ export const DEFAULT_CSAT_PASS_RATE_BENCHMARK = [
     note: '수도권 최선호 공학, 외형 9.4:1이지만 실질 경쟁률 3.38:1로 완화'
   },
 
-  // [3~4등급: 수도권·지거국 안정]
+  // -------------------------------------------------------------
+  // [2] 3~4등급: 수도권 & 인서울 안정 (2025 공식 실측)
+  // -------------------------------------------------------------
   {
-    univName: '경희대학교(국제)',
-    admissionType: '학생부교과(지역균형)',
-    targetGradeBand: '3_4',
-    dept: '응용과학·공학',
-    minScoreText: '2개 영역 등급 합 5 이내 (탐구 1)',
-    initialRate: 8.5,
-    passRate: 52.0,
-    fillRate: 160,
-    note: '외형 8.5:1에서 최저 충족 시 4.4:1, 충원 감안 시 1.7:1'
-  },
-  {
-    univName: '홍익대학교',
+    univName: '한국외국어대학교',
     admissionType: '학생부교과(학교장추천)',
     targetGradeBand: '3_4',
+    dept: '인문·글로벌',
+    minScoreText: '2개 영역 등급 합 4 이내 (탐구 1)',
+    initialRate: 7.2,
+    passRate: 55.8,
+    fillRate: 135,
+    note: '2025 공식: 지원 2,008명 중 충족 1,121명(55.8%), 실질 경쟁률 4.02:1로 완화'
+  },
+  {
+    univName: '숭실대학교',
+    admissionType: '학생부교과(학생부우수자)',
+    targetGradeBand: '3_4',
     dept: '인문·자연',
-    minScoreText: '3개 영역 등급 합 7~8 이내',
-    initialRate: 9.6,
-    passRate: 41.0,
+    minScoreText: '2개 영역 등급 합 5 이내',
+    initialRate: 8.1,
+    passRate: 59.4,
+    fillRate: 145,
+    note: '2025 공식: 지원 4,861명 중 충족 2,886명(59.4%), 실질 경쟁률 4.81:1'
+  },
+  {
+    univName: '아주대학교',
+    admissionType: '학생부교과(고교추천)',
+    targetGradeBand: '3_4',
+    dept: '자연·공학·인문',
+    minScoreText: '2개 영역 등급 합 5 이내',
+    initialRate: 7.4,
+    passRate: 51.0,
+    fillRate: 140,
+    note: '2025 공식: 지원 2,540명 중 충족 1,295명(51.0%), 충족률이 낮아 실질 3.77:1 급감'
+  },
+  {
+    univName: '성신여자대학교',
+    admissionType: '학생부교과(지역균형)',
+    targetGradeBand: '3_4',
+    dept: '인문·사회·자연',
+    minScoreText: '2개 영역 등급 합 7 이내 (탐구 1)',
+    initialRate: 6.8,
+    passRate: 80.7,
     fillRate: 130,
-    note: '인서울 대학 중 최저 기준이 높아 최저 통과율 41%에 불과'
+    note: '2025 공식: 교과 26개 대학 중 최고 충족률 80.7% (최저 기준 완화 반영)'
   },
   {
     univName: '국민대학교',
@@ -1368,29 +1501,141 @@ export const DEFAULT_CSAT_PASS_RATE_BENCHMARK = [
     fillRate: 145,
     note: '실질 4.22:1, 충원율 반영 시 1.72:1로 합격 가능성 급상승'
   },
+  {
+    univName: '홍익대학교',
+    admissionType: '학생부교과(학교장추천)',
+    targetGradeBand: '3_4',
+    dept: '인문·자연',
+    minScoreText: '3개 영역 등급 합 7~8 이내',
+    initialRate: 9.6,
+    passRate: 41.0,
+    fillRate: 130,
+    note: '인서울 대학 중 최저 기준이 높아 최저 통과율 41.0%에 불과, 실질 3.94:1'
+  },
 
-  // [1~2등급: 인서울·메디컬 승부]
+  // -------------------------------------------------------------
+  // [3] 1~2등급: 인서울 최상위 & 의약학계열 승부 (2025 공식 실측)
+  // -------------------------------------------------------------
   {
     univName: '고려대학교',
     admissionType: '학생부교과(학교추천)',
     targetGradeBand: '1_2',
-    dept: '인문·자연',
+    dept: '인문·자연 전체',
     minScoreText: '3개 영역 등급 합 7 이내 (한국사 4)',
-    initialRate: 9.1,
-    passRate: 58.0,
-    fillRate: 120,
-    note: '실질 경쟁률 5.28:1, 충원율 감안 시 2.4:1'
+    initialRate: 6.9,
+    passRate: 70.0,
+    fillRate: 125,
+    note: '2025 공식: 학교추천 충족률 70.0% (실질경쟁률 4.84:1), 교과 전체 61.3%(5,944명 중 3,644명)'
   },
   {
-    univName: '중앙대학교',
+    univName: '고려대학교',
+    admissionType: '학생부종합(학업우수전형)',
+    targetGradeBand: '1_2',
+    dept: '인문·자연 전체',
+    minScoreText: '4개 영역 등급 합 8 이내 (탐구 1)',
+    initialRate: 16.6,
+    passRate: 40.4,
+    fillRate: 95,
+    note: '2025 공식: 학업우수 충족률 40.4% (실질경쟁률 6.70:1, 지원자의 약 60%가 자동 탈락!)'
+  },
+  {
+    univName: '연세대학교',
+    admissionType: '학생부교과(추천형)',
+    targetGradeBand: '1_2',
+    dept: '인문계열',
+    minScoreText: '국수 중 1개 포함 2합 4 (영어 3)',
+    initialRate: 6.2,
+    passRate: 67.7,
+    fillRate: 130,
+    note: '2025 공식 발표: 연세대 인문계열 충족률 67.7% (전체 4,409명 중 2,861명 64.9%)'
+  },
+  {
+    univName: '연세대학교',
+    admissionType: '학생부교과(추천형)',
+    targetGradeBand: '1_2',
+    dept: '자연계열',
+    minScoreText: '수(미/기) 포함 2합 5 (영어 3)',
+    initialRate: 6.8,
+    passRate: 75.7,
+    fillRate: 140,
+    note: '2025 공식 발표: 연세대 자연계열 충족률 75.7% (수학 역량 기반 높은 충족)'
+  },
+  {
+    univName: '연세대학교',
+    admissionType: '학생부교과(추천형)',
+    targetGradeBand: '1_2',
+    dept: '의예과',
+    minScoreText: '국수(미/기) 1등급 2개 이상 (영어 3)',
+    initialRate: 10.5,
+    passRate: 53.3,
+    fillRate: 110,
+    note: '2025 공식 발표: 연세대 의예과 충족률 53.3% (지원자 절반 탈락)'
+  },
+  {
+    univName: '경희대학교',
     admissionType: '학생부교과(지역균형)',
     targetGradeBand: '1_2',
+    dept: '인문·자연 전체',
+    minScoreText: '2개 영역 등급 합 5 이내 (탐구 1)',
+    initialRate: 8.2,
+    passRate: 63.8,
+    fillRate: 155,
+    note: '2025 공식 발표: 지역균형 충족률 63.8% (실질경쟁률 5.22:1), 전체 3,174명 중 1,976명 충족'
+  },
+  {
+    univName: '경희대학교',
+    admissionType: '학생부종합(네오르네상스 의예과)',
+    targetGradeBand: '1_2',
+    dept: '의예과 (의약학계열)',
+    minScoreText: '3개 영역 등급 합 4 이내 + 한국사 5 (과탐 2평균)',
+    initialRate: 18.5,
+    passRate: 69.7,
+    fillRate: 80,
+    note: '2025 공식: 1단계 합격 109명 중 최저 충족 76명(69.7%), 까다로운 최저로 30% 탈락'
+  },
+  {
+    univName: '한양대학교',
+    admissionType: '학생부교과(추천형)',
+    targetGradeBand: '1_2',
+    dept: '전 모집단위 (49곳)',
+    minScoreText: '3개 영역 등급 합 7 이내',
+    initialRate: 7.5,
+    passRate: 69.3,
+    fillRate: 140,
+    note: '2025 공식: 49개 모집단위 평균 충족률 69.3%. 최저 도입 후 48곳 평균 약 0.18등급 합격선 하락!'
+  },
+  {
+    univName: '한양대학교',
+    admissionType: '학생부종합(추천형/서류형)',
+    targetGradeBand: '1_2',
     dept: '인문·자연',
-    minScoreText: '3개 영역 등급 합 7 이내 (영어 1·2등급 인정)',
-    initialRate: 8.7,
-    passRate: 46.0,
-    fillRate: 150,
-    note: '실질 경쟁률 4.0:1, 충원율 감안 체감 경쟁률 1.6:1'
+    minScoreText: '3개 영역 등급 합 7 이내',
+    initialRate: 15.2,
+    passRate: 66.0,
+    fillRate: 110,
+    note: '2025 공식: 종합 8개 대학 중 최고 충족률 66.0%'
+  },
+  {
+    univName: '가톨릭대학교',
+    admissionType: '학생부교과(지역균형 의예과)',
+    targetGradeBand: '1_2',
+    dept: '의예과',
+    minScoreText: '4개 영역 등급 합 5 이내 + 한국사 4 (과탐 2평균)',
+    initialRate: 12.5,
+    passRate: 48.0,
+    fillRate: 120,
+    note: '2025 공식: 지원 75명 중 최저 충족 36명(48.00%), 지원자의 52%가 최저 미충족 탈락'
+  },
+  {
+    univName: '가톨릭대학교',
+    admissionType: '학생부교과(지역균형 약학과)',
+    targetGradeBand: '1_2',
+    dept: '약학과',
+    minScoreText: '3개 영역 등급 합 5 이내 (과탐 1)',
+    initialRate: 14.8,
+    passRate: 60.0,
+    fillRate: 130,
+    note: '2025 공식: 지원 25명 중 최저 충족 15명(60.00%), 실질경쟁률 8.88:1로 완화'
   },
   {
     univName: '서강대학교',
@@ -1399,9 +1644,134 @@ export const DEFAULT_CSAT_PASS_RATE_BENCHMARK = [
     dept: '전 계열',
     minScoreText: '3개 영역 각 3등급 이내 (한국사 4)',
     initialRate: 10.2,
-    passRate: 62.0,
+    passRate: 68.1,
     fillRate: 140,
-    note: '최저 완화로 충족률 62% 형성, 충원율 감안 체감 2.6:1'
+    note: '2025 공식: 지원 2,678명 중 충족 1,823명(68.1%), 완화된 최저 기준'
+  },
+  {
+    univName: '중앙대학교',
+    admissionType: '학생부교과(지역균형)',
+    targetGradeBand: '1_2',
+    dept: '인문·자연',
+    minScoreText: '3개 영역 등급 합 7 이내 (영어 1·2등급 인정)',
+    initialRate: 8.7,
+    passRate: 63.4,
+    fillRate: 150,
+    note: '2025 공식: 지원 4,505명 중 충족 2,856명(63.4%), 실질 경쟁률 5.52:1'
+  },
+
+  // -------------------------------------------------------------
+  // [4] ★ 논술전형: 경쟁률 1/3 ~ 1/11 토막의 신화 (2025 공식 실측)
+  // -------------------------------------------------------------
+  {
+    univName: '경희대학교',
+    admissionType: '논술우수자(한의예과 인문)',
+    targetGradeBand: 'essay',
+    dept: '한의예과(인문)',
+    minScoreText: '3개 영역 등급 합 4 이내 (국수영탐)',
+    initialRate: 434.8,
+    passRate: 9.1,
+    fillRate: 20,
+    note: '★ [경쟁률 1/11 토막] 5명 모집에 2,174명 지원(434.8:1)했으나 최저 충족자 단 198명(9.1%)! 실질경쟁률 39.6:1'
+  },
+  {
+    univName: '고려대학교',
+    admissionType: '논술전형',
+    targetGradeBand: 'essay',
+    dept: '전체 (경영·인문·자연)',
+    minScoreText: '4개 영역 등급 합 8 이내 (경영은 4합 5)',
+    initialRate: 64.9,
+    passRate: 22.1,
+    fillRate: 35,
+    note: '★ 2025 공식: 361명 모집 23,421명 중 충족 5,182명(22.1%)! 77.9%가 허수로 실질경쟁률 14.4:1(1/5 수준) 급락'
+  },
+  {
+    univName: '중앙대학교',
+    admissionType: '논술전형',
+    targetGradeBand: 'essay',
+    dept: '인문·자연',
+    minScoreText: '3개 영역 등급 합 6 이내',
+    initialRate: 52.8,
+    passRate: 22.3,
+    fillRate: 30,
+    note: '2025 공식: 지원 36,119명 중 충족 8,054명(22.3%), 실질 경쟁률 11.77:1로 4.5배 완화'
+  },
+  {
+    univName: '경희대학교',
+    admissionType: '논술우수자전형',
+    targetGradeBand: 'essay',
+    dept: '인문·자연·자율전공',
+    minScoreText: '2개 영역 등급 합 5 이내 (탐구 1)',
+    initialRate: 57.7,
+    passRate: 31.9,
+    fillRate: 35,
+    note: '2025 공식 발표: 지원 24,049명 중 충족률 31.9% (원서접수 57.72:1 → 실질 18.42:1)'
+  },
+  {
+    univName: '한국외국어대학교',
+    admissionType: '논술전형',
+    targetGradeBand: 'essay',
+    dept: '인문·사회',
+    minScoreText: '2개 영역 등급 합 4 이내',
+    initialRate: 38.6,
+    passRate: 25.3,
+    fillRate: 30,
+    note: '2025 공식: 지원 15,773명 중 충족 3,995명(25.3%), 실질 경쟁률 9.77:1'
+  },
+  {
+    univName: '동국대학교',
+    admissionType: '논술전형',
+    targetGradeBand: 'essay',
+    dept: '인문·자연',
+    minScoreText: '2개 영역 등급 합 5 이내',
+    initialRate: 51.2,
+    passRate: 29.2,
+    fillRate: 35,
+    note: '2025 공식: 지원 14,749명 중 충족 4,310명(29.2%), 실질 경쟁률 14.95:1'
+  },
+  {
+    univName: '성균관대학교',
+    admissionType: '논술우수자',
+    targetGradeBand: 'essay',
+    dept: '인문·자연',
+    minScoreText: '3개 영역 등급 합 6 이내',
+    initialRate: 45.3,
+    passRate: 36.2,
+    fillRate: 35,
+    note: '2025 공식: 지원 41,613명 중 충족 15,061명(36.2%), 실질 16.4:1'
+  },
+  {
+    univName: '아주대학교',
+    admissionType: '논술전형',
+    targetGradeBand: 'essay',
+    dept: '자연·의학',
+    minScoreText: '의예 4합 6, 일반 2합 5',
+    initialRate: 34.2,
+    passRate: 52.6,
+    fillRate: 25,
+    note: '2025 공식: 지원 6,889명 중 충족 3,623명(52.6%), 실질 17.99:1'
+  },
+  {
+    univName: '건국대학교',
+    admissionType: '논술(KU논술우수자)',
+    targetGradeBand: 'essay',
+    dept: '인문·자연',
+    minScoreText: '2개 영역 등급 합 5 이내',
+    initialRate: 46.8,
+    passRate: 60.3,
+    fillRate: 30,
+    note: '2025 공식: 지원 22,644명 중 충족 13,651명(60.3%), 실질 28.22:1'
+  },
+  {
+    univName: '성신여자대학교',
+    admissionType: '논술우수자',
+    targetGradeBand: 'essay',
+    dept: '인문·자연',
+    minScoreText: '2개 영역 등급 합 7 이내',
+    initialRate: 28.5,
+    passRate: 61.1,
+    fillRate: 25,
+    note: '2025 공식: 논술 18개 대학 중 최고 충족률 61.1%'
   }
 ]
 
