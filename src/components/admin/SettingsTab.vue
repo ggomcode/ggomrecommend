@@ -478,7 +478,7 @@
               </a>
             </div>
             <p class="text-[11px] text-slate-500 m-0">
-              주요일정, 원서접수마감, 4년제일정, 전문대일정, 학사일정 총 5개 시트가 포함된 시트 ID를 등록합니다.
+              주요일정·원서접수마감·4년제일정·전문대일정(A열: 대입학년도 2027 등) 및 학사일정(A열: 학사년도 2026 등) 총 5개 시트 탭이 포함된 구글 시트 ID 또는 전체 URL을 등록합니다.
             </p>
             <div class="flex gap-2">
               <input
@@ -1401,6 +1401,11 @@ async function loadConfig() {
     realGoogleSheetRuralId.value = dbRuralId
     hasGoogleSheetRuralId.value = !!dbRuralId
     googleSheetRuralId.value = dbRuralId ? maskGoogleSheetId(dbRuralId) : ''
+    if (dbRuralId) {
+      localStorage.setItem('pcm_google_sheet_rural_id', dbRuralId)
+    } else {
+      localStorage.removeItem('pcm_google_sheet_rural_id')
+    }
 
     const dbKcueId = configMap[KCUE_SHEET_KEY] || ''
     realGoogleSheetKcueId.value = dbKcueId
@@ -1486,6 +1491,12 @@ async function saveGoogleSheetRuralId() {
 
       const { error } = await supabase.from('config').upsert({ key: 'google_sheet_rural_id', value: targetVal }, { onConflict: 'key' })
       if (error) throw error
+
+      if (targetVal) {
+        localStorage.setItem('pcm_google_sheet_rural_id', targetVal)
+      } else {
+        localStorage.removeItem('pcm_google_sheet_rural_id')
+      }
 
       hasGoogleSheetRuralId.value = !!targetVal
       googleSheetRuralId.value = targetVal ? maskGoogleSheetId(targetVal) : ''

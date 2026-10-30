@@ -150,6 +150,48 @@ export async function saveKcueSheetId(id) {
   return cleanId
 }
 
+export const RURAL_SHEET_KEY = 'google_sheet_rural_id'
+
+/**
+ * 관리자 설정에 등록된 '2) 농어촌 및 기회균형 전형 구글 시트 ID' 조회
+ */
+export async function getRuralSheetId() {
+  const cached = localStorage.getItem(`pcm_${RURAL_SHEET_KEY}`)
+  let sheetId = cached ? cached.trim() : ''
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('config')
+        .select('value')
+        .eq('key', RURAL_SHEET_KEY)
+        .maybeSingle()
+
+      if (!error) {
+        if (data && data.value != null && String(data.value).trim()) {
+          sheetId = String(data.value).trim()
+          localStorage.setItem(`pcm_${RURAL_SHEET_KEY}`, sheetId)
+        } else if (data && !data.value) {
+          sheetId = ''
+          localStorage.removeItem(`pcm_${RURAL_SHEET_KEY}`)
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch rural sheet config:', e)
+    }
+  }
+
+  return sheetId
+}
+
+/**
+ * 관리자 설정에 농어촌 및 기회균형 전형 구글 시트 ID가 등록되어 있는지 여부
+ */
+export async function hasRuralSheetConfigured() {
+  const sheetId = await getRuralSheetId()
+  return !!(sheetId && sheetId.trim().length > 0)
+}
+
 let cachedActualTabs = null
 let cachedActualTabsTime = 0
 

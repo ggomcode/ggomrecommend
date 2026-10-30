@@ -30,29 +30,34 @@
       </div>
     </div>
 
-    <!-- Modern Integrated Segmented Control (세련된 세그먼트 탭 내비게이션) -->
-    <div class="pt-4 pb-2">
-      <div class="inline-flex p-1 rounded-2xl bg-slate-100/90 border border-slate-200/80 shadow-2xs gap-1 max-w-full overflow-x-auto">
-        <button
-          v-for="tab in subTabs"
-          :key="tab.id"
-          type="button"
-          @click="activeSubTab = tab.id"
-          :class="[
-            'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer border-none whitespace-nowrap',
-            activeSubTab === tab.id
-              ? 'bg-white text-indigo-950 shadow-xs font-black ring-1 ring-slate-900/5'
-              : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/50'
-          ]"
-        >
-          <span>{{ tab.emoji }}</span>
-          <span>{{ tab.label }}</span>
-        </button>
+    <!-- Modern Integrated Segmented Control (세련된 세그먼트 탭 점프 내비게이션 바) -->
+    <div class="sticky top-0 z-30 bg-white/95 backdrop-blur-md py-3 -mx-6 sm:-mx-7 px-6 sm:px-7 border-b border-slate-100 shadow-2xs">
+      <div class="flex items-center justify-between gap-2 overflow-x-auto">
+        <div class="inline-flex p-1 rounded-2xl bg-slate-100/90 border border-slate-200/80 shadow-2xs gap-1 max-w-full">
+          <button
+            v-for="tab in subTabs"
+            :key="tab.id"
+            type="button"
+            @click="scrollToTab(tab.id)"
+            :class="[
+              'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer border-none whitespace-nowrap',
+              activeSubTab === tab.id
+                ? 'bg-white text-indigo-950 shadow-xs font-black ring-1 ring-slate-900/5'
+                : 'bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/50'
+            ]"
+          >
+            <span>{{ tab.emoji }}</span>
+            <span>{{ tab.label }}</span>
+          </button>
+        </div>
+        <span class="text-[11px] text-slate-400 font-medium hidden md:inline-block shrink-0">
+          👇 버튼 클릭 시 해당 분석 섹션으로 즉시 점프합니다
+        </span>
       </div>
     </div>
 
-    <!-- Content 1: 내신 vs 수능 레이더 성적 비교 & 선택과목 분석 -->
-    <div v-if="activeSubTab === 'radar'" class="mt-4 pt-4 border-t border-slate-100 space-y-6">
+    <!-- Content 1: 내신 vs 수능 레이더 성적 비교 & 선택과목 분석 & 4대 기본 현황 -->
+    <div id="sec-radar" class="mt-4 pt-4 space-y-6 scroll-mt-24">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         <!-- Left: 방사형 레이더 차트 -->
         <div class="lg:col-span-6 bg-slate-50/70 rounded-3xl p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between">
@@ -185,10 +190,21 @@
           </div>
         </div>
       </div>
+
+      <!-- 1번에 속하는 수시 지원 4대 기본 현황 차트 슬롯 (전형유형, 지역분포, 학급현황, 계열비중) -->
+      <slot name="overview-charts"></slot>
     </div>
 
     <!-- Content 2: 사탐런 & 사회/과학탐구 응시 상세 현황 -->
-    <div v-else-if="activeSubTab === 'satamRun'" class="mt-4 pt-4 border-t border-slate-100 space-y-6">
+    <div id="sec-satamRun" class="mt-14 pt-8 border-t-2 border-slate-200/90 space-y-6 scroll-mt-24">
+      <!-- Section 2 Header Badge -->
+      <div class="flex items-center justify-between pb-1">
+        <div class="flex items-center gap-2">
+          <span class="flex items-center justify-center w-7 h-7 rounded-xl bg-pink-50 text-pink-700 text-xs font-black border border-pink-200">🚀 2</span>
+          <h3 class="text-base sm:text-lg font-black text-slate-900 m-0">사탐런 & 탐구 응시 분석</h3>
+        </div>
+        <span class="text-xs text-slate-400 font-medium hidden sm:inline">2027 모의고사 및 수시 가채점 연계 분석</span>
+      </div>
       <!-- 상단 모드 전환 및 모의고사 분석 컨트롤 바 -->
       <div class="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs space-y-3">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -884,7 +900,15 @@
     </div>
 
     <!-- Content 3: 수능 최저 충족 실질 경쟁률 분석 & 공교육 역전 전략 -->
-    <div v-else-if="activeSubTab === 'minScoreMagic'" class="mt-4 pt-4 border-t border-slate-100 space-y-6">
+    <div id="sec-minScoreMagic" class="mt-14 pt-8 border-t-2 border-slate-200/90 space-y-6 scroll-mt-24">
+      <!-- Section 3 Header Badge -->
+      <div class="flex items-center justify-between pb-1">
+        <div class="flex items-center gap-2">
+          <span class="flex items-center justify-center w-7 h-7 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-black border border-indigo-200">🎯 3</span>
+          <h3 class="text-base sm:text-lg font-black text-slate-900 m-0">수능최저 충족 실질 경쟁률</h3>
+        </div>
+        <span class="text-xs text-slate-400 font-medium hidden sm:inline">실질 경쟁률 하락 효과 & 성적대별 전략</span>
+      </div>
       <!-- 1. Hero Banner: 공교육 가치 중심 헤더 -->
       <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-7 shadow-lg relative overflow-hidden">
         <div class="relative z-10">
@@ -1836,7 +1860,15 @@
     </div>
 
     <!-- Content 4: 2027학년도 5대 대입 핵심 전략 카드 -->
-    <div v-else-if="activeSubTab === 'strategyCards'" class="mt-4 pt-4 border-t border-slate-100 space-y-4">
+    <div id="sec-strategyCards" class="mt-14 pt-8 border-t-2 border-slate-200/90 space-y-4 scroll-mt-24">
+      <!-- Section 4 Header Badge -->
+      <div class="flex items-center justify-between pb-1">
+        <div class="flex items-center gap-2">
+          <span class="flex items-center justify-center w-7 h-7 rounded-xl bg-amber-50 text-amber-700 text-xs font-black border border-amber-200">💡 4</span>
+          <h3 class="text-base sm:text-lg font-black text-slate-900 m-0">2027 대입 5대 핵심 전략</h3>
+        </div>
+        <span class="text-xs text-slate-400 font-medium hidden sm:inline">수시·정시 대비 5대 핵심 가이드</span>
+      </div>
       <div class="flex items-center justify-between mb-2">
         <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
           <span>💡</span>
@@ -1901,7 +1933,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
   Chart as ChartJS,
   RadialLinearScale,
@@ -1949,6 +1981,17 @@ const subTabs = [
 
 const activeSubTab = ref('radar')
 
+// 상단 세그먼트 버튼 클릭 시 해당 섹션으로 부드럽게 점프
+function scrollToTab(tabId) {
+  activeSubTab.value = tabId
+  const targetEl = document.getElementById(`sec-${tabId}`)
+  if (targetEl) {
+    targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+}
+
+let sectionObserver = null
+
 // useStatData 전역 상태 연동 (학년도 선택 & 2027 모의가채점 연계)
 const {
   selectedAcademicYear,
@@ -1968,6 +2011,37 @@ onMounted(() => {
     loadMockExamData().catch(() => {})
   }
   loadCsatPassRateData().catch(() => {})
+
+  // 스크롤 시 현재 뷰포트에 위치한 섹션 버튼 자동 활성화
+  const sectionIds = ['radar', 'satamRun', 'minScoreMagic', 'strategyCards']
+  if (typeof IntersectionObserver !== 'undefined') {
+    sectionObserver = new IntersectionObserver((entries) => {
+      const visible = entries.filter(e => e.isIntersecting)
+      if (visible.length > 0) {
+        visible.sort((a, b) => Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top))
+        const targetId = visible[0].target.id.replace('sec-', '')
+        if (targetId && activeSubTab.value !== targetId) {
+          activeSubTab.value = targetId
+        }
+      }
+    }, {
+      rootMargin: '-80px 0px -55% 0px',
+      threshold: [0, 0.1, 0.2]
+    })
+
+    setTimeout(() => {
+      sectionIds.forEach(id => {
+        const el = document.getElementById(`sec-${id}`)
+        if (el && sectionObserver) sectionObserver.observe(el)
+      })
+    }, 400)
+  }
+})
+
+onUnmounted(() => {
+  if (sectionObserver) {
+    sectionObserver.disconnect()
+  }
 })
 
 watch(selectedAcademicYear, (newYear) => {

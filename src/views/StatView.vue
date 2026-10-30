@@ -279,7 +279,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import StatHeader from '../stat/components/StatHeader.vue'
@@ -322,7 +322,7 @@ import {
   Award,
   Trees
 } from 'lucide-vue-next'
-import { clearStatSessionPassword, getStatSessionPassword } from '../api/statApi'
+import { clearStatSessionPassword, getStatSessionPassword, hasRuralSheetConfigured } from '../api/statApi'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -337,6 +337,21 @@ const {
 // 사이드바 접기/펼치기 상태
 const collapsed = ref(false)
 const currentTab = ref('overview')
+
+// 관리자 설정에서 '농어촌 및 기회균형 전형 구글 시트 ID' 등록 여부 확인 (미등록 시 메뉴 숨김)
+const initialRuralSheetId = typeof window !== 'undefined' ? localStorage.getItem('pcm_google_sheet_rural_id') : ''
+const hasRuralSheet = ref(!!(initialRuralSheetId && initialRuralSheetId.trim()))
+
+async function checkRuralSheetConfig() {
+  hasRuralSheet.value = await hasRuralSheetConfigured()
+  if (!hasRuralSheet.value && currentTab.value === 'ruralStat') {
+    currentTab.value = 'overview'
+  }
+}
+
+onMounted(() => {
+  checkRuralSheetConfig()
+})
 
 // 아코디언 그룹 접기/펼치기 상태 관리
 const collapsedGroups = ref({})
@@ -353,7 +368,7 @@ const menuGroups = computed(() => [
       { id: 'multiYear', name: '5개년 추이 분석', iconComponent: TrendingUp },
       { id: 'scatter', name: '대입 합불 산점도', iconComponent: ChartScatter, badge: 'NEW' },
       { id: 'schoolRec', name: '학교장추천 전형 분석', iconComponent: Award, badge: '특화' },
-      { id: 'ruralStat', name: '농어촌 전형 분석', iconComponent: Trees, badge: '특화' },
+      ...(hasRuralSheet.value ? [{ id: 'ruralStat', name: '농어촌 전형 분석', iconComponent: Trees, badge: '특화' }] : []),
       { id: 'university', name: '대학 그룹별 분석', iconComponent: Building2 },
       { id: 'grade', name: '성적대별 전형 경향', iconComponent: Target }
     ]
@@ -398,7 +413,7 @@ const activeTabComponent = computed(() => {
     case 'counsel': return ParentCounselTab
     case 'scatter': return PassFailScatterTab
     case 'schoolRec': return SchoolRecommendationTab
-    case 'ruralStat': return RuralStatTab
+    case 'ruralStat': return hasRuralSheet.value ? RuralStatTab : OverviewTab
     case 'multiYear': return MultiYearTab
     case 'university': return UniversityTab
     case 'grade': return GradeTab

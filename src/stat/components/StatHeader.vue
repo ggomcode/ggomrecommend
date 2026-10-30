@@ -29,7 +29,7 @@
             :value="selectedAcademicYear"
             :disabled="isLoadingYearData"
             @change="e => handleYearChange(e.target.value)"
-            class="appearance-none pl-2 pr-5 py-1 rounded-md text-xs font-black bg-white text-amber-950 border border-amber-200/80 shadow-2xs hover:border-amber-400 focus:outline-none cursor-pointer disabled:opacity-60 transition-colors"
+            class="appearance-none pl-2 pr-6 py-1 rounded-md text-xs font-black bg-white text-amber-950 border border-amber-200/80 shadow-2xs hover:border-amber-400 focus:outline-none cursor-pointer disabled:opacity-60 transition-colors"
             title="대입 학년도 선택"
           >
             <option v-for="y in availableAcademicYears" :key="y" :value="y">
@@ -49,7 +49,7 @@
             :value="selectedScope"
             :disabled="isLoadingYearData"
             @change="e => handleScopeChange(e.target.value)"
-            class="appearance-none pl-2 pr-5 py-1 rounded-md text-xs font-bold bg-transparent text-indigo-950 hover:bg-white/80 border-none focus:outline-none cursor-pointer disabled:opacity-60 transition-colors"
+            class="appearance-none pl-2 pr-6 py-1 rounded-md text-xs font-bold bg-transparent text-indigo-950 hover:bg-white/80 border-none focus:outline-none cursor-pointer disabled:opacity-60 transition-colors"
             title="모집시기 및 대학구분 선택"
           >
             <option v-for="opt in scopeOptions" :key="opt.value" :value="opt.value">
@@ -317,3 +317,15 @@ const handleLogout = async () => {
   router.push('/login')
 }
 </script>
+
+<style scoped>
+select {
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  background-image: none !important;
+}
+select::-ms-expand {
+  display: none !important;
+}
+</style>

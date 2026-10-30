@@ -47,6 +47,18 @@
     }
 }
 
+/* @tailwindcss/forms 플러그인이 select에 기본 적용하는 SVG background-image 화살표 제거 (커스텀 아이콘 사용 시 2중 화살표 방지) */
+select.appearance-none,
+select[class*="appearance-none"] {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-image: none !important;
+}
+select.appearance-none::-ms-expand,
+select[class*="appearance-none"]::-ms-expand {
+    display: none !important;
+}
 
 /* 글로벌 인쇄 스타일 (A4 가로 책자 및 공통 인쇄 최적화) */
 @media print {
