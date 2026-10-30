@@ -59,6 +59,35 @@ export const csatMinScoreTable = ref([])
 export const isLoadingCsatMinScore = ref(false)
 export const loadedCsatMinScoreYear = ref('')
 
+// [신규] '수능최저충족률' 시트 전역 상태 및 로더
+export const csatPassRateTable = ref([])
+export const isLoadingCsatPassRate = ref(false)
+
+/**
+ * 구글 시트 '수능최저충족률' 탭의 실제 통계 데이터를 비동기 로드
+ */
+export async function loadCsatPassRateData(forceReload = false) {
+  if (!forceReload && csatPassRateTable.value.length > 0) {
+    return csatPassRateTable.value
+  }
+  isLoadingCsatPassRate.value = true
+  try {
+    const sheetId = await getKcueSheetId()
+    const { fetchCsatPassRateTable } = await import('../../api/statApi.js')
+    const records = await fetchCsatPassRateTable(sheetId, forceReload)
+    if (records && records.length > 0) {
+      csatPassRateTable.value = records
+      console.log(`[useStatData] '수능최저충족률' 데이터 ${records.length}건 로드 완료`)
+    }
+    return records
+  } catch (err) {
+    console.warn(`[useStatData] '수능최저충족률' 데이터 로드 실패:`, err)
+    return []
+  } finally {
+    isLoadingCsatPassRate.value = false
+  }
+}
+
 /**
  * 구글 시트 '{year}수능최저' 탭의 정규화 데이터를 비동기 로드
  */
@@ -1086,7 +1115,10 @@ export function useStatData() {
     loadMockExamData,
     csatMinScoreTable,
     isLoadingCsatMinScore,
-    loadCsatMinScoreData
+    loadCsatMinScoreData,
+    csatPassRateTable,
+    isLoadingCsatPassRate,
+    loadCsatPassRateData
   }
 }
 

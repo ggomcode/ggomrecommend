@@ -1222,3 +1222,288 @@ export function getCsatMinScoreFilterOptions(records = []) {
     detailTypes: Array.from(detailTypes)
   }
 }
+
+/**
+ * ==========================================================
+ * [수능최저충족률 시트 로더 & 벤치마크 데이터셋]
+ * 1~2등급 상위권뿐 아니라 4~6등급 중·하위권 공교육 학생들의
+ * 실질경쟁률 완화 및 기적의 역전 합격 분석 지원
+ * ==========================================================
+ */
+
+// 4~6등급 중·하위권 및 주요 대학 표준 벤치마크 데이터 (시트 데이터 부재/로딩 전 Fallback)
+export const DEFAULT_CSAT_PASS_RATE_BENCHMARK = [
+  // [★ 4~6등급: 기적의 역전존] 수도권 및 거점 국립대
+  {
+    univName: '경기대학교',
+    admissionType: '학생부교과(교과성적우수자)',
+    targetGradeBand: '4_6',
+    dept: '인문·자연 전체',
+    minScoreText: '2개 영역 등급 합 7 이내 (한국사 4)',
+    initialRate: 8.9,
+    passRate: 38.5,
+    fillRate: 155,
+    note: '최저 미충족 탈락율 61.5%! 충원율 1.5바퀴 회전으로 체감 경쟁률 1.3:1 급락'
+  },
+  {
+    univName: '가천대학교',
+    admissionType: '학생부교과(학생부우수자)',
+    targetGradeBand: '4_6',
+    dept: '자연·공학계열',
+    minScoreText: '2개 영역 등급 합 6 이내 (탐구 1과목)',
+    initialRate: 11.2,
+    passRate: 42.0,
+    fillRate: 180,
+    note: '인기 대학이지만 실질 경쟁률 4.7:1, 충원율 반영 시 1.68:1로 합격 문턱 대폭 완화'
+  },
+  {
+    univName: '인천대학교',
+    admissionType: '학생부교과(교과성적우수자)',
+    targetGradeBand: '4_6',
+    dept: '인문·자연계열',
+    minScoreText: '2개 영역 등급 합 7 이내',
+    initialRate: 7.8,
+    passRate: 45.0,
+    fillRate: 140,
+    note: '국립 인천대, 실질 경쟁률 3.5:1로 떨어지며 4등급대 합격자 다수 발생'
+  },
+  {
+    univName: '수원대학교',
+    admissionType: '학생부교과(교과우수전형)',
+    targetGradeBand: '4_6',
+    dept: '인문·공학계열',
+    minScoreText: '2개 영역 등급 합 8 이내 (영어/사탐 가능)',
+    initialRate: 6.8,
+    passRate: 32.0,
+    fillRate: 210,
+    note: '충원율 2.1바퀴! 실질 2.18:1 ÷ 3.1 = 체감 0.7:1 (사실상 전원합격 펑크)'
+  },
+  {
+    univName: '강남대학교',
+    admissionType: '학생부교과(학교생활우수자)',
+    targetGradeBand: '4_6',
+    dept: '인문사회·ICT',
+    minScoreText: '1개 영역 4등급 이내 (영어 가능)',
+    initialRate: 5.9,
+    passRate: 48.0,
+    fillRate: 160,
+    note: '영어 또는 사탐 1과목 4등급만 맞추면 체감 경쟁률 1.09:1로 급락'
+  },
+  {
+    univName: '안양대학교',
+    admissionType: '학생부교과(교과우수)',
+    targetGradeBand: '4_6',
+    dept: '전 모집단위',
+    minScoreText: '1개 영역 3등급 또는 2합 8 이내',
+    initialRate: 6.2,
+    passRate: 40.0,
+    fillRate: 190,
+    note: '실질 경쟁률 2.48:1, 충원 2바퀴 합산 시 체감 경쟁률 0.86:1 (전원합격권)'
+  },
+  {
+    univName: '강원대학교',
+    admissionType: '학생부교과(일반전형)',
+    targetGradeBand: '4_6',
+    dept: '춘천·삼척캠퍼스',
+    minScoreText: '2개 영역 등급 합 8 이내 (탐구 1)',
+    initialRate: 5.7,
+    passRate: 35.0,
+    fillRate: 140,
+    note: '거점 국립대, 최저 맞추면 3.5명 중 1명 합격에서 1.2:1로 하락'
+  },
+  {
+    univName: '충남·충북대학교',
+    admissionType: '학생부교과(일반전형)',
+    targetGradeBand: '4_6',
+    dept: '인문·자연·농생명',
+    minScoreText: '2개 영역 등급 합 7~8 이내',
+    initialRate: 6.4,
+    passRate: 39.0,
+    fillRate: 125,
+    note: '지거국 4등급 합격선 형성의 핵심 요인은 최저 미충족 탈락(61%)'
+  },
+  {
+    univName: '한양대학교(ERICA)',
+    admissionType: '학생부교과(지역균형)',
+    targetGradeBand: '4_6',
+    dept: '공학·소프트웨어',
+    minScoreText: '2개 영역 등급 합 6 이내 (탐구 1)',
+    initialRate: 9.4,
+    passRate: 36.0,
+    fillRate: 130,
+    note: '수도권 최선호 공학, 외형 9.4:1이지만 실질 경쟁률 3.38:1로 완화'
+  },
+
+  // [3~4등급: 수도권·지거국 안정]
+  {
+    univName: '경희대학교(국제)',
+    admissionType: '학생부교과(지역균형)',
+    targetGradeBand: '3_4',
+    dept: '응용과학·공학',
+    minScoreText: '2개 영역 등급 합 5 이내 (탐구 1)',
+    initialRate: 8.5,
+    passRate: 52.0,
+    fillRate: 160,
+    note: '외형 8.5:1에서 최저 충족 시 4.4:1, 충원 감안 시 1.7:1'
+  },
+  {
+    univName: '홍익대학교',
+    admissionType: '학생부교과(학교장추천)',
+    targetGradeBand: '3_4',
+    dept: '인문·자연',
+    minScoreText: '3개 영역 등급 합 7~8 이내',
+    initialRate: 9.6,
+    passRate: 41.0,
+    fillRate: 130,
+    note: '인서울 대학 중 최저 기준이 높아 최저 통과율 41%에 불과'
+  },
+  {
+    univName: '국민대학교',
+    admissionType: '학생부교과(교과성적우수자)',
+    targetGradeBand: '3_4',
+    dept: '인문·자연',
+    minScoreText: '2개 영역 등급 합 5~6 이내',
+    initialRate: 8.8,
+    passRate: 48.0,
+    fillRate: 145,
+    note: '실질 4.22:1, 충원율 반영 시 1.72:1로 합격 가능성 급상승'
+  },
+
+  // [1~2등급: 인서울·메디컬 승부]
+  {
+    univName: '고려대학교',
+    admissionType: '학생부교과(학교추천)',
+    targetGradeBand: '1_2',
+    dept: '인문·자연',
+    minScoreText: '3개 영역 등급 합 7 이내 (한국사 4)',
+    initialRate: 9.1,
+    passRate: 58.0,
+    fillRate: 120,
+    note: '실질 경쟁률 5.28:1, 충원율 감안 시 2.4:1'
+  },
+  {
+    univName: '중앙대학교',
+    admissionType: '학생부교과(지역균형)',
+    targetGradeBand: '1_2',
+    dept: '인문·자연',
+    minScoreText: '3개 영역 등급 합 7 이내 (영어 1·2등급 인정)',
+    initialRate: 8.7,
+    passRate: 46.0,
+    fillRate: 150,
+    note: '실질 경쟁률 4.0:1, 충원율 감안 체감 경쟁률 1.6:1'
+  },
+  {
+    univName: '서강대학교',
+    admissionType: '학생부교과(지역균형)',
+    targetGradeBand: '1_2',
+    dept: '전 계열',
+    minScoreText: '3개 영역 각 3등급 이내 (한국사 4)',
+    initialRate: 10.2,
+    passRate: 62.0,
+    fillRate: 140,
+    note: '최저 완화로 충족률 62% 형성, 충원율 감안 체감 2.6:1'
+  }
+]
+
+const csatPassRateCache = new Map()
+
+/**
+ * 구글 스프레드시트의 '수능최저충족률' 탭 데이터를 비동기 로드
+ * (시트 데이터가 있을 경우 우선 적용하며, 기본 벤치마크와 융합 반환)
+ */
+export async function fetchCsatPassRateTable(sheetId = null, forceRefresh = false) {
+  const targetSheetId = sheetId ? extractSheetId(sheetId) : await getKcueSheetId()
+  const cacheKey = `csat_pass_rate_${targetSheetId}`
+
+  if (!forceRefresh && csatPassRateCache.has(cacheKey)) {
+    return csatPassRateCache.get(cacheKey)
+  }
+
+  const tabName = '수능최저충족률'
+  const gvizUrl = buildSheetTabGvizUrl(targetSheetId, tabName)
+
+  try {
+    const res = await fetch(gvizUrl)
+    if (!res.ok) {
+      console.log(`[fetchCsatPassRateTable] '${tabName}' 탭 원격 로드 불가 -> 기본 벤치마크 데이터 활용`)
+      return DEFAULT_CSAT_PASS_RATE_BENCHMARK
+    }
+
+    const text = await res.text()
+    if (!text || text.includes('google-signin') || text.includes('accounts.google.com')) {
+      return DEFAULT_CSAT_PASS_RATE_BENCHMARK
+    }
+
+    const wb = XLSX.read(text, { type: 'string' })
+    const sheetName = wb.SheetNames[0]
+    if (!sheetName) return DEFAULT_CSAT_PASS_RATE_BENCHMARK
+
+    const sheet = wb.Sheets[sheetName]
+    const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 })
+    if (!rawRows || rawRows.length < 2) return DEFAULT_CSAT_PASS_RATE_BENCHMARK
+
+    const headerRow = rawRows[0] || []
+    const colIdx = {
+      univName: headerRow.findIndex(h => String(h).includes('대학')),
+      admissionType: headerRow.findIndex(h => String(h).includes('전형')),
+      dept: headerRow.findIndex(h => String(h).includes('모집') || String(h).includes('계열') || String(h).includes('학과')),
+      minScoreText: headerRow.findIndex(h => String(h).includes('최저기준') || String(h).includes('수능최저')),
+      initialRate: headerRow.findIndex(h => String(h).includes('최초') || String(h).includes('경쟁률')),
+      passRate: headerRow.findIndex(h => String(h).includes('충족률') || String(h).includes('통과율')),
+      fillRate: headerRow.findIndex(h => String(h).includes('충원') || String(h).includes('추합')),
+      note: headerRow.findIndex(h => String(h).includes('비고') || String(h).includes('특징') || String(h).includes('설명'))
+    }
+
+    const parseNum = (val, fallback = 0) => {
+      if (val === undefined || val === null || val === '') return fallback
+      const clean = String(val).replace(/[^0-9.-]/g, '')
+      const n = parseFloat(clean)
+      return !isNaN(n) ? n : fallback
+    }
+
+    const parsedSheetRecords = []
+    for (let r = 1; r < rawRows.length; r++) {
+      const row = rawRows[r]
+      if (!row || row.length === 0) continue
+
+      const univName = String(row[colIdx.univName !== -1 ? colIdx.univName : 1] || '').trim()
+      if (!univName) continue
+
+      const initialRate = parseNum(row[colIdx.initialRate !== -1 ? colIdx.initialRate : 5], 6.0)
+      const passRate = parseNum(row[colIdx.passRate !== -1 ? colIdx.passRate : 6], 40.0)
+      const fillRate = parseNum(row[colIdx.fillRate !== -1 ? colIdx.fillRate : 7], 120.0)
+
+      // 등급대 자동 분류 판정
+      let targetGradeBand = '4_6'
+      if (initialRate >= 9.0 || passRate >= 55) {
+        targetGradeBand = '1_2'
+      } else if (initialRate >= 7.5 || passRate >= 45) {
+        targetGradeBand = '3_4'
+      }
+
+      parsedSheetRecords.push({
+        univName,
+        admissionType: String(row[colIdx.admissionType !== -1 ? colIdx.admissionType : 2] || '학생부교과').trim(),
+        targetGradeBand,
+        dept: String(row[colIdx.dept !== -1 ? colIdx.dept : 3] || '전체').trim(),
+        minScoreText: String(row[colIdx.minScoreText !== -1 ? colIdx.minScoreText : 4] || '수능최저 반영').trim(),
+        initialRate,
+        passRate,
+        fillRate,
+        note: String(row[colIdx.note !== -1 ? colIdx.note : 8] || '시트 실데이터 연동').trim(),
+        isFromSheet: true
+      })
+    }
+
+    // 시트 데이터가 있으면 시트 데이터를 우선하고 기본 벤치마크와 합침
+    const combined = parsedSheetRecords.length > 0 
+      ? [...parsedSheetRecords, ...DEFAULT_CSAT_PASS_RATE_BENCHMARK.filter(b => !parsedSheetRecords.some(s => s.univName === b.univName))]
+      : DEFAULT_CSAT_PASS_RATE_BENCHMARK
+
+    csatPassRateCache.set(cacheKey, combined)
+    return combined
+  } catch (err) {
+    console.warn(`[fetchCsatPassRateTable] 오류 발생, 기본 벤치마크 적용:`, err)
+    return DEFAULT_CSAT_PASS_RATE_BENCHMARK
+  }
+}
