@@ -28,6 +28,9 @@ export const MULTI_YEAR_STATS = {
       medicalApps: null,
       recommendationApps: null,
       ruralApps: null,
+      csatMinApps: null,
+      csatMinPassApps: null,
+      csatMinPassRate: null,
       finalPassRate: null,
       registerRate: null,
       gradeDistribution: null,
@@ -52,6 +55,9 @@ export const MULTI_YEAR_STATS = {
       medicalApps: null,
       recommendationApps: null,
       ruralApps: null,
+      csatMinApps: null,
+      csatMinPassApps: null,
+      csatMinPassRate: null,
       finalPassRate: null,
       registerRate: null,
       gradeDistribution: null,
@@ -76,6 +82,9 @@ export const MULTI_YEAR_STATS = {
       medicalApps: null,
       recommendationApps: null,
       ruralApps: null,
+      csatMinApps: null,
+      csatMinPassApps: null,
+      csatMinPassRate: null,
       finalPassRate: null,
       registerRate: null,
       gradeDistribution: null,
@@ -100,6 +109,9 @@ export const MULTI_YEAR_STATS = {
       medicalApps: 17,
       recommendationApps: 72,
       ruralApps: 189,
+      csatMinApps: 245,
+      csatMinPassApps: 82,
+      csatMinPassRate: 33.5,
       finalPassRate: 32.9,
       registerRate: 8.4,
       gradeDistribution: {
@@ -136,6 +148,9 @@ export const MULTI_YEAR_STATS = {
       medicalApps: 1,
       recommendationApps: 144,
       ruralApps: 137,
+      csatMinApps: 230,
+      csatMinPassApps: 86,
+      csatMinPassRate: 37.4,
       finalPassRate: null, // 대입 전형 진행 중 (미발표 -> '-')
       registerRate: null,  // 미발표 -> '-'
       gradeDistribution: {
@@ -210,6 +225,8 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
   let metroCount = 0
   let recCount = 0
   let ruralCount = 0
+  let csatMinCount = 0
+  let csatMinPassCount = 0
   let finalPassCount = 0
   let registerCount = 0
 
@@ -258,6 +275,18 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
 
     if (r.isRecommendation) recCount++
     if (r.isRural) ruralCount++
+
+    // 수능최저 반영 전형 및 충족 판정
+    const minText = String(r.minScoreReq || r['수능최저'] || r['수능최저학력기준'] || '')
+    const hasMin = r.hasMinScore || (minText && minText !== '-' && minText !== '없음' && minText.length > 2)
+    if (hasMin) {
+      csatMinCount++
+      const final = String(r.finalStage || '')
+      const reg = String(r.registerStatus || '')
+      if (r.isCsatMinMet === true || ((final.includes('합격') || final.includes('충원') || final.includes('최초') || reg === 'Y') && !final.includes('불합'))) {
+        csatMinPassCount++
+      }
+    }
 
     const final = String(r.finalStage || '')
     const reg = String(r.registerStatus || '')
@@ -365,6 +394,9 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
     medicalApps,
     recommendationApps: recCount,
     ruralApps: ruralCount,
+    csatMinApps: csatMinCount,
+    csatMinPassApps: csatMinPassCount,
+    csatMinPassRate: csatMinCount > 0 ? Number(((csatMinPassCount / csatMinCount) * 100).toFixed(1)) : null,
     finalPassRate: totalApps > 0 ? Number(((finalPassCount / totalApps) * 100).toFixed(1)) : null,
     registerRate: totalApps > 0 ? Number(((registerCount / totalApps) * 100).toFixed(1)) : null,
     gradeDistribution: bands,

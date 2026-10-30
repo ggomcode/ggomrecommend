@@ -144,8 +144,8 @@
       </div>
     </div>
 
-    <!-- 2-1. 특화 전형(학교장추천 & 농어촌 특별전형) 2대 핵심 지표 카드 -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <!-- 2-1. 특화 전형(학교장추천 & 농어촌 & 수능최저) 3대 핵심 지표 카드 -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <!-- Special KPI 1: 학교장추천 전형 지원 -->
       <div class="bg-gradient-to-br from-violet-50/70 via-white to-purple-50/30 rounded-2xl p-5 border border-violet-100 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between text-violet-800 mb-2">
@@ -196,6 +196,35 @@
                 <span>{{ ruralGrowth >= 0 ? '▲ +' : '▼ ' }}</span>{{ ruralGrowth }}% ({{ ruralDiff >= 0 ? '+' : '' }}{{ ruralDiff }}건)
               </span>
               <span>전년({{ previousYearData.year }}년 {{ previousYearData.ruralApps }}건) 대비</span>
+            </template>
+            <template v-else>
+              <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Special KPI 3: 수능 최저학력기준 충족 현황 -->
+      <div class="bg-gradient-to-br from-blue-50/70 via-white to-indigo-50/30 rounded-2xl p-5 border border-blue-100 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between text-blue-800 mb-2">
+          <div class="flex items-center gap-2">
+            <span class="p-1.5 rounded-lg bg-blue-100 text-blue-700 text-sm">🎯</span>
+            <span class="text-xs font-black">수능 최저학력기준 충족 현황</span>
+          </div>
+          <span class="text-[11px] font-bold text-blue-700 bg-blue-100/70 px-2.5 py-0.5 rounded-full border border-blue-200/50">
+            최저 반영 {{ latestYearData?.csatMinApps ? `${latestYearData.csatMinApps}건 중` : '-' }}
+          </span>
+        </div>
+        <div>
+          <div class="text-2xl sm:text-3xl font-black text-blue-900 tracking-tight">
+            {{ latestYearData?.csatMinPassRate != null ? `${latestYearData.csatMinPassRate}%` : '-' }}<span v-if="latestYearData?.csatMinPassApps != null" class="text-xs font-semibold text-blue-500 ml-1.5">({{ latestYearData.csatMinPassApps }}건 충족)</span>
+          </div>
+          <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+            <template v-if="hasMultiYearComparison && previousYearData?.csatMinPassRate != null">
+              <span :class="csatMinGrowth >= 0 ? 'text-blue-700 font-bold flex items-center' : 'text-slate-600 font-bold flex items-center'">
+                <span>{{ csatMinGrowth >= 0 ? '▲ +' : '▼ ' }}</span>{{ csatMinGrowth }}%p ({{ csatMinDiff >= 0 ? '+' : '' }}{{ csatMinDiff }}건)
+              </span>
+              <span>전년({{ previousYearData.year }}년 {{ previousYearData.csatMinPassRate }}%) 대비</span>
             </template>
             <template v-else>
               <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
@@ -336,6 +365,51 @@
       </div>
     </div>
 
+    <!-- 4-2. Charts Row 4: 수능 최저학력기준 5개년 지원 및 실질 충족 추이 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Chart 7: 수능 최저 반영 전형 지원 건수 vs 충족 건수 추이 (Grouped Bar) -->
+      <div class="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-xs">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-slate-900 m-0 flex items-center gap-2">
+              <span>🎯📊</span>
+              <span>수능 최저 반영 지원 건수 vs 실질 충족 건수</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5 m-0">
+              연도별 수능 최저학력기준 적용 전형 지원 건수 중 실제 기준을 충족한 건수 비교
+            </p>
+          </div>
+          <span class="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
+            단위: 건
+          </span>
+        </div>
+        <div class="h-64 sm:h-72">
+          <Bar :data="csatMinVolumeChartData" :options="csatMinVolumeChartOptions" />
+        </div>
+      </div>
+
+      <!-- Chart 8: 수능 최저학력기준 연도별 충족률(%) 추이 (Line) -->
+      <div class="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-xs">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-slate-900 m-0 flex items-center gap-2">
+              <span>🎯📈</span>
+              <span>수능 최저학력기준 실질 충족률(%) 추이</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5 m-0">
+              최저 적용 전형 지원자 중 수능 최저 통과율 추이 (최저 통과 시 실질 경쟁률 급감 효과)
+            </p>
+          </div>
+          <span class="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+            단위: %
+          </span>
+        </div>
+        <div class="h-64 sm:h-72">
+          <Line :data="csatMinRatioChartData" :options="csatMinRatioChartOptions" />
+        </div>
+      </div>
+    </div>
+
     <!-- 5. Table 1: 주요 목표 대학군별 5개년 지원 현황 및 전년 대비 증감표 -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
       <div class="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -445,6 +519,7 @@
               <th class="py-3 px-3 text-center">의치한약수 지원</th>
               <th class="py-3 px-3 text-center text-violet-800 bg-violet-50/50">학교장추천(비율)</th>
               <th class="py-3 px-3 text-center text-emerald-800 bg-emerald-50/50">농어촌전형(비율)</th>
+              <th class="py-3 px-3 text-center text-blue-800 bg-blue-50/50">수능최저 충족(비율)</th>
               <th class="py-3 px-4 text-center">최종 합격률</th>
             </tr>
           </thead>
@@ -512,6 +587,15 @@
                   <span>{{ byYear[y].ruralApps }}건</span>
                   <span v-if="byYear[y]?.totalApplications" class="text-[10px] text-emerald-500 font-normal ml-0.5">
                     ({{ ((byYear[y].ruralApps / byYear[y].totalApplications) * 100).toFixed(1) }}%)
+                  </span>
+                </template>
+                <template v-else class="text-slate-300 font-bold">-</template>
+              </td>
+              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-blue-700">
+                <template v-if="byYear[y]?.csatMinPassRate != null">
+                  <span>{{ byYear[y].csatMinPassRate }}%</span>
+                  <span v-if="byYear[y]?.csatMinPassApps != null" class="text-[10px] text-blue-500 font-normal ml-0.5">
+                    ({{ byYear[y].csatMinPassApps }}/{{ byYear[y].csatMinApps }}건)
                   </span>
                 </template>
                 <template v-else class="text-slate-300 font-bold">-</template>
@@ -619,6 +703,17 @@ const ruralGrowth = computed(() => {
 const ruralDiff = computed(() => {
   if (latestYearData.value?.ruralApps == null || previousYearData.value?.ruralApps == null) return 0
   return latestYearData.value.ruralApps - previousYearData.value.ruralApps
+})
+
+// 수능 최저학력기준 충족률 증감(%p) 및 충족 건수 편차
+const csatMinGrowth = computed(() => {
+  if (latestYearData.value?.csatMinPassRate == null || previousYearData.value?.csatMinPassRate == null) return 0
+  return Number((latestYearData.value.csatMinPassRate - previousYearData.value.csatMinPassRate).toFixed(1))
+})
+
+const csatMinDiff = computed(() => {
+  if (latestYearData.value?.csatMinPassApps == null || previousYearData.value?.csatMinPassApps == null) return 0
+  return latestYearData.value.csatMinPassApps - previousYearData.value.csatMinPassApps
 })
 
 const total5YearApps = computed(() => {
@@ -889,6 +984,90 @@ const specialTrackRatioChartOptions = {
   }
 }
 
+// Chart 7: 수능 최저 반영 건수 vs 충족 건수 5개년 Grouped Bar
+const csatMinVolumeChartData = computed(() => ({
+  labels: years.map(y => `${y}학년도`),
+  datasets: [
+    {
+      label: '최저 반영 지원 건수 (건)',
+      data: years.map(y => byYear[y]?.csatMinApps ?? null),
+      backgroundColor: 'rgba(59, 130, 246, 0.4)', // light blue
+      borderColor: 'rgba(59, 130, 246, 0.9)',
+      borderWidth: 1,
+      borderRadius: 6
+    },
+    {
+      label: '최저 충족 건수 (건)',
+      data: years.map(y => byYear[y]?.csatMinPassApps ?? null),
+      backgroundColor: 'rgba(37, 99, 235, 0.9)', // solid blue
+      borderRadius: 6
+    }
+  ]
+}))
+
+const csatMinVolumeChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11, weight: 'bold' } } }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      grid: { color: 'rgba(226, 232, 240, 0.6)' },
+      ticks: { font: { size: 10 } }
+    },
+    x: {
+      grid: { display: false },
+      ticks: { font: { size: 11, weight: 'bold' } }
+    }
+  }
+}
+
+// Chart 8: 수능 최저학력기준 연도별 충족률(%) 추이 Line
+const csatMinRatioChartData = computed(() => ({
+  labels: years.map(y => `${y}학년도`),
+  datasets: [
+    {
+      label: '수능 최저 충족률 (%)',
+      data: years.map(y => byYear[y]?.csatMinPassRate ?? null),
+      borderColor: '#2563eb', // blue-600
+      backgroundColor: 'rgba(37, 99, 235, 0.1)',
+      borderWidth: 3,
+      pointRadius: 6,
+      pointHoverRadius: 8,
+      tension: 0.3,
+      fill: true,
+      spanGaps: false
+    }
+  ]
+}))
+
+const csatMinRatioChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11, weight: 'bold' } } }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      max: 100,
+      grid: { color: 'rgba(226, 232, 240, 0.6)' },
+      ticks: {
+        callback: (val) => `${val}%`,
+        font: { size: 10 }
+      }
+    },
+    x: {
+      grid: { display: false },
+      ticks: { font: { size: 11, weight: 'bold' } }
+    }
+  }
+}
+
 // 엑셀 내보내기 (데이터 없는 항목은 '-' 처리)
 function exportMultiYearExcel() {
   const summaryRows = years.map(y => {
@@ -912,6 +1091,9 @@ function exportMultiYearExcel() {
       '학교장추천 비중(%)': (rec != null && tot) ? Number(((rec / tot) * 100).toFixed(1)) : '-',
       '농어촌전형 지원 건수(건)': rural != null ? rural : '-',
       '농어촌전형 비중(%)': (rural != null && tot) ? Number(((rural / tot) * 100).toFixed(1)) : '-',
+      '수능최저 반영 건수(건)': byYear[y]?.csatMinApps != null ? byYear[y].csatMinApps : '-',
+      '수능최저 충족 건수(건)': byYear[y]?.csatMinPassApps != null ? byYear[y].csatMinPassApps : '-',
+      '수능최저 충족률(%)': byYear[y]?.csatMinPassRate != null ? byYear[y].csatMinPassRate : '-',
       '최종 합격률(%)': byYear[y]?.finalPassRate != null ? byYear[y].finalPassRate : '-'
     }
   })
