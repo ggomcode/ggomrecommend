@@ -321,21 +321,27 @@
         <!-- 4-A. [서브 탭 1]: 기존 지원 6장 카드 심층 진단 & 시뮬레이션 -->
         <div v-show="activeSubTab === 'DIAGNOSIS'" class="space-y-5">
           
-          <!-- 포트폴리오 안전도 스코어 & 밸런스 헤더 -->
-          <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-sm space-y-3">
+          <!-- 포트폴리오 안전도 스코어 & 7대 입체 평가 지표 헤더 -->
+          <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-sm space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <div class="text-[11px] font-bold text-indigo-300 uppercase tracking-wide">6장 포트폴리오 밸런스 점검</div>
-                <h4 class="text-base sm:text-lg font-black text-white m-0 mt-0.5">
-                  안전도 점수: <strong class="text-indigo-400 font-black">{{ portfolioAnalysis.safetyScore }}점</strong>
-                  <span class="text-xs font-bold ml-2 px-2.5 py-0.5 rounded-full bg-white/10 text-white border border-white/20">
-                    {{ portfolioAnalysis.balanceType }}
+                <div class="text-[11px] font-bold text-indigo-300 uppercase tracking-wide flex items-center space-x-1.5">
+                  <span>📊</span>
+                  <span>7대 입체 평가 지표 기반 6장 포트폴리오 안전도</span>
+                </div>
+                <div class="flex items-center space-x-2 mt-1">
+                  <h4 class="text-xl sm:text-2xl font-black text-white m-0 tracking-tight">
+                    <strong class="text-indigo-400 font-black">{{ portfolioAnalysis.safetyScore }}점</strong>
+                    <span class="text-xs text-slate-400 font-normal"> / 100점 만점</span>
+                  </h4>
+                  <span :class="['text-xs font-bold px-2.5 py-0.5 rounded-full border', portfolioAnalysis.balanceColor]">
+                    {{ portfolioAnalysis.gradeRank }}등급 | {{ portfolioAnalysis.balanceType }}
                   </span>
-                </h4>
+                </div>
               </div>
 
               <!-- 조합 현황 배지 -->
-              <div class="flex items-center space-x-1.5 text-xs">
+              <div class="flex items-center space-x-1.5 text-xs shrink-0">
                 <span class="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-bold">
                   안정 {{ portfolioAnalysis.countSafe }}
                 </span>
@@ -348,6 +354,73 @@
                 <span v-if="portfolioAnalysis.countDanger > 0" class="px-2 py-1 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-400/30 font-bold">
                   과상향 {{ portfolioAnalysis.countDanger }}
                 </span>
+              </div>
+            </div>
+
+            <!-- 7대 세부 입체 지표 브레이크다운 칩스 -->
+            <div v-if="portfolioAnalysis.scoreBreakdown" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 pt-2 border-t border-slate-800">
+              <div class="bg-white/5 border border-white/10 rounded-xl p-2 text-center">
+                <div class="text-[10px] text-slate-400">내신 실질 마진</div>
+                <div class="text-xs font-bold text-indigo-300 mt-0.5">
+                  {{ portfolioAnalysis.scoreBreakdown.gpaMargin.score }}<span class="text-[9px] text-slate-500 font-normal">/25</span>
+                </div>
+                <div class="text-[9px] text-slate-400 mt-0.5 truncate">{{ portfolioAnalysis.scoreBreakdown.gpaMargin.statusText }}</div>
+              </div>
+
+              <div class="bg-white/5 border border-white/10 rounded-xl p-2 text-center">
+                <div class="text-[10px] text-slate-400">수능최저·사탐런</div>
+                <div class="text-xs font-bold text-sky-300 mt-0.5">
+                  {{ portfolioAnalysis.scoreBreakdown.csatSatam.score }}<span class="text-[9px] text-slate-500 font-normal">/20</span>
+                </div>
+                <div class="text-[9px] text-slate-400 mt-0.5 truncate">{{ portfolioAnalysis.scoreBreakdown.csatSatam.statusText }}</div>
+              </div>
+
+              <div class="bg-white/5 border border-white/10 rounded-xl p-2 text-center">
+                <div class="text-[10px] text-slate-400">학교장추천</div>
+                <div class="text-xs font-bold text-purple-300 mt-0.5">
+                  {{ portfolioAnalysis.scoreBreakdown.schoolRec.score }}<span class="text-[9px] text-slate-500 font-normal">/15</span>
+                </div>
+                <div class="text-[9px] text-slate-400 mt-0.5 truncate">{{ portfolioAnalysis.scoreBreakdown.schoolRec.statusText }}</div>
+              </div>
+
+              <div class="bg-white/5 border border-white/10 rounded-xl p-2 text-center">
+                <div class="text-[10px] text-slate-400">농어촌 쿼터</div>
+                <div class="text-xs font-bold text-emerald-300 mt-0.5">
+                  {{ portfolioAnalysis.scoreBreakdown.ruralQuota.score }}<span class="text-[9px] text-slate-500 font-normal">/10</span>
+                </div>
+                <div class="text-[9px] text-slate-400 mt-0.5 truncate">{{ portfolioAnalysis.scoreBreakdown.ruralQuota.statusText }}</div>
+              </div>
+
+              <div class="bg-white/5 border border-white/10 rounded-xl p-2 text-center">
+                <div class="text-[10px] text-slate-400">3개년 경쟁률</div>
+                <div class="text-xs font-bold text-amber-300 mt-0.5">
+                  {{ portfolioAnalysis.scoreBreakdown.compTrend.score }}<span class="text-[9px] text-slate-500 font-normal">/10</span>
+                </div>
+                <div class="text-[9px] text-slate-400 mt-0.5 truncate">{{ portfolioAnalysis.scoreBreakdown.compTrend.statusText }}</div>
+              </div>
+
+              <div class="bg-white/5 border border-white/10 rounded-xl p-2 text-center">
+                <div class="text-[10px] text-slate-400">전형 위험 분산</div>
+                <div class="text-xs font-bold text-blue-300 mt-0.5">
+                  {{ portfolioAnalysis.scoreBreakdown.typeDiversify.score }}<span class="text-[9px] text-slate-500 font-normal">/10</span>
+                </div>
+                <div class="text-[9px] text-slate-400 mt-0.5 truncate">{{ portfolioAnalysis.scoreBreakdown.typeDiversify.statusText }}</div>
+              </div>
+
+              <div class="bg-white/5 border border-white/10 rounded-xl p-2 text-center">
+                <div class="text-[10px] text-slate-400">정시선·일정</div>
+                <div class="text-xs font-bold text-rose-300 mt-0.5">
+                  {{ portfolioAnalysis.scoreBreakdown.jungsiConflict.score }}<span class="text-[9px] text-slate-500 font-normal">/10</span>
+                </div>
+                <div class="text-[9px] text-slate-400 mt-0.5 truncate">{{ portfolioAnalysis.scoreBreakdown.jungsiConflict.statusText }}</div>
+              </div>
+            </div>
+
+            <!-- 맞춤 상담 처방전 박스 -->
+            <div v-if="portfolioAnalysis.prescription" class="bg-indigo-950/60 border border-indigo-500/30 rounded-xl p-3 text-xs text-indigo-200 flex items-start space-x-2">
+              <span class="text-base shrink-0">💡</span>
+              <div class="leading-relaxed">
+                <strong class="text-white font-bold">1:1 진학 상담 개선 처방:</strong> {{ portfolioAnalysis.prescription }}
               </div>
             </div>
 
@@ -446,7 +519,7 @@
 
                 <!-- Recent 3 Years Competition Rate Micro Chart -->
                 <div class="mt-2.5">
-                  <CompetitionRateMicroChart :rates="card.competitionRates" />
+                  <CompetitionRateMicroChart :rates="card.competitionRates" :year="selectedAcademicYear" />
                 </div>
 
                 <!-- 3자 합의 조율 태그 선택 버튼 (담임추천 / 학생희망 / 학부모요청) -->
@@ -574,7 +647,7 @@
       :recommendations="recommendations"
       :cardAgreements="cardAgreements"
       :counselMemo="counselMemo"
-      currentYear="2027"
+      :currentYear="selectedAcademicYear"
       @close="isPrintModalOpen = false"
     />
 
@@ -603,7 +676,8 @@ const {
   applications, 
   studentMockExamsMap, 
   loadMockExamData, 
-  isLoadingMockExams 
+  isLoadingMockExams,
+  selectedAcademicYear
 } = useData()
 
 // 마운트 시 모의고사 및 수능최저충족률 데이터 로드
@@ -860,7 +934,9 @@ const portfolioAnalysis = computed(() => {
     effectiveMockExam.value,
     csatPassRateTable.value,
     simulationOffset.value,
-    jungsiBaseline.value
+    jungsiBaseline.value,
+    selectedAcademicYear.value,
+    currentStudent.value
   )
 })
 
@@ -873,6 +949,7 @@ function handleCardSwap(recommendedUniv) {
   const targetCard = apps.find(a => a.diagnosis && (a.diagnosis.verdict === '과상향' || a.diagnosis.verdict === '상향')) || apps[apps.length - 1]
 
   if (targetCard) {
+    const y = parseInt(String(selectedAcademicYear.value || '2027').replace(/[^0-9]/g, ''), 10) || 2027
     swappedCards.value = {
       ...swappedCards.value,
       [targetCard.id]: {
@@ -888,11 +965,11 @@ function handleCardSwap(recommendedUniv) {
         score9Grade: recommendedUniv.targetGpa,
         univConvertedScore: 950,
         univConvertedGrade: recommendedUniv.targetGpa,
-        competitionRates: [
-          { year: '2023', rate: '8.5' },
-          { year: '2024', rate: '9.2' },
-          { year: '2025', rate: '8.8' }
-        ]
+        competitionRates: {
+          [String(y - 2)]: { rate: 8.5, quota: '15', applicants: '128', raw: '8.5:1' },
+          [String(y - 1)]: { rate: 9.2, quota: '15', applicants: '138', raw: '9.2:1' },
+          [String(y)]: { rate: 8.8, quota: '15', applicants: '132', raw: '8.8:1' }
+        }
       }
     }
     // 스왑 후 1번 진단 탭으로 이동

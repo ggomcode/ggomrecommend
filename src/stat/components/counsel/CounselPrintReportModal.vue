@@ -79,8 +79,19 @@
               <span>수시 6장 지원 카드 정밀 판정 및 경쟁률 분석</span>
             </h4>
             <div class="text-[11px] font-semibold text-slate-500">
-              포트폴리오 안전도: <strong class="text-indigo-600 font-black">{{ portfolioAnalysis.safetyScore }}점</strong> ({{ portfolioAnalysis.balanceType }})
+              7대 지표 포트폴리오 안전도: <strong class="text-indigo-600 font-black">{{ portfolioAnalysis.safetyScore }}점</strong> ({{ portfolioAnalysis.gradeRank }}등급 | {{ portfolioAnalysis.balanceType }})
             </div>
+          </div>
+
+          <!-- 7대 지표 브레이크다운 미니 바 -->
+          <div v-if="portfolioAnalysis.scoreBreakdown" class="grid grid-cols-7 gap-1.5 bg-slate-50 border border-slate-200 rounded-lg p-1.5 mb-2 text-center text-[10px]">
+            <div><span class="text-slate-400 block text-[9px]">내신 마진</span><strong class="text-indigo-700">{{ portfolioAnalysis.scoreBreakdown.gpaMargin.score }}</strong>/25</div>
+            <div><span class="text-slate-400 block text-[9px]">최저·사탐</span><strong class="text-sky-700">{{ portfolioAnalysis.scoreBreakdown.csatSatam.score }}</strong>/20</div>
+            <div><span class="text-slate-400 block text-[9px]">학교장추천</span><strong class="text-purple-700">{{ portfolioAnalysis.scoreBreakdown.schoolRec.score }}</strong>/15</div>
+            <div><span class="text-slate-400 block text-[9px]">농어촌</span><strong class="text-emerald-700">{{ portfolioAnalysis.scoreBreakdown.ruralQuota.score }}</strong>/10</div>
+            <div><span class="text-slate-400 block text-[9px]">경쟁률</span><strong class="text-amber-700">{{ portfolioAnalysis.scoreBreakdown.compTrend.score }}</strong>/10</div>
+            <div><span class="text-slate-400 block text-[9px]">전형분산</span><strong class="text-blue-700">{{ portfolioAnalysis.scoreBreakdown.typeDiversify.score }}</strong>/10</div>
+            <div><span class="text-slate-400 block text-[9px]">정시·일정</span><strong class="text-rose-700">{{ portfolioAnalysis.scoreBreakdown.jungsiConflict.score }}</strong>/10</div>
           </div>
 
           <table class="w-full text-left border-collapse text-[11px] border border-slate-200 rounded-lg overflow-hidden">
@@ -198,7 +209,7 @@
             <span class="text-[10px] text-slate-400 font-normal">학생 및 학부모 확인용</span>
           </div>
           <div class="text-[11px] text-slate-700 leading-relaxed min-h-[44px] whitespace-pre-wrap">
-            {{ counselMemo || '학생의 내신 강점과 모의고사 최저 충족력을 분석한 결과, 상향 2장으로 도전하고 안정 2장을 확보하여 6광탈을 방지하는 균형 잡힌 지원 전략을 강력히 권고합니다.' }}
+            {{ counselMemo || (portfolioAnalysis.prescription ? '💡 [시스템 진단 처방] ' + portfolioAnalysis.prescription : '학생의 내신 강점과 모의고사 최저 충족력을 분석한 결과, 상향 2장으로 도전하고 안정 2장을 확보하여 6광탈을 방지하는 균형 잡힌 지원 전략을 강력히 권고합니다.') }}
           </div>
           <div class="mt-3 pt-2 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
             <div>3학년 {{ student.classNum }}반 담임교사: __________________ (인)</div>

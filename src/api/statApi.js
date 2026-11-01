@@ -441,30 +441,72 @@ export function parseKcueRows(csvText, customPassword = null) {
       return ''
     }
 
+    // 경쟁률 자동 연산 헬퍼 (직접 수치 파싱 우선 -> 미파싱 시 지원인원/모집인원으로 산출)
+    const calcRate = (rawVal, quotaVal, appVal) => {
+      let r = parseRateVal(rawVal)
+      if (r !== null) return r
+      const q = parseFloat(String(quotaVal || '').replace(/[^0-9.]/g, ''))
+      const a = parseFloat(String(appVal || '').replace(/[^0-9.]/g, ''))
+      if (q > 0 && a >= 0) {
+        return parseFloat((a / q).toFixed(1))
+      }
+      return null
+    }
+
     // 2027: CI=86 (모집), CK=88 (지원), CM=90 (경쟁률 수치) / 89 (경쟁률 표시용)
     // 2026: CU=98 (모집), CV=99 (지원), CW=100 (경쟁률)
     // 2025: DA=104 (모집), DB=105 (지원), DC=106 (경쟁률)
-    const rawRate2027 = getColOrKeyVal(90, '[2027_매칭]경쟁률(수치)', '[2027_매칭]경쟁률(표시용)', '2027경쟁률', '27경쟁률', '경쟁률(2027)', '경쟁률') || getColOrKeyVal(89, '[2027_매칭]경쟁률(표시용)')
-    const rawRate2026 = getColOrKeyVal(100, '[2026_매칭]경쟁률', '2026경쟁률', '26경쟁률', '경쟁률(2026)')
-    const rawRate2025 = getColOrKeyVal(106, '[2025_매칭]경쟁률', '2025경쟁률', '25경쟁률', '경쟁률(2025)')
+    // 2024: DG=110 (모집), DH=111 (지원), DI=112 (경쟁률)
+    const rawRate2027 = getColOrKeyVal(90, '[2027_매칭]경쟁률(수치)', '[2027_매칭]경쟁률(표시용)', '[2027_매칭]경쟁률', '2027경쟁률', '27경쟁률', '경쟁률(2027)', '경쟁률') || getColOrKeyVal(89, '[2027_매칭]경쟁률(표시용)')
+    const rawRate2026 = getColOrKeyVal(100, '[2026_매칭]경쟁률(수치)', '[2026_매칭]경쟁률(표시용)', '[2026_매칭]경쟁률', '2026경쟁률', '26경쟁률', '경쟁률(2026)')
+    const rawRate2025 = getColOrKeyVal(106, '[2025_매칭]경쟁률(수치)', '[2025_매칭]경쟁률(표시용)', '[2025_매칭]경쟁률', '2025경쟁률', '25경쟁률', '경쟁률(2025)')
+    const rawRate2024 = getColOrKeyVal(112, '[2024_매칭]경쟁률(수치)', '[2024_매칭]경쟁률(표시용)', '[2024_매칭]경쟁률', '2024경쟁률', '24경쟁률', '경쟁률(2024)')
+    const rawRate2023 = getColOrKeyVal(118, '[2023_매칭]경쟁률(수치)', '[2023_매칭]경쟁률(표시용)', '[2023_매칭]경쟁률', '2023경쟁률', '23경쟁률', '경쟁률(2023)')
+
+    const quota2027 = getColOrKeyVal(86, '[2027_매칭]모집인원(표시용)', '[2027_매칭]모집인원(합산용)', '[2027_매칭]모집인원', '2027모집인원', '27모집인원', '모집인원(2027)')
+    const app2027 = getColOrKeyVal(88, '[2027_매칭]지원인원', '2027지원인원', '27지원인원', '지원인원(2027)')
+
+    const quota2026 = getColOrKeyVal(98, '[2026_매칭]모집인원(표시용)', '[2026_매칭]모집인원', '2026모집인원', '26모집인원', '모집인원(2026)')
+    const app2026 = getColOrKeyVal(99, '[2026_매칭]지원인원', '2026지원인원', '26지원인원', '지원인원(2026)')
+
+    const quota2025 = getColOrKeyVal(104, '[2025_매칭]모집인원(표시용)', '[2025_매칭]모집인원', '2025모집인원', '25모집인원', '모집인원(2025)')
+    const app2025 = getColOrKeyVal(105, '[2025_매칭]지원인원', '2025지원인원', '25지원인원', '지원인원(2025)')
+
+    const quota2024 = getColOrKeyVal(110, '[2024_매칭]모집인원(표시용)', '[2024_매칭]모집인원', '2024모집인원', '24모집인원', '모집인원(2024)')
+    const app2024 = getColOrKeyVal(111, '[2024_매칭]지원인원', '2024지원인원', '24지원인원', '지원인원(2024)')
+
+    const quota2023 = getColOrKeyVal(116, '[2023_매칭]모집인원(표시용)', '[2023_매칭]모집인원', '2023모집인원', '23모집인원', '모집인원(2023)')
+    const app2023 = getColOrKeyVal(117, '[2023_매칭]지원인원', '2023지원인원', '23지원인원', '지원인원(2023)')
 
     const competitionRates = {
+      '2023': {
+        quota: quota2023,
+        applicants: app2023,
+        rate: calcRate(rawRate2023, quota2023, app2023),
+        raw: String(rawRate2023 || '').trim()
+      },
+      '2024': {
+        quota: quota2024,
+        applicants: app2024,
+        rate: calcRate(rawRate2024, quota2024, app2024),
+        raw: String(rawRate2024 || '').trim()
+      },
       '2025': {
-        quota: getColOrKeyVal(104, '[2025_매칭]모집인원', '2025모집인원', '25모집인원', '모집인원(2025)'),
-        applicants: getColOrKeyVal(105, '[2025_매칭]지원인원', '2025지원인원', '25지원인원', '지원인원(2025)'),
-        rate: parseRateVal(rawRate2025),
+        quota: quota2025,
+        applicants: app2025,
+        rate: calcRate(rawRate2025, quota2025, app2025),
         raw: String(rawRate2025 || '').trim()
       },
       '2026': {
-        quota: getColOrKeyVal(98, '[2026_매칭]모집인원', '2026모집인원', '26모집인원', '모집인원(2026)'),
-        applicants: getColOrKeyVal(99, '[2026_매칭]지원인원', '2026지원인원', '26지원인원', '지원인원(2026)'),
-        rate: parseRateVal(rawRate2026),
+        quota: quota2026,
+        applicants: app2026,
+        rate: calcRate(rawRate2026, quota2026, app2026),
         raw: String(rawRate2026 || '').trim()
       },
       '2027': {
-        quota: getColOrKeyVal(86, '[2027_매칭]모집인원(표시용)', '[2027_매칭]모집인원(합산용)', '2027모집인원', '27모집인원', '모집인원(2027)'),
-        applicants: getColOrKeyVal(88, '[2027_매칭]지원인원', '2027지원인원', '27지원인원', '지원인원(2027)'),
-        rate: parseRateVal(rawRate2027),
+        quota: quota2027,
+        applicants: app2027,
+        rate: calcRate(rawRate2027, quota2027, app2027),
         raw: String(rawRate2027 || '').trim()
       }
     }

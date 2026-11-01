@@ -111,7 +111,7 @@
             <span 
               :class="[
                 'text-[10px] font-semibold block leading-tight',
-                year === '2027' ? 'text-indigo-700 font-bold' : 'text-slate-500'
+                year === targetYearStr ? 'text-indigo-700 font-bold' : 'text-slate-500'
               ]"
             >
               {{ year }}
@@ -134,24 +134,80 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useData } from '../composables/useStatData'
 
 const props = defineProps({
   rates: {
-    type: Object,
+    type: [Object, Array],
     default: () => ({})
+  },
+  year: {
+    type: [String, Number],
+    default: ''
   }
 })
 
-const years = ['2025', '2026', '2027']
+const { selectedAcademicYear } = useData()
+
+const targetYearNum = computed(() => {
+  const y = props.year || selectedAcademicYear?.value || '2027'
+  const parsed = parseInt(String(y).replace(/[^0-9]/g, ''), 10)
+  return isNaN(parsed) ? 2027 : parsed
+})
+
+const targetYearStr = computed(() => String(targetYearNum.value))
+
+// 선택된 학년도 기준 3개년 동적 산출 (예: 2026 -> ['2024', '2025', '2026'], 2027 -> ['2025', '2026', '2027'])
+const years = computed(() => {
+  const y = targetYearNum.value
+  return [String(y - 2), String(y - 1), String(y)]
+})
 
 function getItem(year) {
-  return props.rates?.[year] || { quota: '', applicants: '', rate: null, raw: '' }
+  if (!props.rates) return { quota: '', applicants: '', rate: null, raw: '' }
+  
+  let rawItem = null
+  // 1) 객체 형태: props.rates['2026'] 또는 props.rates[2026]
+  if (typeof props.rates === 'object' && !Array.isArray(props.rates)) {
+    rawItem = props.rates[year] || props.rates[String(year)] || props.rates[Number(year)]
+  }
+  // 2) 배열 형태: props.rates.find(r => r.year === '2026')
+  else if (Array.isArray(props.rates)) {
+    rawItem = props.rates.find(r => String(r.year || r.academicYear || '') === String(year))
+  }
+
+  if (!rawItem) {
+    return { quota: '', applicants: '', rate: null, raw: '' }
+  }
+
+  // rate 수치 정규화
+  let rate = rawItem.rate
+  if (rate !== null && rate !== undefined && rate !== '') {
+    const num = parseFloat(String(rate).replace(/[^0-9.]/g, ''))
+    rate = !isNaN(num) ? num : null
+  } else {
+    rate = null
+  }
+
+  // 만약 rate가 없는데 quota와 applicants가 있다면 지원인원 / 모집인원으로 자동 계산
+  const quotaNum = parseFloat(String(rawItem.quota || '').replace(/[^0-9.]/g, ''))
+  const appNum = parseFloat(String(rawItem.applicants || '').replace(/[^0-9.]/g, ''))
+  if (rate === null && quotaNum > 0 && appNum >= 0) {
+    rate = parseFloat((appNum / quotaNum).toFixed(1))
+  }
+
+  return {
+    quota: rawItem.quota || (quotaNum ? String(quotaNum) : ''),
+    applicants: rawItem.applicants || (appNum ? String(appNum) : ''),
+    rate,
+    raw: rawItem.raw || (rate !== null ? `${rate}:1` : '')
+  }
 }
 
 const hasAnyData = computed(() => {
   if (!props.rates) return false
-  return years.some(y => {
-    const it = props.rates[y]
+  return years.value.some(y => {
+    const it = getItem(y)
     return it && (it.rate !== null || it.quota || it.applicants || (it.raw && it.raw !== '자료없음'))
   })
 })
