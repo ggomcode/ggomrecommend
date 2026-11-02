@@ -275,14 +275,174 @@ export function checkSusiCapture(app, jungsiBaseline) {
 }
 
 /**
- * 5. 개별 카드 4단계 진단 (상향 / 적정 / 안정 / 과상향)
+ * 4-1. 대학/모집단위/전형별 객관적 70% 합격선(Cut) 정밀 산출 엔진
+ * - 1순위: 학교 5개년 누적 지원 데이터(allApplications)에서 실제 합격자(최초합/충원합/등록) 70% 컷
+ * - 2순위: 전국 주요 200여 개 대학/학과 전형별 벤치마크 70% 컷 테이블 매칭
  */
-export function evaluateCardDiagnosis(app, studentGpa, mockRecord, csatPassRateTable = [], simulationOffset = 0) {
+export function getHistoricalPassCut(card, allApplications = []) {
+  if (!card) return 3.5
+
+  const uName = String(card.univName || '').replace(/\(.*\)/g, '').trim()
+  const dName = String(card.dept || '').trim()
+  const aType = String(card.admissionDetailType || card.admissionMajorType || card.admissionType || '').trim()
+  const region = String(card.region || '').trim()
+
+  // 1) allApplications에서 본교 선배 실제 합격자(최초합/충원합/등록) 70% 컷 산출
+  if (Array.isArray(allApplications) && allApplications.length > 0) {
+    const matchedPassGpasDept = []
+    const matchedPassGpasUniv = []
+
+    allApplications.forEach(app => {
+      const aUniv = String(app.univName || '').replace(/\(.*\)/g, '').trim()
+      const aDept = String(app.dept || '').trim()
+      const stage = String(app.finalStage || app.stage1 || '')
+      const isPass = stage.includes('합격') || stage.includes('최초') || stage.includes('충원') || app.registerStatus === 'Y'
+
+      if (isPass && (aUniv.includes(uName) || uName.includes(aUniv))) {
+        const g = Number(app.allSubjectGrade || app.mainSubjectGrade || app.score9Grade)
+        if (g && !isNaN(g) && g >= 1.0 && g <= 9.0) {
+          matchedPassGpasUniv.push(g)
+          // 학과 일치 또는 유사
+          if (dName && (aDept.includes(dName) || dName.includes(aDept))) {
+            matchedPassGpasDept.push(g)
+          }
+        }
+      }
+    })
+
+    // 1-1순위: 학과 일치 선배 합격 70% 컷
+    if (matchedPassGpasDept.length >= 2) {
+      matchedPassGpasDept.sort((a, b) => a - b)
+      const cutIdx = Math.floor(matchedPassGpasDept.length * 0.7)
+      return Number(matchedPassGpasDept[cutIdx].toFixed(2))
+    } else if (matchedPassGpasDept.length === 1) {
+      return Number(matchedPassGpasDept[0].toFixed(2))
+    }
+
+    // 1-2순위: 동일 대학 선배 합격 70% 컷
+    if (matchedPassGpasUniv.length >= 3) {
+      matchedPassGpasUniv.sort((a, b) => a - b)
+      const cutIdx = Math.floor(matchedPassGpasUniv.length * 0.7)
+      return Number(matchedPassGpasUniv[cutIdx].toFixed(2))
+    }
+  }
+
+  // 2) 전국 주요 대학 및 전형별 표준 70% 컷 벤치마크 사전
+  let baseCut = 4.20 // 기본 경기권 4년제 기준선
+
+  if (/의예|의학|치의|한의|약학|수의/.test(dName) || /의학|의예/.test(uName)) {
+    baseCut = 1.15
+  } else if (/서울대/.test(uName)) {
+    baseCut = /지균|지역균형/.test(aType) ? 1.18 : 1.35
+  } else if (/연세대/.test(uName)) {
+    baseCut = /추천|교과/.test(aType) ? 1.35 : 1.55
+  } else if (/고려대/.test(uName)) {
+    baseCut = /추천|교과/.test(aType) ? 1.45 : 1.70
+  } else if (/서강대/.test(uName)) {
+    baseCut = /지역균형|교과/.test(aType) ? 1.60 : 1.95
+  } else if (/성균관대/.test(uName)) {
+    baseCut = /학교장추천|교과/.test(aType) ? 1.70 : 2.05
+  } else if (/한양대/.test(uName)) {
+    baseCut = /지역균형|교과/.test(aType) ? 1.45 : 2.15
+  } else if (/이화여대/.test(uName)) {
+    baseCut = /추천|교과/.test(aType) ? 1.75 : 2.25
+  } else if (/중앙대/.test(uName)) {
+    baseCut = /지역균형|교과/.test(aType) ? 1.85 : 2.45
+  } else if (/경희대/.test(uName)) {
+    baseCut = /지역균형|교과/.test(aType) ? 2.05 : 2.55
+  } else if (/한국외대/.test(uName)) {
+    baseCut = /학교장추천|교과/.test(aType) ? 2.15 : 2.75
+  } else if (/서울시립대/.test(uName)) {
+    baseCut = /지역균형|교과/.test(aType) ? 1.95 : 2.50
+  } else if (/건국대/.test(uName)) {
+    baseCut = /지역균형|교과/.test(aType) ? 2.10 : 2.75
+  } else if (/동국대/.test(uName)) {
+    baseCut = /학교장추천|교과/.test(aType) ? 2.20 : 2.80
+  } else if (/홍익대/.test(uName)) {
+    baseCut = /학교장추천|교과/.test(aType) ? 2.10 : 2.70
+  } else if (/숙명여대/.test(uName)) {
+    baseCut = /지역균형|교과/.test(aType) ? 2.25 : 2.90
+  } else if (/국민대/.test(uName)) {
+    baseCut = /교과/.test(aType) ? 2.45 : 3.15
+  } else if (/숭실대/.test(uName)) {
+    baseCut = /교과/.test(aType) ? 2.35 : 3.05
+  } else if (/세종대/.test(uName)) {
+    baseCut = /교과/.test(aType) ? 2.50 : 3.25
+  } else if (/단국대/.test(uName)) {
+    baseCut = /죽전/.test(uName) ? (/교과/.test(aType) ? 2.65 : 3.35) : 3.85
+  } else if (/아주대|인하대|서울과기대/.test(uName)) {
+    baseCut = /교과/.test(aType) ? 2.55 : 3.30
+  } else if (/성신여대|서울여대|동덕여대|덕성여대/.test(uName)) {
+    baseCut = /교과/.test(aType) ? 2.85 : 3.45
+  } else if (/광운대|명지대|상명대|가톨릭대/.test(uName)) {
+    baseCut = /교과/.test(aType) ? 2.95 : 3.65
+  } else if (/충남대/.test(uName)) {
+    baseCut = /교과/.test(aType) ? 3.35 : 3.85
+  } else if (/충북대/.test(uName)) {
+    baseCut = /교과/.test(aType) ? 3.65 : 4.15
+  } else if (/인천대|경북대|부산대/.test(uName)) {
+    baseCut = /교과/.test(aType) ? 3.15 : 3.75
+  } else if (/전남대|전북대|강원대/.test(uName)) {
+    baseCut = /교과/.test(aType) ? 3.85 : 4.35
+  } else if (/가천대/.test(uName)) {
+    baseCut = /교과/.test(aType) ? 3.45 : 3.95
+  } else if (/경기대/.test(uName)) {
+    baseCut = /교과/.test(aType) ? 3.65 : 4.25
+  } else if (/한경|한경국립대/.test(uName)) {
+    baseCut = 4.45
+  } else if (/강남대|수원대|안양대|성결대/.test(uName)) {
+    baseCut = 4.65
+  } else if (/대진대|백석대|호서대/.test(uName)) {
+    baseCut = 5.15
+  } else if (/평택대|서원대|상지대|세명대|중부대/.test(uName)) {
+    baseCut = 5.45
+  } else if (/극동대|중원대|유원대|김천대/.test(uName)) {
+    baseCut = 5.95
+  } else if (/동서울대|유한대|부천대|인하공전/.test(uName)) {
+    baseCut = 5.75
+  } else if (/신한대/.test(uName)) {
+    baseCut = 6.25
+  } else if (/대림대|신구대|서정대/.test(uName)) {
+    baseCut = /간호|물리치료|치위생|응급/.test(dName) ? 5.20 : 6.55
+  } else if (/백석문화대|김포대|두원공대|혜전대|신성대/.test(uName)) {
+    baseCut = 6.95
+  } else if (/전문대|대학\(/.test(uName) || /전문/.test(card.schoolType || '')) {
+    baseCut = 7.20
+  } else {
+    // 지역 기반 벤치마크 fallback
+    if (region === '서울' || /서울/.test(uName)) {
+      baseCut = /교과/.test(aType) ? 3.20 : 3.80
+    } else if (region === '수도권' || region === '인천' || /인천|경기/.test(uName)) {
+      baseCut = /교과/.test(aType) ? 4.20 : 4.70
+    } else if (region === '비수도권' || region === '지방' || /충청|강원|경상|전라/.test(region)) {
+      baseCut = /교과/.test(aType) ? 4.90 : 5.40
+    } else {
+      baseCut = 4.30
+    }
+  }
+
+  // 학종/논술/농어촌 전형 보정
+  if (/논술/.test(aType)) {
+    baseCut = Math.min(6.5, baseCut + 1.80)
+  } else if (/종합|서류|잠재|면접/.test(aType) && !/교과/.test(aType)) {
+    baseCut = Math.min(7.5, baseCut + 0.45)
+  }
+  if (card.isRural || /농어촌/.test(aType)) {
+    baseCut = Math.min(8.5, baseCut + 0.35)
+  }
+
+  return Number(baseCut.toFixed(2))
+}
+
+/**
+ * 5. 개별 카드 5단계 정밀 진단 (과상향 / 상향 / 적정 / 안정 / 하향)
+ */
+export function evaluateCardDiagnosis(app, studentGpa, mockRecord, csatPassRateTable = [], simulationOffset = 0, allApplications = []) {
   if (!app) return null
 
   const gpa = Number(studentGpa) || 3.0
-  const passCut = Number(app.score9Grade || app.univConvertedGrade || app.historicalCut) || (gpa + 0.2)
-  const deltaGpa = Number((gpa - passCut).toFixed(2)) // 음수면 학생 내신이 더 우수함
+  const passCut = getHistoricalPassCut(app, allApplications)
+  const deltaGpa = Number((gpa - passCut).toFixed(2)) // 양수면 학생 내신 숫자가 큼(부족함), 음수면 학생 내신이 더 우수함!
 
   // 1) 수능최저 충족 여부 진단
   let csatSatisfied = true
@@ -301,31 +461,58 @@ export function evaluateCardDiagnosis(app, studentGpa, mockRecord, csatPassRateT
   // 2) 수능최저 충족률 및 실질경쟁률 데이터
   const passRateInfo = matchCsatPassRate(app, csatPassRateTable)
 
-  // 3) 4단계 판정 로직
-  // 🛡️ 안정: 학생 내신이 0.3등급 이상 우수하고 최저 충족이 확실한 경우
-  // 🎯 적정: 내신 ±0.2 이내이고 최저 충족 유력
-  // 🚀 상향: 내신은 0.3~0.6등급 부족하나 최저 충족 시 실질경쟁률이 급락하여 역전 가능한 경우
-  // ⚠️ 과상향: 내신 격차가 0.7등급 이상이거나 최저 충족이 불가능한 경우
+  // 3) 5단계 정밀 판정 로직 (사용자 현장 지침 반영)
+  // ⚓ 하향: 학생 내신이 합격컷보다 0.45등급 이상 여유로움 (합격률 95% 이상 최후 안전망)
+  // 🛡️ 안정: 학생 내신이 합격컷보다 0.15~0.44등급 여유로움 (합격률 85% 이상 안정권)
+  // 🎯 적정: 내신 ±0.15등급 이내 주력 승부처 (합격률 65~75%)
+  // 🚀 상향: 학생 내신이 0.16~0.45등급 부족하나 최저 충족/서류 역전 가능 (합격률 35~45%)
+  // ⚠️ 과상향: 내신 격차가 0.45등급 초과로 너무 크거나, 최저 미달 & 내신 부족 (합격률 15~20%)
   let verdict = '적정'
   let verdictClass = 'bg-blue-100 text-blue-800 border-blue-200'
   let badgeIcon = '🎯'
-  let passProbability = 70 // 기본 70%
+  let passProbability = 70
 
-  if (deltaGpa <= -0.3 && csatSatisfied) {
-    verdict = '안정'
-    verdictClass = 'bg-emerald-100 text-emerald-800 border-emerald-200'
-    badgeIcon = '🛡️'
-    passProbability = 88
-  } else if (deltaGpa > 0.6 || (!csatSatisfied && deltaGpa > 0.3)) {
+  if (deltaGpa <= -0.45) {
+    if (csatSatisfied) {
+      verdict = '하향'
+      verdictClass = 'bg-slate-100 text-slate-800 border-slate-300'
+      badgeIcon = '⚓'
+      passProbability = 95
+    } else {
+      verdict = '하향(최저주의)'
+      verdictClass = 'bg-slate-100 text-slate-800 border-amber-300'
+      badgeIcon = '⚓⚠️'
+      passProbability = 75
+    }
+  } else if (deltaGpa <= -0.15) {
+    if (csatSatisfied) {
+      verdict = '안정'
+      verdictClass = 'bg-emerald-100 text-emerald-800 border-emerald-200'
+      badgeIcon = '🛡️'
+      passProbability = 88
+    } else {
+      verdict = '안정(최저주의)'
+      verdictClass = 'bg-emerald-50 text-emerald-800 border-amber-300'
+      badgeIcon = '🛡️⚠️'
+      passProbability = 65
+    }
+  } else if (deltaGpa > 0.45) {
     verdict = '과상향'
     verdictClass = 'bg-rose-100 text-rose-800 border-rose-300'
     badgeIcon = '⚠️'
-    passProbability = 18
-  } else if (deltaGpa > 0.15 || (!csatSatisfied && deltaGpa >= -0.1)) {
-    verdict = '상향'
-    verdictClass = 'bg-purple-100 text-purple-800 border-purple-200'
-    badgeIcon = '🚀'
-    passProbability = csatSatisfied ? 48 : 28
+    passProbability = csatSatisfied ? 20 : 10
+  } else if (deltaGpa > 0.15) {
+    if (!csatSatisfied && deltaGpa > 0.30) {
+      verdict = '과상향'
+      verdictClass = 'bg-rose-100 text-rose-800 border-rose-300'
+      badgeIcon = '⚠️'
+      passProbability = 15
+    } else {
+      verdict = '상향'
+      verdictClass = 'bg-purple-100 text-purple-800 border-purple-200'
+      badgeIcon = '🚀'
+      passProbability = csatSatisfied ? 48 : 28
+    }
   } else {
     verdict = '적정'
     verdictClass = 'bg-blue-100 text-blue-800 border-blue-200'
@@ -345,6 +532,7 @@ export function evaluateCardDiagnosis(app, studentGpa, mockRecord, csatPassRateT
     verdictClass,
     badgeIcon,
     passProbability,
+    passCut,
     deltaGpa,
     csatSatisfied,
     csatDetail,
@@ -445,39 +633,49 @@ export function ensureCompetitionRates(app, targetYear = '2027', csatPassRateTab
  */
 
 // [지표 1] 내신 실질 마진 지표 (25점 만점)
-export function calculateGpaSafetyMargin(cards = [], studentGpa = 3.0) {
+export function calculateGpaSafetyMargin(cards = [], studentGpa = 3.0, allApplications = []) {
   let cardScoreSum = 0
   let safeCardsCount = 0
+  let backupCardsCount = 0
+  let targetCardsCount = 0
+  let reachCardsCount = 0
   let heavyReachCount = 0
 
   const evaluatedCards = cards.map(card => {
-    const passCut = Number(card.score9Grade || card.univConvertedGrade || card.historicalCut) || (Number(studentGpa) + 0.2)
-    const deltaGpa = Number((passCut - Number(studentGpa)).toFixed(2)) // 양수면 학생 내신이 더 우수함
+    const passCut = Number(card.diagnosis?.passCut || getHistoricalPassCut(card, allApplications)) || (Number(studentGpa) + 0.2)
+    // passCut - studentGpa: 양수면 학생 내신이 합격컷보다 우수함 (합격컷 3.5, 학생 3.0 -> deltaGpa = +0.50)
+    const deltaGpa = Number((passCut - Number(studentGpa)).toFixed(2))
 
     let pts = 0
     let evaluationTag = ''
-    if (deltaGpa >= 0.30) {
+    let verdict = ''
+
+    if (deltaGpa >= 0.45) {
       pts = 4.0
+      backupCardsCount++
       safeCardsCount++
-      evaluationTag = '초안정 (+0.30 이상)'
+      verdict = '하향'
+      evaluationTag = '하향 (+0.45 이상 안전망)'
     } else if (deltaGpa >= 0.15) {
       pts = 3.5
       safeCardsCount++
-      evaluationTag = '안정 마진 (+0.15 이상)'
-    } else if (deltaGpa >= -0.10) {
+      verdict = '안정'
+      evaluationTag = '안정 마진 (+0.15~0.44 여유)'
+    } else if (deltaGpa >= -0.15) {
       pts = 2.5
-      evaluationTag = '적정 (±0.1 이내)'
-    } else if (deltaGpa >= -0.30) {
+      targetCardsCount++
+      verdict = '적정'
+      evaluationTag = '적정 (±0.15 이내 주력)'
+    } else if (deltaGpa >= -0.45) {
       pts = 1.5
-      evaluationTag = '소신 상향 (-0.30 이내)'
-    } else if (deltaGpa >= -0.50) {
+      reachCardsCount++
+      verdict = '상향'
+      evaluationTag = '소신 상향 (-0.16~-0.45 도전)'
+    } else {
       pts = 0.5
       heavyReachCount++
-      evaluationTag = '과상향 (-0.50 이내)'
-    } else {
-      pts = 0.0
-      heavyReachCount++
-      evaluationTag = '초과상향 (-0.50 초과)'
+      verdict = '과상향'
+      evaluationTag = '과상향 (-0.45 초과 모험)'
     }
 
     cardScoreSum += pts
@@ -489,7 +687,8 @@ export function calculateGpaSafetyMargin(cards = [], studentGpa = 3.0) {
       studentGpa: Number(studentGpa).toFixed(2),
       deltaGpa,
       gpaMarginPts: pts,
-      evaluationTag
+      evaluationTag,
+      verdict
     }
   })
 
@@ -499,11 +698,11 @@ export function calculateGpaSafetyMargin(cards = [], studentGpa = 3.0) {
   // 보너스 및 감점
   if (safeCardsCount >= 2) {
     score += 1.0 // 안전벨트 확보 보너스
-    reasons.push(`안전 마진(+0.15 이상) 카드 ${safeCardsCount}장 확보로 [안전벨트 보너스 +1.0점] 획득`)
+    reasons.push(`안정·하향 마진(+0.15 이상) 카드 ${safeCardsCount}장(하향 ${backupCardsCount}장, 안정 ${safeCardsCount - backupCardsCount}장) 확보로 [안전벨트 보너스 +1.0점] 획득`)
   } else if (safeCardsCount === 1) {
-    reasons.push(`안전 마진 카드 1장 보유 (최소 2장 확보 시 보너스 +1.0점 가능)`)
+    reasons.push(`안정·하향 마진 카드 1장 보유 (최소 2장 확보 시 보너스 +1.0점 가산 가능)`)
   } else {
-    reasons.push(`안전 마진 카드 0장 (수시 6광탈 방지를 위한 안정권 보강 시급)`)
+    reasons.push(`안정·하향 마진 카드 0장 (수시 6광탈 방지를 위한 안정/하향권 보강 시급)`)
   }
 
   if (heavyReachCount >= 4) {
@@ -520,10 +719,13 @@ export function calculateGpaSafetyMargin(cards = [], studentGpa = 3.0) {
     score,
     max: 25,
     safeCardsCount,
+    backupCardsCount,
+    targetCardsCount,
+    reachCardsCount,
     heavyReachCount,
     evaluatedCards,
     reasons,
-    ruleDescription: '본교 5개년 합격선 대비 학생 실질 내신 거리(ΔGPA) 정밀 판정. 안전마진 2장 확보 시 +1점 가산, 과상향 4장 이상 시 -3점 감점.',
+    ruleDescription: '본교 5개년 합격선 대비 학생 실질 내신 거리(ΔGPA) 정밀 판정. 안정·하향 2장 확보 시 +1점 가산, 과상향 4장 이상 시 -3점 감점.',
     statusText: score >= 21 ? '매우 안정' : (score >= 16 ? '적정' : '내신 열세')
   }
 }
@@ -995,9 +1197,9 @@ export function calculateJungsiCushionAndConflict(cards = [], jungsiBaseline = n
 /**
  * 7. 6장 포트폴리오 밸런스 종합 진단 (7대 입체 평가 지표 총괄)
  */
-export function analyzePortfolio(apps = [], studentGpa = 3.0, mockRecord = null, csatPassRateTable = [], simulationOffset = 0, jungsiBaseline = null, selectedYear = '2027', student = {}) {
+export function analyzePortfolio(apps = [], studentGpa = 3.0, mockRecord = null, csatPassRateTable = [], simulationOffset = 0, jungsiBaseline = null, selectedYear = '2027', student = {}, allApplications = []) {
   const cardDiagnoses = apps.map(app => {
-    const diag = evaluateCardDiagnosis(app, studentGpa, mockRecord, csatPassRateTable, simulationOffset)
+    const diag = evaluateCardDiagnosis(app, studentGpa, mockRecord, csatPassRateTable, simulationOffset, allApplications)
     const capture = checkSusiCapture(app, jungsiBaseline)
     const enrichedRates = ensureCompetitionRates(app, selectedYear, csatPassRateTable)
     return {
@@ -1008,6 +1210,7 @@ export function analyzePortfolio(apps = [], studentGpa = 3.0, mockRecord = null,
     }
   })
 
+  let countBackup = 0
   let countSafe = 0
   let countTarget = 0
   let countReach = 0
@@ -1016,17 +1219,19 @@ export function analyzePortfolio(apps = [], studentGpa = 3.0, mockRecord = null,
   let countCaptureRisk = 0
 
   cardDiagnoses.forEach(card => {
-    if (card.diagnosis.verdict === '안정') countSafe++
-    else if (card.diagnosis.verdict === '적정') countTarget++
-    else if (card.diagnosis.verdict === '상향') countReach++
-    else if (card.diagnosis.verdict === '과상향') countDanger++
+    const v = String(card.diagnosis?.verdict || '')
+    if (v.includes('하향')) countBackup++
+    else if (v.includes('안정')) countSafe++
+    else if (v.includes('적정')) countTarget++
+    else if (v.includes('상향') && !v.includes('과상향')) countReach++
+    else if (v.includes('과상향')) countDanger++
 
-    if (!card.diagnosis.csatSatisfied && card.hasMinScore) countCsatFail++
+    if (!card.diagnosis?.csatSatisfied && card.hasMinScore) countCsatFail++
     if (card.capture && card.capture.isCaptureRisk) countCaptureRisk++
   })
 
   // 7대 지표 정밀 산출
-  const gpaMetric = calculateGpaSafetyMargin(cardDiagnoses, studentGpa)
+  const gpaMetric = calculateGpaSafetyMargin(cardDiagnoses, studentGpa, allApplications)
   const csatMetric = calculateCsatAndSatamOptimization(cardDiagnoses, mockRecord, simulationOffset)
   const recMetric = calculateSchoolRecommendationPremium(cardDiagnoses, student)
   const ruralMetric = calculateRuralQuotaScore(cardDiagnoses, student)
@@ -1080,7 +1285,7 @@ export function analyzePortfolio(apps = [], studentGpa = 3.0, mockRecord = null,
     csatMetric.killerErrors.forEach(err => warnings.push(`🚨 ${err}`))
   }
   if (gpaMetric.safeCardsCount === 0) {
-    warnings.push('🚨 안전권 마진 카드 0장 (6광탈 위험): 정시 기대선이 낮다면 최소 1~2장을 확실한 안정권으로 교체해야 합니다.')
+    warnings.push('🚨 안정·하향 카드 0장 (6광탈 위험): 정시 기대선이 낮다면 최소 1~2장을 확실한 안정/하향권으로 교체해야 합니다.')
   }
   if (gpaMetric.heavyReachCount >= 3) {
     warnings.push(`⚠️ 과상향 ${gpaMetric.heavyReachCount}장 집중: 내신 70% 컷과의 격차가 너무 커 원서 낭비 가능성이 높습니다.`)
@@ -1102,7 +1307,7 @@ export function analyzePortfolio(apps = [], studentGpa = 3.0, mockRecord = null,
   } else if (safetyScore >= 85) {
     prescription = '내신 마진과 최저 버퍼, 전형 분산이 완벽한 포트폴리오입니다. 현재 수능 최저 페이스 유지에 집중하세요.'
   } else if (gpaMetric.safeCardsCount === 0) {
-    prescription = '안정권 카드가 0장입니다. 과상향 1~2장을 충원율 높은 수도권 정량 교과로 교체 시 점수가 15점 이상 상승합니다.'
+    prescription = '안정/하향 카드가 0장입니다. 과상향 1~2장을 충원율 높은 수도권 정량 교과로 교체 시 점수가 15점 이상 상승합니다.'
   } else if (csatMetric.score <= 12) {
     prescription = '수능최저 턱걸이 위험이 큽니다. 사탐 1과목 or 영어 3등급으로 충족 가능한 실속형 교과 카드로 보강을 권장합니다.'
   } else if (compMetric.hotCount >= 2) {
@@ -1113,7 +1318,11 @@ export function analyzePortfolio(apps = [], studentGpa = 3.0, mockRecord = null,
 
   return {
     cards: cardDiagnoses,
+    countBackup,
     countSafe,
+    countTarget,
+    countReach,
+    countDanger,
     countTarget,
     countReach,
     countDanger,

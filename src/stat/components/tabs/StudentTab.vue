@@ -414,6 +414,9 @@
               <!-- 우측 액션: 조합 현황 배지 & 아코디언 열기/닫기 토글 버튼 -->
               <div class="flex items-center space-x-2 shrink-0">
                 <div class="hidden sm:flex items-center space-x-1.5 text-xs">
+                  <span v-if="portfolioAnalysis.countBackup > 0" class="px-2 py-1 rounded-lg bg-slate-500/20 text-slate-300 border border-slate-400/30 font-bold">
+                    하향 {{ portfolioAnalysis.countBackup }}
+                  </span>
                   <span class="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-bold">
                     안정 {{ portfolioAnalysis.countSafe }}
                   </span>
@@ -1089,6 +1092,7 @@ const portfolioAnalysis = computed(() => {
   if (!currentStudent.value) {
     return {
       cards: [],
+      countBackup: 0,
       countSafe: 0,
       countTarget: 0,
       countReach: 0,
@@ -1108,7 +1112,8 @@ const portfolioAnalysis = computed(() => {
     simulationOffset.value,
     jungsiBaseline.value,
     selectedAcademicYear.value,
-    currentStudent.value
+    currentStudent.value,
+    applications.value
   )
 })
 

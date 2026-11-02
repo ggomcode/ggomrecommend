@@ -124,11 +124,13 @@
                 </div>
                 <span :class="[
                   'text-[10px] font-bold px-1.5 py-0.5 rounded',
+                  c.deltaGpa >= 0.45 ? 'bg-slate-800 text-slate-200 border border-slate-600' :
                   c.deltaGpa >= 0.15 ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' :
-                  c.deltaGpa >= -0.10 ? 'bg-blue-950 text-blue-300 border border-blue-800' :
+                  c.deltaGpa >= -0.15 ? 'bg-blue-950 text-blue-300 border border-blue-800' :
+                  c.deltaGpa >= -0.45 ? 'bg-purple-950 text-purple-300 border border-purple-800' :
                   'bg-rose-950 text-rose-300 border border-rose-800'
                 ]">
-                  {{ c.gpaMarginPts }}점
+                  {{ c.verdict || (c.deltaGpa >= 0.45 ? '하향' : c.deltaGpa >= 0.15 ? '안정' : c.deltaGpa >= -0.15 ? '적정' : c.deltaGpa >= -0.45 ? '상향' : '과상향') }} ({{ c.gpaMarginPts }}점)
                 </span>
               </div>
               <div class="mt-2 pt-1.5 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-400">

@@ -208,7 +208,7 @@
             <span>📝 담임교사 상담 종합 소견</span>
             <span class="text-[10px] text-slate-400 font-normal">학생 및 학부모 확인용</span>
           </div>
-          <div class="text-[11px] text-slate-700 leading-relaxed min-h-[44px] whitespace-pre-wrap">
+          <div class="text-[11px] text-slate-700 leading-relaxed min-h-11 whitespace-pre-wrap">
             {{ counselMemo || (portfolioAnalysis.prescription ? '💡 [시스템 진단 처방] ' + portfolioAnalysis.prescription : '학생의 내신 강점과 모의고사 최저 충족력을 분석한 결과, 상향 2장으로 도전하고 안정 2장을 확보하여 6광탈을 방지하는 균형 잡힌 지원 전략을 강력히 권고합니다.') }}
           </div>
           <div class="mt-3 pt-2 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
