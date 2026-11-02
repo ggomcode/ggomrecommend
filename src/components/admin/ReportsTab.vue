@@ -60,7 +60,7 @@
       </div>
 
       <!-- ── 2027 대입 확정 원장 안내 배너 ── -->
-      <div v-if="isUsingKcueArchive" class="mb-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-300 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs shrink-0">
+      <div v-if="isUsingKcueArchive" class="mb-4 bg-linear-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-300 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs shrink-0">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-extrabold text-lg shrink-0 shadow-xs">
             🏛️
@@ -751,7 +751,7 @@ import { dialog } from '../common/dialog.js'
 import { supabase } from '../../utils/supabaseClient.js'
 import { decryptText } from '../../utils/cryptoUtils.js'
 import { formatScore } from '../../utils/scorePreviewShared.js'
-import { fetchRoundSchedulesMap, DEFAULT_SCHEDULES, parseKstDate } from '../../utils/roundSchedule.js'
+import { fetchRoundSchedulesMap, DEFAULT_SCHEDULES, parseKstDate, isRoundAnnouncedOrDone } from '../../utils/roundSchedule.js'
 import { getKcueRecommendationApps, buildReportsDataFromKcue, exportKcueQuotaStatsExcel } from '../../utils/recommendationKcueAdapter.js'
 
 const loading = ref(false)
@@ -887,7 +887,16 @@ const roundOptions = computed(() => {
 })
 
 const roundLabelText = computed(() => {
-  if (selectedRoundFilter.value === 'all') return '(전체)'
+  if (selectedRoundFilter.value === 'all') {
+    const completedCount = (roundsList.value || []).filter(r => isRoundAnnouncedOrDone(r, schedulesMap.value[r.id])).length
+    if (completedCount >= totalRounds.value && totalRounds.value > 1) {
+      return `(전체 ${totalRounds.value}차 합산)`
+    }
+    if (completedCount >= 2) {
+      return `(1~${completedCount}차 누적 합산)`
+    }
+    return '(전체 합산)'
+  }
   if (Number(selectedRoundFilter.value) === 0) return '(사전 선발)'
   return `(${selectedRoundFilter.value}차 선발)`
 })
@@ -960,10 +969,25 @@ const flatStats = computed(() => {
 
       const remainingAfterPrev = hasQuota ? Math.max(0, t.unit_quota - prevUsedCount) : null
 
+      // 현재 완료된(선정결과 공지 시작 이후) 차수 목록
+      const completedRoundIds = new Set(
+        (roundsList.value || []).filter(r => isRoundAnnouncedOrDone(r, schedulesMap.value[r.id])).map(r => r.id)
+      )
+
       // 현재 선택된 차수 기준 추천 대상 학생들
       let trackApps = []
       if (curRound === null || isNaN(curRound)) {
-        trackApps = allTrackRecs
+        // [합산 모드]:
+        // 1,2차가 끝나고 3차 종료 전까지는 1차와 2차를 합산한 결과
+        // 3차가 종료된 이후부터는 1,2,3차가 합산되어서 보여짐 (2027년 2월 28일까지 상시 유지)
+        if (completedRoundIds.size > 0) {
+          trackApps = allTrackRecs.filter(ap => {
+            const r = ap.recommended_round ?? ap.round ?? 1
+            return completedRoundIds.has(r)
+          })
+        } else {
+          trackApps = allTrackRecs.filter(ap => (ap.recommended_round ?? ap.round ?? 1) === 1)
+        }
       } else {
         trackApps = allTrackRecs.filter(ap => {
           const r = ap.recommended_round ?? ap.round ?? 1
@@ -1176,6 +1200,22 @@ const currentDate = computed(() => {
   return now.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 })
 
+function applyKcueArchiveFallback(gMap = null) {
+  const kcueData = buildReportsDataFromKcue()
+  isUsingKcueArchive.value = true
+  stats.value = kcueData.stats
+  allApplicantsMap.value = kcueData.allApplicantsMap
+  recommendedList.value = kcueData.recommendedList
+  studentMap.value = kcueData.studentMap
+  abandonedList.value = []
+  roundsList.value = [{ id: 1, name: '1차 선발', status: 'FINALIZED' }]
+  totalRounds.value = 1
+  selectedRoundFilter.value = 'all'
+  if (gMap && Object.keys(gMap).length > 0) {
+    gradConditionMap.value = gMap
+  }
+}
+
 async function loadData() {
   loading.value = true
   try {
@@ -1184,6 +1224,11 @@ async function loadData() {
     } catch (err) {
       console.warn('포기원 서명 자동 복구 예외:', err)
     }
+    if (!supabase) {
+      applyKcueArchiveFallback()
+      return
+    }
+
     stats.value = await getQuotaStats()
     if (supabase) {
       // 1. 지원서, 학생 마스터, 수도권/지역 추천 전형(졸업조건), 라운드 목록, 라운드 일정 로드
@@ -1243,6 +1288,14 @@ async function loadData() {
 
       // 지원서 분리: 유효 추천 지원서 vs 포기된 지원서
       const allApps = (allAppsRaw || []).filter(ap => !ap.is_abandoned)
+
+      // 유효 추천 지원서가 없는 경우 (수시 추천 종료 후 아카이브 모드: 2027 원서접수 확정 원장 자동 연동)
+      if (allApps.length === 0) {
+        applyKcueArchiveFallback(gMap)
+        return
+      }
+
+      isUsingKcueArchive.value = false
       const rawAbandonedApps = (allAppsRaw || []).filter(ap => {
         if (ap.is_abandoned) return true
         if (ap.scanned_doc_url) {
@@ -1387,7 +1440,8 @@ async function loadData() {
       recommendedList.value = selectedApps
     }
   } catch (e) {
-    await dialog.alert({ title: '데이터 조회 실패', message: e.message || '보고서 데이터 조회 중 오류가 발생했습니다.' })
+    console.warn('보고서 데이터 조회 예외, 2027 원장 아카이브로 폴백:', e)
+    applyKcueArchiveFallback()
   } finally {
     loading.value = false
   }
@@ -1404,6 +1458,17 @@ async function downloadExcel() {
       const a = document.createElement('a')
       a.href = url
       a.download = `학교장추천전형_${roundStr}_추천포기자_명단_${new Date().toISOString().slice(0, 10)}.xlsx`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      return
+    }
+
+    if (isUsingKcueArchive.value) {
+      const blob = exportKcueQuotaStatsExcel(flatStats.value, roundStr)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `2027학년도_학교장추천전형_원서접수_확정명단_${roundStr}_${new Date().toISOString().slice(0, 10)}.xlsx`
       a.click()
       window.URL.revokeObjectURL(url)
       return

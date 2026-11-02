@@ -36,25 +36,31 @@ export const getCurrentRound = async () => {
 
   const schedulesMap = await fetchRoundSchedulesMap()
 
-  // 1. 현재 접수 중(OPEN)인 차수가 있으면 낮은 차수(1차 우선) 선택
+  // 1. 현재 접수 중(OPEN)인 차수가 있으면 최우선 (낮은 차수 우선)
   for (const r of rounds) {
     const sched = schedulesMap[r.id]
     if (computeRoundDisplayStatus(r, sched) === 'OPEN') return r
   }
 
-  // 2. 접수 전(DRAFT) 상태인 차수가 있으면 가장 낮은 차수(1차) 선택
-  for (const r of rounds) {
-    const sched = schedulesMap[r.id]
-    if (computeRoundDisplayStatus(r, sched) === 'DRAFT') return r
-  }
-
-  // 3. 심사 중(CLOSED)인 차수가 있으면 선택
+  // 2. 심사 중(CLOSED)인 차수가 있으면 선택
   for (const r of rounds) {
     const sched = schedulesMap[r.id]
     if (computeRoundDisplayStatus(r, sched) === 'CLOSED') return r
   }
 
-  // 4. 모두 FINALIZED이면 첫 차수(1차) 선택
+  // 3. 최종 마감(FINALIZED)된 차수가 있는 경우: 이미 선발이 완료되어 데이터가 확정된 차수를 우선 선택
+  //    (여러 개가 완료된 경우 가장 최근 완료 차수 반환)
+  const finalizedRounds = rounds.filter(r => computeRoundDisplayStatus(r, schedulesMap[r.id]) === 'FINALIZED')
+  if (finalizedRounds.length > 0) {
+    return finalizedRounds[finalizedRounds.length - 1]
+  }
+
+  // 4. 아직 어떤 차수도 시작되지 않아 모두 접수 전(DRAFT)인 경우: 첫 차수(1차) 선택
+  for (const r of rounds) {
+    const sched = schedulesMap[r.id]
+    if (computeRoundDisplayStatus(r, sched) === 'DRAFT') return r
+  }
+
   return rounds[0]
 }
 

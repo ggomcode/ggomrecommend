@@ -335,6 +335,93 @@ export function buildTeacherResultsFromKcue(kcueApps = null, authClassNo = null,
   };
 }
 
+
+/**
+ * OverviewTab.vue (개요)용 데이터 생성 — DB에 지원서가 0건일 때 폴백
+ * getOverview()가 반환하는 all_time, classes 구조와 동일한 형태를 KCUE 확정 원장으로 채움
+ */
+export function buildOverviewFromKcue(teachers = []) {
+  const apps = getKcueRecommendationApps();
+  const totalCases = apps.length;
+
+  // 학생 고유 수
+  const studentSet = new Set(apps.map(a => a.student_id));
+  const totalStudents = studentSet.size;
+
+  // 반별 지원자 수 집계
+  const classCounts = {};  // key: "grade_classNo" -> Set of student_id
+  apps.forEach(a => {
+    if (a.class_no) {
+      const key = `${a.grade}_${a.class_no}`;
+      if (!classCounts[key]) classCounts[key] = new Set();
+      classCounts[key].add(a.student_id);
+    }
+  });
+
+  // teachers 배열로 classes 구성 (교사 정보가 있으면 반영, 없으면 1~11반 기본 생성)
+  const regularTeachers = teachers.filter(t => t.grade && Number(t.grade) !== 0);
+  const graduatedTeacher = teachers.find(t => !t.grade || Number(t.grade) === 0);
+
+  let classes;
+  if (regularTeachers.length > 0) {
+    classes = regularTeachers.map(t => {
+      const key = `${t.grade}_${t.class_no}`;
+      const count = classCounts[key] ? classCounts[key].size : 0;
+      return {
+        grade: t.grade,
+        class_no: t.class_no,
+        teacher_name: t.decryptedName || t.teacher_name || '담임교사',
+        count,
+        submitted: count,
+        confirmed: true
+      };
+    });
+  } else {
+    // 교사 정보 없으면 1~11반 기본 생성
+    classes = [];
+    for (let c = 1; c <= 11; c++) {
+      const key = `3_${c}`;
+      const count = classCounts[key] ? classCounts[key].size : 0;
+      classes.push({
+        grade: 3,
+        class_no: c,
+        teacher_name: `${c}반 담임`,
+        count,
+        submitted: count,
+        confirmed: true
+      });
+    }
+  }
+
+  const graduated = graduatedTeacher ? {
+    grade: 0,
+    class_no: 0,
+    teacher_name: graduatedTeacher.decryptedName || graduatedTeacher.teacher_name || '졸업생 담당',
+    submitted: 0,
+    count: 0,
+    confirmed: true
+  } : null;
+
+  return {
+    classes,
+    graduated,
+    all_time: {
+      total_rounds: 1,
+      progressed_rounds: 1,
+      applicant_students: totalStudents,
+      applicant_cases: totalCases,
+      confirmed_students: totalStudents,
+      confirmed_cases: totalCases,
+      abandoned_students: 0,
+      abandoned_cases: 0,
+      total_applicants: totalStudents,
+      confirmed: totalStudents,
+      abandoned: 0
+    },
+    _is_kcue_archive: true
+  };
+}
+
 /**
  * TeacherView/ApplicationTab.vue (교사용 신청 관리 및 학생별 지원 현황)용 데이터 보강
  */

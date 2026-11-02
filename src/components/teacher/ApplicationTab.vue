@@ -9,7 +9,7 @@
     </div>
 
     <!-- ── 2027 대입 확정 원장 안내 배너 ── -->
-    <div v-if="isUsingKcueArchive" class="mx-4 sm:mx-10 mb-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-300 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs shrink-0">
+    <div v-if="isUsingKcueArchive" class="mx-4 sm:mx-10 mb-4 bg-linear-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-300 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs shrink-0">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-extrabold text-lg shrink-0 shadow-xs">
           🏛️
@@ -541,6 +541,17 @@ async function loadAll() {
       applications.value = await teacherGetApplications(round.id)
     }
 
+    if (!round || !applications.value || applications.value.length === 0) {
+      const kcueApp = buildTeacherApplicationsFromKcue(null, auth.classNo, auth.grade)
+      if (!students.value || students.value.length === 0) {
+        students.value = kcueApp.students
+      }
+      applications.value = kcueApp.applications
+      isUsingKcueArchive.value = true
+    } else {
+      isUsingKcueArchive.value = false
+    }
+
     if (supabase) {
       try {
         const { data: cfg } = await supabase.from('config').select('value').eq('key', 'total_rounds').maybeSingle()
@@ -554,7 +565,13 @@ async function loadAll() {
       } catch {}
     }
   } catch (e) {
-    loadError.value = e.message || '데이터를 불러오는 중 오류가 발생했습니다.'
+    console.warn('교사 추천 신청 조회 실패, 2027 원장 아카이브로 폴백:', e)
+    const kcueApp = buildTeacherApplicationsFromKcue(null, auth.classNo, auth.grade)
+    if (!students.value || students.value.length === 0) {
+      students.value = kcueApp.students
+    }
+    applications.value = kcueApp.applications
+    isUsingKcueArchive.value = true
   } finally {
     loaded.value = true
   }

@@ -2,8 +2,9 @@ import { supabase } from '../utils/supabaseClient'
 import * as XLSX from 'xlsx'
 import { formatPhoneLast4, hashPhone, cleanFullPhone } from '../utils/phoneUtils'
 import { encryptText, decryptText, hashText } from '../utils/cryptoUtils'
-import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../utils/roundSchedule'
+import { fetchRoundSchedulesMap, computeRoundDisplayStatus, isRoundAnnouncedOrDone } from '../utils/roundSchedule'
 import { deleteApplicationStorageFiles } from '../utils/storageUtils'
+import { buildOverviewFromKcue } from '../utils/recommendationKcueAdapter'
 
 // Helper for error parsing
 export async function blobErrMsg(e) {
@@ -42,25 +43,31 @@ export const getCurrentRound = async () => {
 
   const schedulesMap = await fetchRoundSchedulesMap()
 
-  // 1. 현재 접수 중(OPEN)인 차수가 있으면 낮은 차수(1차 우선) 선택
+  // 1. 현재 접수 중(OPEN)인 차수가 있으면 최우선 (낮은 차수 우선)
   for (const r of rounds) {
     const sched = schedulesMap[r.id]
     if (computeRoundDisplayStatus(r, sched) === 'OPEN') return r
   }
 
-  // 2. 접수 전(DRAFT) 상태인 차수가 있으면 가장 낮은 차수(1차) 선택
-  for (const r of rounds) {
-    const sched = schedulesMap[r.id]
-    if (computeRoundDisplayStatus(r, sched) === 'DRAFT') return r
-  }
-
-  // 3. 심사 중(CLOSED)인 차수가 있으면 선택
+  // 2. 심사 중(CLOSED)인 차수가 있으면 선택
   for (const r of rounds) {
     const sched = schedulesMap[r.id]
     if (computeRoundDisplayStatus(r, sched) === 'CLOSED') return r
   }
 
-  // 4. 모두 FINALIZED이면 첫 차수(1차) 선택
+  // 3. 최종 마감(FINALIZED)된 차수가 있는 경우: 이미 선발이 완료되어 데이터가 확정된 차수를 우선 선택
+  //    (여러 개가 완료된 경우 가장 최근 완료 차수 반환)
+  const finalizedRounds = rounds.filter(r => computeRoundDisplayStatus(r, schedulesMap[r.id]) === 'FINALIZED')
+  if (finalizedRounds.length > 0) {
+    return finalizedRounds[finalizedRounds.length - 1]
+  }
+
+  // 4. 아직 어떤 차수도 시작되지 않아 모두 접수 전(DRAFT)인 경우: 첫 차수(1차) 선택
+  for (const r of rounds) {
+    const sched = schedulesMap[r.id]
+    if (computeRoundDisplayStatus(r, sched) === 'DRAFT') return r
+  }
+
   return rounds[0]
 }
 
@@ -139,8 +146,17 @@ export const getOverview = async (targetRoundId = null) => {
   const abandonedStudentsCount = abandonedStudentsSet.size
   const abandonedCasesCount = abandonedApps.length
 
+  // [차수 완료 판정] 각 차수의 모집 및 심사가 끝나고 선정결과 공지 시작 이후이거나 CLOSED/FINALIZED로 마감된 차수
+  const completedRounds = roundsList.filter(r => isRoundAnnouncedOrDone(r, schedulesMap[r.id]))
+  const completedRoundIds = completedRounds.map(r => r.id)
+  const isAllRoundsCompleted = roundsList.length > 0 && completedRoundIds.length >= roundsList.length
+
   let round = null
-  if (targetRoundId != null) {
+  let targetRoundIds = []
+  let isCumulative = false
+
+  // 1) 특정 단일 차수를 명시적으로 요청한 경우 (예: 1차, 2차, 3차 탭 클릭)
+  if (targetRoundId != null && targetRoundId !== 'all' && targetRoundId !== 'cumulative') {
     const found = roundsList.find(r => r.id === Number(targetRoundId))
     if (found) {
       round = found
@@ -148,22 +164,58 @@ export const getOverview = async (targetRoundId = null) => {
       const { data: dbRound } = await supabase.from('timeline_rounds').select('*').eq('id', Number(targetRoundId)).maybeSingle()
       round = dbRound
     }
+    targetRoundIds = [Number(targetRoundId)]
+    isCumulative = false
   } else {
-    round = await getCurrentRound()
+    // 2) 기본 진입(null) 또는 합산 요청('cumulative' / 'all'):
+    //    - 1,2차가 끝나고 3차 종료 전까지는 1차와 2차를 합산한 결과 표출
+    //    - 3차가 종료된 이후부터는 1,2,3차가 합산되어서 표출 (2027년 2월 28일까지 상시 유지)
+    //    - 1차만 끝났으면 1차 결과 표출
+    //    - 아직 아무 차수도 안 끝났으면 현재 진행 중인 차수 표출
+    if (completedRoundIds.length > 0) {
+      targetRoundIds = [...completedRoundIds]
+      isCumulative = targetRoundIds.length > 1 || isAllRoundsCompleted
+      const lastCompletedId = targetRoundIds[targetRoundIds.length - 1]
+      round = {
+        id: isAllRoundsCompleted ? 'all' : (targetRoundIds.length > 1 ? 'cumulative' : lastCompletedId),
+        display_id: isAllRoundsCompleted ? 'all' : (targetRoundIds.length > 1 ? 'cumulative' : lastCompletedId),
+        is_cumulative: isCumulative,
+        cumulative_round_ids: targetRoundIds,
+        name: isAllRoundsCompleted
+          ? `전체 추천 선발 최종 확정 (${targetRoundIds.map(id => id + '차').join(', ')} 합산)`
+          : (targetRoundIds.length > 1
+              ? `${targetRoundIds.map(id => id + '차').join('·')} 누적 추천 선발 결과`
+              : `${lastCompletedId}차 추천 선발 결과`),
+        status: 'FINALIZED',
+        opened_at: roundsList[0]?.opened_at,
+        closed_at: roundsList[lastCompletedId - 1]?.closed_at
+      }
+    } else {
+      round = await getCurrentRound()
+      targetRoundIds = round ? [round.id] : [1]
+      isCumulative = false
+    }
   }
 
   const studentCount = studentCountRes.count || 0
   const teachers = teachersRes.data || []
   const totalRounds = roundsList.length
 
-  // [2] 현재 조회 대상 라운드의 지원서와 재학생 매핑 정보를 조회
+  // [2] 현재 조회 대상 라운드(들)의 지원서와 재학생 매핑 정보를 조회 (합산 차수 다중 조회 지원)
   const appCountByUniv = new Map()
   const appCountByClass = new Map()
   const gradApplicantsSet = new Set()
 
-  if (round) {
+  if (targetRoundIds.length > 0) {
+    let appQuery = supabase.from('applications').select('univ_id, student_id, round, is_recommended, is_abandoned')
+    if (targetRoundIds.length === 1) {
+      appQuery = appQuery.eq('round', targetRoundIds[0])
+    } else {
+      appQuery = appQuery.in('round', targetRoundIds)
+    }
+
     const [appsRes, studentsRes] = await Promise.all([
-      supabase.from('applications').select('univ_id, student_id').eq('round', round.id),
+      appQuery,
       supabase.from('enrolled_students').select('id, grade, class_no, is_enrolled')
     ])
     const roundApps = appsRes.data || []
@@ -232,7 +284,7 @@ export const getOverview = async (targetRoundId = null) => {
   // 이전 차수에서 추천 확정되어 아직 포기되지 않은(유효한) 추천 인원 집계
   const priorConfirmedByTrack = new Map()
 
-  if (round && round.id > 1) {
+  if (!isCumulative && round && round.id > 1) {
     const { data: priorApps } = await supabase
       .from('applications')
       .select('univ_id')
@@ -286,6 +338,36 @@ export const getOverview = async (targetRoundId = null) => {
       })
     }
   })
+
+  // 2027 대입 확정 원장 폴백: DB에 지원서가 0건이면 KCUE 아카이브로 개요 통계 보강
+  if (applicantStudentsCount === 0 && confirmedCasesCount === 0) {
+    try {
+      const kcueOverview = buildOverviewFromKcue(teachers)
+      if (kcueOverview && kcueOverview.all_time.confirmed_cases > 0) {
+        // 반별 지원자 수를 KCUE 데이터로 보강
+        for (const kcClass of (kcueOverview.classes || [])) {
+          const match = classes.find(c => Number(c.grade) === Number(kcClass.grade) && Number(c.class_no) === Number(kcClass.class_no))
+          if (match && match.count === 0) {
+            match.count = kcClass.count
+            match.submitted = kcClass.submitted
+          }
+        }
+        return {
+          version,
+          server_addr,
+          round: round || { id: 1, name: '1차 선발', status: 'FINALIZED' },
+          all_rounds: (allRoundsLimitRes.data && allRoundsLimitRes.data.length > 0) ? allRoundsLimitRes.data : [{ id: 1, name: '1차 선발', status: 'FINALIZED' }],
+          student_count: studentCount || kcueOverview.all_time.applicant_students,
+          classes,
+          graduated: graduatedObj || kcueOverview.graduated,
+          universities,
+          all_time: kcueOverview.all_time
+        }
+      }
+    } catch (e) {
+      console.warn('KCUE overview fallback error:', e)
+    }
+  }
 
   return {
     version,
@@ -2105,11 +2187,18 @@ export const unrecommendResult = async (sid, tid, rid) => {
 export const getApplications = async (roundId, trackId) => {
   if (!supabase) return []
 
-  // 1. 지원서 조회
+  // 1. 지원서 조회 (배열, 'all', 'cumulative', 단일 숫자 모두 지원)
   let query = supabase
     .from('applications')
     .select('*, universities:univ_id(*)')
-    .eq('round', roundId)
+
+  if (Array.isArray(roundId)) {
+    query = query.in('round', roundId)
+  } else if (roundId === 'all' || roundId === 'cumulative' || String(roundId).startsWith('cumulative_')) {
+    // 누적 합산 조회: 전체 조회
+  } else if (roundId !== null && roundId !== undefined && roundId !== '') {
+    query = query.eq('round', Number(roundId))
+  }
 
   if (trackId) {
     query = query.eq('univ_id', trackId)

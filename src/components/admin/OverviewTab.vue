@@ -98,15 +98,29 @@
         <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
           <SectionLabel title="추천 선발 현황" />
 
-          <!-- 다차수일 때 차수 선택 탭 버튼 -->
+          <!-- 다차수일 때 차수 선택 탭 버튼 (누적 합산 및 개별 차수) -->
           <div v-if="totalRounds > 1" class="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-xl border border-slate-200/80 flex-wrap">
+            <button
+              v-if="hasCompletedRounds"
+              type="button"
+              @click="handleSelectRound('cumulative')"
+              class="px-3.5 py-1.5 text-xs rounded-lg font-bold transition-all cursor-pointer border-none flex items-center gap-1.5"
+              :class="isViewingCumulative
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 bg-transparent'"
+            >
+              <span>{{ cumulativeTabTitle }}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800">
+                합산
+              </span>
+            </button>
             <button
               v-for="rId in totalRounds"
               :key="rId"
               type="button"
               @click="handleSelectRound(rId)"
               class="px-3.5 py-1.5 text-xs rounded-lg font-bold transition-all cursor-pointer border-none flex items-center gap-1.5"
-              :class="currentViewingRoundId === rId
+              :class="(!isViewingCumulative && currentViewingRoundId === rId)
                 ? 'bg-white text-blue-600 shadow-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 bg-transparent'"
             >
@@ -123,7 +137,7 @@
 
         <div v-if="data.round" class="flex items-center gap-3 flex-wrap">
           <span class="text-3xl font-bold" style="color: #1e293b;">
-            {{ totalRounds === 1 ? '추천 선발' : `${data.round.id}차 추천 선발` }}
+            {{ data.round.is_cumulative ? data.round.name : (totalRounds === 1 ? '추천 선발' : `${data.round.id}차 추천 선발`) }}
           </span>
           <span
             class="text-base font-semibold"
@@ -151,7 +165,7 @@
       <template v-if="data.round">
         <div class="rounded-xl overflow-hidden flex flex-col" style="min-height: 200px; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);">
           <div class="flex items-center justify-between flex-wrap gap-2" style="padding: 20px 24px 0;">
-            <SectionLabel :title="totalRounds === 1 ? '학급별 지원자 현황' : `${currentViewingRoundId}차 추천 선발 · 학급별 지원자 현황`" />
+            <SectionLabel :title="data.round.is_cumulative ? `${data.round.name} · 학급별 지원자 현황` : (totalRounds === 1 ? '학급별 지원자 현황' : `${currentViewingRoundId}차 추천 선발 · 학급별 지원자 현황`)" />
             <div class="flex items-center gap-2 mb-4 flex-wrap">
               <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1.5 rounded-full border border-blue-100 flex items-center gap-1">
                 💡 학급 행을 클릭하면 지원자 상세 명단을 확인할 수 있습니다
@@ -746,7 +760,7 @@ import { supabase } from '../../utils/supabaseClient.js'
 import { Copy, Check, AlertTriangle, CheckCircle2, XCircle, ArrowRight, Users, X, Search, RefreshCw, Printer } from 'lucide-vue-next'
 import { getOverview, getClasses, getStudents, getAreas, getUniversities, getApplications } from '../../api/admin.js'
 import { roundStatusLabel } from '../../data/roundStatus.js'
-import { fetchRoundSchedulesMap, computeRoundDisplayStatus } from '../../utils/roundSchedule.js'
+import { fetchRoundSchedulesMap, computeRoundDisplayStatus, isRoundAnnouncedOrDone } from '../../utils/roundSchedule.js'
 import { printClassApplicationsReport, printAllClassesApplicationsReport } from '../../utils/printTemplates.js'
 import MiniPie from './MiniPie.vue'
 import HelpBox from '../common/HelpBox.vue'
@@ -857,8 +871,35 @@ const schedulesMap = ref({})
 const selectedRoundId = ref(null)
 const overviewLoading = ref(false)
 
+const hasCompletedRounds = computed(() => {
+  return (data.value?.all_rounds || []).some(r => isRoundAnnouncedOrDone(r, schedulesMap.value[r.id]))
+})
+
+const completedRoundsCount = computed(() => {
+  return (data.value?.all_rounds || []).filter(r => isRoundAnnouncedOrDone(r, schedulesMap.value[r.id])).length
+})
+
+const isViewingCumulative = computed(() => {
+  if (selectedRoundId.value === 'cumulative' || selectedRoundId.value === 'all') return true
+  if (data.value?.round?.is_cumulative) return true
+  return false
+})
+
+const cumulativeTabTitle = computed(() => {
+  const count = completedRoundsCount.value
+  if (count >= totalRounds.value && totalRounds.value > 1) {
+    return '전체 합산 (최종)'
+  }
+  if (count >= 2) {
+    return `누적 합산 (1~${count}차)`
+  }
+  return '1차 합산'
+})
+
 const currentViewingRoundId = computed(() => {
+  if (selectedRoundId.value === 'cumulative' || selectedRoundId.value === 'all') return 'cumulative'
   if (selectedRoundId.value) return selectedRoundId.value
+  if (data.value?.round?.is_cumulative) return 'cumulative'
   return data.value?.round?.id || 1
 })
 
@@ -907,6 +948,7 @@ function getTrackEffectiveQuota(track) {
 
 const effectiveRoundStatus = computed(() => {
   if (!data.value?.round) return 'DRAFT'
+  if (data.value.round.is_cumulative) return 'FINALIZED'
   const round = data.value.round
   const sched = schedulesMap.value[round.id]
   return computeRoundDisplayStatus(round, sched)
@@ -1074,7 +1116,7 @@ async function openClassDetailModal(classObj, isGraduated = false) {
 
   try {
     const isGrad = selectedClass.value.isGraduated
-    const roundId = data.value?.round?.id
+    const roundId = data.value?.round?.cumulative_round_ids || data.value?.round?.id
 
     const studentParams = {
       per_page: 300,
@@ -1300,7 +1342,7 @@ async function handlePrintAllClasses(appliedOnly = true) {
   allClassesPrintLoading.value = true
 
   try {
-    const roundId = data.value?.round?.id
+    const roundId = data.value?.round?.cumulative_round_ids || data.value?.round?.id
     const [studentsRes, appsRes] = await Promise.all([
       getStudents({ per_page: 2000, page: 1 }),
       roundId ? getApplications(roundId) : Promise.resolve([])
