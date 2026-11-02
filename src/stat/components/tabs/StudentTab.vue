@@ -36,7 +36,7 @@
     <!-- Main Content: Student Master-Detail Layout -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       <!-- Left: Student List Sidebar -->
-      <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col max-h-205">
+      <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col max-h-182">
         <div class="p-3 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
           <span>학생 명단</span>
           <span>반-번호 순 정렬</span>

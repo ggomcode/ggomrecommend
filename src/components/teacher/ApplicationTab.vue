@@ -8,6 +8,31 @@
       </div>
     </div>
 
+    <!-- ── 2027 대입 확정 원장 안내 배너 ── -->
+    <div v-if="isUsingKcueArchive" class="mx-4 sm:mx-10 mb-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-300 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-extrabold text-lg shrink-0 shadow-xs">
+          🏛️
+        </div>
+        <div>
+          <h4 class="text-xs sm:text-sm font-extrabold text-emerald-950 m-0 flex items-center gap-2 flex-wrap">
+            2027학년도 대입 학교장추천전형 원서접수 확정 내역 (상시 열람 모드)
+            <span class="px-2 py-0.5 rounded-full text-[11px] bg-blue-100 text-blue-900 border border-blue-200 font-bold">
+              대입 학년도 종료일(2027.02.28)까지 상시 조회 지원
+            </span>
+          </h4>
+          <p class="text-xs text-emerald-900 m-0 mt-1 leading-relaxed">
+            현재 2027 학교장 추천 선발 신청은 모두 종료되었으나, 이번 대입 학년도가 종료될 때까지 교사가 우리 반 학생들의 학교장 추천 전형 확정 지원 내역을 언제든 열람할 수 있도록 원장 데이터를 제공합니다.
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <span class="text-xs font-bold text-emerald-800 bg-white/80 px-3 py-1.5 rounded-lg border border-emerald-200">
+          확정 원장 조회 모드
+        </span>
+      </div>
+    </div>
+
     <!-- HWP 양식 다운로드 바 -->
     <div class="px-4 sm:px-10 pb-4 flex gap-4 text-xs border-b border-slate-100 dark:border-slate-800 mb-2">
       <a :href="`${baseUrl}data/2027%ED%95%99%EB%85%84%EB%8F%84%20%ED%95%99%EA%B5%90%EC%9E%A5%EC%B6%94%EC%B2%9C%EC%A0%84%ED%98%95%20%EC%84%A0%EC%A0%95%20%EC%8B%A0%EC%B2%AD%EC%84%9C_%EC%96%91%EC%8B%9D.hwp`" download class="text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer">
@@ -91,7 +116,7 @@
       </div>
     </div>
 
-    <div v-else-if="!currentRound && loaded" class="px-4 sm:px-10 pb-8">
+    <div v-else-if="!currentRound && !isUsingKcueArchive && loaded" class="px-4 sm:px-10 pb-8">
       <div class="rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 p-12 text-center text-slate-400 dark:text-slate-500">
         🔓 진행 중인 추천 선발이 없습니다. 관리자가 새 추천 선발을 시작해야 지원 등록이 가능합니다.
       </div>
@@ -119,7 +144,7 @@
               <p class="text-[10px] text-slate-400 font-mono mt-0.5">{{ s.student_code }}</p>
             </div>
             <span
-              v-if="getStudentAppCount(s.id) > 0"
+              v-if="getStudentAppCount(s) > 0"
               class="text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full px-2 py-0.5"
             >
               {{ getStudentAppCount(s.id) }}건
@@ -142,7 +167,7 @@
                 <h3 class="text-base font-bold text-slate-800 dark:text-white">
                   {{ selectedStudent.name }} 학생의 추천 신청 내역
                 </h3>
-                <p class="text-xs text-slate-400 font-medium">현재 {{ currentRound.id }}차 추천 선발 신청 데이터</p>
+                <p class="text-xs text-slate-400 font-medium">현재 {{ currentRound?.id ? currentRound.id + (typeof currentRound.id === 'number' ? '차' : '') : '2027' }} 추천 선발 신청 데이터</p>
               </div>
               <button
                 @click="openNewForm"
@@ -380,6 +405,7 @@ import {
 import ApplicationDetailModal from './ApplicationDetailModal.vue'
 import { dialog } from '../common/dialog.js'
 import { isUndecidedDepartment } from '../../utils/departmentValidation.js'
+import { getKcueRecommendationApps, buildTeacherApplicationsFromKcue } from '../../utils/recommendationKcueAdapter.js'
 
 import { supabase } from '../../utils/supabaseClient.js'
 
@@ -403,6 +429,7 @@ const applications = ref([])
 const universities = ref([])
 const tracks = ref([])
 const loaded = ref(false)
+const isUsingKcueArchive = ref(false)
 const loadError = ref('')
 const selectedStudent = ref(null)
 const showForm = ref(false)

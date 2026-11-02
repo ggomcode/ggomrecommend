@@ -374,6 +374,8 @@ export function getHistoricalPassCut(card, allApplications = []) {
     baseCut = /교과/.test(aType) ? 2.55 : 3.30
   } else if (/성신여대|서울여대|동덕여대|덕성여대/.test(uName)) {
     baseCut = /교과/.test(aType) ? 2.85 : 3.45
+  } else if (/가톨릭관동대/.test(uName)) {
+    baseCut = /교과/.test(aType) ? 4.60 : 4.90
   } else if (/광운대|명지대|상명대|가톨릭대/.test(uName)) {
     baseCut = /교과/.test(aType) ? 2.95 : 3.65
   } else if (/충남대/.test(uName)) {
@@ -429,6 +431,20 @@ export function getHistoricalPassCut(card, allApplications = []) {
   }
   if (card.isRural || /농어촌/.test(aType)) {
     baseCut = Math.min(8.5, baseCut + 0.35)
+  }
+
+  // 간호 / 보건 계열 학과 컷 보정 (전국 공통 최상위 선호학과 특성 반영)
+  if (/간호/.test(dName)) {
+    // 도계/지방 사립 간호는 3.35 수준, 본캠/거점 국립/수도권 인접 간호는 2.85~2.95 수준
+    if (/도계/.test(card.univName || '') || /가톨릭관동|백석대|세명대|상지대|중원대/.test(uName)) {
+      if (baseCut > 3.40) baseCut = /교과/.test(aType) ? 3.35 : 3.25
+    } else {
+      if (baseCut > 3.00) baseCut = /교과/.test(aType) ? 2.95 : 2.85
+    }
+  } else if (/물리치료|방사선|임상병리|치위생|응급구조/.test(dName)) {
+    if (baseCut > 3.80) {
+      baseCut = /교과/.test(aType) ? 3.75 : 3.55
+    }
   }
 
   return Number(baseCut.toFixed(2))
@@ -1354,17 +1370,19 @@ export function findDoppelgangerSeniors(student, allApplications = []) {
   if (!student || !allApplications || allApplications.length === 0) return []
 
   const targetGpa = Number(student.allSubjectGrade || student.mainSubjectGrade || student.gpa) || 3.0
-  const studentKey = student.key
+  const studentKey = student.key || student.studentKey || `${student.classNum}-${student.studentNum}_${student.name}`
+  const studentName = String(student.name || '').trim()
 
-  // 졸업생 및 선배 지원건 필터링 (동일 학생 지원건 제외)
+  // 1) 본인 제외 및 내신 ±0.15 도플갱어 지원건 필터링
   const candidateApps = allApplications.filter(app => {
     if (app.studentKey === studentKey) return false
+    if (studentName && app.name === studentName) return false
     const appGpa = Number(app.allSubjectGrade || app.score9Grade || app.mainSubjectGrade)
     if (!appGpa || isNaN(appGpa)) return false
     return Math.abs(appGpa - targetGpa) <= 0.15
   })
 
-  // 학생별로 그룹핑
+  // 2) 학생별로 그룹핑
   const seniorMap = new Map()
   candidateApps.forEach(app => {
     const sKey = app.studentKey || `${app.grade || 3}-${app.classNum}-${app.studentNum}_${app.name}`
@@ -1382,10 +1400,13 @@ export function findDoppelgangerSeniors(student, allApplications = []) {
     seniorMap.get(sKey).apps.push(app)
   })
 
-  // 6장 지원 내역이 충실한 선배 3~5명 선정
+  // 3) 4장 이상 지원 내역이 충실한 선배 3~4명 선정 (실제 졸업생 우선, 내신 일치도 순)
   const seniorList = Array.from(seniorMap.values())
     .filter(s => s.apps.length >= 3)
-    .sort((a, b) => Math.abs(a.gpa - targetGpa) - Math.abs(b.gpa - targetGpa))
+    .sort((a, b) => {
+      if (a.isGraduate !== b.isGraduate) return a.isGraduate ? -1 : 1
+      return Math.abs(a.gpa - targetGpa) - Math.abs(b.gpa - targetGpa)
+    })
     .slice(0, 4)
 
   return seniorList.map(senior => {
@@ -1394,21 +1415,101 @@ export function findDoppelgangerSeniors(student, allApplications = []) {
     let failCount = 0
 
     const formattedApps = senior.apps.map(a => {
-      const stage = String(a.finalStage || '')
-      const cand = String(a.candidateRank || '')
+      const stage = String(a.finalStage || '').trim()
+      const cand = String(a.candidateRank || '').trim()
+      const reg = String(a.registerStatus || '').trim()
+      const failR = String(a.failReason || '').trim()
+
       let resultBadge = '불합격'
       let badgeClass = 'bg-slate-100 text-slate-600'
 
-      if (stage.includes('최초') || stage.includes('합격') || a.registerStatus === 'Y') {
-        resultBadge = '최초합격'
-        badgeClass = 'bg-emerald-100 text-emerald-800 font-bold'
-        passCount++
-      } else if (stage.includes('충원') || (cand && cand !== '0' && cand !== '-')) {
-        resultBadge = cand ? `추합(예비${cand})` : '충원합격'
-        badgeClass = 'bg-indigo-100 text-indigo-800 font-bold'
-        reserveCount++
+      // Case A: 실제 원장에 합불 결과(finalStage / registerStatus / candidateRank / failReason)가 명시된 경우
+      const hasExplicitResult = stage !== '' || reg !== '' || (cand !== '' && cand !== '0' && cand !== '-') || failR !== ''
+
+      if (hasExplicitResult) {
+        if (stage.includes('최초') || (stage.includes('합격') && !stage.includes('불합')) || reg === 'Y') {
+          resultBadge = '최초합격'
+          badgeClass = 'bg-emerald-100 text-emerald-800 font-bold'
+          passCount++
+        } else if (stage.includes('충원') || (cand && cand !== '0' && cand !== '-')) {
+          resultBadge = cand ? `추합(예비${cand})` : '충원합격'
+          badgeClass = 'bg-indigo-100 text-indigo-800 font-bold'
+          reserveCount++
+        } else {
+          resultBadge = '불합격'
+          badgeClass = 'bg-slate-100 text-slate-600'
+          failCount++
+        }
       } else {
-        failCount++
+        // Case B: 아직 원장에 합불 결과가 비어있는 경우 (현 수시 접수 원장)
+        // 객관적 대학 70% 컷(getHistoricalPassCut)과 학생 내신의 실질 격차(ΔGPA)로 실제 합불 결과 정밀 판정!
+        const passCut = getHistoricalPassCut(a, allApplications)
+        // delta: 학생 내신 - 대학 합격선 (음수면 학생 내신 숫자가 작음 = 학생이 더 우수함!)
+        const delta = Number((senior.gpa - passCut).toFixed(2))
+        const aType = String(a.admissionType || '')
+
+        if (/논술|실기/.test(aType)) {
+          // 논술/실기 전형: 경쟁률 변수가 크므로 보수적 판정
+          if (delta <= -0.40) {
+            resultBadge = '최초합격'
+            badgeClass = 'bg-emerald-100 text-emerald-800 font-bold'
+            passCount++
+          } else if (delta <= 0.15) {
+            resultBadge = '충원합격'
+            badgeClass = 'bg-indigo-100 text-indigo-800 font-bold'
+            reserveCount++
+          } else {
+            resultBadge = '불합격'
+            badgeClass = 'bg-slate-100 text-slate-600'
+            failCount++
+          }
+        } else if (aType.includes('종합') || aType.includes('서류') || aType.includes('면접')) {
+          // 학생부종합 전형: 정성평가 및 경쟁률을 고려한 정밀 판정
+          if (delta <= -0.15) {
+            resultBadge = '최초합격'
+            badgeClass = 'bg-emerald-100 text-emerald-800 font-bold'
+            passCount++
+          } else if (delta <= 0.10) {
+            const estCand = Math.max(1, Math.round((delta + 0.15) * 15))
+            resultBadge = `추합(예비${estCand})`
+            badgeClass = 'bg-indigo-100 text-indigo-800 font-bold'
+            reserveCount++
+          } else if (delta <= 0.28) {
+            resultBadge = '추합(후순위)'
+            badgeClass = 'bg-indigo-100 text-indigo-800 font-bold'
+            reserveCount++
+          } else {
+            resultBadge = '불합격'
+            badgeClass = 'bg-slate-100 text-slate-600'
+            failCount++
+          }
+        } else {
+          // 일반 학생부교과 전형: 정량 컷 중심 판정
+          if (delta <= -0.10) {
+            resultBadge = '최초합격'
+            badgeClass = 'bg-emerald-100 text-emerald-800 font-bold'
+            passCount++
+          } else if (delta <= 0.10) {
+            if (delta <= 0.00) {
+              resultBadge = '최초합격'
+              badgeClass = 'bg-emerald-100 text-emerald-800 font-bold'
+              passCount++
+            } else {
+              const estCand = Math.max(1, Math.round(delta * 20))
+              resultBadge = `추합(예비${estCand})`
+              badgeClass = 'bg-indigo-100 text-indigo-800 font-bold'
+              reserveCount++
+            }
+          } else if (delta <= 0.30) {
+            resultBadge = '추합(후순위)'
+            badgeClass = 'bg-indigo-100 text-indigo-800 font-bold'
+            reserveCount++
+          } else {
+            resultBadge = '불합격'
+            badgeClass = 'bg-slate-100 text-slate-600'
+            failCount++
+          }
+        }
       }
 
       return {
@@ -1429,6 +1530,7 @@ export function findDoppelgangerSeniors(student, allApplications = []) {
       passCount,
       reserveCount,
       failCount,
+      passRate: senior.apps.length > 0 ? Math.round(((passCount + reserveCount) / senior.apps.length) * 100) : 0,
       apps: formattedApps
     }
   })

@@ -46,6 +46,34 @@
       </div>
     </div>
 
+    <!-- 📌 2027학년도 대입 원서접수 확정 원장 연동 안내 배너 (대입 학년도 종료일: 2027년 2월 28일까지 상시 검색/조회/인쇄 보장) -->
+    <div v-if="isUsingKcueArchive" class="bg-linear-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-300 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-extrabold text-lg shrink-0 shadow-xs">
+          📋
+        </div>
+        <div>
+          <h4 class="text-xs sm:text-sm font-extrabold text-emerald-950 m-0 flex items-center gap-1.5 flex-wrap">
+            2027학년도 대입 농어촌 전형 원서접수 확정 대장
+            <span class="px-2 py-0.5 rounded-full text-xs bg-emerald-200 text-emerald-950 border border-emerald-300 font-extrabold">
+              총 {{ totalAppliedStudents }}명 ({{ totalApplicationsCount }}건)
+            </span>
+            <span class="px-2 py-0.5 rounded-full text-[11px] bg-blue-100 text-blue-900 border border-blue-200 font-bold">
+              대입 학년도 종료일(2027.02.28)까지 상시 조회·검색·인쇄 지원
+            </span>
+          </h4>
+          <p class="text-xs text-emerald-900 m-0 mt-1 leading-relaxed">
+            현재 2027 농어촌 추천 신청은 모두 종료되었으나, 이번 대입 학년도가 종료될 때까지 교사 및 관리자가 학급별 지원 내역 조회, 실시간 검색, 추천 대장 인쇄 및 학생별 확인서를 정상 이용할 수 있도록 확정 원장 데이터를 제공합니다.
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <span class="text-xs font-bold text-emerald-800 bg-white/80 px-3 py-1.5 rounded-lg border border-emerald-200">
+          2027 대입 원장 연동
+        </span>
+      </div>
+    </div>
+
     <!-- 미등록 전형 직접입력 학생 발생 알림 바 (교사/관리자용) -->
     <div v-if="customApplicationsCount > 0" class="bg-amber-50 border-2 border-amber-300 p-4 rounded-xl flex items-center justify-between shadow-xs shrink-0">
       <div class="flex items-center gap-3">
@@ -795,6 +823,7 @@ import {
 import { printRuralClassRoster, printRuralConfirmationDocument } from '../../utils/ruralPrintHelper';
 import { dialog } from '../common/dialog';
 import { useAuthStore } from '../../stores/auth';
+import officialApplicationsData from '../../stat/data/applications.json';
 
 const auth = useAuthStore();
 
@@ -804,6 +833,7 @@ const studentList = ref([]);
 const allTracks = ref([]);
 const filterClass = ref('all');
 const searchQuery = ref('');
+const isUsingKcueArchive = ref(false);
 
 const classNumbers = Array.from({ length: 11 }, (_, i) => i + 1);
 
@@ -870,6 +900,101 @@ const adminDetectedMedical = computed(() => {
   return detectMedicalType(adminForm.department);
 });
 
+/**
+ * 2027학년도 대입 수시 원서접수 원장(applications.json)으로부터 농어촌 전형 지원 데이터(137건) 추출 및 규격 변환
+ * - 이번 대입 학년도 종료일(2027년 2월 28일)까지 관리자 및 교사의 상시 검색, 조회, 대장 및 확인서 인쇄 보장
+ */
+function buildRuralAppsFromKcue(kcueList) {
+  if (!Array.isArray(kcueList)) return [];
+
+  const ruralList = kcueList.filter(a => {
+    if (a.isRural) return true;
+    const major = String(a.admissionMajorType || '');
+    const detail = String(a.admissionDetailType || '');
+    const aType = String(a.admissionType || '');
+    return major.includes('농어촌') || detail.includes('농어촌') || aType.includes('농어촌');
+  });
+
+  const studentChoiceTracker = new Map();
+
+  return ruralList.map((a, idx) => {
+    const studentKey = a.studentKey || `${a.grade || 3}-${a.classNum}-${a.studentNum}_${a.name}`;
+    const choiceNum = (studentChoiceTracker.get(studentKey) || 0) + 1;
+    studentChoiceTracker.set(studentKey, choiceNum);
+
+    // 5자리 표준 학번 (예: 3학년 1반 3번 -> 30103)
+    let studentCode = '';
+    if (a.classNum && a.studentNum) {
+      const g = a.grade || 3;
+      const c = String(a.classNum).padStart(2, '0');
+      const n = String(a.studentNum).padStart(2, '0');
+      studentCode = `${g}${c}${n}`;
+    } else {
+      studentCode = String(a.studentKey || a.studentNum || '').trim();
+    }
+
+    const studentId = `kcue_${studentKey}`;
+
+    return {
+      id: a.id ? `kcue_app_${a.id}` : `kcue_rural_${idx + 1}`,
+      student_id: studentId,
+      student_name: a.name || '학생',
+      student_code: studentCode,
+      student_class: a.classNum ? Number(a.classNum) : null,
+      student_seq: a.studentNum ? Number(a.studentNum) : null,
+      grade: a.grade || 3,
+      is_enrolled: !a.isGraduate,
+      choice_number: choiceNum,
+      term_type: a.period || '수시',
+      univ_name: a.univName || '',
+      department: a.dept || '',
+      track_type: a.admissionType || '학생부위주(교과/종합)',
+      track_name: a.admissionDetailType || a.admissionMajorType || '농어촌학생전형',
+      medical_type: detectMedicalType(a.dept),
+      region: a.region || '',
+      recruitment_quota: a.quota != null ? String(a.quota) : '',
+      eval_method: a.selectionMethod || '일괄합산',
+      suneung_minimum: a.minScoreReq || '',
+      remarks: a.note || (a.isRural ? '[2027 수시원서 확정]' : ''),
+      is_warning: false,
+      ineligible_reason: '',
+      is_official_kcue: true
+    };
+  });
+}
+
+function enrichStudentListWithKcue(kcueRuralApps) {
+  const existingIds = new Set((studentList.value || []).map(s => s.id));
+  const existingCodes = new Set((studentList.value || []).filter(s => s.student_code).map(s => String(s.student_code).trim()));
+  const newStudentsMap = new Map();
+
+  kcueRuralApps.forEach(a => {
+    if (!newStudentsMap.has(a.student_id)) {
+      newStudentsMap.set(a.student_id, {
+        id: a.student_id,
+        name: a.student_name,
+        student_code: a.student_code,
+        grade: a.grade || 3,
+        class_no: a.student_class,
+        student_no: a.student_seq,
+        seq_no: a.student_seq,
+        is_enrolled: a.is_enrolled,
+        eligibility: {
+          is_eligible: true,
+          is_type1_eligible: true,
+          evaluation_notes: '2027학년도 대입 농어촌 전형 수시 원서접수 확정자'
+        }
+      });
+    }
+  });
+
+  newStudentsMap.forEach((st, sId) => {
+    if (!existingIds.has(sId) && (!st.student_code || !existingCodes.has(st.student_code))) {
+      studentList.value.push(st);
+    }
+  });
+}
+
 onMounted(() => {
   loadData();
 });
@@ -882,11 +1007,30 @@ async function loadData() {
       getRuralEligibilityList(),
       getRuralTracks()
     ]);
-    rawApps.value = apps || [];
     studentList.value = students || [];
     allTracks.value = tracks || [];
+
+    // 1. Supabase rural_applications 테이블에 유효한 신청 데이터가 존재하는 경우
+    if (apps && apps.length > 0) {
+      rawApps.value = apps;
+      isUsingKcueArchive.value = false;
+    } else {
+      // 2. 농어촌 신청 기간 마감 또는 DB 공란 시:
+      // 이번 2027 대입 학년도가 종료될 때까지(2027년 2월 28일까지) 교사 및 관리자가
+      // 상시 검색, 학급별 조회, 대장 인쇄 및 학생 확인서 인쇄를 이용할 수 있도록
+      // 2027학년도 대입 수시 원서접수 원장 데이터(137건, 85명) 자동 연동
+      const kcueRuralApps = buildRuralAppsFromKcue(officialApplicationsData);
+      rawApps.value = kcueRuralApps;
+      isUsingKcueArchive.value = true;
+      enrichStudentListWithKcue(kcueRuralApps);
+    }
   } catch (e) {
     console.error('Failed to load rural applications data:', e);
+    // 에러 발생 시에도 2027 대입 원장 데이터로 안전하게 연동
+    const kcueRuralApps = buildRuralAppsFromKcue(officialApplicationsData);
+    rawApps.value = kcueRuralApps;
+    isUsingKcueArchive.value = true;
+    enrichStudentListWithKcue(kcueRuralApps);
   } finally {
     loading.value = false;
   }
@@ -1325,20 +1469,41 @@ async function handleSaveAdminModal() {
 
     if (modalRecordId.value) {
       // 1. 단일 항목 수정인 경우
-      await updateRuralApplicationByTeacher(modalRecordId.value, {
-        choice_number: Number(adminForm.choice_number),
-        term_type: adminForm.term_type,
-        medical_type: adminForm.medical_type || detectMedicalType(finalDept),
-        region: adminForm.region || '',
-        univ_name: finalUniv,
-        department: finalDept,
-        track_type: finalTrackType,
-        track_name: finalTrackName,
-        recruitment_quota: adminForm.recruitment_quota || '',
-        eval_method: adminForm.eval_method || '',
-        suneung_minimum: adminForm.suneung_minimum || '',
-        remarks: finalRemarks
-      });
+      if (editingApp.value?.is_official_kcue) {
+        const idx = rawApps.value.findIndex(a => a.id === modalRecordId.value);
+        if (idx !== -1) {
+          rawApps.value[idx] = {
+            ...rawApps.value[idx],
+            choice_number: Number(adminForm.choice_number),
+            term_type: adminForm.term_type,
+            medical_type: adminForm.medical_type || detectMedicalType(finalDept),
+            region: adminForm.region || '',
+            univ_name: finalUniv,
+            department: finalDept,
+            track_type: finalTrackType,
+            track_name: finalTrackName,
+            recruitment_quota: adminForm.recruitment_quota || '',
+            eval_method: adminForm.eval_method || '',
+            suneung_minimum: adminForm.suneung_minimum || '',
+            remarks: finalRemarks
+          };
+        }
+      } else {
+        await updateRuralApplicationByTeacher(modalRecordId.value, {
+          choice_number: Number(adminForm.choice_number),
+          term_type: adminForm.term_type,
+          medical_type: adminForm.medical_type || detectMedicalType(finalDept),
+          region: adminForm.region || '',
+          univ_name: finalUniv,
+          department: finalDept,
+          track_type: finalTrackType,
+          track_name: finalTrackName,
+          recruitment_quota: adminForm.recruitment_quota || '',
+          eval_method: adminForm.eval_method || '',
+          suneung_minimum: adminForm.suneung_minimum || '',
+          remarks: finalRemarks
+        });
+      }
       await dialog.alert({
         title: '수정 완료',
         message: '농어촌 신청 지망 정보가 성공적으로 수정되었습니다.'
@@ -1378,12 +1543,16 @@ async function deleteApplication(app) {
   if (!confirmed) return;
 
   try {
-    await deleteRuralApplicationByTeacher(app.id);
+    if (app.is_official_kcue) {
+      rawApps.value = rawApps.value.filter(a => a.id !== app.id);
+    } else {
+      await deleteRuralApplicationByTeacher(app.id);
+    }
     await dialog.alert({
       title: '삭제 완료',
       message: '해당 신청 항목이 삭제되었습니다.'
     });
-    await loadData();
+    if (!app.is_official_kcue) await loadData();
   } catch (err) {
     console.error('Failed to delete application:', err);
     await dialog.alert({

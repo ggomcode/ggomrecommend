@@ -7,6 +7,31 @@
       <h1 class="text-2xl font-semibold" style="color: #1e293b; margin: 0;">추천 결과</h1>
     </div>
 
+    <!-- ── 2027 대입 확정 원장 안내 배너 ── -->
+    <div v-if="isUsingKcueArchive" class="mb-5 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-300 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-extrabold text-lg shrink-0 shadow-xs">
+          🏛️
+        </div>
+        <div>
+          <h4 class="text-xs sm:text-sm font-extrabold text-emerald-950 m-0 flex items-center gap-2 flex-wrap">
+            2027학년도 대입 학교장추천전형 추천 결과 확정 대장
+            <span class="px-2 py-0.5 rounded-full text-[11px] bg-blue-100 text-blue-900 border border-blue-200 font-bold">
+              대입 학년도 종료일(2027.02.28)까지 상시 조회·인쇄 지원
+            </span>
+          </h4>
+          <p class="text-xs text-emerald-900 m-0 mt-1 leading-relaxed">
+            현재 2027 학교장 추천 선발은 모두 종료되었으나, 이번 대입 학년도가 종료될 때까지 교사가 우리 반 학생들의 추천 결과를 상시 확인하고 결과 보고서를 출력할 수 있도록 확정 원장 데이터를 제공합니다.
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <span class="text-xs font-bold text-emerald-800 bg-white/80 px-3 py-1.5 rounded-lg border border-emerald-200">
+          2027 대입 원장 연동
+        </span>
+      </div>
+    </div>
+
     <HelpBox
       v-if="!loading && !loadError"
       :key="helpBox.key"
@@ -215,6 +240,7 @@ import { dialog } from '../common/dialog.js'
 import HelpBox from '../common/HelpBox.vue'
 import { formatScore } from '../../utils/scorePreviewShared.js'
 import { formatKoreanDateTimePeriod } from '../../utils/roundSchedule.js'
+import { getKcueRecommendationApps, buildTeacherResultsFromKcue } from '../../utils/recommendationKcueAdapter.js'
 
 const auth = useAuthStore()
 
@@ -222,6 +248,7 @@ const rounds    = ref([])
 const results   = ref([])
 const loading   = ref(false)
 const loadError = ref('')
+const isUsingKcueArchive = ref(false)
 
 function formatPeriod(sched) {
   if (!sched || (!sched.apply_start && !sched.apply_end)) return '접수 기간 미선택'

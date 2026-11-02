@@ -28,6 +28,9 @@ export const MULTI_YEAR_STATS = {
       medicalApps: null,
       recommendationApps: null,
       ruralApps: null,
+      essayApps: null,
+      essayPassApps: null,
+      essayPassRate: null,
       csatMinApps: null,
       csatMinPassApps: null,
       csatMinPassRate: null,
@@ -55,6 +58,9 @@ export const MULTI_YEAR_STATS = {
       medicalApps: null,
       recommendationApps: null,
       ruralApps: null,
+      essayApps: null,
+      essayPassApps: null,
+      essayPassRate: null,
       csatMinApps: null,
       csatMinPassApps: null,
       csatMinPassRate: null,
@@ -82,6 +88,9 @@ export const MULTI_YEAR_STATS = {
       medicalApps: null,
       recommendationApps: null,
       ruralApps: null,
+      essayApps: null,
+      essayPassApps: null,
+      essayPassRate: null,
       csatMinApps: null,
       csatMinPassApps: null,
       csatMinPassRate: null,
@@ -109,6 +118,9 @@ export const MULTI_YEAR_STATS = {
       medicalApps: 17,
       recommendationApps: 72,
       ruralApps: 189,
+      essayApps: 37,
+      essayPassApps: 4,
+      essayPassRate: 10.8,
       csatMinApps: 245,
       csatMinPassApps: 82,
       csatMinPassRate: 33.5,
@@ -148,6 +160,9 @@ export const MULTI_YEAR_STATS = {
       medicalApps: 1,
       recommendationApps: 144,
       ruralApps: 137,
+      essayApps: 41,
+      essayPassApps: null,
+      essayPassRate: null,
       csatMinApps: 230,
       csatMinPassApps: 86,
       csatMinPassRate: 37.4,
@@ -225,6 +240,8 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
   let metroCount = 0
   let recCount = 0
   let ruralCount = 0
+  let essayCount = 0
+  let essayPassCount = 0
   let csatMinCount = 0
   let csatMinPassCount = 0
   let finalPassCount = 0
@@ -259,7 +276,15 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
     const aType = String(r.admissionType || '')
     if (aType.includes('교과')) types['학생부교과']++
     else if (aType.includes('종합')) types['학생부종합']++
-    else if (aType.includes('논술')) types['논술위주']++
+    else if (aType.includes('논술')) {
+      types['논술위주']++
+      essayCount++
+      const final = String(r.finalStage || '')
+      const reg = String(r.registerStatus || '')
+      if ((final.includes('합격') || final.includes('충원') || final.includes('최초') || reg === 'Y') && !final.includes('불합')) {
+        essayPassCount++
+      }
+    }
     else if (aType.includes('실기')) types['실기/실적']++
 
     const g = typeof r.score9Grade === 'number' ? r.score9Grade : (typeof r.allSubjectGrade === 'number' ? r.allSubjectGrade : null)
@@ -394,6 +419,9 @@ export function computeYearMultiYearStats(year, rows, totalStudents = null) {
     medicalApps,
     recommendationApps: recCount,
     ruralApps: ruralCount,
+    essayApps: essayCount,
+    essayPassApps: essayPassCount,
+    essayPassRate: essayCount > 0 ? Number(((essayPassCount / essayCount) * 100).toFixed(1)) : null,
     csatMinApps: csatMinCount,
     csatMinPassApps: csatMinPassCount,
     csatMinPassRate: csatMinCount > 0 ? Number(((csatMinPassCount / csatMinCount) * 100).toFixed(1)) : null,

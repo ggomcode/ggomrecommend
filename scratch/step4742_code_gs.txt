@@ -1,0 +1,481 @@
+<USER_REQUEST>
+원본시트(id가 1hk....)에 '수능최저충족률'시트를 추가했어. 암호화 시트(1U5vnx...)에는 암호화 하지 않고 자료를 넘길건데, 원본시트에 appscript로 추가한 '대입 데이터 관리'메뉴에서 암호하 배포 버튼을 누르면 이 작업이 자동으로 이뤄지게 수정하고 싶어. 현재 Code.gs는 다음과 같아. '/**
+ * ==========================================================
+ * 포곡고 대입 데이터 통합 관리 & 보안 배포 시스템 (Apps Script)
+ * 1. [가채점] '2027모의등급컷' 기준 EBS 등급 자동 변환 (AS:BB열)
+ * 2. [배포] '2027가채점' CA열(79열) / '수시원자료' FA열(157열) 암호화 배포
+ * ==========================================================
+ */
+
+const TARGET_SPREADSHEET_ID = '1U5Vnx2x8gnXQlI3N4deyaurKxj-naZP0cRBb3lQnT4o'; // 배포용 시트 ID
+const CUTOFF_SHEET_NAME = '2027모의등급컷';
+const EXCLUDE_SHEET_NAME = '기본통계';
+const TARGET_ENC_COL_NAME = 'encrypted_data';
+
+/**
+ * 시트 오픈 시 상단 커스텀 메뉴 등록
+ */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('🚀 대입 데이터 관리')
+    .addItem('1. [가채점] 2027모의등급컷 기준 등급 자동 변환 (AS:BB)', 'convertMockGradesToEbs')
+    .addSeparator()
+    .addItem('2. [배포] 현재 탭 데이터 암호화하여 배포 시트로 동기화 (Upsert)', 'syncCurrentSheetUpsert')
+    .addToUi();
+}
+
+/**
+ * ==========================================================
+ * 기능 1: '2027모의등급컷'을 참조하여 가채점 원점수를 EBS 등급으로 환산 (AS:BB열)
+ * ==========================================================
+ */
+function convertMockGradesToEbs() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const currentSheet = ss.getActiveSheet();
+  const currentName = currentSheet.getName();
+
+  if (!currentName.includes('가채점') && !currentName.includes('모의')) {
+    const confirm = ui.alert('확인', `'${currentName}' 탭이 가채점 시트가 맞습니까?\n계속 진행하시겠습니까?`, ui.ButtonSet.YES_NO);
+    if (confirm !== ui.Button.YES) return;
+  }
+
+  const cutoffSheet = ss.getSheetByName(CUTOFF_SHEET_NAME);
+  if (!cutoffSheet) {
+    ui.alert(`'${CUTOFF_SHEET_NAME}' 시트를 찾을 수 없습니다.`);
+    return;
+  }
+
+  // 1) 등급컷 시트 전체 파싱
+  const cutoffRows = cutoffSheet.getDataRange().getValues();
+  const monthCutoffs = parseAllMonthCutoffs(cutoffRows);
+
+  // 2) 가채점 시트 데이터 로드
+  const lastRow = currentSheet.getLastRow();
+  if (lastRow < 3) {
+    ui.alert('가채점 시트에 변환할 학생 데이터(3행 이후)가 없습니다.');
+    return;
+  }
+
+  // A3부터 BB열(54열)까지 일괄 로드
+  const dataRange = currentSheet.getRange(3, 1, lastRow - 2, 54);
+  const rows = dataRange.getValues();
+
+  // 3) AS열~BB열 (10개 열: 45번째 열부터 54번째 열까지) 변환 결과 배열 준비
+  const convertedResults = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const name = String(row[5] || '').trim(); // F열(이름)
+
+    // 이름이 없는 빈 행 처리
+    if (!name) {
+      convertedResults.push(new Array(10).fill(''));
+      continue;
+    }
+
+    const monthNum = parseInt(row[0]) || 3; // A열(월)
+    const mCuts = monthCutoffs[monthNum] || monthCutoffs[3] || {};
+
+    // 1. 국어 (G열 선택과목, J열 원점수총점)
+    const korSubj = String(row[6] || '').trim();
+    const korScore = row[9];
+    const korGrade = calcCutoffGrade(korScore, mCuts[cleanSubjName(korSubj)]);
+
+    // 2. 수학 (N열 선택과목, Q열 원점수총점)
+    const mathSubj = String(row[13] || '').trim();
+    const mathScore = row[16];
+    const mathGrade = calcCutoffGrade(mathScore, mCuts[cleanSubjName(mathSubj)]);
+
+    // 3. 영어 (U열 원점수, 절대평가)
+    const engScore = row[20];
+    const engGrade = calcAbsoluteEnglish(engScore);
+
+    // 4. 한국사 (AJ열 원점수, 절대평가)
+    const histScore = row[35];
+    const histGrade = calcAbsoluteHistory(histScore);
+
+    // 5. 탐구1 (Z열 과목명, AA열 원점수)
+    const inq1Subj = String(row[25] || '').trim();
+    const inq1Score = row[26];
+    const inq1Grade = calcCutoffGrade(inq1Score, mCuts[cleanSubjName(inq1Subj)]);
+
+    // 6. 탐구2 (AE열 과목명, AF열 원점수)
+    const inq2Subj = String(row[30] || '').trim();
+    const inq2Score = row[31];
+    const inq2Grade = calcCutoffGrade(inq2Score, mCuts[cleanSubjName(inq2Subj)]);
+
+    // AS ~ BB (총 10개 열) 순서:
+    // AS(45): 국어(선택과목), AT(46): 국어(EBS), AU(47): 수학(선택과목), AV(48): 수학(EBS),
+    // AW(49): 영어(EBS), AX(50): 한국사, AY(51): 탐구1(과목명), AZ(52): 탐구1(EBS),
+    // BA(53): 탐구2(과목명), BB(54): 탐구2(EBS)
+    convertedResults.push([
+      korSubj,
+      korGrade,
+      mathSubj,
+      mathGrade,
+      engGrade,
+      histGrade,
+      inq1Subj,
+      inq1Grade,
+      inq2Subj,
+      inq2Grade
+    ]);
+  }
+
+  // 4) AS3:BB 영역에 초고속 일괄 쓰기 (45열 ~ 54열, 총 10열)
+  currentSheet.getRange(3, 45, convertedResults.length, 10).setValues(convertedResults);
+
+  ui.alert(`🎉 [등급 환산 완료]\n\n` +
+           `• 대상 탭: ${currentName}\n` +
+           `• 환산 학생 수: ${convertedResults.length}명\n` +
+           `• 반영 영역: AS3:BB${lastRow} (국/수/영/한/탐1/탐2 EBS 등급)\n\n` +
+           `'2027모의등급컷' 기준 환산이 정상적으로 적용되었습니다.`);
+}
+
+/**
+ * 과목명 표준화 헬퍼 (로마자 I, II, Ⅰ, Ⅱ, 1, 2, 공백 완벽 호환)
+ */
+function cleanSubjName(name) {
+  if (!name) return '';
+  let s = String(name).replace(/[\r\n\s·ㆍ]+/g, '').replace(/[Ⅰ1]/g, '1').replace(/[Ⅱ2]/g, '2');
+  if (s.startsWith('물리1') || s.startsWith('물리학1')) return '물리학1';
+  if (s.startsWith('물리2') || s.startsWith('물리학2')) return '물리학2';
+  if (s.startsWith('화학1') || s.startsWith('화1')) return '화학1';
+  if (s.startsWith('화학2') || s.startsWith('화2')) return '화학2';
+  if (s.startsWith('생명과학1') || s.startsWith('생명1') || s.startsWith('생물1')) return '생명과학1';
+  if (s.startsWith('생명과학2') || s.startsWith('생명2') || s.startsWith('생물2')) return '생명과학2';
+  if (s.startsWith('지구과학1') || s.startsWith('지학1') || s.startsWith('지구1')) return '지구과학1';
+  if (s.startsWith('지구과학2') || s.startsWith('지학2') || s.startsWith('지구2')) return '지구과학2';
+  return s;
+}
+
+/**
+ * 등급컷 시트 파싱 (월별 블록 자동 감지)
+ */
+function parseAllMonthCutoffs(cRows) {
+  const monthCutoffs = {};
+
+  for (let r = 0; r < cRows.length; r++) {
+    const txt = String(cRows[r]?.[0] || '').trim();
+    if (txt.includes('월')) {
+      const mNum = parseInt(txt);
+      if (isNaN(mNum)) continue;
+      monthCutoffs[mNum] = {};
+
+      const subjRow = cRows[r + 1] || [];
+      const typeRow = cRows[r + 2] || [];
+
+      for (let c = 0; c < subjRow.length; c++) {
+        const rawSubj = subjRow[c];
+        if (!rawSubj) continue;
+        const key = cleanSubjName(rawSubj);
+
+        // 해당 과목의 원점수 열 인덱스 탐색
+        let scoreColIdx = -1;
+        if (String(typeRow[c] || '').includes('원점수')) scoreColIdx = c;
+        else if (String(typeRow[c + 1] || '').includes('원점수')) scoreColIdx = c + 1;
+        else if (String(typeRow[c + 2] || '').includes('원점수')) scoreColIdx = c + 2;
+
+        if (scoreColIdx !== -1) {
+          const cuts = [];
+          for (let g = 1; g <= 8; g++) {
+            const cutVal = cRows[r + 5 + g]?.[scoreColIdx];
+            cuts.push(cutVal != null && !isNaN(cutVal) ? Number(cutVal) : null);
+          }
+          monthCutoffs[mNum][key] = cuts;
+        }
+      }
+    }
+  }
+  return monthCutoffs;
+}
+
+/**
+ * 원점수 컷 기준 등급 계산 (1~9등급)
+ */
+function calcCutoffGrade(score, cuts) {
+  if (score == null || score === '' || isNaN(score)) return '';
+  const num = Number(score);
+  if (!cuts || cuts.length === 0) return '';
+  for (let i = 0; i < cuts.length; i++) {
+    if (cuts[i] != null && num >= cuts[i]) return i + 1;
+  }
+  return 9;
+}
+
+/**
+ * 영어 절대평가 등급 (만점 100점)
+ */
+function calcAbsoluteEnglish(score) {
+  if (score == null || score === '' || isNaN(score)) return '';
+  const num = Number(score);
+  if (num >= 90) return 1;
+  if (num >= 80) return 2;
+  if (num >= 70) return 3;
+  if (num >= 60) return 4;
+  if (num >= 50) return 5;
+  if (num >= 40) return 6;
+  if (num >= 30) return 7;
+  if (num >= 20) return 8;
+  return 9;
+}
+
+/**
+ * 한국사 절대평가 등급 (만점 50점)
+ */
+function calcAbsoluteHistory(score) {
+  if (score == null || score === '' || isNaN(score)) return '';
+  const num = Number(score);
+  if (num >= 40) return 1;
+  if (num >= 35) return 2;
+  if (num >= 30) return 3;
+  if (num >= 25) return 4;
+  if (num >= 20) return 5;
+  if (num >= 15) return 6;
+  if (num >= 10) return 7;
+  if (num >= 5) return 8;
+  return 9;
+}
+
+/**
+ * ==========================================================
+ * 기능 2: 현재 탭 데이터 암호화하여 배포 시트로 동기화 (Upsert)
+ * - '가채점' 탭: CA열(79열)에 저장 (학생 기준 키)
+ * - '수시' 등 원자료 탭: FA열(157열)에 저장 (지원 기준 키)
+ * ==========================================================
+ */
+function syncCurrentSheetUpsert() {
+  const ui = SpreadsheetApp.getUi();
+  const sourceSheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const sheetName = sourceSheet.getName();
+
+  if (sheetName === EXCLUDE_SHEET_NAME) {
+    ui.alert(`'${EXCLUDE_SHEET_NAME}' 탭은 배포 대상이 아닙니다.`);
+    return;
+  }
+
+  // 탭 구분에 따라 CA열(79열) vs FA열(157열) 자동 결정
+  const isMockExam = sheetName.includes('가채점') || sheetName.includes('모의');
+  const targetEncColIndex = isMockExam ? 79 : 157; // CA열 = 79열, FA열 = 157열
+  const targetEncColLetter = isMockExam ? 'CA' : 'FA';
+
+  const password = promptPassword(ui);
+  if (!password) return;
+
+  let targetSs = null;
+  let targetSheet = null;
+  try {
+    targetSs = SpreadsheetApp.openById(TARGET_SPREADSHEET_ID);
+    targetSheet = targetSs.getSheetByName(sheetName);
+    if (!targetSheet) {
+      targetSheet = targetSs.insertSheet(sheetName);
+    }
+  } catch (e) {
+    ui.alert(`배포 시트 접근 실패: ${e.message}`);
+    return;
+  }
+
+  const srcLastRow = sourceSheet.getLastRow();
+  const srcLastCol = sourceSheet.getLastColumn();
+  if (srcLastRow < 2) {
+    ui.alert('원본 시트에 동기화할 데이터가 없습니다.');
+    return;
+  }
+  const srcData = sourceSheet.getRange(1, 1, srcLastRow, srcLastCol).getValues();
+  const srcHeaders = srcData[0];
+
+  const targetMaxCols = targetSheet.getMaxColumns();
+  if (targetMaxCols < targetEncColIndex) {
+    targetSheet.insertColumnsAfter(targetMaxCols, targetEncColIndex - targetMaxCols);
+  }
+  targetSheet.getRange(1, targetEncColIndex).setValue(TARGET_ENC_COL_NAME);
+
+  const targetLastRow = targetSheet.getLastRow();
+  const existingKeyMap = new Map();
+  let targetRows = [];
+  let targetHeaders = [];
+
+  if (targetLastRow > 1) {
+    targetRows = targetSheet.getRange(1, 1, targetLastRow, targetEncColIndex).getValues();
+    targetHeaders = targetRows[0];
+
+    // 기존 비밀번호 검증
+    let sampleCipher = '';
+    for (let r = 1; r < targetRows.length; r++) {
+      const c = String(targetRows[r][targetEncColIndex - 1] || '').trim();
+      if (c.startsWith('U2FsdGVkX1')) {
+        sampleCipher = c;
+        break;
+      }
+    }
+    if (sampleCipher && !decryptAES(sampleCipher, password)) {
+      ui.alert('❌ 비밀번호가 기존에 암호화된 데이터의 비밀번호와 일치하지 않습니다.');
+      return;
+    }
+
+    for (let r = 1; r < targetRows.length; r++) {
+      const row = targetRows[r];
+      let key = extractCompositeKey(row, targetHeaders, isMockExam);
+
+      if (!key) {
+        const cipher = String(row[targetEncColIndex - 1] || '').trim();
+        if (cipher) {
+          const dec = decryptAES(cipher, password);
+          if (dec) {
+            try {
+              const obj = JSON.parse(dec);
+              const b = obj['반'] || obj['학급'] || '';
+              const n = obj['번호'] || obj['출석번호'] || '';
+              const nm = obj['이름'] || obj['성명'] || obj['학생명'] || '';
+              if (isMockExam) {
+                if (nm) key = `${b}_${n}_${nm}`;
+              } else {
+                const u = obj['대학명'] || '';
+                const d = obj['모집단위'] || '';
+                if (nm && u) key = `${b}_${n}_${nm}_${u}_${d}`;
+              }
+            } catch(e) {}
+          }
+        }
+      }
+
+      if (key) existingKeyMap.set(key, r);
+    }
+  }
+
+  let updateCount = 0;
+  let insertCount = 0;
+  const newRowEntries = [];
+  const encColUpdates = targetLastRow > 1 ? targetRows.slice(1).map(r => [r[targetEncColIndex - 1]]) : [];
+
+  for (let i = 1; i < srcData.length; i++) {
+    const row = srcData[i];
+    const key = extractCompositeKey(row, srcHeaders, isMockExam);
+    if (!key) continue;
+
+    const rowObj = {};
+    let hasData = false;
+    for (let j = 0; j < srcHeaders.length; j++) {
+      const val = row[j];
+      if (val !== '' && val !== null && val !== undefined) {
+        hasData = true;
+        rowObj[srcHeaders[j]] = (val instanceof Date) ? Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM-dd') : val;
+      }
+    }
+    if (!hasData) continue;
+
+    const cipherText = encryptAES(JSON.stringify(rowObj), password);
+
+    if (existingKeyMap.has(key)) {
+      const targetRowIdx = existingKeyMap.get(key) - 1;
+      if (targetRowIdx >= 0 && targetRowIdx < encColUpdates.length) {
+        encColUpdates[targetRowIdx][0] = cipherText;
+        updateCount++;
+      }
+    } else {
+      const newRow = new Array(targetEncColIndex).fill('');
+      newRow[targetEncColIndex - 1] = cipherText;
+      newRowEntries.push(newRow);
+      insertCount++;
+    }
+  }
+
+  if (encColUpdates.length > 0 && updateCount > 0) {
+    targetSheet.getRange(2, targetEncColIndex, encColUpdates.length, 1).setValues(encColUpdates);
+  }
+  if (newRowEntries.length > 0) {
+    targetSheet.getRange(targetSheet.getLastRow() + 1, 1, newRowEntries.length, targetEncColIndex).setValues(newRowEntries);
+  }
+
+  ui.alert(`🎉 [배포 성공]\n\n` +
+           `• 대상 탭: ${sheetName}\n` +
+           `• 갱신: ${updateCount}건 / 추가: ${insertCount}건\n` +
+           `• 암호문 저장 위치: ${targetEncColLetter}열 (${targetEncColIndex}번째 열)\n\n` +
+           `배포 시트로 안전하게 암호화 배포되었습니다.`);
+}
+
+function extractCompositeKey(row, headers, isMockExam) {
+  const findVal = (colName) => {
+    const cleanTarget = colName.replace(/[\r\n\s]+/g, '');
+    const idx = headers.findIndex(h => String(h || '').replace(/[\r\n\s]+/g, '') === cleanTarget);
+    return idx !== -1 ? String(row[idx] || '').trim() : '';
+  };
+
+  const ban = findVal('반') || findVal('학급');
+  const num = findVal('번호') || findVal('출석번호');
+  const name = findVal('이름') || findVal('성명') || findVal('학생명');
+
+  if (isMockExam) {
+    if (!name) return '';
+    return `${ban}_${num}_${name}`;
+  } else {
+    const univ = findVal('대학명') || findVal('대학');
+    const dept = findVal('모집단위') || findVal('학과');
+    if (!name || !univ) return '';
+    return `${ban}_${num}_${name}_${univ}_${dept}`;
+  }
+}
+
+function promptPassword(ui) {
+  const res1 = ui.prompt('🔐 관리자 보안 인증 (1/2)', '비밀번호를 입력하세요:', ui.ButtonSet.OK_CANCEL);
+  if (res1.getSelectedButton() !== ui.Button.OK) return null;
+  const pw1 = res1.getResponseText().trim();
+  if (!pw1) return null;
+
+  const res2 = ui.prompt('🔐 비밀번호 확인 (2/2)', '비밀번호를 한 번 더 입력하세요:', ui.ButtonSet.OK_CANCEL);
+  if (res2.getSelectedButton() !== ui.Button.OK) return null;
+  const pw2 = res2.getResponseText().trim();
+
+  if (pw1 !== pw2) {
+    ui.alert('❌ 비밀번호가 일치하지 않습니다.');
+    return null;
+  }
+  return pw1;
+}
+
+let _crypto = null;
+function getCryptoJS() {
+  if (_crypto) return _crypto;
+  if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
+    globalThis.crypto = {
+      getRandomValues: function(b) {
+        for (let i = 0; i < b.length; i++) b[i] = Math.floor(Math.random() * 256);
+        return b;
+      }
+    };
+  }
+  const code = UrlFetchApp.fetch('https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.3.0/crypto-js.min.js').getContentText();
+  eval(code);
+  _crypto = CryptoJS;
+  return _crypto;
+}
+
+function encryptAES(text, password) {
+  return getCryptoJS().AES.encrypt(text, password).toString();
+}
+
+function decryptAES(cipherText, password) {
+  try {
+    const bytes = getCryptoJS().AES.decrypt(cipherText, password);
+    const str = bytes.toString(CryptoJS.enc.Utf8);
+    return str || null;
+  } catch(e) {
+    return null;
+  }
+}'
+
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-30T10:48:45+09:00.
+
+The user's current state is as follows:
+Active Document: d:\Cloud\git\ggomcode\ggomrecommend\src\style.css (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- d:\Cloud\git\ggomcode\ggomrecommend\src\stat\components\tabs\PrintReportTab.vue (LANGUAGE_UNSPECIFIED)
+- d:\Cloud\git\ggomcode\ggomrecommend\src\stat\components\SatVsGpaStrategyWidget.vue (LANGUAGE_UNSPECIFIED)
+- d:\Cloud\git\ggomcode\ggomrecommend\src\stat\components\tabs\SchoolRecommendationTab.vue (LANGUAGE_UNSPECIFIED)
+- d:\Cloud\git\ggomcode\ggomrecommend\vite.config.js (LANGUAGE_UNSPECIFIED)
+- d:\Cloud\git\ggomcode\ggomrecommend\src\utils\cryptoUtils.js (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>

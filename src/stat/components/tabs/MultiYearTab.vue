@@ -144,8 +144,8 @@
       </div>
     </div>
 
-    <!-- 2-1. 특화 전형(학교장추천 & 농어촌 & 수능최저) 3대 핵심 지표 카드 -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <!-- 2-1. 특화 전형(학교장추천 & 농어촌 & 수능최저 & 논술전형) 4대 핵심 지표 카드 -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <!-- Special KPI 1: 학교장추천 전형 지원 -->
       <div class="bg-gradient-to-br from-violet-50/70 via-white to-purple-50/30 rounded-2xl p-5 border border-violet-100 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between text-violet-800 mb-2">
@@ -225,6 +225,37 @@
                 <span>{{ csatMinGrowth >= 0 ? '▲ +' : '▼ ' }}</span>{{ csatMinGrowth }}%p ({{ csatMinDiff >= 0 ? '+' : '' }}{{ csatMinDiff }}건)
               </span>
               <span>전년({{ previousYearData.year }}년 {{ previousYearData.csatMinPassRate }}%) 대비</span>
+            </template>
+            <template v-else>
+              <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Special KPI 4: 논술위주 전형 지원 및 합격률 현황 -->
+      <div class="bg-gradient-to-br from-pink-50/70 via-white to-rose-50/30 rounded-2xl p-5 border border-pink-100 shadow-xs flex flex-col justify-between">
+        <div class="flex items-center justify-between text-pink-800 mb-2">
+          <div class="flex items-center gap-2">
+            <span class="p-1.5 rounded-lg bg-pink-100 text-pink-700 text-sm">✍️</span>
+            <span class="text-xs font-black">논술전형 지원 & 합격률 현황</span>
+          </div>
+          <span class="text-[11px] font-bold text-pink-700 bg-pink-100/70 px-2.5 py-0.5 rounded-full border border-pink-200/50">
+            수시 지원 중 {{ (latestYearData?.totalApplications && latestYearData?.essayApps) ? ((latestYearData.essayApps / latestYearData.totalApplications) * 100).toFixed(1) : '-' }}%
+          </span>
+        </div>
+        <div>
+          <div class="text-2xl sm:text-3xl font-black text-pink-900 tracking-tight">
+            {{ latestYearData?.essayApps != null ? latestYearData.essayApps.toLocaleString() : '-' }}<span v-if="latestYearData?.essayApps != null" class="text-xs font-semibold text-pink-400 ml-1">건</span>
+            <span v-if="latestYearData?.essayPassRate != null" class="text-xs font-bold text-rose-600 ml-1.5">(합격률 {{ latestYearData.essayPassRate }}%)</span>
+            <span v-else-if="previousYearData?.essayPassRate != null" class="text-xs font-semibold text-slate-500 ml-1.5">(전년 합격률 {{ previousYearData.essayPassRate }}%)</span>
+          </div>
+          <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+            <template v-if="hasMultiYearComparison && previousYearData?.essayApps != null">
+              <span :class="essayGrowth >= 0 ? 'text-pink-700 font-bold flex items-center' : 'text-slate-600 font-bold flex items-center'">
+                <span>{{ essayGrowth >= 0 ? '▲ +' : '▼ ' }}</span>{{ essayGrowth }}% ({{ essayDiff >= 0 ? '+' : '' }}{{ essayDiff }}건)
+              </span>
+              <span>전년({{ previousYearData.year }}년 {{ previousYearData.essayApps }}건) 대비</span>
             </template>
             <template v-else>
               <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
@@ -520,6 +551,8 @@
               <th class="py-3 px-3 text-center text-violet-800 bg-violet-50/50">학교장추천(비율)</th>
               <th class="py-3 px-3 text-center text-emerald-800 bg-emerald-50/50">농어촌전형(비율)</th>
               <th class="py-3 px-3 text-center text-blue-800 bg-blue-50/50">수능최저 충족(비율)</th>
+              <th class="py-3 px-3 text-center text-pink-800 bg-pink-50/50">논술전형 지원(비율)</th>
+              <th class="py-3 px-3 text-center text-rose-800 bg-rose-50/50">논술 합격률</th>
               <th class="py-3 px-4 text-center">최종 합격률</th>
             </tr>
           </thead>
@@ -596,6 +629,24 @@
                   <span>{{ byYear[y].csatMinPassRate }}%</span>
                   <span v-if="byYear[y]?.csatMinPassApps != null" class="text-[10px] text-blue-500 font-normal ml-0.5">
                     ({{ byYear[y].csatMinPassApps }}/{{ byYear[y].csatMinApps }}건)
+                  </span>
+                </template>
+                <template v-else class="text-slate-300 font-bold">-</template>
+              </td>
+              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-pink-700">
+                <template v-if="byYear[y]?.essayApps != null">
+                  <span>{{ byYear[y].essayApps }}건</span>
+                  <span v-if="byYear[y]?.totalApplications" class="text-[10px] text-pink-500 font-normal ml-0.5">
+                    ({{ ((byYear[y].essayApps / byYear[y].totalApplications) * 100).toFixed(1) }}%)
+                  </span>
+                </template>
+                <template v-else class="text-slate-300 font-bold">-</template>
+              </td>
+              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-rose-700">
+                <template v-if="byYear[y]?.essayPassRate != null">
+                  <span>{{ byYear[y].essayPassRate }}%</span>
+                  <span v-if="byYear[y]?.essayPassApps != null" class="text-[10px] text-rose-500 font-normal ml-0.5">
+                    ({{ byYear[y].essayPassApps }}/{{ byYear[y].essayApps }}건)
                   </span>
                 </template>
                 <template v-else class="text-slate-300 font-bold">-</template>
@@ -714,6 +765,19 @@ const csatMinGrowth = computed(() => {
 const csatMinDiff = computed(() => {
   if (latestYearData.value?.csatMinPassApps == null || previousYearData.value?.csatMinPassApps == null) return 0
   return latestYearData.value.csatMinPassApps - previousYearData.value.csatMinPassApps
+})
+
+// 논술전형 지원 건수 증감률 및 편차
+const essayGrowth = computed(() => {
+  if (!latestYearData.value?.essayApps || !previousYearData.value?.essayApps) return 0
+  const cur = latestYearData.value.essayApps
+  const prev = previousYearData.value.essayApps
+  return Number((((cur - prev) / prev) * 100).toFixed(1))
+})
+
+const essayDiff = computed(() => {
+  if (latestYearData.value?.essayApps == null || previousYearData.value?.essayApps == null) return 0
+  return latestYearData.value.essayApps - previousYearData.value.essayApps
 })
 
 const total5YearApps = computed(() => {
@@ -1073,6 +1137,7 @@ function exportMultiYearExcel() {
   const summaryRows = years.map(y => {
     const rec = byYear[y]?.recommendationApps
     const rural = byYear[y]?.ruralApps
+    const essay = byYear[y]?.essayApps
     const tot = byYear[y]?.totalApplications
     return {
       '학년도': `${y}학년도`,
@@ -1094,6 +1159,10 @@ function exportMultiYearExcel() {
       '수능최저 반영 건수(건)': byYear[y]?.csatMinApps != null ? byYear[y].csatMinApps : '-',
       '수능최저 충족 건수(건)': byYear[y]?.csatMinPassApps != null ? byYear[y].csatMinPassApps : '-',
       '수능최저 충족률(%)': byYear[y]?.csatMinPassRate != null ? byYear[y].csatMinPassRate : '-',
+      '논술전형 지원 건수(건)': essay != null ? essay : '-',
+      '논술전형 비중(%)': (essay != null && tot) ? Number(((essay / tot) * 100).toFixed(1)) : '-',
+      '논술전형 합격 건수(건)': byYear[y]?.essayPassApps != null ? byYear[y].essayPassApps : '-',
+      '논술전형 합격률(%)': byYear[y]?.essayPassRate != null ? byYear[y].essayPassRate : '-',
       '최종 합격률(%)': byYear[y]?.finalPassRate != null ? byYear[y].finalPassRate : '-'
     }
   })
