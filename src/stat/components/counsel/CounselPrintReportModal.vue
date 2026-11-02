@@ -124,7 +124,7 @@
                 <td class="p-2 text-slate-600 text-[10px]">
                   {{ card.admissionDetailType || card.admissionType }}
                 </td>
-                <td class="p-2 text-slate-500 text-[10px] max-w-[140px] truncate" :title="card.minScoreReq">
+                <td class="p-2 text-slate-500 text-[10px] max-w-35 truncate" :title="card.minScoreReq">
                   {{ card.minScoreReq && card.minScoreReq !== '-' ? card.minScoreReq.replace(/^\*\s*수능최저기준\s*:\s*/, '') : '최저 없음' }}
                 </td>
                 <td class="p-2 text-center font-bold">

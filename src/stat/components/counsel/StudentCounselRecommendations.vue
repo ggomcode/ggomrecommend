@@ -33,12 +33,12 @@
               🚀
             </span>
             <div>
-              <h5 class="text-sm font-bold text-slate-900 m-0">상향 (Reach / 도전)</h5>
-              <div class="text-[11px] text-purple-600 font-medium">높은 수능최저 충족으로 실질경쟁률이 급락하여 역전이 가능한 전형</div>
+              <h5 class="text-sm font-bold text-slate-900 m-0">상향 (Reach / 0.3~0.5등급 도전선)</h5>
+              <div class="text-[11px] text-purple-600 font-medium">학생 내신보다 0.3~0.5등급 높은 현실적 스나이핑 라인 (최저 충족 or 서류 역전)</div>
             </div>
           </div>
           <span class="text-xs font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-200">
-            합격 확률 30~50%
+            합격 확률 35~50%
           </span>
         </div>
 
@@ -51,7 +51,9 @@
             <div>
               <div class="flex items-center justify-between mb-1">
                 <span class="text-[11px] font-bold text-purple-800">{{ rec.admissionType }}</span>
-                <span class="text-[10px] text-slate-400">기준 내신 ~{{ rec.targetGpa }}</span>
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 border border-purple-200">
+                  전년 70% 컷 {{ Number(rec.targetGpa).toFixed(2) }}등급
+                </span>
               </div>
               <h6 class="text-sm font-bold text-slate-900 m-0">{{ rec.univName }}</h6>
               <div class="text-xs font-semibold text-indigo-700 mt-0.5">{{ rec.dept }}</div>
@@ -99,8 +101,8 @@
               🎯
             </span>
             <div>
-              <h5 class="text-sm font-bold text-slate-900 m-0">적정 (Target / 승부처)</h5>
-              <div class="text-[11px] text-blue-600 font-medium">학생 내신이 전년도 70% 컷에 부합하고 최저 충족이 안정적인 핵심 카드</div>
+              <h5 class="text-sm font-bold text-slate-900 m-0">적정 (Target / ±0.2등급 승부처)</h5>
+              <div class="text-[11px] text-blue-600 font-medium">학생 내신과 전년도 70% 컷이 일치하며 실질경쟁률을 뚫어낼 수 있는 핵심 주력 라인</div>
             </div>
           </div>
           <span class="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
@@ -117,7 +119,9 @@
             <div>
               <div class="flex items-center justify-between mb-1">
                 <span class="text-[11px] font-bold text-blue-800">{{ rec.admissionType }}</span>
-                <span class="text-[10px] text-slate-400">기준 내신 ~{{ rec.targetGpa }}</span>
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200">
+                  전년 70% 컷 {{ Number(rec.targetGpa).toFixed(2) }}등급
+                </span>
               </div>
               <h6 class="text-sm font-bold text-slate-900 m-0">{{ rec.univName }}</h6>
               <div class="text-xs font-semibold text-indigo-700 mt-0.5">{{ rec.dept }}</div>
@@ -163,8 +167,8 @@
               🛡️
             </span>
             <div>
-              <h5 class="text-sm font-bold text-slate-900 m-0">안정 (Safety / 합격확보)</h5>
-              <div class="text-[11px] text-emerald-600 font-medium">내신이 80~90% 컷 이내이며 충원율이 높아 무조건 최초합 또는 빠른 추합 보장</div>
+              <h5 class="text-sm font-bold text-slate-900 m-0">안정 (Safety / +0.3~0.5등급 합격권)</h5>
+              <div class="text-[11px] text-emerald-600 font-medium">학생 내신 대비 0.3~0.5등급 여유가 있고 충원율이 높아 무조건 최초합 또는 빠른 추합 보장</div>
             </div>
           </div>
           <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
@@ -181,7 +185,9 @@
             <div>
               <div class="flex items-center justify-between mb-1">
                 <span class="text-[11px] font-bold text-emerald-800">{{ rec.admissionType }}</span>
-                <span class="text-[10px] text-slate-400">기준 내신 ~{{ rec.targetGpa }}</span>
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-200">
+                  전년 70% 컷 {{ Number(rec.targetGpa).toFixed(2) }}등급
+                </span>
               </div>
               <h6 class="text-sm font-bold text-slate-900 m-0">{{ rec.univName }}</h6>
               <div class="text-xs font-semibold text-indigo-700 mt-0.5">{{ rec.dept }}</div>
@@ -227,8 +233,8 @@
               ⚓
             </span>
             <div>
-              <h5 class="text-sm font-bold text-slate-900 m-0">하향 (Backup / 최후 보루)</h5>
-              <div class="text-[11px] text-slate-500 font-medium">재수를 고려하지 않을 때 수능 당일 변수와 무관하게 100% 합격하는 확실한 보험</div>
+              <h5 class="text-sm font-bold text-slate-900 m-0">하향 (Backup / +0.6~1.0등급 최후 안전망)</h5>
+              <div class="text-[11px] text-slate-500 font-medium">학생 내신 대비 0.6~1.0등급 안전 여유가 있어 재수를 방지하고 100% 합격하는 확실한 보험</div>
             </div>
           </div>
           <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
@@ -245,7 +251,9 @@
             <div>
               <div class="flex items-center justify-between mb-1">
                 <span class="text-[11px] font-bold text-slate-800">{{ rec.admissionType }}</span>
-                <span class="text-[10px] text-slate-400">기준 내신 ~{{ rec.targetGpa }}</span>
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 border border-slate-300">
+                  전년 70% 컷 {{ Number(rec.targetGpa).toFixed(2) }}등급
+                </span>
               </div>
               <h6 class="text-sm font-bold text-slate-900 m-0">{{ rec.univName }}</h6>
               <div class="text-xs font-semibold text-indigo-700 mt-0.5">{{ rec.dept }}</div>

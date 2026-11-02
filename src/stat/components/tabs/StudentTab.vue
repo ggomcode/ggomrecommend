@@ -36,7 +36,7 @@
     <!-- Main Content: Student Master-Detail Layout -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       <!-- Left: Student List Sidebar -->
-      <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col max-h-[820px]">
+      <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col max-h-205">
         <div class="p-3 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
           <span>학생 명단</span>
           <span>반-번호 순 정렬</span>
@@ -100,8 +100,8 @@
               <div :class="[
                 'w-14 h-14 rounded-2xl text-white flex items-center justify-center font-bold text-lg shadow-md',
                 currentStudent.isGraduate 
-                  ? 'bg-gradient-to-tr from-amber-600 to-amber-400 shadow-amber-500/20' 
-                  : 'bg-gradient-to-tr from-indigo-600 to-sky-400 shadow-indigo-500/20'
+                  ? 'bg-linear-to-tr from-amber-600 to-amber-400 shadow-amber-500/20' 
+                  : 'bg-linear-to-tr from-indigo-600 to-sky-400 shadow-indigo-500/20'
               ]">
                 {{ currentStudent.isGraduate ? '졸' : (maskName(currentStudent.name).replace(/\*/g, '')[0] || '학') }}
               </div>
@@ -216,49 +216,112 @@
           </div>
 
           <!-- N수생 유입 반영 수능 실전 예측 시뮬레이터 -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-xs">
-            <div class="flex items-center space-x-2 text-slate-600">
-              <span class="font-bold text-slate-800">📊 N수생 유입 수능 예측 시뮬레이터:</span>
-              <span class="text-[11px] text-slate-400">수능 당일 성적 변동에 따른 최저 충족을 실시간 테스트합니다</span>
+          <div class="space-y-2 pt-1 text-xs">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div class="flex items-center space-x-2 text-slate-600">
+                <span class="font-bold text-slate-800">📊 N수생 유입 수능 실전 시뮬레이터:</span>
+                <span class="text-[11px] text-slate-400">수능 당일 N수생 유입에 따른 등급 변동을 실시간 테스트합니다</span>
+              </div>
+
+              <!-- 3단계 시뮬레이터 버튼 -->
+              <div class="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200 shrink-0">
+                <button
+                  type="button"
+                  @click="simulationOffset = -1"
+                  :class="[
+                    'px-3 py-1.5 rounded-lg font-bold text-xs transition-all cursor-pointer border-none flex items-center space-x-1',
+                    simulationOffset === -1 
+                      ? 'bg-rose-500 text-white shadow-xs' 
+                      : 'bg-transparent text-slate-600 hover:text-slate-900'
+                  ]"
+                  title="N수생 대거 유입으로 수능 당일 실전 등급이 1등급 하락하는 보수적 상황을 가정합니다"
+                >
+                  <span>📉</span>
+                  <span>보수적 (-1등급)</span>
+                </button>
+                <button
+                  type="button"
+                  @click="simulationOffset = 0"
+                  :class="[
+                    'px-3 py-1.5 rounded-lg font-bold text-xs transition-all cursor-pointer border-none flex items-center space-x-1',
+                    simulationOffset === 0 
+                      ? 'bg-indigo-600 text-white shadow-xs' 
+                      : 'bg-transparent text-slate-600 hover:text-slate-900'
+                  ]"
+                  title="평소 모의고사 성적 그대로 실력을 발휘하는 기준선입니다"
+                >
+                  <span>⚖️</span>
+                  <span>현상 유지 (기준)</span>
+                </button>
+                <button
+                  type="button"
+                  @click="simulationOffset = 1"
+                  :class="[
+                    'px-3 py-1.5 rounded-lg font-bold text-xs transition-all cursor-pointer border-none flex items-center space-x-1',
+                    simulationOffset === 1 
+                      ? 'bg-emerald-600 text-white shadow-xs' 
+                      : 'bg-transparent text-slate-600 hover:text-slate-900'
+                  ]"
+                  title="수능 당일 기량을 120% 발휘하여 1등급 상승하는 낙관적 상황을 가정합니다"
+                >
+                  <span>🚀</span>
+                  <span>낙관적 (+1등급)</span>
+                </button>
+              </div>
             </div>
 
-            <div class="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200 shrink-0">
-              <button
-                type="button"
-                @click="simulationOffset = -1"
-                :class="[
-                  'px-3 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer border-none',
-                  simulationOffset === -1 
-                    ? 'bg-rose-500 text-white shadow-xs' 
-                    : 'bg-transparent text-slate-600 hover:text-slate-900'
-                ]"
-              >
-                📉 보수적 (실전 -1등급)
-              </button>
-              <button
-                type="button"
-                @click="simulationOffset = 0"
-                :class="[
-                  'px-3 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer border-none',
-                  simulationOffset === 0 
-                    ? 'bg-indigo-600 text-white shadow-xs' 
-                    : 'bg-transparent text-slate-600 hover:text-slate-900'
-                ]"
-              >
-                ⚖️ 현상 유지 (모평 기준)
-              </button>
-              <button
-                type="button"
-                @click="simulationOffset = 1"
-                :class="[
-                  'px-3 py-1 rounded-lg font-bold text-xs transition-all cursor-pointer border-none',
-                  simulationOffset === 1 
-                    ? 'bg-emerald-600 text-white shadow-xs' 
-                    : 'bg-transparent text-slate-600 hover:text-slate-900'
-                ]"
-              >
-                🚀 낙관적 (+1등급 상승)
-              </button>
+            <!-- [실시간 시뮬레이션 결과 뷰어] 현재 적용 등급 및 최저 충족 영향 즉각 표시 -->
+            <div 
+              v-if="effectiveMockExam"
+              :class="[
+                'p-2.5 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-2 transition-all duration-200',
+                simulationOffset === -1 
+                  ? 'bg-rose-50/80 border-rose-200 text-rose-900' 
+                  : simulationOffset === 1 
+                    ? 'bg-emerald-50/80 border-emerald-200 text-emerald-900' 
+                    : 'bg-slate-50 border-slate-200 text-slate-700'
+              ]"
+            >
+              <!-- 좌측: 현재 적용 중인 가상 수능 등급 칩스 -->
+              <div class="flex items-center flex-wrap gap-1.5 text-xs">
+                <span class="font-bold text-slate-800 shrink-0">
+                  {{ simulationOffset === -1 ? '📉 실전 -1등급 반영 수능 등급:' : simulationOffset === 1 ? '🚀 실전 +1등급 반영 수능 등급:' : '⚖️ 모평 기준 수능 등급:' }}
+                </span>
+                <span class="px-2 py-0.5 rounded-md bg-white border border-slate-200 font-bold shadow-2xs text-[11px]">
+                  국 <strong :class="simulationOffset === -1 ? 'text-rose-600' : simulationOffset === 1 ? 'text-emerald-600' : 'text-indigo-600'">{{ effectiveMockExam.korGrade }}</strong>
+                </span>
+                <span class="px-2 py-0.5 rounded-md bg-white border border-slate-200 font-bold shadow-2xs text-[11px]">
+                  수 <strong :class="simulationOffset === -1 ? 'text-rose-600' : simulationOffset === 1 ? 'text-emerald-600' : 'text-indigo-600'">{{ effectiveMockExam.mathGrade }}</strong>
+                </span>
+                <span class="px-2 py-0.5 rounded-md bg-white border border-slate-200 font-bold shadow-2xs text-[11px]">
+                  영 <strong :class="simulationOffset === -1 ? 'text-rose-600' : simulationOffset === 1 ? 'text-emerald-600' : 'text-indigo-600'">{{ effectiveMockExam.engGrade }}</strong>
+                </span>
+                <span class="px-2 py-0.5 rounded-md bg-white border border-slate-200 font-bold shadow-2xs text-[11px]">
+                  탐 <strong :class="simulationOffset === -1 ? 'text-rose-600' : simulationOffset === 1 ? 'text-emerald-600' : 'text-indigo-600'">{{ effectiveMockExam.tam1Grade }}</strong>
+                </span>
+                <span class="text-[10px] text-slate-400 font-normal ml-1">
+                  ({{ effectiveMockExam.isEstimated ? '💡 내신 기반 추정 모평 성적' : `📊 ${effectiveMockExam.examName || '최신 모평'} 성적 기준` }})
+                </span>
+              </div>
+
+              <!-- 우측: 수능최저 충족 장수 및 안전도 점수 실시간 반응 -->
+              <div class="flex items-center space-x-2 shrink-0 text-xs">
+                <div class="flex items-center space-x-1.5 font-bold">
+                  <span>수능최저 충족:</span>
+                  <span :class="[
+                    'px-2 py-0.5 rounded-full text-xs font-black',
+                    csatSimulationSummary.satisfiedCount >= 4 ? 'bg-emerald-100 text-emerald-800' :
+                    csatSimulationSummary.satisfiedCount >= 2 ? 'bg-blue-100 text-blue-800' : 'bg-rose-100 text-rose-800'
+                  ]">
+                    6장 중 {{ csatSimulationSummary.satisfiedCount }}장 ({{ csatSimulationSummary.ratePct }}%)
+                  </span>
+                </div>
+
+                <div class="flex items-center space-x-1 pl-2 border-l border-slate-300 font-bold">
+                  <span class="text-slate-500">안전도:</span>
+                  <span class="text-indigo-700 font-black text-sm">{{ portfolioAnalysis.safetyScore }}점</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -324,91 +387,143 @@
           <!-- 포트폴리오 안전도 스코어 & 7대 입체 평가 지표 헤더 -->
           <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-sm space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
+              <!-- 점수 및 등급 배지 (클릭 시 아코디언 토글 & 호버 효과) -->
+              <div 
+                @click="toggleScoreAccordion('ALL')"
+                class="group cursor-pointer p-2 -m-2 rounded-xl transition-all duration-200 hover:bg-white/5"
+                title="클릭 시 7대 지표별 세부 배점 및 산출 근거 아코디언이 펼쳐집니다"
+              >
                 <div class="text-[11px] font-bold text-indigo-300 uppercase tracking-wide flex items-center space-x-1.5">
                   <span>📊</span>
                   <span>7대 입체 평가 지표 기반 6장 포트폴리오 안전도</span>
+                  <span class="text-[10px] text-indigo-400/80 group-hover:text-indigo-200 transition-colors ml-1 font-normal">
+                    (💡 클릭하여 산출 근거 보기)
+                  </span>
                 </div>
                 <div class="flex items-center space-x-2 mt-1">
-                  <h4 class="text-xl sm:text-2xl font-black text-white m-0 tracking-tight">
+                  <h4 class="text-xl sm:text-2xl font-black text-white m-0 tracking-tight group-hover:scale-102 transition-transform origin-left">
                     <strong class="text-indigo-400 font-black">{{ portfolioAnalysis.safetyScore }}점</strong>
                     <span class="text-xs text-slate-400 font-normal"> / 100점 만점</span>
                   </h4>
-                  <span :class="['text-xs font-bold px-2.5 py-0.5 rounded-full border', portfolioAnalysis.balanceColor]">
+                  <span :class="['text-xs font-bold px-2.5 py-0.5 rounded-full border transition-shadow group-hover:shadow-xs', portfolioAnalysis.balanceColor]">
                     {{ portfolioAnalysis.gradeRank }}등급 | {{ portfolioAnalysis.balanceType }}
                   </span>
                 </div>
               </div>
 
-              <!-- 조합 현황 배지 -->
-              <div class="flex items-center space-x-1.5 text-xs shrink-0">
-                <span class="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-bold">
-                  안정 {{ portfolioAnalysis.countSafe }}
-                </span>
-                <span class="px-2 py-1 rounded-lg bg-blue-500/20 text-blue-300 border border-blue-400/30 font-bold">
-                  적정 {{ portfolioAnalysis.countTarget }}
-                </span>
-                <span class="px-2 py-1 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-400/30 font-bold">
-                  상향 {{ portfolioAnalysis.countReach }}
-                </span>
-                <span v-if="portfolioAnalysis.countDanger > 0" class="px-2 py-1 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-400/30 font-bold">
-                  과상향 {{ portfolioAnalysis.countDanger }}
-                </span>
+              <!-- 우측 액션: 조합 현황 배지 & 아코디언 열기/닫기 토글 버튼 -->
+              <div class="flex items-center space-x-2 shrink-0">
+                <div class="hidden sm:flex items-center space-x-1.5 text-xs">
+                  <span class="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-bold">
+                    안정 {{ portfolioAnalysis.countSafe }}
+                  </span>
+                  <span class="px-2 py-1 rounded-lg bg-blue-500/20 text-blue-300 border border-blue-400/30 font-bold">
+                    적정 {{ portfolioAnalysis.countTarget }}
+                  </span>
+                  <span class="px-2 py-1 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-400/30 font-bold">
+                    상향 {{ portfolioAnalysis.countReach }}
+                  </span>
+                  <span v-if="portfolioAnalysis.countDanger > 0" class="px-2 py-1 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-400/30 font-bold">
+                    과상향 {{ portfolioAnalysis.countDanger }}
+                  </span>
+                </div>
+
+                <!-- 아코디언 토글 버튼 -->
+                <button
+                  type="button"
+                  @click="toggleScoreAccordion('ALL')"
+                  :class="[
+                    'px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center space-x-1.5 border',
+                    isScoreAccordionOpen 
+                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm' 
+                      : 'bg-white/10 hover:bg-white/15 text-slate-200 border-white/15 hover:border-indigo-400/50'
+                  ]"
+                >
+                  <span>{{ isScoreAccordionOpen ? '▲ 산출 근거 접기' : '🔍 산출 근거 상세 보기 ▼' }}</span>
+                </button>
               </div>
             </div>
 
-            <!-- 7대 세부 입체 지표 브레이크다운 칩스 -->
+            <!-- 7대 세부 입체 지표 브레이크다운 칩스 (각 칩 클릭 시 해당 지표 아코디언 상세 뷰 즉시 오픈) -->
             <div v-if="portfolioAnalysis.scoreBreakdown" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 pt-2 border-t border-slate-800">
-              <div class="bg-white/5 border border-white/10 rounded-xl p-2 text-center">
-                <div class="text-[10px] text-slate-400">내신 실질 마진</div>
+              <div 
+                @click="openMetricDetail('gpaMargin')"
+                class="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-indigo-400/70 rounded-xl p-2 text-center cursor-pointer transition-all group"
+                title="클릭하여 내신 실질 마진 지표의 세부 배점과 6장 카드별 내신 격차를 확인합니다"
+              >
+                <div class="text-[10px] text-slate-400 group-hover:text-slate-200">내신 실질 마진</div>
                 <div class="text-xs font-bold text-indigo-300 mt-0.5">
                   {{ portfolioAnalysis.scoreBreakdown.gpaMargin.score }}<span class="text-[9px] text-slate-500 font-normal">/25</span>
                 </div>
                 <div class="text-[9px] text-slate-400 mt-0.5 truncate">{{ portfolioAnalysis.scoreBreakdown.gpaMargin.statusText }}</div>
               </div>
 
-              <div class="bg-white/5 border border-white/10 rounded-xl p-2 text-center">
-                <div class="text-[10px] text-slate-400">수능최저·사탐런</div>
+              <div 
+                @click="openMetricDetail('csatSatam')"
+                class="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-sky-400/70 rounded-xl p-2 text-center cursor-pointer transition-all group"
+                title="클릭하여 수능최저 충족 버퍼 및 사탐런 자격 검증 상세를 확인합니다"
+              >
+                <div class="text-[10px] text-slate-400 group-hover:text-slate-200">수능최저·사탐런</div>
                 <div class="text-xs font-bold text-sky-300 mt-0.5">
                   {{ portfolioAnalysis.scoreBreakdown.csatSatam.score }}<span class="text-[9px] text-slate-500 font-normal">/20</span>
                 </div>
                 <div class="text-[9px] text-slate-400 mt-0.5 truncate">{{ portfolioAnalysis.scoreBreakdown.csatSatam.statusText }}</div>
               </div>
 
-              <div class="bg-white/5 border border-white/10 rounded-xl p-2 text-center">
-                <div class="text-[10px] text-slate-400">학교장추천</div>
+              <div 
+                @click="openMetricDetail('schoolRec')"
+                class="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-400/70 rounded-xl p-2 text-center cursor-pointer transition-all group"
+                title="클릭하여 학교장추천 쿼터 배분 및 허수 배제 효과 상세를 확인합니다"
+              >
+                <div class="text-[10px] text-slate-400 group-hover:text-slate-200">학교장추천</div>
                 <div class="text-xs font-bold text-purple-300 mt-0.5">
                   {{ portfolioAnalysis.scoreBreakdown.schoolRec.score }}<span class="text-[9px] text-slate-500 font-normal">/15</span>
                 </div>
                 <div class="text-[9px] text-slate-400 mt-0.5 truncate">{{ portfolioAnalysis.scoreBreakdown.schoolRec.statusText }}</div>
               </div>
 
-              <div class="bg-white/5 border border-white/10 rounded-xl p-2 text-center">
-                <div class="text-[10px] text-slate-400">농어촌 쿼터</div>
+              <div 
+                @click="openMetricDetail('ruralQuota')"
+                class="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-400/70 rounded-xl p-2 text-center cursor-pointer transition-all group"
+                title="클릭하여 농어촌 쿼터 유불리 및 역전 방지 상세를 확인합니다"
+              >
+                <div class="text-[10px] text-slate-400 group-hover:text-slate-200">농어촌 쿼터</div>
                 <div class="text-xs font-bold text-emerald-300 mt-0.5">
                   {{ portfolioAnalysis.scoreBreakdown.ruralQuota.score }}<span class="text-[9px] text-slate-500 font-normal">/10</span>
                 </div>
                 <div class="text-[9px] text-slate-400 mt-0.5 truncate">{{ portfolioAnalysis.scoreBreakdown.ruralQuota.statusText }}</div>
               </div>
 
-              <div class="bg-white/5 border border-white/10 rounded-xl p-2 text-center">
-                <div class="text-[10px] text-slate-400">3개년 경쟁률</div>
+              <div 
+                @click="openMetricDetail('compTrend')"
+                class="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-amber-400/70 rounded-xl p-2 text-center cursor-pointer transition-all group"
+                title="클릭하여 3개년 경쟁률 추이 및 과열/소외 학과 상세를 확인합니다"
+              >
+                <div class="text-[10px] text-slate-400 group-hover:text-slate-200">3개년 경쟁률</div>
                 <div class="text-xs font-bold text-amber-300 mt-0.5">
                   {{ portfolioAnalysis.scoreBreakdown.compTrend.score }}<span class="text-[9px] text-slate-500 font-normal">/10</span>
                 </div>
                 <div class="text-[9px] text-slate-400 mt-0.5 truncate">{{ portfolioAnalysis.scoreBreakdown.compTrend.statusText }}</div>
               </div>
 
-              <div class="bg-white/5 border border-white/10 rounded-xl p-2 text-center">
-                <div class="text-[10px] text-slate-400">전형 위험 분산</div>
+              <div 
+                @click="openMetricDetail('typeDiversify')"
+                class="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-400/70 rounded-xl p-2 text-center cursor-pointer transition-all group"
+                title="클릭하여 전형 유형 위험 분산도(교과 vs 종합 vs 논술) 상세를 확인합니다"
+              >
+                <div class="text-[10px] text-slate-400 group-hover:text-slate-200">전형 위험 분산</div>
                 <div class="text-xs font-bold text-blue-300 mt-0.5">
                   {{ portfolioAnalysis.scoreBreakdown.typeDiversify.score }}<span class="text-[9px] text-slate-500 font-normal">/10</span>
                 </div>
                 <div class="text-[9px] text-slate-400 mt-0.5 truncate">{{ portfolioAnalysis.scoreBreakdown.typeDiversify.statusText }}</div>
               </div>
 
-              <div class="bg-white/5 border border-white/10 rounded-xl p-2 text-center">
-                <div class="text-[10px] text-slate-400">정시선·일정</div>
+              <div 
+                @click="openMetricDetail('jungsiConflict')"
+                class="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-rose-400/70 rounded-xl p-2 text-center cursor-pointer transition-all group"
+                title="클릭하여 수시 납치 및 고사일정 충돌 방지 상세를 확인합니다"
+              >
+                <div class="text-[10px] text-slate-400 group-hover:text-slate-200">정시선·일정</div>
                 <div class="text-xs font-bold text-rose-300 mt-0.5">
                   {{ portfolioAnalysis.scoreBreakdown.jungsiConflict.score }}<span class="text-[9px] text-slate-500 font-normal">/10</span>
                 </div>
@@ -435,6 +550,28 @@
               </ul>
             </div>
           </div>
+
+          <!-- [신규] 7대 입체 평가 지표 정밀 산출 근거 아코디언 패널 (호버/클릭 시 애니메이션 확장) -->
+          <transition
+            enter-active-class="transition-all duration-300 ease-out"
+            enter-from-class="opacity-0 -translate-y-2 scale-99"
+            enter-to-class="opacity-100 translate-y-0 scale-100"
+            leave-active-class="transition-all duration-200 ease-in"
+            leave-from-class="opacity-100 translate-y-0 scale-100"
+            leave-to-class="opacity-0 -translate-y-2 scale-99"
+          >
+            <StudentSafetyScoreAccordion
+              v-if="isScoreAccordionOpen && portfolioAnalysis.scoreBreakdown"
+              :scoreBreakdown="portfolioAnalysis.scoreBreakdown"
+              :safetyScore="portfolioAnalysis.safetyScore"
+              :gradeRank="portfolioAnalysis.gradeRank"
+              :balanceType="portfolioAnalysis.balanceType"
+              :balanceColor="portfolioAnalysis.balanceColor"
+              :prescription="portfolioAnalysis.prescription"
+              :initialMetricKey="selectedScoreMetric"
+              @close="isScoreAccordionOpen = false"
+            />
+          </transition>
 
           <!-- 6 Application Cards Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -671,6 +808,7 @@ import {
 import CounselPrintReportModal from '../counsel/CounselPrintReportModal.vue'
 import StudentCounselRecommendations from '../counsel/StudentCounselRecommendations.vue'
 import StudentDoppelgangerSeniors from '../counsel/StudentDoppelgangerSeniors.vue'
+import StudentSafetyScoreAccordion from '../counsel/StudentSafetyScoreAccordion.vue'
 
 const { 
   applications, 
@@ -701,6 +839,24 @@ const isPrintModalOpen = ref(false)
 const cardAgreements = ref({}) // { [cardId]: '담임추천' | '학생희망' | '학부모요청' }
 const swappedCards = ref({}) // { [cardId]: swappedAppObj }
 const counselMemo = ref('')
+
+// 안전도 점수 아코디언 상세 보기 상태
+const isScoreAccordionOpen = ref(false)
+const selectedScoreMetric = ref('ALL')
+
+function toggleScoreAccordion(metricKey = 'ALL') {
+  if (isScoreAccordionOpen.value && selectedScoreMetric.value === metricKey) {
+    isScoreAccordionOpen.value = false
+  } else {
+    selectedScoreMetric.value = metricKey
+    isScoreAccordionOpen.value = true
+  }
+}
+
+function openMetricDetail(metricKey) {
+  selectedScoreMetric.value = metricKey
+  isScoreAccordionOpen.value = true
+}
 
 // 학생 변경 시 메모 불러오기 및 스왑 초기화
 watch(activeStudentKey, (newKey) => {
@@ -856,15 +1012,31 @@ const currentStudentMockExams = computed(() => {
 })
 
 // 최신 모의고사 1회차에 수능 시뮬레이터 옵셋(-1, 0, +1)을 적용한 유효 모의고사 성적
+// 모의고사 성적이 미등록된 학생의 경우 학생 내신 기반 가상 모평을 자동 생성하여 시뮬레이션 보장
 const effectiveMockExam = computed(() => {
   const records = currentStudentMockExams.value
-  if (!records || records.length === 0) return null
-  const sorted = [...records].sort((a, b) => {
-    const mA = parseInt(String(a.examName || a.title || '').replace(/[^0-9]/g, '')) || 0
-    const mB = parseInt(String(b.examName || b.title || '').replace(/[^0-9]/g, '')) || 0
-    return mB - mA
-  })
-  return getAdjustedMockExam(sorted[0], simulationOffset.value)
+  let baseExam = null
+  if (records && records.length > 0) {
+    const sorted = [...records].sort((a, b) => {
+      const mA = parseInt(String(a.examName || a.title || '').replace(/[^0-9]/g, '')) || 0
+      const mB = parseInt(String(b.examName || b.title || '').replace(/[^0-9]/g, '')) || 0
+      return mB - mA
+    })
+    baseExam = sorted[0]
+  }
+  return getAdjustedMockExam(baseExam, simulationOffset.value, currentStudent.value)
+})
+
+// 수능 실전 시뮬레이션 상태 요약 (최저 충족 카드 수, 충족률, 시뮬레이션 영향)
+const csatSimulationSummary = computed(() => {
+  if (!portfolioAnalysis.value || !portfolioAnalysis.value.cards) {
+    return { satisfiedCount: 0, totalCards: 0, ratePct: 0 }
+  }
+  const cards = portfolioAnalysis.value.cards
+  const totalCards = cards.length
+  const satisfiedCount = cards.filter(c => c.diagnosis && c.diagnosis.csatSatisfied).length
+  const ratePct = totalCards > 0 ? Math.round((satisfiedCount / totalCards) * 100) : 0
+  return { satisfiedCount, totalCards, ratePct }
 })
 
 // 정시 기대선 (정시 지원 가능 대학 라인)
