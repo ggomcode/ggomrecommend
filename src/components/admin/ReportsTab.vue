@@ -11,11 +11,11 @@
         <!-- 우측 액션 버튼들 -->
         <div class="flex items-center gap-3 flex-wrap">
           <!-- 차수 선택 드롭다운 -->
-          <div class="h-[38px] flex items-center gap-2.5 bg-white px-4 rounded-xl border border-slate-300 shadow-sm box-border">
+          <div class="h-9.5 flex items-center gap-2.5 bg-white px-4 rounded-xl border border-slate-300 shadow-sm box-border">
             <span class="text-xs font-bold text-slate-500 whitespace-nowrap">선택 차수:</span>
             <select
               v-model="selectedRoundFilter"
-              class="bg-transparent border-none text-xs font-black text-blue-700 focus:outline-none cursor-pointer pr-3 py-0 leading-tight min-w-[76px]"
+              class="bg-transparent border-none text-xs font-black text-blue-700 focus:outline-none cursor-pointer pr-3 py-0 leading-tight min-w-19"
             >
               <option value="all">전체</option>
               <option :value="0">사전 선발</option>
@@ -24,33 +24,33 @@
           </div>
 
           <button
-            class="h-[38px] px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors box-border"
+            class="h-9.5 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors box-border"
             :disabled="loading"
             @click="loadData"
           >
             <span>🔄 데이터 새로고침</span>
           </button>
           <button
-            class="h-[38px] px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors border-none box-border"
+            class="h-9.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors border-none box-border"
             :disabled="downloading"
             @click="downloadExcel"
           >
             <span>📥 엑셀 내보내기</span>
           </button>
           <button
-            class="h-[38px] px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors border-none box-border"
+            class="h-9.5 px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors border-none box-border"
             @click="printReport"
           >
             <span>🖨️ 보고서 인쇄 (PDF)</span>
           </button>
           <button
-            class="h-[38px] px-5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors border-none box-border"
+            class="h-9.5 px-5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors border-none box-border"
             @click="printReportRecommendOnly"
           >
             <span>🖨️ 보고서 인쇄 (PDF, 추천 대학만)</span>
           </button>
           <button
-            class="h-[38px] px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors border-none box-border"
+            class="h-9.5 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition-colors border-none box-border"
             title="학교장추천전형 추천 포기자 결과 보고서 인쇄"
             @click="printAbandonedReport"
           >
@@ -118,7 +118,7 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-2 min-w-[260px] sm:w-72">
+        <div class="flex items-center gap-2 min-w-65 sm:w-72">
           <div class="relative w-full">
             <input
               type="text"
