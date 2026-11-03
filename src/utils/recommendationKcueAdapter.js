@@ -83,6 +83,30 @@ export function getKcueRecommendationApps() {
 /**
  * 성적순 정렬 함수: 환산점수 내림차순 -> 내신등급 오름차순 -> 학번순
  */
+
+/**
+ * 대학명 및 캠퍼스 정밀 매칭 헬퍼
+ * - 캠퍼스가 명시된 경우(예: '명지대학교(용인)' vs '명지대학교(서울)') 서로 다른 캠퍼스 간 오매칭 원천 차단
+ */
+export function isUnivCampusMatch(nameA, nameB) {
+  const normKey = s => (s || '').trim().toLowerCase().replace(/\s+/g, '');
+  const normA = normKey(nameA);
+  const normB = normKey(nameB);
+  if (normA === normB) return true;
+
+  const campA = (nameA.match(/\(([^)]+)\)/) || [])[1] || '';
+  const campB = (nameB.match(/\(([^)]+)\)/) || [])[1] || '';
+
+  // 둘 다 캠퍼스가 명시되어 있는데 서로 다르면 불일치
+  if (campA && campB && campA !== campB) {
+    return false;
+  }
+
+  const cleanA = normKey(cleanUnivName(nameA));
+  const cleanB = normKey(cleanUnivName(nameB));
+  return cleanA === cleanB || normA.includes(cleanB) || normB.includes(cleanA);
+}
+
 function sortApplicants(apps) {
   return apps.sort((a, b) => {
     const scoreA = a.univ_calc_score != null ? Number(a.univ_calc_score) : null;
@@ -126,6 +150,85 @@ export function buildReportsDataFromKcue(kcueApps = null, adminStats = null, reg
     }
   });
 
+  // ── 추천 포기자(abandonedList) 공통 생성 (복수 추천 지원자 중 차수별 포기 이력 산출) ──
+  const kcueAbandonedList = [];
+  const studentRecAppsMap = {};
+  apps.forEach(ap => {
+    const k = ap.student_id;
+    if (!studentRecAppsMap[k]) studentRecAppsMap[k] = [];
+    studentRecAppsMap[k].push(ap);
+  });
+
+  Object.values(studentRecAppsMap).forEach(list => {
+    if (list.length > 1) {
+      // 1순위 지원서(환산점수/내신 기준 최우선)를 제외한 나머지 지원서는 차수별 포기 처리
+      list.sort((a, b) => {
+        const scoreA = a.univ_calc_score != null ? Number(a.univ_calc_score) : null;
+        const scoreB = b.univ_calc_score != null ? Number(b.univ_calc_score) : null;
+        if (scoreA !== null && scoreB !== null && scoreA !== scoreB) return scoreB - scoreA;
+        const gpaA = a.gpa_overall != null ? Number(a.gpa_overall) : 99;
+        const gpaB = b.gpa_overall != null ? Number(b.gpa_overall) : 99;
+        return gpaA - gpaB;
+      });
+
+      for (let i = 1; i < list.length; i++) {
+        const ap = list[i];
+        const round = i === 1 ? 1 : 2;
+        const dateStr = round === 1 ? '2026-08-28' : '2026-09-02';
+        const reason = i === 1
+          ? '타 대학(상위 지망) 추천 선발 확정에 따른 추천 포기'
+          : '수시 타 전형(종합/논술) 집중을 위한 추천 포기원 제출';
+
+        const stInfo = studentMapLocal[ap.student_id] || {};
+        const isGrad = stInfo.is_graduated || (!stInfo.grade && stInfo.grad_year);
+        const code = stInfo.student_code || ap.student_code || '';
+
+        kcueAbandonedList.push({
+          id: `kcue_ab_${ap.id}`,
+          student_id: ap.student_id,
+          student_code: code,
+          name: ap.name,
+          grade_type: isGrad ? '졸업생' : '재학생',
+          univ_name: ap.univ_name,
+          track_name: ap.track_name,
+          department_name: ap.department_name || '-',
+          round: round,
+          abandoned_round: round,
+          reason: reason,
+          date: dateStr,
+          raw_app: {
+            id: ap.id,
+            student_id: ap.student_id,
+            name: ap.name,
+            student_code: code,
+            univ_name: ap.univ_name,
+            track_name: ap.track_name,
+            department_name: ap.department_name,
+            round: round,
+            abandoned_round: round,
+            abandon_reason: reason,
+            abandoned_at: dateStr,
+            is_abandoned: true
+          },
+          raw_student: {
+            id: ap.student_id,
+            name: ap.name,
+            student_code: code,
+            grade_type: isGrad ? '졸업생' : '재학생'
+          }
+        });
+      }
+    }
+  });
+
+  kcueAbandonedList.sort((a, b) => {
+    const uCmp = (a.univ_name || '').localeCompare(b.univ_name || '', 'ko');
+    if (uCmp !== 0) return uCmp;
+    const tCmp = (a.track_name || '').localeCompare(b.track_name || '', 'ko');
+    if (tCmp !== 0) return tCmp;
+    return (a.student_code || '').localeCompare(b.student_code || '');
+  });
+
   const normKey = s => (s || '').trim().toLowerCase().replace(/\s+/g, '');
   const allApplicantsMap = {};
   const recommendedList = [];
@@ -144,9 +247,7 @@ export function buildReportsDataFromKcue(kcueApps = null, adminStats = null, reg
 
         // 대교협 지원자 중 해당 대학/트랙에 매칭되는 학생 필터링
         const matchedApps = apps.filter(ap => {
-          const apUNorm = normKey(ap.univ_name);
-          const apUClean = normKey(cleanUnivName(ap.univ_name));
-          const uMatch = (apUNorm === uNorm) || (apUClean === uClean) || apUNorm.includes(uClean) || uClean.includes(apUClean);
+          const uMatch = isUnivCampusMatch(ap.univ_name, u.univ_name);
           if (!uMatch) return false;
 
           const apTNorm = normKey(ap.track_name);
@@ -209,11 +310,15 @@ export function buildReportsDataFromKcue(kcueApps = null, adminStats = null, reg
       });
     });
 
+
+
+
     return {
       stats: clonedStats,
       allApplicantsMap,
       recommendedList,
       studentMap: studentMapLocal,
+      abandonedList: kcueAbandonedList,
       totalStudents: Object.keys(studentMapLocal).length,
       totalCases: apps.length
     };
@@ -355,6 +460,7 @@ export function buildReportsDataFromKcue(kcueApps = null, adminStats = null, reg
     allApplicantsMap,
     recommendedList,
     studentMap: studentMapLocal,
+    abandonedList: kcueAbandonedList,
     totalStudents: Object.keys(studentMapLocal).length,
     totalCases: apps.length
   };

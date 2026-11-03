@@ -1215,7 +1215,7 @@ const currentDate = computed(() => {
   return now.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 })
 
-function applyKcueArchiveFallback(gMap = null, existingStats = null, regRecs = null) {
+function applyKcueArchiveFallback(gMap = null, existingStats = null, regRecs = null, dbAbandonedList = null) {
   // 관리자가 '대학 설정'에 넣어둔 기준(existingStats 또는 regRecs)을 최우선으로 사용하여 데이터 생성
   const kcueData = buildReportsDataFromKcue(null, existingStats, regRecs)
   isUsingKcueArchive.value = true
@@ -1223,7 +1223,8 @@ function applyKcueArchiveFallback(gMap = null, existingStats = null, regRecs = n
   allApplicantsMap.value = kcueData.allApplicantsMap
   recommendedList.value = kcueData.recommendedList
   studentMap.value = kcueData.studentMap
-  abandonedList.value = []
+  // 1순위: DB에 이미 저장된 포기자 목록 / 2순위: 2027 원장 복수 지원 기반 차수별 포기자 목록
+  abandonedList.value = (dbAbandonedList && dbAbandonedList.length > 0) ? dbAbandonedList : (kcueData.abandonedList || [])
   roundsList.value = [
     { id: 1, name: '1차 선발', status: 'FINALIZED' },
     { id: 2, name: '2차 선발', status: 'FINALIZED' },
@@ -1309,16 +1310,7 @@ async function loadData() {
         }
       }
 
-      // 지원서 분리: 유효 추천 지원서 vs 포기된 지원서
-      const allApps = (allAppsRaw || []).filter(ap => !ap.is_abandoned)
-
-      // 유효 추천 지원서가 없는 경우 (수시 추천 종료 후 아카이브 모드: 2027 원서접수 확정 원장 자동 연동)
-      if (allApps.length === 0) {
-        applyKcueArchiveFallback(gMap, stats.value, regRecs)
-        return
-      }
-
-      isUsingKcueArchive.value = false
+      // 포기된 지원서(DB) 선행 추출 및 목록 구성
       const rawAbandonedApps = (allAppsRaw || []).filter(ap => {
         if (ap.is_abandoned) return true
         if (ap.scanned_doc_url) {
@@ -1330,7 +1322,6 @@ async function loadData() {
         return false
       })
 
-      // 추천 포기자 목록 가공
       const abList = []
       for (const ap of rawAbandonedApps) {
         const s = studentMapLocal[ap.student_id] || {}
@@ -1383,6 +1374,17 @@ async function loadData() {
         return (a.student_code || '').localeCompare(b.student_code || '')
       })
       abandonedList.value = abList
+
+      // 지원서 분리: 유효 추천 지원서 vs 포기된 지원서
+      const allApps = (allAppsRaw || []).filter(ap => !ap.is_abandoned)
+
+      // 유효 추천 지원서가 없는 경우 (수시 추천 종료 후 아카이브 모드: 2027 원서접수 확정 원장 자동 연동)
+      if (allApps.length === 0) {
+        applyKcueArchiveFallback(gMap, stats.value, regRecs, abList)
+        return
+      }
+
+      isUsingKcueArchive.value = false
 
       // 3. 대학(univ_id=track_id)별로 지원서를 그룹화하여 석차(순위) 계산
       const groupedByTrack = {}
