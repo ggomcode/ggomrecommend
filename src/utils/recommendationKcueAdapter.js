@@ -1,13 +1,25 @@
 import officialApplicationsData from '../stat/data/applications.json' with { type: 'json' };
 import * as XLSX from 'xlsx';
+import {
+  lookupMasterData,
+  lookupMasterQuota,
+  lookupMasterRawQuota,
+  lookupMasterGradCondition,
+  cleanUnivName
+} from './recommendationMasterData.js';
 
 /**
  * 대교협 수시 원서접수 원장(applications.json)에서 학교장추천 전형(isRecommendation=true) 지원 내역 추출
+ * - 학생별 복수 추천 지원 건수에 따라 1지망(1차), 2지망(2차), 3지망(3차) 순차 배정
+ * - 학과 모집정원이 아닌 대학별 공식 고교 추천 제한 정원 및 졸업년도 조건 매핑
  */
 export function getKcueRecommendationApps() {
   const recApps = (officialApplicationsData || []).filter(
     a => a.isRecommendation === true || a.isRecommendation === 'true' || a.is_recommendation === true
   );
+
+  // 학생별 추천 지원 건수 및 지망 순서 산정용 맵
+  const studentRecCountMap = {};
 
   return recApps.map((a, idx) => {
     const grade = a.grade || 3;
@@ -21,9 +33,17 @@ export function getKcueRecommendationApps() {
     const studentKey = a.studentKey || `${a.classNum || 0}-${a.studentNum || 0}_${a.name || '학생'}`;
     const studentId = `kcue_rec_std_${studentCode}_${a.name || idx}`;
 
+    // 학생별 추천 지망 순서 (0: 1지망/1차, 1: 2지망/2차, 2+: 3지망/3차)
+    const recOrder = studentRecCountMap[studentId] || 0;
+    studentRecCountMap[studentId] = recOrder + 1;
+    const assignedRound = Math.min(recOrder + 1, 3);
+
     const univName = (a.univName || '').trim();
     const trackName = (a.admissionDetailType || a.admissionMajorType || '학교장추천전형').trim();
     const trackId = `kcue_track_${univName}__${trackName}`.replace(/[\s()\/]+/g, '_');
+
+    // 대학 공식 고교 추천 정원 및 졸업조건 매핑 (개별 학과 정원 a.quota 대신 고교별 추천 제한 정원 사용)
+    const masterInfo = lookupMasterData(univName, trackName);
 
     const calcScore = a.univConvertedScore != null ? Number(a.univConvertedScore) : null;
     const gpa = a.score9Grade != null ? Number(a.score9Grade) : (a.allSubjectGrade != null ? Number(a.allSubjectGrade) : null);
@@ -46,16 +66,19 @@ export function getKcueRecommendationApps() {
       track_name: trackName,
       department_name: a.dept || '',
       admission_type: a.admissionType || '학생부위주(교과)',
-      quota: a.quota != null ? Number(a.quota) : null,
+      dept_quota: a.quota != null ? Number(a.quota) : null, // 학과 모집정원
+      quota: masterInfo.quota, // 고교별 추천 제한 정원
+      raw_quota_limit: masterInfo.raw_quota,
+      grad_condition: masterInfo.grad_condition,
       selection_method: a.selectionMethod || '일괄합산',
 
       univ_calc_score: calcScore,
       manual_score: calcScore,
       gpa_overall: gpa,
 
-      round: 1,
-      recommended_round: 1,
-      is_recommended: true,
+      round: assignedRound,
+      recommended_round: assignedRound,
+      is_recommended: true, // 그룹화 후 석차에 따라 최종 결정
       is_abandoned: false,
       abandoned: false,
       excluded: false,
@@ -98,6 +121,8 @@ export function buildReportsDataFromKcue(kcueApps = null) {
         track_name: ap.track_name,
         track_type: ap.admission_type,
         quota: ap.quota,
+        raw_quota_limit: ap.raw_quota_limit,
+        grad_condition: ap.grad_condition,
         apps: []
       };
     }
@@ -132,6 +157,7 @@ export function buildReportsDataFromKcue(kcueApps = null) {
 
     allApplicantsMap[trackId] = trackApps;
 
+    let selectedCount = 0;
     trackApps.forEach((ap, idx) => {
       const rank = idx + 1;
       let scoreText = '-';
@@ -141,13 +167,18 @@ export function buildReportsDataFromKcue(kcueApps = null) {
         scoreText = `${Number(ap.gpa_overall).toFixed(2)}등급`;
       }
 
+      // 추천 제한 정원이 있으면 정원 내 학생만 최종 선발(is_recommended=true), 초과는 대기
+      const isSelected = trackInfo.quota != null ? rank <= trackInfo.quota : true;
+      if (isSelected) selectedCount++;
+      ap.is_recommended = isSelected;
+
       recommendedList.push({
         id: ap.id,
         student_id: ap.student_id,
         univ_id: ap.univ_id,
         round: ap.round || 1,
         recommended_round: ap.recommended_round || 1,
-        is_recommended: true,
+        is_recommended: isSelected,
         student_code: ap.student_code || '',
         name: ap.name || '',
         rank: rank,
@@ -166,14 +197,23 @@ export function buildReportsDataFromKcue(kcueApps = null) {
     }
 
     const quotaLimit = trackInfo.quota;
+    let quotaDisplayStr = '제한없음';
+    if (trackInfo.raw_quota_limit && /%/.test(trackInfo.raw_quota_limit)) {
+      quotaDisplayStr = quotaLimit != null ? `${quotaLimit}명 (${trackInfo.raw_quota_limit})` : trackInfo.raw_quota_limit;
+    } else if (quotaLimit != null) {
+      quotaDisplayStr = `${quotaLimit}명`;
+    }
+
     univGroupMap[uName].tracks.push({
       track_id: trackId,
       track_name: trackInfo.track_name,
       display_track_name: trackInfo.track_name,
       track_type: trackInfo.track_type,
       unit_quota: quotaLimit,
-      quota_display: quotaLimit != null ? `${quotaLimit}명` : '제한없음',
-      unit_used: trackApps.length,
+      raw_quota_limit: trackInfo.raw_quota_limit,
+      grad_condition: trackInfo.grad_condition,
+      quota_display: quotaDisplayStr,
+      unit_used: selectedCount,
       total_applied: trackApps.length
     });
   });
@@ -220,8 +260,8 @@ export function exportKcueQuotaStatsExcel(displayedStats, roundStr = '전체') {
     { wch: 6 },
     { wch: 22 },
     { wch: 28 },
-    { wch: 16 },
-    { wch: 16 },
+    { wch: 22 },
+    { wch: 18 },
     { wch: 14 },
     { wch: 10 },
     { wch: 10 },
@@ -246,7 +286,7 @@ export function exportKcueQuotaStatsExcel(displayedStats, roundStr = '전체') {
         st.grade_type || '재학생',
         st.rank ? `${st.rank}위` : '-',
         st.score_text || '-',
-        '추천 확정 (2027 대입 확정)'
+        st.is_recommended ? `${st.recommended_round || 1}차 선발 (추천 확정)` : '정원 초과 (대기)'
       ]);
     });
   });
@@ -289,9 +329,27 @@ export function buildTeacherResultsFromKcue(kcueApps = null, authClassNo = null,
     {
       id: 1,
       status: 'FINALIZED',
-      name: '2027학년도 대입 원서접수 확정',
+      name: '1차 선발 (2027 원서 확정)',
       schedule: {
         apply_start: '2026-09-01 09:00',
+        apply_end: '2026-09-05 18:00'
+      }
+    },
+    {
+      id: 2,
+      status: 'FINALIZED',
+      name: '2차 선발 (2027 원서 확정)',
+      schedule: {
+        apply_start: '2026-09-06 09:00',
+        apply_end: '2026-09-09 18:00'
+      }
+    },
+    {
+      id: 3,
+      status: 'FINALIZED',
+      name: '3차 선발 (2027 원서 확정)',
+      schedule: {
+        apply_start: '2026-09-10 09:00',
         apply_end: '2026-09-13 18:00'
       }
     }
@@ -309,8 +367,8 @@ export function buildTeacherResultsFromKcue(kcueApps = null, authClassNo = null,
     return {
       id: a.id,
       student_id: a.student_id,
-      round_id: 1,
-      round: 1,
+      round_id: a.round || 1,
+      round: a.round || 1,
       track_id: a.track_id,
       univ_name: a.univ_name,
       track_name: a.track_name,
@@ -321,7 +379,7 @@ export function buildTeacherResultsFromKcue(kcueApps = null, authClassNo = null,
       ranking: 1,
       score: scoreText,
       total_score: a.univ_calc_score || a.gpa_overall || 0,
-      is_recommended: true,
+      is_recommended: a.is_recommended !== false,
       abandoned: false,
       is_abandoned: false,
       scanned_doc_url: null,
@@ -334,7 +392,6 @@ export function buildTeacherResultsFromKcue(kcueApps = null, authClassNo = null,
     results
   };
 }
-
 
 /**
  * OverviewTab.vue (개요)용 데이터 생성 — DB에 지원서가 0건일 때 폴백
@@ -406,8 +463,8 @@ export function buildOverviewFromKcue(teachers = []) {
     classes,
     graduated,
     all_time: {
-      total_rounds: 1,
-      progressed_rounds: 1,
+      total_rounds: 3,
+      progressed_rounds: 3,
       applicant_students: totalStudents,
       applicant_cases: totalCases,
       confirmed_students: totalStudents,

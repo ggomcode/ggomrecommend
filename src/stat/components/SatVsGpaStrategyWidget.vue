@@ -1996,17 +1996,59 @@ const subTabs = [
 ]
 
 const activeSubTab = ref('radar')
+let isClickScrolling = false
+let clickScrollTimeout = null
 
 // 상단 세그먼트 버튼 클릭 시 해당 섹션으로 부드럽게 점프
 function scrollToTab(tabId) {
   activeSubTab.value = tabId
+  isClickScrolling = true
+  if (clickScrollTimeout) clearTimeout(clickScrollTimeout)
+  clickScrollTimeout = setTimeout(() => {
+    isClickScrolling = false
+  }, 900)
+
   const targetEl = document.getElementById(`sec-${tabId}`)
   if (targetEl) {
     targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 }
 
+// 스크롤 시 현재 뷰포트에 위치한 섹션 버튼 자동 동기화
+function updateActiveSection() {
+  if (isClickScrolling) return
+
+  const sectionIds = ['radar', 'satamRun', 'minScoreMagic', 'strategyCards']
+  const thresholdOffset = 220 // 헤더 및 세그먼트 바를 고려한 판정 기준선
+
+  let matchedId = sectionIds[0]
+
+  for (const id of sectionIds) {
+    const el = document.getElementById(`sec-${id}`)
+    if (el) {
+      const rect = el.getBoundingClientRect()
+      if (rect.top <= thresholdOffset) {
+        matchedId = id
+      }
+    }
+  }
+
+  // 바닥에 거의 도달했을 때 마지막 4번 섹션 활성화
+  const scrollContainer = document.querySelector('.overflow-y-auto') || document.documentElement
+  if (scrollContainer) {
+    const isAtBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 80
+    if (isAtBottom) {
+      matchedId = 'strategyCards'
+    }
+  }
+
+  if (activeSubTab.value !== matchedId) {
+    activeSubTab.value = matchedId
+  }
+}
+
 let sectionObserver = null
+let handleScrollEvent = null
 
 // useStatData 전역 상태 연동 (학년도 선택 & 2027 모의가채점 연계)
 const {
@@ -2028,21 +2070,20 @@ onMounted(() => {
   }
   loadCsatPassRateData().catch(() => {})
 
-  // 스크롤 시 현재 뷰포트에 위치한 섹션 버튼 자동 활성화
+  // 스크롤 이벤트 캡처 리스너 등록 (부모 컨테이너 스크롤 감지)
+  handleScrollEvent = () => {
+    updateActiveSection()
+  }
+  window.addEventListener('scroll', handleScrollEvent, { passive: true, capture: true })
+
+  // IntersectionObserver 연동
   const sectionIds = ['radar', 'satamRun', 'minScoreMagic', 'strategyCards']
   if (typeof IntersectionObserver !== 'undefined') {
-    sectionObserver = new IntersectionObserver((entries) => {
-      const visible = entries.filter(e => e.isIntersecting)
-      if (visible.length > 0) {
-        visible.sort((a, b) => Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top))
-        const targetId = visible[0].target.id.replace('sec-', '')
-        if (targetId && activeSubTab.value !== targetId) {
-          activeSubTab.value = targetId
-        }
-      }
+    sectionObserver = new IntersectionObserver(() => {
+      updateActiveSection()
     }, {
-      rootMargin: '-80px 0px -55% 0px',
-      threshold: [0, 0.1, 0.2]
+      rootMargin: '-80px 0px -40% 0px',
+      threshold: [0, 0.2, 0.5]
     })
 
     setTimeout(() => {
@@ -2055,6 +2096,10 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (clickScrollTimeout) clearTimeout(clickScrollTimeout)
+  if (handleScrollEvent) {
+    window.removeEventListener('scroll', handleScrollEvent, { capture: true })
+  }
   if (sectionObserver) {
     sectionObserver.disconnect()
   }

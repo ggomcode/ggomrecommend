@@ -753,6 +753,7 @@ import { decryptText } from '../../utils/cryptoUtils.js'
 import { formatScore } from '../../utils/scorePreviewShared.js'
 import { fetchRoundSchedulesMap, DEFAULT_SCHEDULES, parseKstDate, isRoundAnnouncedOrDone } from '../../utils/roundSchedule.js'
 import { getKcueRecommendationApps, buildReportsDataFromKcue, exportKcueQuotaStatsExcel } from '../../utils/recommendationKcueAdapter.js'
+import { lookupMasterData, lookupMasterQuota, lookupMasterRawQuota, lookupMasterGradCondition, cleanUnivName } from '../../utils/recommendationMasterData.js'
 
 const loading = ref(false)
 const downloading = ref(false)
@@ -817,7 +818,14 @@ const abandonedStats = computed(() => {
  * - 선발 진행 중인 경우(해당 차수 접수 시작부터 선정 협의일까지): 'N차 지원' (인디고 계열)
  */
 function getStudentRoundBadge(std) {
-  const roundNum = std.round ?? 1
+  if (std.is_recommended === false) {
+    return {
+      type: 'wait',
+      text: '정원초과 (대기)',
+      class: 'text-rose-600 font-bold text-xs'
+    }
+  }
+  const roundNum = std.recommended_round ?? std.round ?? 1
   if (roundNum === 0) {
     return {
       type: 'selected',
@@ -1063,11 +1071,18 @@ const flatStats = computed(() => {
       const isOverQuota = hasQuota && effectiveQuota > 0 && totalApplied > effectiveQuota
 
       // 졸업년도 조건 매핑 (1순위: 대학_전형 정확 매칭, 2순위: 대학명 fallback)
-      const uNorm = normKey(u.univ_name)
+            const uNorm = normKey(u.univ_name)
       const tNorm = normKey(t.track_name)
-      const gradCond = gradConditionMap.value[`${uNorm}__${tNorm}`] || gradConditionMap.value[uNorm] || ''
+      const uClean = normKey(cleanUnivName(u.univ_name))
+      const gradCond = t.grad_condition ||
+                       gradConditionMap.value[`${uNorm}__${tNorm}`] ||
+                       gradConditionMap.value[uNorm] ||
+                       gradConditionMap.value[`${uClean}__${tNorm}`] ||
+                       gradConditionMap.value[uClean] ||
+                       lookupMasterGradCondition(u.univ_name, t.track_name) ||
+                       '졸업생 가능'
 
-      const quotaDisplay = formatQuotaDisplay(t.unit_quota, t.raw_quota_limit, curRound, remainingAfterPrev)
+      const quotaDisplay = t.quota_display || formatQuotaDisplay(t.unit_quota, t.raw_quota_limit, curRound, remainingAfterPrev)
       const trackType = String(t.track_type || '').trim()
       const displayTrackName = trackType ? `(${trackType}) ${t.track_name}` : t.track_name
 
@@ -1208,8 +1223,12 @@ function applyKcueArchiveFallback(gMap = null) {
   recommendedList.value = kcueData.recommendedList
   studentMap.value = kcueData.studentMap
   abandonedList.value = []
-  roundsList.value = [{ id: 1, name: '1차 선발', status: 'FINALIZED' }]
-  totalRounds.value = 1
+  roundsList.value = [
+    { id: 1, name: '1차 선발', status: 'FINALIZED' },
+    { id: 2, name: '2차 선발', status: 'FINALIZED' },
+    { id: 3, name: '3차 선발', status: 'FINALIZED' }
+  ]
+  totalRounds.value = 3
   selectedRoundFilter.value = 'all'
   if (gMap && Object.keys(gMap).length > 0) {
     gradConditionMap.value = gMap
@@ -1252,6 +1271,9 @@ async function loadData() {
           const tKey = normKey(r.track_name)
           gMap[`${uKey}__${tKey}`] = r.grad_condition
           if (!gMap[uKey]) gMap[uKey] = r.grad_condition
+          const uClean = normKey(cleanUnivName(r.univ_name))
+          if (!gMap[uClean]) gMap[uClean] = r.grad_condition
+          gMap[`${uClean}__${tKey}`] = r.grad_condition
         }
       }
       gradConditionMap.value = gMap

@@ -5,6 +5,7 @@ import { encryptText, decryptText, hashText } from '../utils/cryptoUtils'
 import { fetchRoundSchedulesMap, computeRoundDisplayStatus, isRoundAnnouncedOrDone } from '../utils/roundSchedule'
 import { deleteApplicationStorageFiles } from '../utils/storageUtils'
 import { buildOverviewFromKcue } from '../utils/recommendationKcueAdapter'
+import { cleanUnivName, lookupMasterData, lookupMasterQuota, lookupMasterRawQuota } from '../utils/recommendationMasterData'
 
 // Helper for error parsing
 export async function blobErrMsg(e) {
@@ -2579,6 +2580,9 @@ export const getQuotaStats = async () => {
     const tName = (r.track_name || '').trim()
     const k = `${normKey(uName)}__${normKey(tName)}`
     if (!regRecMap.has(k)) regRecMap.set(k, r.quota_limit)
+    const uClean = cleanUnivName(uName)
+    const kClean = `${normKey(uClean)}__${normKey(tName)}`
+    if (!regRecMap.has(kClean)) regRecMap.set(kClean, r.quota_limit)
     // 퍼센트 타입 감지: "3%" 형태 OR 0 < n < 1 소수("0.03" 등 엑셀 % 셀 원본값)
     if (r.quota_limit != null) {
       const rawStr = String(r.quota_limit).trim()
@@ -2668,9 +2672,10 @@ export const getQuotaStats = async () => {
     }
 
     const group = univGroupMap[key]
+    const cleanKey = cleanUnivName(key)
     const regKey = `${normKey(key)}__${normKey(u.track_name || key)}`
-    // 1순위: remarks.raw_quota_limit (DB 저장값), 2순위: regRecMap 정확 매칭, 3순위: 대학명만 fallback
-    const rawQuotaLimit = u.raw_quota_limit ?? regRecMap.get(regKey) ?? regRecByUniv.get(normKey(key)) ?? null
+    const regKeyClean = `${normKey(cleanKey)}__${normKey(u.track_name || key)}`
+    const rawQuotaLimit = u.raw_quota_limit ?? regRecMap.get(regKey) ?? regRecMap.get(regKeyClean) ?? regRecByUniv.get(normKey(key)) ?? regRecByUniv.get(normKey(cleanKey)) ?? lookupMasterRawQuota(key, u.track_name) ?? null
 
     // unit_quota: DB 저장값(INTEGER)이 0이고 raw에 %가 있으면 다시 환산
     let unitQuota = u.has_quota ? resolveUnitQuota(u.quota_limit) : null
@@ -2679,6 +2684,10 @@ export const getQuotaStats = async () => {
       if (pct !== null && disclosureCount != null && disclosureCount > 0) {
         unitQuota = Math.ceil(disclosureCount * pct / 100)
       }
+    }
+    if (unitQuota === null || unitQuota === 0) {
+      const mQuota = lookupMasterQuota(key, u.track_name)
+      if (mQuota != null) unitQuota = mQuota
     }
 
     group.total_used += recommendedCount
