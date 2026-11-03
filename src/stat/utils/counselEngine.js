@@ -11,6 +11,7 @@
  */
 
 import { parseCsatRequirement, evaluateCsatRequirement } from './csatMinScoreEvaluator.js'
+import { maskName, MASK_MODES } from '../composables/useStatData.js'
 
 /**
  * 1. 학생의 모의고사 성적을 바탕으로 정시 지원 가능 대학 라인(정시 기대선) 산출
@@ -1524,7 +1525,7 @@ export function findDoppelgangerSeniors(student, allApplications = []) {
 
     return {
       seniorKey: senior.studentKey,
-      maskedName: senior.name ? senior.name[0] + 'O' + (senior.name.slice(2) || '') : '선배',
+      maskedName: senior.name ? maskName(senior.name, MASK_MODES.FIRST_AND_LAST) : '선배',
       gpa: senior.gpa.toFixed(2),
       diffStr: (senior.gpa - targetGpa >= 0 ? '+' : '') + (senior.gpa - targetGpa).toFixed(2),
       passCount,

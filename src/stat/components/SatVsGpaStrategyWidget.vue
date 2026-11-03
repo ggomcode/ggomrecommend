@@ -2006,7 +2006,7 @@ function scrollToTab(tabId) {
   if (clickScrollTimeout) clearTimeout(clickScrollTimeout)
   clickScrollTimeout = setTimeout(() => {
     isClickScrolling = false
-  }, 900)
+  }, 1800)
 
   const targetEl = document.getElementById(`sec-${tabId}`)
   if (targetEl) {
@@ -2014,35 +2014,56 @@ function scrollToTab(tabId) {
   }
 }
 
-// 스크롤 시 현재 뷰포트에 위치한 섹션 버튼 자동 동기화
+// 스크롤 시 현재 뷰포트에 위치한 섹션 버튼 자동 동기화 (구간 포함 판정 알고리즘)
 function updateActiveSection() {
   if (isClickScrolling) return
 
   const sectionIds = ['radar', 'satamRun', 'minScoreMagic', 'strategyCards']
-  const thresholdOffset = 220 // 헤더 및 세그먼트 바를 고려한 판정 기준선
+  const targetLine = 280 // 상단 헤더 및 스티키 내비게이션 바 아래 기준선
 
-  let matchedId = sectionIds[0]
+  // 바닥에 거의 도달했을 때 마지막 4번 섹션 우선 활성화
+  const scrollContainer = document.querySelector('.overflow-y-auto') || document.documentElement
+  if (scrollContainer) {
+    const isAtBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 120
+    if (isAtBottom) {
+      if (activeSubTab.value !== 'strategyCards') {
+        activeSubTab.value = 'strategyCards'
+      }
+      return
+    }
+  }
 
+  let matchedId = null
   for (const id of sectionIds) {
     const el = document.getElementById(`sec-${id}`)
     if (el) {
       const rect = el.getBoundingClientRect()
-      if (rect.top <= thresholdOffset) {
+      // 해당 섹션이 targetLine을 포함하고 있으면 그 섹션이 현재 활성 섹션!
+      if (rect.top <= targetLine && rect.bottom > targetLine) {
         matchedId = id
+        break
       }
     }
   }
 
-  // 바닥에 거의 도달했을 때 마지막 4번 섹션 활성화
-  const scrollContainer = document.querySelector('.overflow-y-auto') || document.documentElement
-  if (scrollContainer) {
-    const isAtBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 80
-    if (isAtBottom) {
-      matchedId = 'strategyCards'
+  if (!matchedId) {
+    // 뷰포트 맨 위쪽에 있는 경우 첫 번째 섹션
+    const firstEl = document.getElementById('sec-radar')
+    if (firstEl && firstEl.getBoundingClientRect().top > targetLine) {
+      matchedId = 'radar'
+    } else {
+      // 그 외에는 targetLine 이전 가장 가까운 섹션
+      for (let i = sectionIds.length - 1; i >= 0; i--) {
+        const el = document.getElementById(`sec-${sectionIds[i]}`)
+        if (el && el.getBoundingClientRect().top <= targetLine) {
+          matchedId = sectionIds[i]
+          break
+        }
+      }
     }
   }
 
-  if (activeSubTab.value !== matchedId) {
+  if (matchedId && activeSubTab.value !== matchedId) {
     activeSubTab.value = matchedId
   }
 }

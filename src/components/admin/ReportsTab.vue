@@ -1215,10 +1215,11 @@ const currentDate = computed(() => {
   return now.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 })
 
-function applyKcueArchiveFallback(gMap = null) {
-  const kcueData = buildReportsDataFromKcue()
+function applyKcueArchiveFallback(gMap = null, existingStats = null, regRecs = null) {
+  // 관리자가 '대학 설정'에 넣어둔 기준(existingStats 또는 regRecs)을 최우선으로 사용하여 데이터 생성
+  const kcueData = buildReportsDataFromKcue(null, existingStats, regRecs)
   isUsingKcueArchive.value = true
-  stats.value = kcueData.stats
+  stats.value = (existingStats && existingStats.length > 0) ? existingStats : kcueData.stats
   allApplicantsMap.value = kcueData.allApplicantsMap
   recommendedList.value = kcueData.recommendedList
   studentMap.value = kcueData.studentMap
@@ -1313,7 +1314,7 @@ async function loadData() {
 
       // 유효 추천 지원서가 없는 경우 (수시 추천 종료 후 아카이브 모드: 2027 원서접수 확정 원장 자동 연동)
       if (allApps.length === 0) {
-        applyKcueArchiveFallback(gMap)
+        applyKcueArchiveFallback(gMap, stats.value, regRecs)
         return
       }
 
@@ -1463,7 +1464,7 @@ async function loadData() {
     }
   } catch (e) {
     console.warn('보고서 데이터 조회 예외, 2027 원장 아카이브로 폴백:', e)
-    applyKcueArchiveFallback()
+    applyKcueArchiveFallback(gradConditionMap.value, stats.value)
   } finally {
     loading.value = false
   }

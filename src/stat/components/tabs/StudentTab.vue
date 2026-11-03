@@ -6,7 +6,7 @@
         <!-- Class Selector -->
         <select 
           v-model="studentClassFilter" 
-          class="min-w-56 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 pl-3 pr-8 py-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          class="min-w-[270px] bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 pl-3.5 pr-8 py-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         >
           <option value="ALL">전체 학급 (재학생 + 졸업생)</option>
           <option value="ENROLLED">재학생 전체 (1~11반)</option>
@@ -56,7 +56,7 @@
           >
             <div class="flex items-center space-x-3">
               <div :class="[
-                'w-10 h-10 rounded-xl flex items-center justify-center font-bold text-[11px] font-mono tracking-tight shrink-0 px-1',
+                'w-10 h-10 rounded-xl flex items-center justify-center font-bold text-[10px] font-mono tracking-tighter shrink-0 px-0.5',
                 st.isGraduate 
                   ? 'bg-amber-100 text-amber-900 border border-amber-300' 
                   : (activeStudentKey === st.key ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700')
@@ -98,7 +98,7 @@
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
             <div class="flex items-center space-x-4">
               <div :class="[
-                'w-14 h-14 rounded-2xl text-white flex items-center justify-center font-bold text-sm font-mono tracking-tight shadow-md px-1.5',
+                'w-14 h-14 rounded-2xl text-white flex items-center justify-center font-black text-sm font-mono tracking-tight shadow-md px-1.5',
                 currentStudent.isGraduate 
                   ? 'bg-linear-to-tr from-amber-600 to-amber-400 shadow-amber-500/20' 
                   : 'bg-linear-to-tr from-indigo-600 to-sky-400 shadow-indigo-500/20'

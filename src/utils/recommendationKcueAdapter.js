@@ -11,7 +11,6 @@ import {
 /**
  * 대교협 수시 원서접수 원장(applications.json)에서 학교장추천 전형(isRecommendation=true) 지원 내역 추출
  * - 학생별 복수 추천 지원 건수에 따라 1지망(1차), 2지망(2차), 3지망(3차) 순차 배정
- * - 학과 모집정원이 아닌 대학별 공식 고교 추천 제한 정원 및 졸업년도 조건 매핑
  */
 export function getKcueRecommendationApps() {
   const recApps = (officialApplicationsData || []).filter(
@@ -42,9 +41,6 @@ export function getKcueRecommendationApps() {
     const trackName = (a.admissionDetailType || a.admissionMajorType || '학교장추천전형').trim();
     const trackId = `kcue_track_${univName}__${trackName}`.replace(/[\s()\/]+/g, '_');
 
-    // 대학 공식 고교 추천 정원 및 졸업조건 매핑 (개별 학과 정원 a.quota 대신 고교별 추천 제한 정원 사용)
-    const masterInfo = lookupMasterData(univName, trackName);
-
     const calcScore = a.univConvertedScore != null ? Number(a.univConvertedScore) : null;
     const gpa = a.score9Grade != null ? Number(a.score9Grade) : (a.allSubjectGrade != null ? Number(a.allSubjectGrade) : null);
 
@@ -66,10 +62,7 @@ export function getKcueRecommendationApps() {
       track_name: trackName,
       department_name: a.dept || '',
       admission_type: a.admissionType || '학생부위주(교과)',
-      dept_quota: a.quota != null ? Number(a.quota) : null, // 학과 모집정원
-      quota: masterInfo.quota, // 고교별 추천 제한 정원
-      raw_quota_limit: masterInfo.raw_quota,
-      grad_condition: masterInfo.grad_condition,
+      dept_quota: a.quota != null ? Number(a.quota) : null,
       selection_method: a.selectionMethod || '일괄합산',
 
       univ_calc_score: calcScore,
@@ -78,7 +71,7 @@ export function getKcueRecommendationApps() {
 
       round: assignedRound,
       recommended_round: assignedRound,
-      is_recommended: true, // 그룹화 후 석차에 따라 최종 결정
+      is_recommended: true,
       is_abandoned: false,
       abandoned: false,
       excluded: false,
@@ -88,9 +81,31 @@ export function getKcueRecommendationApps() {
 }
 
 /**
- * ReportsTab.vue (결과 보고서 및 추천 대장)용 데이터 생성
+ * 성적순 정렬 함수: 환산점수 내림차순 -> 내신등급 오름차순 -> 학번순
  */
-export function buildReportsDataFromKcue(kcueApps = null) {
+function sortApplicants(apps) {
+  return apps.sort((a, b) => {
+    const scoreA = a.univ_calc_score != null ? Number(a.univ_calc_score) : null;
+    const scoreB = b.univ_calc_score != null ? Number(b.univ_calc_score) : null;
+    if (scoreA !== null && scoreB !== null && scoreA !== scoreB) {
+      return scoreB - scoreA;
+    }
+    const gpaA = a.gpa_overall != null && Number(a.gpa_overall) > 0 ? Number(a.gpa_overall) : 99;
+    const gpaB = b.gpa_overall != null && Number(b.gpa_overall) > 0 ? Number(b.gpa_overall) : 99;
+    if (gpaA !== gpaB) {
+      return gpaA - gpaB;
+    }
+    return (a.student_code || '').localeCompare(b.student_code || '');
+  });
+}
+
+/**
+ * ReportsTab.vue (결과 보고서 및 추천 대장)용 데이터 생성
+ * - [핵심 원칙]: 관리자가 '대학 설정'에 이미 넣어둔 기준(adminStats 또는 regRecs)을 최우선 Source of Truth로 사용!
+ * - 관리자가 설정한 대학별 추천 제한 정원(unit_quota), 원본 인원제한(raw_quota_limit), 졸업년도 조건(grad_condition)을 100% 반영
+ * - 대교협 원서접수 원장의 학생들을 관리자의 대학/트랙 설정에 매칭하여 순위 및 선발 판정
+ */
+export function buildReportsDataFromKcue(kcueApps = null, adminStats = null, regRecs = null) {
   const apps = kcueApps || getKcueRecommendationApps();
 
   // 1. 학생 맵 구성
@@ -111,50 +126,166 @@ export function buildReportsDataFromKcue(kcueApps = null) {
     }
   });
 
-  // 2. 대학 및 트랙별 그룹화
+  const normKey = s => (s || '').trim().toLowerCase().replace(/\s+/g, '');
+  const allApplicantsMap = {};
+  const recommendedList = [];
+
+  // ── [케이스 A]: 관리자가 이미 '대학 설정'에 넣어둔 기준(adminStats)이 존재하는 경우 ──
+  if (adminStats && Array.isArray(adminStats) && adminStats.length > 0) {
+    // 관리자가 설정한 대학/트랙 구조를 깊은 복사하여 사용
+    const clonedStats = JSON.parse(JSON.stringify(adminStats));
+
+    clonedStats.forEach(u => {
+      const uNorm = normKey(u.univ_name);
+      const uClean = normKey(cleanUnivName(u.univ_name));
+
+      (u.tracks || []).forEach(t => {
+        const tNorm = normKey(t.track_name);
+
+        // 대교협 지원자 중 해당 대학/트랙에 매칭되는 학생 필터링
+        const matchedApps = apps.filter(ap => {
+          const apUNorm = normKey(ap.univ_name);
+          const apUClean = normKey(cleanUnivName(ap.univ_name));
+          const uMatch = (apUNorm === uNorm) || (apUClean === uClean) || apUNorm.includes(uClean) || uClean.includes(apUClean);
+          if (!uMatch) return false;
+
+          const apTNorm = normKey(ap.track_name);
+          const tMatch = (apTNorm === tNorm) || apTNorm.includes(tNorm) || tNorm.includes(apTNorm) || (u.tracks.length === 1);
+          return tMatch;
+        });
+
+        // 성적순 정렬
+        sortApplicants(matchedApps);
+        allApplicantsMap[t.track_id] = matchedApps;
+
+        let selectedCount = 0;
+        let enrolledUsed = 0;
+        let gradUsed = 0;
+
+        matchedApps.forEach((ap, idx) => {
+          const rank = idx + 1;
+          let scoreText = '-';
+          if (ap.univ_calc_score != null && Number(ap.univ_calc_score) > 0) {
+            scoreText = `${Number(ap.univ_calc_score).toFixed(2)}점`;
+          } else if (ap.gpa_overall != null && Number(ap.gpa_overall) > 0) {
+            scoreText = `${Number(ap.gpa_overall).toFixed(2)}등급`;
+          }
+
+          // 관리자가 설정한 추천 제한 정원(unit_quota) 기준 선발 여부 판정
+          const isSelected = t.unit_quota != null ? rank <= t.unit_quota : true;
+          ap.is_recommended = isSelected;
+          ap.univ_id = t.track_id; // 관리자의 track_id로 통일 매핑
+
+          const stInfo = studentMapLocal[ap.student_id] || {};
+          const isGrad = stInfo.is_graduated || (!stInfo.grade && stInfo.grad_year);
+
+          if (isSelected) {
+            selectedCount++;
+            if (isGrad) gradUsed++;
+            else enrolledUsed++;
+          }
+
+          recommendedList.push({
+            id: ap.id,
+            student_id: ap.student_id,
+            univ_id: t.track_id,
+            round: ap.round || 1,
+            recommended_round: ap.recommended_round || 1,
+            is_recommended: isSelected,
+            student_code: ap.student_code || '',
+            name: ap.name || '',
+            rank: rank,
+            score_text: scoreText,
+            department_name: ap.department_name
+          });
+        });
+
+        // 관리자 트랙 통계 업데이트
+        t.unit_used = selectedCount;
+        t.enrolled_used = enrolledUsed;
+        t.grad_used = gradUsed;
+        t.total_applied = matchedApps.length;
+        t.remaining_quota = t.unit_quota != null ? Math.max(0, t.unit_quota - selectedCount) : null;
+      });
+    });
+
+    return {
+      stats: clonedStats,
+      allApplicantsMap,
+      recommendedList,
+      studentMap: studentMapLocal,
+      totalStudents: Object.keys(studentMapLocal).length,
+      totalCases: apps.length
+    };
+  }
+
+  // ── [케이스 B]: adminStats가 없지만 regional_recommendations가 있는 경우 ──
+  const regMap = {};
+  if (regRecs && Array.isArray(regRecs)) {
+    regRecs.forEach(r => {
+      const uNorm = normKey(r.univ_name);
+      const tNorm = normKey(r.track_name);
+      const uClean = normKey(cleanUnivName(r.univ_name));
+      const key = `${uNorm}__${tNorm}`;
+      regMap[key] = r;
+      if (!regMap[uNorm]) regMap[uNorm] = r;
+      if (!regMap[uClean]) regMap[uClean] = r;
+    });
+  }
+
+  // 대학 및 트랙별 그룹화
   const groupedTracks = {};
   apps.forEach(ap => {
+    const univName = ap.univ_name;
+    const trackName = ap.track_name;
     const key = ap.univ_id;
+
     if (!groupedTracks[key]) {
+      // 1순위: 관리자가 등록한 regional_recommendations 데이터
+      const uNorm = normKey(univName);
+      const tNorm = normKey(trackName);
+      const uClean = normKey(cleanUnivName(univName));
+      const reg = regMap[`${uNorm}__${tNorm}`] || regMap[uNorm] || regMap[uClean];
+
+      let quota = null;
+      let rawQuotaLimit = null;
+      let gradCond = '';
+
+      if (reg) {
+        rawQuotaLimit = reg.quota_limit;
+        gradCond = reg.grad_condition || '';
+        if (reg.quota_limit && !reg.quota_limit.includes('제한없음') && !reg.quota_limit.includes('무제한')) {
+          const numMatch = String(reg.quota_limit).match(/\d+/);
+          if (numMatch) quota = parseInt(numMatch[0], 10);
+        }
+      } else {
+        // 2순위: fallback 마스터 사전
+        const masterInfo = lookupMasterData(univName, trackName);
+        quota = masterInfo.quota;
+        rawQuotaLimit = masterInfo.raw_quota;
+        gradCond = masterInfo.grad_condition;
+      }
+
       groupedTracks[key] = {
-        univ_name: ap.univ_name,
-        track_name: ap.track_name,
+        univ_name: univName,
+        track_name: trackName,
         track_type: ap.admission_type,
-        quota: ap.quota,
-        raw_quota_limit: ap.raw_quota_limit,
-        grad_condition: ap.grad_condition,
+        quota: quota,
+        raw_quota_limit: rawQuotaLimit,
+        grad_condition: gradCond,
         apps: []
       };
     }
     groupedTracks[key].apps.push(ap);
   });
 
-  // 3. allApplicantsMap 및 recommendedList 산출
-  const allApplicantsMap = {};
-  const recommendedList = [];
-
-  // 대학별로 stats 배열 구조화
   const univGroupMap = {};
 
   Object.keys(groupedTracks).forEach(trackId => {
     const trackInfo = groupedTracks[trackId];
     const trackApps = trackInfo.apps;
 
-    // 성적순 정렬: 환산점수 내림차순 -> 내신등급 오름차순 -> 학번
-    trackApps.sort((a, b) => {
-      const scoreA = a.univ_calc_score != null ? Number(a.univ_calc_score) : null;
-      const scoreB = b.univ_calc_score != null ? Number(b.univ_calc_score) : null;
-      if (scoreA !== null && scoreB !== null && scoreA !== scoreB) {
-        return scoreB - scoreA;
-      }
-      const gpaA = a.gpa_overall != null && Number(a.gpa_overall) > 0 ? Number(a.gpa_overall) : 99;
-      const gpaB = b.gpa_overall != null && Number(b.gpa_overall) > 0 ? Number(b.gpa_overall) : 99;
-      if (gpaA !== gpaB) {
-        return gpaA - gpaB;
-      }
-      return (a.student_code || '').localeCompare(b.student_code || '');
-    });
-
+    sortApplicants(trackApps);
     allApplicantsMap[trackId] = trackApps;
 
     let selectedCount = 0;
@@ -167,7 +298,6 @@ export function buildReportsDataFromKcue(kcueApps = null) {
         scoreText = `${Number(ap.gpa_overall).toFixed(2)}등급`;
       }
 
-      // 추천 제한 정원이 있으면 정원 내 학생만 최종 선발(is_recommended=true), 초과는 대기
       const isSelected = trackInfo.quota != null ? rank <= trackInfo.quota : true;
       if (isSelected) selectedCount++;
       ap.is_recommended = isSelected;
