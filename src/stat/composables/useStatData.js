@@ -594,7 +594,7 @@ const searchKeyword = ref('')
 /**
  * 학생 이름 마스킹 단계 (3단계 순환):
  * 0: MASK_MODES.LAST_ONLY (기본 디폴트) - 맨 뒤 한 글자만 표시 (예: "홍길동" -> "**동", "이민" -> "*민")
- * 1: MASK_MODES.FIRST_AND_LAST - 맨 앞글자(성)와 맨 뒷글자 총 2글자 표시 (예: "홍길동" -> "홍*동", "이민" -> "이민", "남궁민수" -> "남**수")
+ * 1: MASK_MODES.FIRST_AND_LAST - 맨 앞글자(성)와 맨 뒷글자 표시 (예: "홍길동" -> "홍*동", 2글자는 성 가림 "고윤" -> "*윤", "남궁민수" -> "남**수")
  * 2: MASK_MODES.UNMASKED - 모든 이름 다 보임 (예: "홍길동")
  */
 export const MASK_MODES = {
@@ -660,9 +660,10 @@ export function maskName(name, forceLevel = null) {
     return str
   }
 
-  // 2단계: 맨 앞글자 성과 맨 뒷글자까지 총 2개 글자만 보임
+  // 2단계: 맨 앞글자 성과 맨 뒷글자 표시 (단, 2글자 이름은 성 가림: '*윤')
   if (mode === MASK_MODES.FIRST_AND_LAST) {
-    if (str.length <= 2) return str
+    if (str.length <= 1) return '*'
+    if (str.length === 2) return '*' + str[1]
     return str[0] + '*'.repeat(str.length - 2) + str[str.length - 1]
   }
 
@@ -676,6 +677,33 @@ export function maskName(name, forceLevel = null) {
 export function formatGrade(val) {
   if (val === null || val === undefined || isNaN(val)) return '-'
   return Number(val).toFixed(2)
+}
+
+// Standalone Helper: Format 5-digit student code (예: 3학년 1반 1번 -> "30101")
+export function formatStudentCode(st) {
+  if (!st) return ''
+  const directCode = st.student_code || st.studentCode
+  if (directCode && String(directCode).trim().length === 5) {
+    return String(directCode).trim()
+  }
+  if (st.isGraduate || st.classNum === '졸업생') {
+    const rawNum = String(st.studentNum || '').trim()
+    if (rawNum.length === 5) return rawNum
+    if (/^\d+$/.test(rawNum) && rawNum.length <= 5) {
+      return rawNum.padStart(5, '0')
+    }
+    return rawNum || '졸업생'
+  }
+  const g = String(st.grade || 3).trim()
+  const c = parseInt(st.classNum, 10)
+  const n = parseInt(st.studentNum, 10)
+  if (!isNaN(c) && !isNaN(n)) {
+    return `${g}${String(c).padStart(2, '0')}${String(n).padStart(2, '0')}`
+  }
+  if (st.studentNum && String(st.studentNum).length === 5) {
+    return String(st.studentNum)
+  }
+  return `${st.classNum}-${st.studentNum}`
 }
 
 export const TOP_TIER_TARGET_UNIVS = [
@@ -1095,6 +1123,7 @@ export function useStatData() {
     loadCustomData,
     maskName,
     formatGrade,
+    formatStudentCode,
     selectedAcademicYear,
     availableAcademicYears,
     selectedScope,
