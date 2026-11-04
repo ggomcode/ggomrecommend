@@ -49,3 +49,35 @@ ON CONFLICT (id) DO UPDATE SET
 INSERT INTO public.config (key, value)
 VALUES ('login_system_name', '3학년 통합 학년업무 시스템')
 ON CONFLICT (key) DO NOTHING;
+
+
+-- ================================================================
+-- 27. COUNSEL_LOGS (진학지도 1:1 상담 기록 및 이력 관리 테이블)
+-- ================================================================
+CREATE TABLE IF NOT EXISTS public.counsel_logs (
+    id TEXT PRIMARY KEY,
+    academic_year TEXT NOT NULL,                                   -- 대입 학년도 (예: '2027', '2026')
+    counsel_date TEXT NOT NULL,                                    -- 상담 일자 (YYYY-MM-DD)
+    teacher_name TEXT NOT NULL,                                    -- 상담교사 성명
+    student_key TEXT NOT NULL,                                     -- 학생 식별 키 (예: '3-1_15_홍길동')
+    student_code TEXT,                                             -- 5자리 학번 (예: '30115')
+    student_name TEXT NOT NULL,                                    -- 학생 이름
+    grade INTEGER DEFAULT 3,                                       -- 학년
+    class_num TEXT,                                                -- 학급 ('1' ~ '11', '졸업생')
+    student_num TEXT,                                              -- 번호
+    content TEXT NOT NULL,                                         -- 1:1 진학 상담 내용 및 소견
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- 인덱스 생성 (빠른 검색 및 학년도/교사별/학생별 인쇄 지원)
+CREATE INDEX IF NOT EXISTS idx_counsel_logs_academic_year ON public.counsel_logs(academic_year);
+CREATE INDEX IF NOT EXISTS idx_counsel_logs_teacher_year ON public.counsel_logs(teacher_name, academic_year);
+CREATE INDEX IF NOT EXISTS idx_counsel_logs_student_key ON public.counsel_logs(student_key);
+CREATE INDEX IF NOT EXISTS idx_counsel_logs_counsel_date ON public.counsel_logs(counsel_date);
+
+-- RLS 활성화 및 권한 부여
+ALTER TABLE public.counsel_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable all access to counsel_logs" ON public.counsel_logs;
+CREATE POLICY "Enable all access to counsel_logs" ON public.counsel_logs FOR ALL TO public USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.counsel_logs TO anon, authenticated, service_role;
