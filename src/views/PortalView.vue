@@ -13,7 +13,7 @@
           </div>
           <div class="flex flex-col leading-tight">
             <span class="text-xs font-bold text-blue-600 tracking-wide">{{ schoolName }}</span>
-            <h1 class="text-base font-bold text-slate-900 m-0">{{ displaySystemName }}</h1>
+            <h1 class="text-base font-bold text-slate-900 m-0 portal-title-font">{{ displaySystemName }}</h1>
           </div>
         </div>
 
@@ -70,9 +70,9 @@
         <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-extrabold mb-3 border border-blue-200 shadow-2xs">
           <span>🏫 {{ schoolName }}</span>
           <span class="text-slate-300">|</span>
-          <span>{{ displaySystemName }}</span>
+          <span class="portal-title-font">{{ displaySystemName }}</span>
         </div>
-        <h2 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-3">
+        <h2 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-3 portal-title-font">
           {{ displaySystemName }}
         </h2>
         <p class="text-base text-slate-600 leading-relaxed">
@@ -516,7 +516,7 @@
     <!-- 하단 푸터 -->
     <footer class="py-6 border-t border-slate-200 bg-white text-center text-xs text-slate-500">
       <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
-        <p class="m-0">© {{ new Date().getFullYear() }} {{ schoolName }} {{ displaySystemName }}</p>
+        <p class="m-0 portal-title-font">© {{ new Date().getFullYear() }} {{ schoolName }} {{ displaySystemName }}</p>
         <span class="hidden sm:inline text-slate-300">•</span>
         <div class="relative group inline-flex items-center">
           <span class="text-slate-400 mr-1">License:</span>

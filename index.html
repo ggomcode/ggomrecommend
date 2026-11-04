@@ -5,6 +5,18 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>3학년 진학·학사 통합 포털</title>
+    <!-- Pretendard Webfont Early Preload -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+    <script>
+      try {
+        var cachedTitle = localStorage.getItem('pcm_login_system_name');
+        var cachedSchool = localStorage.getItem('pcm_school_name');
+        if (cachedTitle && cachedTitle.trim()) {
+          var cleanS = (cachedSchool && cachedSchool !== '우리학교') ? cachedSchool.trim() + ' - ' : '';
+          document.title = cleanS + cachedTitle.trim();
+        }
+      } catch (e) {}
+    </script>
     <!-- Start Single Page Apps for GitHub Pages. -->
     <script>
       (function(l) {

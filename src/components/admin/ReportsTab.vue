@@ -71,19 +71,8 @@
               <span class="px-2 py-0.5 rounded-full text-xs bg-emerald-200 text-emerald-950 border border-emerald-300 font-extrabold">
                 총 {{ totalRecommendedStats.totalStudents }}명 ({{ totalRecommendedStats.totalCases }}건)
               </span>
-              <span class="px-2 py-0.5 rounded-full text-[11px] bg-blue-100 text-blue-900 border border-blue-200 font-bold">
-                대입 학년도 종료일(2027.02.28)까지 상시 조회·인쇄 지원
-              </span>
             </h4>
-            <p class="text-xs text-emerald-900 m-0 mt-1 leading-relaxed">
-              현재 2027 학교장 추천 선발은 모두 종료되었으나, 이번 대입 학년도가 종료될 때까지 교사 및 관리자가 추천 명단 조회, 실시간 검색, 추천 대장 인쇄 및 엑셀 출력을 정상 이용할 수 있도록 확정 원장 데이터를 제공합니다.
-            </p>
           </div>
-        </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <span class="text-xs font-bold text-emerald-800 bg-white/80 px-3 py-1.5 rounded-lg border border-emerald-200">
-            2027 대입 원장 연동
-          </span>
         </div>
       </div>
 
@@ -178,9 +167,13 @@
 
         <!-- 1. 추천 명단 화면용 테이블 (activeViewMode === 'recommend') -->
         <template v-else-if="activeViewMode === 'recommend'">
-          <div v-if="!flatStats || flatStats.length === 0" class="flex-1 flex flex-col items-center justify-center p-12 text-slate-400">
-            <p class="text-base font-bold text-slate-600 mb-1">등록된 정원 현황 및 추천 학생 데이터가 없습니다.</p>
-            <p class="text-xs">대학 정원 설정 및 학생 지원을 진행한 후 다시 확인해 주세요.</p>
+          <div v-if="!displayedStats || displayedStats.length === 0" class="flex-1 flex flex-col items-center justify-center p-12 text-slate-400">
+            <p class="text-base font-bold text-slate-600 mb-1">
+              {{ filterClass !== 'all' ? `${filterClass === 'grad' ? '졸업생' : filterClass + '반'}에 해당하는 추천 학생 데이터가 없습니다.` : '등록된 정원 현황 및 추천 학생 데이터가 없습니다.' }}
+            </p>
+            <p class="text-xs">
+              {{ filterClass !== 'all' ? '다른 학급을 선택하거나 전체를 선택해 주세요.' : '대학 정원 설정 및 학생 지원을 진행한 후 다시 확인해 주세요.' }}
+            </p>
           </div>
 
           <div v-else class="flex-1 min-h-0 overflow-y-auto p-6">
@@ -218,7 +211,11 @@
                 <td class="p-3 text-center">
                   <div v-if="item.is_over_quota" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-100/80 text-rose-700 border border-rose-200 text-xs font-black">
                     <span>{{ item.unit_used }}명</span>
-                    <span class="text-[11px] font-bold text-rose-600">(지원 {{ item.total_applied }}명)</span>
+                    <span class="text-[11px] font-bold text-rose-600">(정원초과)</span>
+                  </div>
+                  <div v-else-if="item.unit_used > 0 && item.total_applied > item.unit_used" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 text-xs font-black">
+                    <span class="font-extrabold text-blue-700">{{ item.unit_used }}명</span>
+                    <span class="text-[11px] font-bold text-slate-500">(지원 {{ item.total_applied }}명)</span>
                   </div>
                   <span v-else-if="item.unit_used > 0" class="font-extrabold text-blue-600">
                     {{ item.unit_used }}명
@@ -770,7 +767,8 @@ const schedulesMap = ref({})
 const isUsingKcueArchive = ref(false)
 const searchQuery = ref('')
 const filterClass = ref('all')
-const classNumbers = Array.from({ length: 11 }, (_, i) => i + 1)
+const maxClassCount = computed(() => Number(localStorage.getItem('pcm_class_count')) || 11)
+const classNumbers = computed(() => Array.from({ length: maxClassCount.value }, (_, i) => i + 1))
 
 // 화면 및 인쇄 모드 상태
 const activeViewMode = ref('recommend') // 'recommend' | 'abandoned'
@@ -779,8 +777,47 @@ const abandonedList = ref([])
 
 const filteredAbandonedList = computed(() => {
   const curRound = selectedRoundFilter.value === 'all' ? null : Number(selectedRoundFilter.value)
-  if (curRound === null || isNaN(curRound)) return abandonedList.value
-  return abandonedList.value.filter(item => (item.abandoned_round != null ? item.abandoned_round : item.round) === curRound)
+  let list = abandonedList.value
+
+  // 1. 차수 필터
+  if (curRound !== null && !isNaN(curRound)) {
+    list = list.filter(item => (item.abandoned_round != null ? item.abandoned_round : item.round) === curRound)
+  }
+
+  // 2. 학급 필터
+  if (filterClass.value && filterClass.value !== 'all') {
+    if (filterClass.value === 'grad') {
+      list = list.filter(item => item.grade_type === '졸업생' || item.is_graduated)
+    } else {
+      const targetClass = Number(filterClass.value)
+      list = list.filter(item => {
+        if (item.grade_type === '졸업생' || item.is_graduated) return false
+        const code = String(item.student_code || item.raw_app?.student_code || '')
+        let c = item.class_no ?? item.raw_student?.class_no
+        if (c == null && code.length >= 5) {
+          const parsed = parseInt(code.substring(1, 3), 10)
+          if (!isNaN(parsed) && parsed > 0) c = parsed
+        }
+        return c === targetClass
+      })
+    }
+  }
+
+  // 3. 검색어 필터
+  const q = (searchQuery.value || '').trim().toLowerCase()
+  if (q) {
+    list = list.filter(item => {
+      const uMatch = (item.univ_name || '').toLowerCase().includes(q)
+      const tMatch = (item.track_name || '').toLowerCase().includes(q)
+      const dMatch = (item.department_name || '').toLowerCase().includes(q)
+      const nMatch = (item.name || '').toLowerCase().includes(q)
+      const cMatch = (item.student_code || '').toLowerCase().includes(q)
+      const rMatch = (item.reason || '').toLowerCase().includes(q)
+      return uMatch || tMatch || dMatch || nMatch || cMatch || rMatch
+    })
+  }
+
+  return list
 })
 
 const abandonedStats = computed(() => {
@@ -833,55 +870,10 @@ function getStudentRoundBadge(std) {
       class: 'text-emerald-700 font-bold text-xs'
     }
   }
-  const sched = schedulesMap.value[roundNum] || DEFAULT_SCHEDULES[roundNum]
-  const roundObj = roundsList.value.find(r => r.id === roundNum)
-
-  // 오늘 날짜 (KST: YYYY-MM-DD)
-  const now = new Date()
-  const todayStr = now.toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
-
-  // 1. 해당 라운드가 관리자에 의해 최종 마감(FINALIZED)된 경우 -> 선발 확정
-  if (roundObj?.status === 'FINALIZED') {
-    return {
-      type: 'selected',
-      text: `${roundNum}차 선발`,
-      class: 'text-emerald-700 font-bold text-xs'
-    }
-  }
-
-  // 2. 일정이 있는 경우: 접수 시작부터 선정 협의/심사 종료(eval_end 또는 eval_date)까지는 '진행중(N차 지원)'
-  const evalTarget = sched?.eval_end || sched?.eval_date
-  if (evalTarget) {
-    const evalLimit = parseKstDate(evalTarget, true)
-    if (evalLimit && now <= evalLimit) {
-      return {
-        type: 'applied',
-        text: `${roundNum}차 지원`,
-        class: 'text-indigo-600 font-medium text-xs'
-      }
-    } else if (evalLimit) {
-      // 선정 협의/심사 종료 이후 -> 선발 확정
-      return {
-        type: 'selected',
-        text: `${roundNum}차 선발`,
-        class: 'text-emerald-700 font-bold text-xs'
-      }
-    }
-  }
-
-  // 3. 일정이 없는 경우 기본 fallback: is_recommended 여부
-  if (std.is_recommended) {
-    return {
-      type: 'selected',
-      text: `${roundNum}차 선발`,
-      class: 'text-emerald-700 font-bold text-xs'
-    }
-  }
-
   return {
-    type: 'applied',
-    text: `${roundNum}차 지원`,
-    class: 'text-indigo-600 font-medium text-xs'
+    type: 'selected',
+    text: `${roundNum}차 선발`,
+    class: 'text-emerald-700 font-bold text-xs'
   }
 }
 
@@ -963,7 +955,7 @@ const flatStats = computed(() => {
   for (const u of (stats.value || [])) {
     for (const t of (u.tracks || [])) {
       const allTrackApps = allApplicantsMap.value[t.track_id] || []
-      const allTrackRecs = recommendedList.value.filter(ap => ap.univ_id === t.track_id)
+      const allTrackRecs = recommendedList.value.filter(ap => ap.univ_id === t.track_id && ap.is_recommended !== false)
       const hasQuota = t.unit_quota != null
 
       // 이전 차수(1차 등)에서 선발된 인원 계산
@@ -1003,6 +995,11 @@ const flatStats = computed(() => {
         })
       }
       
+      // 정원제한이 있는 경우: unit_quota를 초과하지 않도록 보장
+      if (hasQuota && trackApps.length > t.unit_quota) {
+        trackApps = trackApps.slice(0, t.unit_quota)
+      }
+
       // 정원제한이 있는 경우 추천 순위 순, 없는 경우 학번순 정렬
       trackApps.sort((a, b) => {
         if (hasQuota) {
@@ -1032,6 +1029,11 @@ const flatStats = computed(() => {
         }
         const appRound = ap.round != null ? ap.round : 1
         const recRound = ap.recommended_round != null ? ap.recommended_round : (ap.round != null ? ap.round : 1)
+        let stdClass = stInfo.class_no != null ? Number(stInfo.class_no) : (ap.class_no != null ? Number(ap.class_no) : null)
+        if (!stdClass && rawCode.length >= 5 && !isGrad) {
+          const parsed = parseInt(rawCode.substring(1, 3), 10)
+          if (!isNaN(parsed) && parsed > 0) stdClass = parsed
+        }
         return {
           id: ap.id,
           student_id: ap.student_id,
@@ -1044,6 +1046,8 @@ const flatStats = computed(() => {
           recommended_round: recRound,
           is_recommended: !!ap.is_recommended,
           grade_type: isGrad ? '졸업생' : '재학생',
+          is_graduated: isGrad,
+          class_no: isGrad ? null : stdClass,
           suffix: hasQuota ? `(${ap.rank}위, ${ap.score_text})` : ''
         }
       })
@@ -1066,9 +1070,9 @@ const flatStats = computed(() => {
         else enrolledApplied++
       }
 
-      // 추천 제한 인원이 있는 경우, 지원수(재학생+졸업생)가 제한 인원을 넘었는지 여부
+      // 추천 제한 인원이 있는 경우, 추천 선발 인원(usedCount)이 제한 인원을 초과했는지 여부
       const effectiveQuota = curRound && curRound >= 2 ? (remainingAfterPrev ?? 0) : (t.unit_quota ?? 0)
-      const isOverQuota = hasQuota && effectiveQuota > 0 && totalApplied > effectiveQuota
+      const isOverQuota = hasQuota && effectiveQuota > 0 && usedCount > effectiveQuota
 
       // 졸업년도 조건 매핑 (1순위: 대학_전형 정확 매칭, 2순위: 대학명 fallback)
             const uNorm = normKey(u.univ_name)
@@ -1130,12 +1134,74 @@ const flatStats = computed(() => {
 const printOnlyWithRecommendations = ref(false)
 
 const displayedStats = computed(() => {
-  if (printOnlyWithRecommendations.value) {
-    return flatStats.value
-      .filter(item => item.unit_used > 0 || item.total_applied > 0)
-      .map((item, idx) => ({ ...item, no: idx + 1 }))
+  const isClassFilterActive = filterClass.value && filterClass.value !== 'all'
+  const q = (searchQuery.value || '').trim().toLowerCase()
+  const targetClass = isClassFilterActive && filterClass.value !== 'grad' ? Number(filterClass.value) : null
+
+  let baseList = flatStats.value
+
+  const result = []
+
+  for (const item of baseList) {
+    // 1. 해당 트랙 내 학생들을 학급 필터 및 검색어에 맞춰 선별
+    const matchedStudents = (item.students || []).filter(std => {
+      // 1-1. 학급 필터
+      if (isClassFilterActive) {
+        if (filterClass.value === 'grad') {
+          if (!std.is_graduated && std.grade_type !== '졸업생') return false
+        } else {
+          if (std.is_graduated || std.grade_type === '졸업생') return false
+          if (std.class_no !== targetClass) return false
+        }
+      }
+      // 1-2. 검색어 필터
+      if (q) {
+        const uMatch = (item.univ_name || '').toLowerCase().includes(q)
+        const tMatch = (item.track_name || '').toLowerCase().includes(q)
+        const dMatch = (item.display_track_name || '').toLowerCase().includes(q)
+        const sNameMatch = (std.name || '').toLowerCase().includes(q)
+        const sCodeMatch = (std.student_code || '').toLowerCase().includes(q) || (std.raw_student_code || '').toLowerCase().includes(q)
+        if (!uMatch && !tMatch && !dMatch && !sNameMatch && !sCodeMatch) return false
+      }
+      return true
+    })
+
+    // 2. 대학명/전형명 자체 매칭 여부
+    const trackTextMatches = q ? (
+      (item.univ_name || '').toLowerCase().includes(q) ||
+      (item.track_name || '').toLowerCase().includes(q) ||
+      (item.display_track_name || '').toLowerCase().includes(q)
+    ) : true
+
+    // 3. 행(row) 표출 여부 결정
+    // - 학급 필터가 활성화된 경우: 해당 학급 학생이 존재하는 전형만 표출
+    // - 학급 필터가 전체('all')이고 검색어가 있는 경우: 전형명 매칭이거나 학생 매칭인 경우 표출
+    // - 인쇄 전용(printOnlyWithRecommendations)인 경우: 추천자가 있는 전형만 표출
+    if (isClassFilterActive) {
+      if (matchedStudents.length === 0) continue
+    } else if (q) {
+      if (!trackTextMatches && matchedStudents.length === 0) continue
+    } else if (printOnlyWithRecommendations.value) {
+      if (item.unit_used === 0 && item.total_applied === 0) continue
+    }
+
+    const enrolledMatched = matchedStudents.filter(s => !s.is_graduated && s.grade_type !== '졸업생').length
+    const gradMatched = matchedStudents.filter(s => s.is_graduated || s.grade_type === '졸업생').length
+
+    result.push({
+      ...item,
+      students: matchedStudents,
+      unit_used: isClassFilterActive ? matchedStudents.length : item.unit_used,
+      enrolled_used: isClassFilterActive ? enrolledMatched : item.enrolled_used,
+      grad_used: isClassFilterActive ? gradMatched : item.grad_used
+    })
   }
-  return flatStats.value
+
+  // 순번 No 재할당
+  return result.map((item, idx) => ({
+    ...item,
+    no: idx + 1
+  }))
 })
 
 const totalAppliedStats = computed(() => {
@@ -1165,7 +1231,7 @@ const totalRecommendedStats = computed(() => {
   let enrolledCases = 0
   let gradCases = 0
 
-  for (const item of flatStats.value) {
+  for (const item of displayedStats.value) {
     for (const std of (item.students || [])) {
       totalCases++
       totalSet.add(std.student_id)
@@ -1397,6 +1463,24 @@ async function loadData() {
 
       const rankMap = {}
       const selectedApps = []
+      const overQuotaApps = []
+
+      // 학생별 복수 지원 차수(1차/2차/3차) 자동 분배
+      const allRoundsAreOne = allApps.every(ap => (ap.round == null || Number(ap.round) === 1) && (ap.recommended_round == null || Number(ap.recommended_round) === 1))
+      const studentRecOrderMap = {}
+      if (allRoundsAreOne) {
+        const sortedForOrder = [...allApps].sort((a, b) => {
+          const scoreA = a.univ_calc_score != null ? Number(a.univ_calc_score) : (a.manual_score != null ? Number(a.manual_score) : null)
+          const scoreB = b.univ_calc_score != null ? Number(b.univ_calc_score) : (b.manual_score != null ? Number(b.manual_score) : null)
+          if (scoreA !== null && scoreB !== null && scoreA !== scoreB) return scoreB - scoreA
+          return new Date(a.created_at || 0) - new Date(b.created_at || 0)
+        })
+        sortedForOrder.forEach(ap => {
+          const ord = studentRecOrderMap[ap.student_id] || 0
+          studentRecOrderMap[ap.student_id] = ord + 1
+          ap.calculated_round = Math.min(ord + 1, totalRounds.value || 3)
+        })
+      }
 
       Object.keys(groupedByTrack).forEach(trackId => {
         const list = groupedByTrack[trackId]
@@ -1430,39 +1514,84 @@ async function loadData() {
           rankMap[ap.id] = rank
 
           // [현 상황 추천 선발 대상 판정]
-          // 1) 이미 마감되어 DB에 is_recommended === true로 확정된 경우 포함
-          // 2) 접수 마감 전이라도 정원이 있으면 rank <= unitQuota 이내 학생, 정원 없으면(무제한) 전체 지원 학생을 현 상황 추천 대상으로 선정
-          const isSelected = ap.is_recommended || (unitQuota != null ? rank <= unitQuota : true)
+          // 정원 제한이 있는 경우: 반드시 석차가 정원 이내(rank <= unitQuota)여야만 추천 선발 대상!
+          // 정원 제한이 없는 경우(무제한): DB의 is_recommended 상태 또는 전체 지원 학생
+          const isSelected = unitQuota != null ? (rank <= unitQuota) : (ap.is_recommended !== false)
+          const s = studentMapLocal[ap.student_id] || {}
+          const scoreVal = ap.univ_calc_score != null ? ap.univ_calc_score : ap.manual_score
+          let scoreText = ''
+          if (scoreVal != null && Number(scoreVal) > 0) {
+            scoreText = `${formatScore(scoreVal)}점`
+          } else if (s.gpa_overall != null && Number(s.gpa_overall) > 0) {
+            scoreText = `${Number(s.gpa_overall).toFixed(2)}등급`
+          } else {
+            scoreText = '-'
+          }
+
+          const effRound = ap.calculated_round || (ap.recommended_round != null ? ap.recommended_round : (ap.round != null ? ap.round : 1))
 
           if (isSelected) {
-            const s = studentMapLocal[ap.student_id] || {}
-            const scoreVal = ap.univ_calc_score != null ? ap.univ_calc_score : ap.manual_score
-            let scoreText = ''
-            if (scoreVal != null && Number(scoreVal) > 0) {
-              scoreText = `${formatScore(scoreVal)}점`
-            } else if (s.gpa_overall != null && Number(s.gpa_overall) > 0) {
-              scoreText = `${Number(s.gpa_overall).toFixed(2)}등급`
-            } else {
-              scoreText = '-'
-            }
-
             selectedApps.push({
               id: ap.id,
               student_id: ap.student_id,
               univ_id: ap.univ_id,
-              round: ap.round != null ? ap.round : 1,
-              recommended_round: ap.recommended_round != null ? ap.recommended_round : (ap.round != null ? ap.round : 1),
-              is_recommended: !!ap.is_recommended,
+              round: effRound,
+              recommended_round: effRound,
+              is_recommended: true,
               student_code: s.student_code || '',
               name: s.name || '',
               rank: rank,
               score_text: scoreText
+            })
+          } else {
+            // 정원 초과 미선발 지원서 수집 -> 포기자 명단에 추가
+            const isGrad = s.is_graduated || (!s.grade && s.grad_year)
+            const code = s.student_code || ap.student_code || ''
+            let cNo = s.class_no || ap.class_no
+            if (!cNo && code.length >= 5 && !isGrad) {
+              const parsed = parseInt(code.substring(1, 3), 10)
+              if (!isNaN(parsed) && parsed > 0) cNo = parsed
+            }
+            const tInfo = trackInfoMap[ap.univ_id] || {}
+            overQuotaApps.push({
+              id: `db_over_quota_${ap.id}`,
+              student_id: ap.student_id,
+              student_code: code,
+              class_no: isGrad ? null : cNo,
+              is_graduated: isGrad,
+              name: s.name || ap.name || '',
+              grade_type: isGrad ? '졸업생' : '재학생',
+              univ_name: ap.universities?.univ_name || tInfo.univ_name || ap.univ_name || '',
+              track_name: ap.universities?.track_name || tInfo.track_name || ap.track_name || '',
+              department_name: ap.department_name || '-',
+              round: effRound,
+              abandoned_round: effRound,
+              reason: `추천 제한 정원 초과 (${rank}위, ${scoreText})`,
+              date: '2026-09-02',
+              raw_app: { ...ap, is_abandoned: true },
+              raw_student: s
             })
           }
         })
       })
 
       recommendedList.value = selectedApps
+
+      // DB에 명시된 포기원(abList) + 정원 초과 미선발 지원 건(overQuotaApps) 합산
+      const combinedAbandoned = [...abList, ...overQuotaApps]
+      if (combinedAbandoned.length === 0) {
+        const kcueData = buildReportsDataFromKcue(null, stats.value, regRecs)
+        abandonedList.value = kcueData.abandonedList || []
+      } else {
+        combinedAbandoned.sort((a, b) => {
+          const uCmp = (a.univ_name || '').localeCompare(b.univ_name || '', 'ko')
+          if (uCmp !== 0) return uCmp
+          const tCmp = (a.track_name || '').localeCompare(b.track_name || '', 'ko')
+          if (tCmp !== 0) return tCmp
+          return (a.student_code || '').localeCompare(b.student_code || '')
+        })
+        abandonedList.value = combinedAbandoned
+      }
     }
   } catch (e) {
     console.warn('보고서 데이터 조회 예외, 2027 원장 아카이브로 폴백:', e)

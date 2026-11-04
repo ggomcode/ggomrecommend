@@ -27,6 +27,38 @@ export function formatSchoolPrincipalTitle(rawInput) {
   return `${name}장 귀하`
 }
 
+export async function initSchoolConfig() {
+  const cached = typeof localStorage !== 'undefined' ? localStorage.getItem('pcm_school_name') : null
+  if (cached && cached.trim()) {
+    schoolName.value = cached.trim()
+  }
+
+  if (!supabase) return schoolName.value
+
+  try {
+    const fetchPromise = supabase
+      .from('config')
+      .select('value')
+      .eq('key', 'school_name')
+      .maybeSingle()
+
+    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ timeout: true }), 500))
+    const res = await Promise.race([fetchPromise, timeoutPromise])
+
+    if (res && !res.timeout && !res.error && res.data?.value) {
+      const val = normalizeSchoolName(res.data.value)
+      schoolName.value = val
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('pcm_school_name', val)
+      }
+    }
+  } catch (e) {
+    console.warn('Initial school config check failed:', e)
+  }
+
+  return schoolName.value
+}
+
 export async function fetchSchoolName() {
   const cached = localStorage.getItem('pcm_school_name')
   if (cached) {

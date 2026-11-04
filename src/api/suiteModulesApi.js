@@ -514,14 +514,73 @@ export const RECOMMENDED_SYSTEM_NAMES = [
   '올인원 학년통합 업무시스템'
 ]
 
-// ── 1. 로그인 시스템명 조회 ───────────────────────────────────────────
-export async function fetchLoginSystemName() {
-  const cached = localStorage.getItem('pcm_login_system_name')
-  if (cached) {
-    loginSystemName.value = cached
+// ── 문서 타이틀(브라우저 탭 명칭) 동기화 ─────────────────────────────
+export function syncDocumentTitle() {
+  if (typeof document === 'undefined') return
+  const sName = (typeof localStorage !== 'undefined' ? localStorage.getItem('pcm_school_name') : '') || ''
+  const pTitle = loginSystemName.value || DEFAULT_SYSTEM_NAME
+  const cleanSchool = sName && sName !== '우리학교' ? sName.trim() : ''
+  document.title = cleanSchool ? `${cleanSchool} - ${pTitle}` : pTitle
+}
+
+// ── 0. 초기 구동 전 관리자 설정 대문명 사전 검사 ────────────────────────
+export async function initLoginSystemConfig() {
+  // 1. 브라우저 캐시에서 먼저 확인
+  const cached = typeof localStorage !== 'undefined' ? localStorage.getItem('pcm_login_system_name') : null
+  if (cached && cached.trim()) {
+    loginSystemName.value = cached.trim()
   }
 
+  syncDocumentTitle()
+
   if (!supabase) return loginSystemName.value
+
+  // 2. DB(config 테이블)에서 관리자가 지정한 대문명이 있는지 최우선 검사 (500ms 타임아웃으로 초기 블로킹 방지)
+  try {
+    const fetchPromise = supabase
+      .from('config')
+      .select('value')
+      .eq('key', CONFIG_KEY_LOGIN_SYSTEM_NAME)
+      .maybeSingle()
+
+    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ timeout: true }), 500))
+    const res = await Promise.race([fetchPromise, timeoutPromise])
+
+    if (res && !res.timeout && !res.error) {
+      const val = res.data?.value?.trim()
+      if (val) {
+        // 관리자가 설정한 대문명이 있으면 즉시 채택
+        loginSystemName.value = val
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('pcm_login_system_name', val)
+        }
+      } else {
+        // 관리자 설정에 대문명이 없으면 디폴트 지정 명칭 채택
+        loginSystemName.value = DEFAULT_SYSTEM_NAME
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem('pcm_login_system_name')
+        }
+      }
+      syncDocumentTitle()
+    }
+  } catch (e) {
+    console.warn('Initial login system config check failed:', e)
+  }
+
+  return loginSystemName.value
+}
+
+// ── 1. 로그인 시스템명 조회 ───────────────────────────────────────────
+export async function fetchLoginSystemName() {
+  const cached = typeof localStorage !== 'undefined' ? localStorage.getItem('pcm_login_system_name') : null
+  if (cached && cached.trim()) {
+    loginSystemName.value = cached.trim()
+  }
+
+  if (!supabase) {
+    syncDocumentTitle()
+    return loginSystemName.value
+  }
 
   try {
     const { data, error } = await supabase
@@ -532,12 +591,20 @@ export async function fetchLoginSystemName() {
 
     if (!error && data && data.value && data.value.trim()) {
       loginSystemName.value = data.value.trim()
-      localStorage.setItem('pcm_login_system_name', loginSystemName.value)
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('pcm_login_system_name', loginSystemName.value)
+      }
+    } else if (!error && (!data || !data.value || !data.value.trim())) {
+      loginSystemName.value = DEFAULT_SYSTEM_NAME
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('pcm_login_system_name')
+      }
     }
   } catch (e) {
     console.warn('Failed to fetch login system name from DB:', e)
   }
 
+  syncDocumentTitle()
   return loginSystemName.value
 }
 
@@ -545,7 +612,11 @@ export async function fetchLoginSystemName() {
 export async function saveLoginSystemName(newName) {
   const trimmed = (newName || '').trim() || DEFAULT_SYSTEM_NAME
   loginSystemName.value = trimmed
-  localStorage.setItem('pcm_login_system_name', trimmed)
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('pcm_login_system_name', trimmed)
+  }
+
+  syncDocumentTitle()
 
   if (!supabase) return { success: true }
 

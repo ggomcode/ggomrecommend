@@ -2570,9 +2570,10 @@ export const getQuotaStats = async () => {
   // Map2: univ_name 만 (단일 전형 대학 fallback)
   const { data: regRecs } = await supabase
     .from('regional_recommendations')
-    .select('univ_name, track_name, quota_limit')
+    .select('univ_name, track_name, quota_limit, grad_condition')
   const regRecMap = new Map()      // key: norm(univ)__norm(track)
   const regRecByUniv = new Map()   // key: norm(univ) (% 타입인 것만)
+  const regGradCondMap = new Map() // key: norm(univ)__norm(track) 또는 norm(univ)
   // 대학명/전형명 정규화: 앞뒤 공백 제거, 내부 공백 제거, 소문자 변환
   const normKey = s => (s || '').trim().toLowerCase().replace(/\s+/g, '')
   for (const r of (regRecs || [])) {
@@ -2580,9 +2581,13 @@ export const getQuotaStats = async () => {
     const tName = (r.track_name || '').trim()
     const k = `${normKey(uName)}__${normKey(tName)}`
     if (!regRecMap.has(k)) regRecMap.set(k, r.quota_limit)
+    if (r.grad_condition && !regGradCondMap.has(k)) regGradCondMap.set(k, r.grad_condition)
     const uClean = cleanUnivName(uName)
     const kClean = `${normKey(uClean)}__${normKey(tName)}`
     if (!regRecMap.has(kClean)) regRecMap.set(kClean, r.quota_limit)
+    if (r.grad_condition && !regGradCondMap.has(kClean)) regGradCondMap.set(kClean, r.grad_condition)
+    if (r.grad_condition && !regGradCondMap.has(normKey(uName))) regGradCondMap.set(normKey(uName), r.grad_condition)
+    if (r.grad_condition && !regGradCondMap.has(normKey(uClean))) regGradCondMap.set(normKey(uClean), r.grad_condition)
     // 퍼센트 타입 감지: "3%" 형태 OR 0 < n < 1 소수("0.03" 등 엑셀 % 셀 원본값)
     if (r.quota_limit != null) {
       const rawStr = String(r.quota_limit).trim()
@@ -2697,6 +2702,7 @@ export const getQuotaStats = async () => {
       group.total_quota = meta.total_quota
     }
 
+    const gradConditionVal = regGradCondMap.get(regKey) ?? regGradCondMap.get(regKeyClean) ?? regGradCondMap.get(normKey(key)) ?? regGradCondMap.get(normKey(cleanKey)) ?? lookupMasterGradCondition(key, u.track_name) ?? '제한없음';
     group.tracks.push({
       id: u.id,
       track_id: u.id,
@@ -2704,6 +2710,7 @@ export const getQuotaStats = async () => {
       track_type: u.track_type || '',
       unit_quota: unitQuota,
       raw_quota_limit: rawQuotaLimit,   // 원본 regional % 텍스트 ("3%" 등)
+      grad_condition: gradConditionVal,
       unit_used: recommendedCount,
       enrolled_used: enrolledUsed,
       grad_used: gradUsed,

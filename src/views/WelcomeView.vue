@@ -15,7 +15,7 @@
             <path d="M6 12v5c3 3 9 3 12 0v-5"/>
           </svg>
         </div>
-        <h1 class="text-2xl font-bold" style="color: #0f172a; margin: 0;">{{ displaySystemName }}</h1>
+        <h1 class="text-2xl font-bold portal-title-font" style="color: #0f172a; margin: 0;">{{ displaySystemName }}</h1>
       </div>
 
       <!-- 1단계: 이용 안내 동의 -->

@@ -97,9 +97,15 @@ export function isUnivCampusMatch(nameA, nameB) {
   const campA = (nameA.match(/\(([^)]+)\)/) || [])[1] || '';
   const campB = (nameB.match(/\(([^)]+)\)/) || [])[1] || '';
 
-  // 둘 다 캠퍼스가 명시되어 있는데 서로 다르면 불일치
+  // 둘 다 캠퍼스가 명시되어 있는데 서로 다르면 불일치 (복합 캠퍼스인 경우 포함 여부 검사)
   if (campA && campB && campA !== campB) {
-    return false;
+    const multiCampus = campA.includes('/') || campA.includes('=') || campB.includes('/') || campB.includes('=');
+    if (multiCampus) {
+      const matchInMulti = campA.includes(campB) || campB.includes(campA);
+      if (!matchInMulti) return false;
+    } else {
+      return false;
+    }
   }
 
   const cleanA = normKey(cleanUnivName(nameA));
@@ -183,10 +189,18 @@ export function buildReportsDataFromKcue(kcueApps = null, adminStats = null, reg
         const isGrad = stInfo.is_graduated || (!stInfo.grade && stInfo.grad_year);
         const code = stInfo.student_code || ap.student_code || '';
 
+        let cNo = stInfo.class_no || ap.class_no;
+        if (!cNo && code.length >= 5 && !isGrad) {
+          const parsed = parseInt(code.substring(1, 3), 10);
+          if (!isNaN(parsed) && parsed > 0) cNo = parsed;
+        }
+
         kcueAbandonedList.push({
           id: `kcue_ab_${ap.id}`,
           student_id: ap.student_id,
           student_code: code,
+          class_no: isGrad ? null : cNo,
+          is_graduated: isGrad,
           name: ap.name,
           grade_type: isGrad ? '졸업생' : '재학생',
           univ_name: ap.univ_name,
@@ -284,21 +298,47 @@ export function buildReportsDataFromKcue(kcueApps = null, adminStats = null, reg
             selectedCount++;
             if (isGrad) gradUsed++;
             else enrolledUsed++;
-          }
 
-          recommendedList.push({
-            id: ap.id,
-            student_id: ap.student_id,
-            univ_id: t.track_id,
-            round: ap.round || 1,
-            recommended_round: ap.recommended_round || 1,
-            is_recommended: isSelected,
-            student_code: ap.student_code || '',
-            name: ap.name || '',
-            rank: rank,
-            score_text: scoreText,
-            department_name: ap.department_name
-          });
+            recommendedList.push({
+              id: ap.id,
+              student_id: ap.student_id,
+              univ_id: t.track_id,
+              round: ap.round || 1,
+              recommended_round: ap.recommended_round || 1,
+              is_recommended: true,
+              student_code: ap.student_code || '',
+              name: ap.name || '',
+              rank: rank,
+              score_text: scoreText,
+              department_name: ap.department_name
+            });
+          } else {
+            // 정원 초과 미선발 지원서는 추천 포기자(탈락) 명단에 추가
+            const code = stInfo.student_code || ap.student_code || '';
+            let cNo = stInfo.class_no || ap.class_no;
+            if (!cNo && code.length >= 5 && !isGrad) {
+              const parsed = parseInt(code.substring(1, 3), 10);
+              if (!isNaN(parsed) && parsed > 0) cNo = parsed;
+            }
+            kcueAbandonedList.push({
+              id: `kcue_over_quota_${ap.id}`,
+              student_id: ap.student_id,
+              student_code: code,
+              class_no: isGrad ? null : cNo,
+              is_graduated: isGrad,
+              name: ap.name,
+              grade_type: isGrad ? '졸업생' : '재학생',
+              univ_name: u.univ_name,
+              track_name: t.track_name,
+              department_name: ap.department_name || '-',
+              round: ap.round || 1,
+              abandoned_round: ap.round || 1,
+              reason: `추천 제한 정원 초과 (${rank}위, ${scoreText})`,
+              date: '2026-09-02',
+              raw_app: { ...ap, is_abandoned: true },
+              raw_student: { ...stInfo }
+            });
+          }
         });
 
         // 관리자 트랙 통계 업데이트
@@ -404,22 +444,51 @@ export function buildReportsDataFromKcue(kcueApps = null, adminStats = null, reg
       }
 
       const isSelected = trackInfo.quota != null ? rank <= trackInfo.quota : true;
-      if (isSelected) selectedCount++;
-      ap.is_recommended = isSelected;
+      if (isSelected) {
+        selectedCount++;
+        ap.is_recommended = true;
 
-      recommendedList.push({
-        id: ap.id,
-        student_id: ap.student_id,
-        univ_id: ap.univ_id,
-        round: ap.round || 1,
-        recommended_round: ap.recommended_round || 1,
-        is_recommended: isSelected,
-        student_code: ap.student_code || '',
-        name: ap.name || '',
-        rank: rank,
-        score_text: scoreText,
-        department_name: ap.department_name
-      });
+        recommendedList.push({
+          id: ap.id,
+          student_id: ap.student_id,
+          univ_id: ap.univ_id,
+          round: ap.round || 1,
+          recommended_round: ap.recommended_round || 1,
+          is_recommended: true,
+          student_code: ap.student_code || '',
+          name: ap.name || '',
+          rank: rank,
+          score_text: scoreText,
+          department_name: ap.department_name
+        });
+      } else {
+        const stInfo = studentMapLocal[ap.student_id] || {};
+        const isGrad = stInfo.is_graduated || (!stInfo.grade && stInfo.grad_year);
+        const code = stInfo.student_code || ap.student_code || '';
+        let cNo = stInfo.class_no || ap.class_no;
+        if (!cNo && code.length >= 5 && !isGrad) {
+          const parsed = parseInt(code.substring(1, 3), 10);
+          if (!isNaN(parsed) && parsed > 0) cNo = parsed;
+        }
+        kcueAbandonedList.push({
+          id: `kcue_over_quota_${ap.id}`,
+          student_id: ap.student_id,
+          student_code: code,
+          class_no: isGrad ? null : cNo,
+          is_graduated: isGrad,
+          name: ap.name,
+          grade_type: isGrad ? '졸업생' : '재학생',
+          univ_name: trackInfo.univ_name,
+          track_name: trackInfo.track_name,
+          department_name: ap.department_name || '-',
+          round: ap.round || 1,
+          abandoned_round: ap.round || 1,
+          reason: `추천 제한 정원 초과 (${rank}위, ${scoreText})`,
+          date: '2026-09-02',
+          raw_app: { ...ap, is_abandoned: true },
+          raw_student: { ...stInfo }
+        });
+      }
     });
 
     const uName = trackInfo.univ_name;

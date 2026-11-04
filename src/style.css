@@ -8,7 +8,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    --font-sans: 'Pretendard Variable', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+    --font-sans: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
 
     /* 커스텀 컨테이너 쿼리 브레이크포인트 */
     --container-3xl: 900px;
@@ -72,4 +72,12 @@ select[class*="appearance-none"]::-ms-expand {
         height: auto !important;
         overflow: visible !important;
     }
+}
+
+/* 대문(포털) 시스템 타이틀 전용 폰트 고정 스타일: 초기 깜빡임 및 폰트 변경 방지 */
+.portal-title-font {
+    font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif !important;
+    font-feature-settings: "cv05", "cv08", "cv10";
+    letter-spacing: -0.025em;
+    word-break: keep-all;
 }
