@@ -144,15 +144,17 @@
               <span v-if="!collapsed" class="truncate">시트 새로고침</span>
             </button>
 
-            <!-- GAS 연동 설정 버튼 -->
+            <!-- 관리자 전용: 시트 연동 관리 (관리자 설정 바로가기) -->
             <button
-              id="gasSettingsBtn"
+              v-if="auth.isAdmin"
+              type="button"
+              @click="$router.push('/admin?tab=settings')"
               class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all cursor-pointer border-none bg-transparent"
               :class="collapsed ? 'justify-center px-0' : 'justify-start'"
-              title="구글 앱스 스크립트(GAS) Web App 주소 설정"
+              title="관리자 설정 > 환경 설정 > 구글 스프레드시트 DB 연동 설정으로 이동합니다"
             >
               <span class="text-sm">⚙️</span>
-              <span v-if="!collapsed" class="truncate">GAS 연동 설정</span>
+              <span v-if="!collapsed" class="truncate">시트 연동 (관리자)</span>
             </button>
 
             <!-- 결석계 관리 바로가기 리스너 연결용 숨김 태그 -->
@@ -363,42 +365,7 @@
           </div>
         </div>
 
-        <!-- GAS Web App Settings Modal -->
-        <div class="modal-backdrop no-print" id="gasSettingsModal" style="display: none;">
-          <div class="modal-dialog">
-            <div class="modal-header">
-              <div class="modal-title-group">
-                <span class="modal-icon">⚙️</span>
-                <div>
-                  <h3 class="modal-title">구글 앱스 스크립트(GAS) Web App 설정</h3>
-                  <p class="modal-desc">'출결기록' 시트에 실시간 저장을 위한 웹 앱 주소를 등록합니다.</p>
-                </div>
-              </div>
-              <button type="button" class="modal-close-btn" id="closeGasSettingsBtn" title="닫기">&times;</button>
-            </div>
-            <div class="modal-body">
-              <div class="modal-section">
-                <label class="modal-label" for="gasUrlInput">배포된 Web App URL:</label>
-                <input type="url" id="gasUrlInput" class="styled-input" placeholder="https://script.google.com/macros/s/.../exec" />
-                <div class="field-hint">
-                  ※ 스프레드시트 [확장 프로그램] &gt; [Apps Script]에서 배포한 웹 앱 URL을 입력하세요.<br>
-                  ※ 자세한 설치 방법은 <code>docs/apps_script_code.js</code>를 참고하세요.
-                </div>
-              </div>
-              <div class="modal-section" style="margin-top: 15px;">
-                <label class="modal-label" for="teacherAuthKeyInput">교사용 결석계 관리 인증 키:</label>
-                <input type="text" id="teacherAuthKeyInput" class="styled-input" placeholder="teacher2026" />
-                <div class="field-hint">
-                  ※ 결석계 대장 조회 및 인쇄 페이지 접근 시 사용할 비밀 토큰입니다. (기본값: <code>teacher2026</code>)
-                </div>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" id="cancelGasSettingsBtn">취소</button>
-              <button type="button" class="btn btn-primary" id="saveGasSettingsBtn">저장하기</button>
-            </div>
-          </div>
-        </div>
+
 
         <!-- NEIS Monthly Attendance Summary Report Modal -->
         <div class="modal-backdrop no-print" id="neisReportModal" style="display: none;">

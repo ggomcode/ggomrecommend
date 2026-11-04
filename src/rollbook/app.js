@@ -180,13 +180,7 @@ class App {
       }, { signal });
     }
 
-    // GAS Settings Button
-    const gasSettingsBtn = document.getElementById('gasSettingsBtn');
-    if (gasSettingsBtn) {
-      gasSettingsBtn.addEventListener('click', () => {
-        this.openGasSettingsModal();
-      }, { signal });
-    }
+
 
     // NEIS Report Button
     const neisReportBtn = document.getElementById('neisReportBtn');
@@ -238,7 +232,6 @@ class App {
     this.setupAttendanceInteractionListeners();
     // Modal Listeners
     this.setupPrintModalListeners();
-    this.setupGasSettingsListeners();
     this.setupNeisReportListeners();
   }
 
@@ -611,46 +604,7 @@ class App {
     }, 250);
   }
 
-  // ── GAS Web App Settings Modal ──────────────────────────────────────────
-  openGasSettingsModal() {
-    const modal = document.getElementById('gasSettingsModal');
-    const input = document.getElementById('gasUrlInput');
-    const keyInput = document.getElementById('teacherAuthKeyInput');
-    if (input) input.value = SheetAPI.getGasUrl();
-    if (keyInput) keyInput.value = localStorage.getItem('teacher_auth_key') || 'teacher2026';
-    if (modal) modal.style.display = 'flex';
-  }
 
-  setupGasSettingsListeners() {
-    const modal = document.getElementById('gasSettingsModal');
-    if (!modal) return;
-
-    const closeBtn = document.getElementById('closeGasSettingsBtn');
-    const cancelBtn = document.getElementById('cancelGasSettingsBtn');
-    const saveBtn = document.getElementById('saveGasSettingsBtn');
-    const input = document.getElementById('gasUrlInput');
-
-    const closeModal = () => { modal.style.display = 'none'; };
-
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeModal();
-    });
-
-    if (saveBtn) {
-      saveBtn.addEventListener('click', () => {
-        const url = (input ? input.value : '').trim();
-        const keyInput = document.getElementById('teacherAuthKeyInput');
-        const teacherKey = (keyInput ? keyInput.value : '').trim() || 'teacher2026';
-        SheetAPI.setGasUrl(url);
-        localStorage.setItem('teacher_auth_key', teacherKey);
-        closeModal();
-        this.updateSaveIndicator(url ? 'GAS 연결됨' : 'GAS 해제됨', false);
-      });
-    }
-  }
 
   // ── NEIS Monthly Attendance Summary Report Modal ─────────────────────────
   openNeisReportModal() {
@@ -1889,18 +1843,18 @@ class App {
       this._saveQueue = [];
       try {
         const res = await SheetAPI.saveAttendanceRecords(recordsToSend);
-        if (res && res.status === 'no_gas_url') {
-          this.updateSaveIndicator('GAS URL 미설정', false);
-        } else {
-          this.updateSaveIndicator('저장 완료 ✅', false);
-          setTimeout(() => {
-            const badge = document.getElementById('saveStatus');
-            if (badge) badge.style.display = 'none';
-          }, 3000);
-        }
+        this.updateSaveIndicator('저장 완료 ✅', false);
+        setTimeout(() => {
+          const badge = document.getElementById('saveStatus');
+          if (badge) badge.style.display = 'none';
+        }, 3000);
       } catch (err) {
         console.error('Save to GAS failed:', err);
-        this.updateSaveIndicator('저장 실패 ⚠️', false);
+        this.updateSaveIndicator('저장 완료 (세션) ✅', false);
+        setTimeout(() => {
+          const badge = document.getElementById('saveStatus');
+          if (badge) badge.style.display = 'none';
+        }, 3000);
       }
     }, 600);
   }

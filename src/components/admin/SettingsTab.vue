@@ -504,6 +504,67 @@
               </button>
             </div>
           </div>
+
+          <!-- 5. 선택교과 출석관리 구글 스프레드시트 ID -->
+          <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-700 space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                5) 선택교과 출석관리 구글 스프레드시트 ID (고3 이동수업 · 원적학급 출석부)
+              </label>
+              <a
+                v-if="realGoogleSheetRollbookId"
+                :href="`https://docs.google.com/spreadsheets/d/${realGoogleSheetRollbookId}/edit`"
+                target="_blank"
+                class="text-xs text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 font-semibold flex items-center gap-1 hover:underline"
+              >
+                <span>🔗 시트 바로 열기</span>
+              </a>
+            </div>
+            <p class="text-[11px] text-slate-500 m-0 leading-relaxed">
+              출석관리 구글 시트 ID 또는 전체 URL을 입력하면 자동으로 ID만 추출하여 안전하게 저장됩니다.<br>
+              (시트 내 <code>출결사항</code>, <code>행사및휴업</code>, <code>출결기록</code>, <code>결석계 접수 대장</code> 시트 탭이 실시간 연동됩니다. 기본값: <code>1-Ki9X...</code>)
+            </p>
+            <div class="flex gap-2">
+              <input
+                v-model="googleSheetRollbookId"
+                type="text"
+                :placeholder="hasGoogleSheetRollbookId ? '저장된 ID (마스킹됨)' : 'ID 또는 전체 시트 URL 입력 (기본: 1-Ki9X...)'"
+                class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-slate-800 dark:text-white"
+              />
+              <button
+                @click="saveGoogleSheetRollbookId"
+                :disabled="googleSheetRollbookLoading"
+                class="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap"
+              >
+                {{ googleSheetRollbookLoading ? '저장 중…' : 'ID 저장' }}
+              </button>
+            </div>
+
+            <!-- 시트 실시간 쓰기 연동용 GAS Web App URL (선택사항) -->
+            <div class="pt-2 border-t border-slate-200/60 dark:border-slate-800">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                  ⚡ 실시간 시트 쓰기 연동용 GAS Web App URL (선택사항)
+                </span>
+                <span class="text-[10px] text-slate-400">구글 시트 '출결기록' 탭에 실시간 저장이 필요할 때 입력</span>
+              </div>
+              <div class="flex gap-2">
+                <input
+                  v-model="googleSheetRollbookGasUrl"
+                  type="text"
+                  :placeholder="hasGoogleSheetRollbookGasUrl ? '저장된 Web App URL (마스킹됨)' : 'https://script.google.com/macros/s/.../exec'"
+                  class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-slate-800 dark:text-white"
+                />
+                <button
+                  @click="saveGoogleSheetRollbookGasUrl"
+                  :disabled="googleSheetRollbookGasLoading"
+                  class="text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg px-3.5 cursor-pointer transition-colors whitespace-nowrap"
+                >
+                  {{ googleSheetRollbookGasLoading ? '저장 중…' : 'URL 저장' }}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1006,6 +1067,16 @@ const hasAdmissionSheetId = ref(false)
 const admissionSheetLoading = ref(false)
 const admissionRefreshLoading = ref(false)
 
+const googleSheetRollbookId = ref('')
+const realGoogleSheetRollbookId = ref('')
+const hasGoogleSheetRollbookId = ref(false)
+const googleSheetRollbookLoading = ref(false)
+
+const googleSheetRollbookGasUrl = ref('')
+const realGoogleSheetRollbookGasUrl = ref('')
+const hasGoogleSheetRollbookGasUrl = ref(false)
+const googleSheetRollbookGasLoading = ref(false)
+
 const allowAreaEdit = ref(false)
 const areaEditLoading = ref(false)
 
@@ -1417,6 +1488,17 @@ async function loadConfig() {
     hasAdmissionSheetId.value = !!dbAdmissionId
     admissionSheetIdInput.value = dbAdmissionId ? maskGoogleSheetId(dbAdmissionId) : ''
 
+    const dbRollbookId = configMap['google_sheet_rollbook_id'] || localStorage.getItem('pcm_google_sheet_rollbook_id') || '1-Ki9X_EKw5xEq-Pc-ba-PBU6VWhvdBun-1bkUjTTH0Q'
+    realGoogleSheetRollbookId.value = dbRollbookId
+    hasGoogleSheetRollbookId.value = !!dbRollbookId
+    googleSheetRollbookId.value = dbRollbookId ? maskGoogleSheetId(dbRollbookId) : ''
+    localStorage.setItem('pcm_google_sheet_rollbook_id', dbRollbookId)
+
+    const dbRollbookGasUrl = configMap['google_sheet_rollbook_gas_url'] || localStorage.getItem('ggom_gas_webapp_url') || ''
+    realGoogleSheetRollbookGasUrl.value = dbRollbookGasUrl
+    hasGoogleSheetRollbookGasUrl.value = !!dbRollbookGasUrl
+    googleSheetRollbookGasUrl.value = dbRollbookGasUrl ? maskGoogleSheetId(dbRollbookGasUrl) : ''
+
     if (configMap['allow_area_edit']) {
       allowAreaEdit.value = configMap['allow_area_edit'] === 'true'
       localStorage.setItem('pcm_allow_area_edit', configMap['allow_area_edit'])
@@ -1592,6 +1674,73 @@ async function handleRefreshAdmissionData() {
     alert(`동기화 실패: ${e.message}`)
   } finally {
     admissionRefreshLoading.value = false
+  }
+}
+
+async function saveGoogleSheetRollbookId() {
+  googleSheetRollbookLoading.value = true
+  try {
+    const inputVal = googleSheetRollbookId.value.trim()
+    let targetVal = inputVal
+    if (inputVal.includes('•')) {
+      targetVal = realGoogleSheetRollbookId.value
+    } else {
+      targetVal = extractSheetId(inputVal)
+      realGoogleSheetRollbookId.value = targetVal
+    }
+
+    if (supabase) {
+      const { error } = await supabase.from('config').upsert({ key: 'google_sheet_rollbook_id', value: targetVal }, { onConflict: 'key' })
+      if (error) throw error
+    }
+
+    if (targetVal) {
+      localStorage.setItem('pcm_google_sheet_rollbook_id', targetVal)
+    } else {
+      localStorage.removeItem('pcm_google_sheet_rollbook_id')
+    }
+
+    hasGoogleSheetRollbookId.value = !!targetVal
+    googleSheetRollbookId.value = targetVal ? maskGoogleSheetId(targetVal) : ''
+    alert(targetVal ? '선택교과 출석관리 구글 스프레드시트 ID가 저장되었습니다.' : '출석관리 시트 ID가 삭제되었습니다.')
+  } catch (e) {
+    console.error(e)
+    alert('출석관리 구글 시트 ID 저장 중 오류가 발생했습니다: ' + e.message)
+  } finally {
+    googleSheetRollbookLoading.value = false
+  }
+}
+
+async function saveGoogleSheetRollbookGasUrl() {
+  googleSheetRollbookGasLoading.value = true
+  try {
+    const inputVal = googleSheetRollbookGasUrl.value.trim()
+    let targetVal = inputVal
+    if (inputVal.includes('•')) {
+      targetVal = realGoogleSheetRollbookGasUrl.value
+    } else {
+      realGoogleSheetRollbookGasUrl.value = targetVal
+    }
+
+    if (supabase) {
+      const { error } = await supabase.from('config').upsert({ key: 'google_sheet_rollbook_gas_url', value: targetVal }, { onConflict: 'key' })
+      if (error) throw error
+    }
+
+    if (targetVal) {
+      localStorage.setItem('ggom_gas_webapp_url', targetVal)
+    } else {
+      localStorage.removeItem('ggom_gas_webapp_url')
+    }
+
+    hasGoogleSheetRollbookGasUrl.value = !!targetVal
+    googleSheetRollbookGasUrl.value = targetVal ? maskGoogleSheetId(targetVal) : ''
+    alert(targetVal ? '선택교과 출석관리 GAS Web App URL이 저장되었습니다.' : '출석관리 GAS URL이 삭제되었습니다.')
+  } catch (e) {
+    console.error(e)
+    alert('출석관리 GAS URL 저장 중 오류가 발생했습니다: ' + e.message)
+  } finally {
+    googleSheetRollbookGasLoading.value = false
   }
 }
 
