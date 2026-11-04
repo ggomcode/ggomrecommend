@@ -149,6 +149,7 @@
                   <th class="py-2 px-2 border border-slate-400 w-24 text-center">이름</th>
                   <th class="py-2 px-2 border border-slate-400 w-28 text-center">날짜</th>
                   <th class="py-2 px-3 border border-slate-400 text-left">상담내용</th>
+                  <th class="py-2 px-2 border border-slate-400 w-28 text-center print:hidden">관리</th>
                 </tr>
               </thead>
               <tbody>
@@ -172,11 +173,31 @@
                   <td class="py-2.5 px-3 border border-slate-300 text-slate-900 align-top whitespace-pre-wrap leading-relaxed text-[11.5px]">
                     {{ log.content }}
                   </td>
+                  <td class="py-2.5 px-2 border border-slate-300 text-center align-top print:hidden whitespace-nowrap">
+                    <div class="flex items-center justify-center space-x-1.5">
+                      <button
+                        type="button"
+                        @click="openEditModal(log)"
+                        class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md text-xs font-bold border border-indigo-200 cursor-pointer transition-colors shadow-2xs"
+                        title="상담 기록 수정"
+                      >
+                        ✏️ 수정
+                      </button>
+                      <button
+                        type="button"
+                        @click="handleDeleteLog(log)"
+                        class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-md text-xs font-bold border border-rose-200 cursor-pointer transition-colors shadow-2xs"
+                        title="상담 기록 삭제"
+                      >
+                        🗑️ 삭제
+                      </button>
+                    </div>
+                  </td>
                 </tr>
 
                 <!-- 데이터가 없을 때 -->
                 <tr v-if="filteredLogs.length === 0">
-                  <td colspan="5" class="py-12 text-center text-slate-400 border border-slate-300">
+                  <td colspan="6" class="py-12 text-center text-slate-400 border border-slate-300">
                     선택한 조건(학년도: {{ selectedYear }}, 상담교사: {{ selectedTeacher }}, 학급: {{ formatClassLabel(selectedClass) }})에 등록된 상담 기록이 없습니다.
                   </td>
                 </tr>
@@ -194,13 +215,55 @@
 
       </div>
 
+      <!-- 상담 기록 수정 서브 모달 (화면 전용) -->
+      <div v-if="isEditDialogOpen" class="fixed inset-0 z-60 bg-black/60 backdrop-blur-2xs flex items-center justify-center p-4 print:hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h4 class="text-sm font-bold text-slate-900 m-0 flex items-center space-x-2">
+              <span>✏️</span>
+              <span>상담 기록 수정 ({{ editTarget?.student_name }} / {{ editTarget?.student_code || formatCode(editTarget) }})</span>
+            </h4>
+            <button type="button" @click="closeEditModal" class="text-slate-400 hover:text-slate-600 bg-transparent border-none cursor-pointer text-lg">
+              ✕
+            </button>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">상담 일자:</label>
+              <input type="date" v-model="editForm.counsel_date" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">상담 교사:</label>
+              <input type="text" v-model="editForm.teacher_name" placeholder="상담교사 성명" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" />
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">상담 내용:</label>
+              <textarea v-model="editForm.content" rows="4" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 leading-relaxed"></textarea>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+            <button type="button" @click="closeEditModal" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg cursor-pointer border border-slate-300">
+              취소
+            </button>
+            <button type="button" @click="saveEdit" :disabled="isSavingEdit" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg cursor-pointer border-none disabled:opacity-50 flex items-center space-x-1.5">
+              <span>💾</span>
+              <span>수정 저장</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { fetchCounselLogs, getDistinctTeachers, getDistinctYears } from '../../../api/counselApi.js'
+import { fetchCounselLogs, saveCounselRecord, deleteCounselRecord, getDistinctTeachers, getDistinctYears } from '../../../api/counselApi.js'
 
 const props = defineProps({
   isOpen: { type: Boolean, default: false },
@@ -209,7 +272,73 @@ const props = defineProps({
   currentTeacherName: { type: String, default: '' }
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close', 'updated'])
+
+// 인라인 수정 모달 상태
+const isEditDialogOpen = ref(false)
+const editTarget = ref(null)
+const editForm = ref({ counsel_date: '', teacher_name: '', content: '' })
+const isSavingEdit = ref(false)
+
+function openEditModal(log) {
+  editTarget.value = log
+  editForm.value = {
+    counsel_date: log.counsel_date || '',
+    teacher_name: log.teacher_name || '',
+    content: log.content || ''
+  }
+  isEditDialogOpen.value = true
+}
+
+function closeEditModal() {
+  isEditDialogOpen.value = false
+  editTarget.value = null
+}
+
+async function saveEdit() {
+  if (!editTarget.value) return
+  if (!editForm.value.content.trim()) {
+    alert('상담 내용을 입력해주세요.')
+    return
+  }
+
+  isSavingEdit.value = true
+  try {
+    const updated = {
+      ...editTarget.value,
+      counsel_date: editForm.value.counsel_date,
+      teacher_name: (editForm.value.teacher_name || '담임교사').trim(),
+      content: editForm.value.content.trim()
+    }
+    await saveCounselRecord(updated)
+    await loadLogs()
+    emit('updated')
+    closeEditModal()
+  } catch (err) {
+    console.error('saveEdit error:', err)
+    alert('수정 저장 중 오류가 발생했습니다: ' + err.message)
+  } finally {
+    isSavingEdit.value = false
+  }
+}
+
+async function handleDeleteLog(log) {
+  if (!log) return
+  const name = log.student_name || '학생'
+  const date = log.counsel_date || ''
+  if (!confirm(`[${name}] 학생의 ${date} 상담 기록을 삭제하시겠습니까?`)) {
+    return
+  }
+
+  try {
+    await deleteCounselRecord(log.id, log.student_key)
+    await loadLogs()
+    emit('updated')
+  } catch (err) {
+    console.error('handleDeleteLog error:', err)
+    alert('삭제 중 오류가 발생했습니다.')
+  }
+}
 
 const selectedYear = ref(props.initialYear || '2027')
 const selectedTeacher = ref(props.initialTeacher || props.currentTeacherName || localStorage.getItem('pcm_teacher_name') || '담임교사')

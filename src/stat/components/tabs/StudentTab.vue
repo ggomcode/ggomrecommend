@@ -811,11 +811,11 @@
 
                 <!-- 상태 표시 -->
                 <div class="sm:col-span-3 text-right">
-                  <span v-if="editingLogId" class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800">
-                    수정 중
+                  <span v-if="editingLogId" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                    기존 기록 수정 중
                   </span>
-                  <span v-else class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700">
-                    신규 작성
+                  <span v-else class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    신규 상담 작성
                   </span>
                 </div>
               </div>
@@ -831,7 +831,7 @@
               </div>
 
               <!-- 버튼 및 피드백 -->
-              <div class="flex items-center justify-between pt-1">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
                 <div>
                   <span v-if="saveMessage" class="text-xs text-emerald-600 font-bold flex items-center space-x-1">
                     <span>✅</span>
@@ -839,15 +839,29 @@
                   </span>
                 </div>
 
-                <div class="flex items-center space-x-2">
+                <div class="flex items-center space-x-2 self-end sm:self-auto">
                   <button
                     v-if="editingLogId"
                     type="button"
-                    @click="cancelEditCounsel"
-                    class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg transition-colors cursor-pointer border-none"
+                    @click="startNewCounsel"
+                    class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors cursor-pointer border border-slate-300 flex items-center space-x-1"
+                    title="기존 기록 수정을 닫고 새로운 상담 기록을 작성합니다"
                   >
-                    수정 취소
+                    <span>➕</span>
+                    <span>새 상담 작성</span>
                   </button>
+
+                  <button
+                    v-if="editingLogId"
+                    type="button"
+                    @click="handleDeleteCounsel(editingLogId)"
+                    class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg transition-colors cursor-pointer border border-rose-300 flex items-center space-x-1"
+                    title="현재 불러온 상담 기록을 완전히 삭제합니다"
+                  >
+                    <span>🗑️</span>
+                    <span>기록 삭제</span>
+                  </button>
+
                   <button
                     type="button"
                     @click="handleSaveCounsel"
@@ -892,20 +906,24 @@
                       </span>
                     </div>
 
-                    <div class="flex items-center space-x-2">
+                    <div class="flex items-center space-x-1.5">
                       <button
                         type="button"
                         @click="handleEditCounsel(log)"
-                        class="text-indigo-600 hover:text-indigo-800 text-[11px] font-bold bg-transparent border-none cursor-pointer"
+                        class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-md cursor-pointer transition-colors flex items-center space-x-1 shadow-2xs"
+                        title="이 상담 내용을 위 입력창으로 불러와 수정합니다"
                       >
-                        수정
+                        <span>✏️</span>
+                        <span>수정</span>
                       </button>
                       <button
                         type="button"
                         @click="handleDeleteCounsel(log.id)"
-                        class="text-rose-600 hover:text-rose-800 text-[11px] font-bold bg-transparent border-none cursor-pointer"
+                        class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-md cursor-pointer transition-colors flex items-center space-x-1 shadow-2xs"
+                        title="이 상담 기록을 삭제합니다"
                       >
-                        삭제
+                        <span>🗑️</span>
+                        <span>삭제</span>
                       </button>
                     </div>
                   </div>
@@ -962,6 +980,7 @@
       :initialYear="selectedAcademicYear"
       :currentTeacherName="counselTeacher"
       @close="isTeacherReportModalOpen = false"
+      @updated="reloadCurrentStudentLogs"
     />
 
   </div>
@@ -1066,9 +1085,14 @@ watch(activeStudentKey, async (newKey) => {
       const logs = await fetchCounselLogsByStudent(newKey, selectedAcademicYear.value)
       studentCounselLogs.value = logs || []
       if (logs && logs.length > 0) {
-        counselContent.value = logs[0].content || ''
-        counselMemo.value = logs[0].content || ''
+        const latest = logs[0]
+        editingLogId.value = latest.id
+        counselDate.value = latest.counsel_date || new Date().toISOString().slice(0, 10)
+        counselTeacher.value = latest.teacher_name || counselTeacher.value
+        counselContent.value = latest.content || ''
+        counselMemo.value = latest.content || ''
       } else {
+        editingLogId.value = null
         const saved = localStorage.getItem(`counsel_memo_${newKey}`)
         counselContent.value = saved || ''
         counselMemo.value = saved || ''
@@ -1080,11 +1104,20 @@ watch(activeStudentKey, async (newKey) => {
       counselMemo.value = saved || ''
     }
   } else {
+    editingLogId.value = null
     counselContent.value = ''
     counselMemo.value = ''
     studentCounselLogs.value = []
   }
 }, { immediate: true })
+
+function startNewCounsel() {
+  editingLogId.value = null
+  counselDate.value = new Date().toISOString().slice(0, 10)
+  counselContent.value = ''
+  counselMemo.value = ''
+  saveMessage.value = ''
+}
 
 // 상담 내용과 레거시 counselMemo 실시간 동기화
 watch(counselContent, (newVal) => {
@@ -1172,16 +1205,25 @@ async function handleDeleteCounsel(logId) {
   try {
     await deleteCounselRecord(logId, activeStudentKey.value)
     if (editingLogId.value === logId) {
-      cancelEditCounsel()
+      editingLogId.value = null
     }
     await reloadCurrentStudentLogs()
     if (studentCounselLogs.value.length > 0) {
-      counselContent.value = studentCounselLogs.value[0].content || ''
-      counselMemo.value = studentCounselLogs.value[0].content || ''
+      const latest = studentCounselLogs.value[0]
+      editingLogId.value = latest.id
+      counselDate.value = latest.counsel_date || new Date().toISOString().slice(0, 10)
+      counselTeacher.value = latest.teacher_name || counselTeacher.value
+      counselContent.value = latest.content || ''
+      counselMemo.value = latest.content || ''
     } else {
+      editingLogId.value = null
       counselContent.value = ''
       counselMemo.value = ''
     }
+    saveMessage.value = '상담 기록이 삭제되었습니다.'
+    setTimeout(() => {
+      saveMessage.value = ''
+    }, 3000)
   } catch (err) {
     console.error('Delete counsel error:', err)
     alert('삭제 중 오류가 발생했습니다.')

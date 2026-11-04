@@ -167,7 +167,7 @@ export async function saveCounselRecord(record) {
 
   const nowIso = new Date().toISOString()
   const payload = {
-    id: record.id || generateId(),
+    id: (record.id && !record.id.startsWith('legacy_')) ? record.id : generateId(),
     academic_year: String(record.academic_year || '2027'),
     counsel_date: record.counsel_date || nowIso.slice(0, 10),
     teacher_name: (record.teacher_name || '담임교사').trim(),
@@ -217,6 +217,13 @@ export async function saveCounselRecord(record) {
  */
 export async function deleteCounselRecord(id, studentKey = null) {
   if (!id) return false
+
+  if (String(id).startsWith('legacy_')) {
+    if (studentKey) {
+      localStorage.removeItem(`counsel_memo_${studentKey}`)
+    }
+    return true
+  }
 
   // 1. 로컬 스토리지에서 삭제
   const currentLogs = getLocalCounselLogs()
