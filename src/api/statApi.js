@@ -627,7 +627,10 @@ export async function getStatSampleCipher(sheetId, forceReload = false) {
     }
   }
 
-  const cleanId = extractSheetId(sheetId) || DEFAULT_KCUE_SHEET_ID
+  const cleanId = extractSheetId(sheetId)
+  if (!cleanId || cleanId === DEFAULT_KCUE_SHEET_ID) {
+    return cachedBasicStats || {}
+  }
   if (!cleanId) return ''
 
   // 초고속 GViz 쿼리 (단 3개 행만 요청: 5KB 미만, 0.2~0.5초 완료)
