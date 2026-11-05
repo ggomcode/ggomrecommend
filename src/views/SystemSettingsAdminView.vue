@@ -220,7 +220,8 @@ import {
   Menu,
   Home,
   LogOut,
-  KeyRound
+  KeyRound,
+  FileSpreadsheet
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -229,11 +230,13 @@ const auth = useAuthStore()
 // ── 탭 컴포넌트 ──────────────────────────────────────────────
 const ApprovalTab = defineAsyncComponent(() => import('../components/teacher/ApprovalTab.vue'))
 const StudentsTab = defineAsyncComponent(() => import('../components/admin/StudentsTab.vue'))
+const MockExamUploadTab = defineAsyncComponent(() => import('../components/admin/MockExamUploadTab.vue'))
 const SettingsTab = defineAsyncComponent(() => import('../components/admin/SettingsTab.vue'))
 
 const menus = [
   { key: 'approval', label: '가입 승인', icon: UserCheck },
   { key: 'students', label: '학생 관리', icon: Users },
+  { key: 'mockExamUpload', label: '모의고사 성적 업로드', icon: FileSpreadsheet },
   { key: 'settings', label: '환경 설정', icon: Settings },
 ]
 
@@ -243,6 +246,7 @@ const collapsed = ref(false)
 const currentTab = computed(() => {
   if (active.value === 'approval') return ApprovalTab
   if (active.value === 'students') return StudentsTab
+  if (active.value === 'mockExamUpload') return MockExamUploadTab
   if (active.value === 'settings') return SettingsTab
   return null
 })

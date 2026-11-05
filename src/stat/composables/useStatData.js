@@ -434,6 +434,10 @@ async function applyYearAndScope(year, scope, forceReload = false) {
 
     applications.value = combined
     updateOfficialStats(strYear, combined)
+    // 연도 변경 시 모의고사 성적 승격 매핑 동기화
+    if (mockExamRecords.value.length > 0) {
+      loadMockExamData(true).catch(e => console.warn(e))
+    }
 
     if (combined.length === 0) {
       const periodLabel = scope.startsWith('JUNGSI') ? '정시' : '수시'

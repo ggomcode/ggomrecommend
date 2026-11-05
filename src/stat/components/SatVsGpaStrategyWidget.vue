@@ -113,44 +113,46 @@
         <div class="lg:col-span-6 flex flex-col gap-4">
           <!-- 언어 / 수리 / 외국어 상세 요약 카드 & 시각화 그래프 -->
           <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-4">
-            <!-- Header: 제목 & 회차 드롭다운 & 뷰 모드 토글 -->
+            <!-- Header: 제목 & 회차 드롭다운 (검은 박스선 제거 및 화살표 겹침 없는 넉넉한 폭) -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
               <div>
                 <h4 class="text-sm font-black text-slate-900 m-0 flex items-center gap-1.5">
                   <span>📝</span>
                   <span>{{ currentSatAnalysis.isCsat ? '수능' : '모의고사' }} 주요 영역 응시자 수 및 평균 등급</span>
                 </h4>
-                <div class="flex items-center gap-2 mt-1">
-                  <span class="inline-flex items-center gap-1 text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded-md font-mono font-bold">
-                    <span>📌</span>
-                    <span>{{ currentSatAnalysis.subText }}</span>
-                  </span>
-                </div>
               </div>
 
               <!-- 우측 모의고사 회차 드롭다운 선택기 -->
-              <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-2xs">
-                <span class="text-[11px] font-bold text-slate-500 shrink-0">회차:</span>
-                <select
-                  v-model="selectedMockExamMonth"
-                  class="text-xs font-bold bg-transparent text-slate-800 focus:outline-none cursor-pointer pr-1"
-                >
-                  <option value="ALL">🌟 전체 (3~10월 통합) - {{ currentSatAnalysis.studentCount }}명</option>
-                  <option
-                    v-for="opt in availableExamMonthOptions"
-                    :key="opt.key"
-                    :value="opt.key"
+              <div class="relative inline-flex items-center self-start sm:self-auto">
+                <label for="mock-exam-month-select" class="text-xs font-bold text-slate-500 mr-2 shrink-0">회차:</label>
+                <div class="relative">
+                  <select
+                    id="mock-exam-month-select"
+                    v-model="selectedMockExamMonth"
+                    class="appearance-none bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-3 py-1.5 pr-8 text-xs font-bold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer min-w-60"
                   >
-                    📅 {{ opt.displayLabel }}
-                  </option>
-                </select>
+                    <option value="ALL">🌟 전체 (3~10월 통합) - {{ currentSatAnalysis.studentCount }}명</option>
+                    <option
+                      v-for="opt in availableExamMonthOptions"
+                      :key="opt.key"
+                      :value="opt.key"
+                    >
+                      📅 {{ opt.displayLabel }}
+                    </option>
+                  </select>
+                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
               </div>
             </div>
 
             <!-- 시각화 인포그래픽 카드 3종 (국어, 수학, 영어) -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
               <!-- 국어 영역 카드 -->
-              <div class="bg-linear-to-br from-blue-50/70 to-slate-50 p-3.5 rounded-2xl border border-blue-100 flex flex-col justify-between">
+              <div class="bg-linear-to-br from-blue-50/70 to-slate-50 p-4 rounded-2xl border border-blue-100 flex flex-col justify-between space-y-3">
                 <div>
                   <div class="flex items-center justify-between mb-1.5">
                     <span class="text-xs font-black text-blue-900 flex items-center gap-1">
@@ -160,49 +162,63 @@
                     <span class="text-[11px] font-mono text-slate-500">{{ currentSatAnalysis.subjectsDetail.kor.totalCount }}명 응시</span>
                   </div>
                   <div class="flex items-baseline gap-2 mb-2">
-                    <span class="text-xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.kor.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
+                    <span class="text-2xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.kor.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
                     <span class="text-[11px] font-semibold text-rose-600">
                       내신({{ currentGpaRaw[0] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.kor.totalAvg) - currentGpaRaw[0]).toFixed(2) }}↓
                     </span>
                   </div>
 
-                  <!-- 1~9 등급 시각화 게이지 바 -->
-                  <div class="space-y-1 mb-3">
-                    <div class="flex justify-between text-[10px] text-slate-400 font-bold">
+                  <!-- 1~9 등급 수직선 위치 마커 (직관적 포인터 핀) -->
+                  <div class="relative pt-1 pb-2">
+                    <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
+                    <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
                       <span>1등급(우수)</span>
+                      <span>5등급</span>
                       <span>9등급</span>
                     </div>
-                    <div class="h-2 w-full bg-slate-200 rounded-full relative overflow-hidden">
-                      <div
-                        class="h-full bg-linear-to-r from-blue-600 via-indigo-500 to-rose-400 rounded-full"
-                        :style="{ width: Math.max(10, Math.min(100, (10 - Number(currentSatAnalysis.subjectsDetail.kor.totalAvg)) / 9 * 100)) + '%' }"
-                      ></div>
+                    <!-- 현재 등급 위치 핀 -->
+                    <div
+                      class="absolute top-0 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
+                      :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.kor.totalAvg) }"
+                    >
+                      <span class="w-3 h-3 rounded-full bg-blue-600 border-2 border-white shadow-xs"></span>
                     </div>
                   </div>
                 </div>
 
-                <!-- 국어 선택과목 점유율 & 평균 비교 -->
-                <div class="pt-2 border-t border-blue-100/80 space-y-1.5 text-[11px]">
-                  <div class="flex justify-between items-center text-slate-700">
-                    <span class="font-bold text-blue-800">언매 ({{ currentSatAnalysis.subjectsDetail.kor.unmaeCount }}명)</span>
-                    <span class="font-mono font-extrabold text-blue-700">{{ currentSatAnalysis.subjectsDetail.kor.unmaeAvg }}등급</span>
+                <!-- 국어 선택과목 각각의 독립 비교 블록 -->
+                <div class="pt-2.5 border-t border-blue-100/80 space-y-2">
+                  <!-- 언어와 매체 -->
+                  <div class="bg-white/90 p-2 rounded-xl border border-blue-200/80 shadow-2xs">
+                    <div class="flex justify-between items-center text-xs">
+                      <span class="font-bold text-blue-900 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                        <span>언어와 매체</span>
+                        <span class="text-[10.5px] font-normal text-slate-500">({{ currentSatAnalysis.subjectsDetail.kor.unmaeCount }}명)</span>
+                      </span>
+                      <span class="font-mono font-extrabold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
+                        {{ currentSatAnalysis.subjectsDetail.kor.unmaeAvg }}등급
+                      </span>
+                    </div>
                   </div>
-                  <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden flex">
-                    <div
-                      class="bg-blue-600 h-full"
-                      :style="{ width: ((currentSatAnalysis.subjectsDetail.kor.unmaeCount / (currentSatAnalysis.subjectsDetail.kor.totalCount || 1)) * 100) + '%' }"
-                    ></div>
-                    <div class="bg-slate-300 h-full flex-1"></div>
-                  </div>
-                  <div class="flex justify-between items-center text-slate-600">
-                    <span>화작 ({{ currentSatAnalysis.subjectsDetail.kor.hwajakCount }}명)</span>
-                    <span class="font-mono font-bold">{{ currentSatAnalysis.subjectsDetail.kor.hwajakAvg }}등급</span>
+                  <!-- 화법과 작문 -->
+                  <div class="bg-white/90 p-2 rounded-xl border border-slate-200 shadow-2xs">
+                    <div class="flex justify-between items-center text-xs">
+                      <span class="font-bold text-slate-700 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                        <span>화법과 작문</span>
+                        <span class="text-[10.5px] font-normal text-slate-500">({{ currentSatAnalysis.subjectsDetail.kor.hwajakCount }}명)</span>
+                      </span>
+                      <span class="font-mono font-bold text-slate-700 bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200">
+                        {{ currentSatAnalysis.subjectsDetail.kor.hwajakAvg }}등급
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <!-- 수학 영역 카드 -->
-              <div class="bg-linear-to-br from-indigo-50/70 to-slate-50 p-3.5 rounded-2xl border border-indigo-100 flex flex-col justify-between">
+              <!-- 수학 영역 카드 (핵심: 미적분 vs 확통 각각 독립 카드 비교) -->
+              <div class="bg-linear-to-br from-indigo-50/70 to-slate-50 p-4 rounded-2xl border border-indigo-100 flex flex-col justify-between space-y-3">
                 <div>
                   <div class="flex items-center justify-between mb-1.5">
                     <span class="text-xs font-black text-indigo-900 flex items-center gap-1">
@@ -212,52 +228,69 @@
                     <span class="text-[11px] font-mono text-slate-500">{{ currentSatAnalysis.subjectsDetail.math.totalCount }}명 응시</span>
                   </div>
                   <div class="flex items-baseline gap-2 mb-2">
-                    <span class="text-xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.math.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
+                    <span class="text-2xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.math.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
                     <span class="text-[11px] font-semibold text-rose-600">
                       내신({{ currentGpaRaw[1] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.math.totalAvg) - currentGpaRaw[1]).toFixed(2) }}↓
                     </span>
                   </div>
 
-                  <!-- 1~9 등급 시각화 게이지 바 -->
-                  <div class="space-y-1 mb-3">
-                    <div class="flex justify-between text-[10px] text-slate-400 font-bold">
+                  <!-- 1~9 등급 수직선 위치 마커 (6.03등급 지점에 정확히 핀) -->
+                  <div class="relative pt-1 pb-2">
+                    <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
+                    <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
                       <span>1등급(우수)</span>
+                      <span>5등급</span>
                       <span>9등급</span>
                     </div>
-                    <div class="h-2 w-full bg-slate-200 rounded-full relative overflow-hidden">
-                      <div
-                        class="h-full bg-linear-to-r from-indigo-600 via-purple-500 to-rose-400 rounded-full"
-                        :style="{ width: Math.max(10, Math.min(100, (10 - Number(currentSatAnalysis.subjectsDetail.math.totalAvg)) / 9 * 100)) + '%' }"
-                      ></div>
+                    <!-- 현재 등급 위치 핀 -->
+                    <div
+                      class="absolute top-0 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
+                      :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.math.totalAvg) }"
+                    >
+                      <span class="w-3 h-3 rounded-full bg-indigo-600 border-2 border-white shadow-xs"></span>
                     </div>
                   </div>
                 </div>
 
-                <!-- 수학 선택과목 점유율 & 평균 비교 (미적 vs 확통 2.10등급 격차) -->
-                <div class="pt-2 border-t border-indigo-100/80 space-y-1.5 text-[11px]">
-                  <div class="flex justify-between items-center text-slate-700">
-                    <span class="font-bold text-indigo-800">미적/기하 ({{ currentSatAnalysis.subjectsDetail.math.mijukCount }}명)</span>
-                    <span class="font-mono font-extrabold text-indigo-700">{{ currentSatAnalysis.subjectsDetail.math.mijukAvg }}등급</span>
+                <!-- 수학 선택과목 각각의 독립 블록 & 2.10등급 격차 -->
+                <div class="pt-2.5 border-t border-indigo-100/80 space-y-2">
+                  <!-- 1. 미적분/기하 독립 카드 -->
+                  <div class="bg-white/95 p-2 rounded-xl border border-indigo-200 shadow-2xs">
+                    <div class="flex justify-between items-center text-xs">
+                      <span class="font-bold text-indigo-950 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+                        <span>미적분/기하</span>
+                        <span class="text-[10.5px] font-normal text-slate-500">({{ currentSatAnalysis.subjectsDetail.math.mijukCount }}명)</span>
+                      </span>
+                      <span class="font-mono font-extrabold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">
+                        {{ currentSatAnalysis.subjectsDetail.math.mijukAvg }}등급
+                      </span>
+                    </div>
                   </div>
-                  <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden flex">
-                    <div
-                      class="bg-indigo-600 h-full"
-                      :style="{ width: ((currentSatAnalysis.subjectsDetail.math.mijukCount / (currentSatAnalysis.subjectsDetail.math.totalCount || 1)) * 100) + '%' }"
-                    ></div>
-                    <div class="bg-slate-300 h-full flex-1"></div>
+
+                  <!-- 2. 확률과 통계 독립 카드 -->
+                  <div class="bg-white/95 p-2 rounded-xl border border-slate-200 shadow-2xs">
+                    <div class="flex justify-between items-center text-xs">
+                      <span class="font-bold text-slate-700 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                        <span>확률과 통계</span>
+                        <span class="text-[10.5px] font-normal text-slate-500">({{ currentSatAnalysis.subjectsDetail.math.hwaktongCount }}명)</span>
+                      </span>
+                      <span class="font-mono font-bold text-slate-700 bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200">
+                        {{ currentSatAnalysis.subjectsDetail.math.hwaktongAvg }}등급
+                      </span>
+                    </div>
                   </div>
-                  <div class="flex justify-between items-center text-slate-600">
-                    <span>확통 ({{ currentSatAnalysis.subjectsDetail.math.hwaktongCount }}명)</span>
-                    <span class="font-mono font-bold">{{ currentSatAnalysis.subjectsDetail.math.hwaktongAvg }}등급</span>
-                  </div>
-                  <div class="text-[10px] font-bold text-indigo-700 bg-indigo-100/60 rounded px-1.5 py-0.5 text-center mt-1">
-                    ⚡ 미적분이 확통 대비 {{ (Number(currentSatAnalysis.subjectsDetail.math.hwaktongAvg) - Number(currentSatAnalysis.subjectsDetail.math.mijukAvg)).toFixed(2) }}등급 우세
+
+                  <!-- 직관적 격차 배지 -->
+                  <div class="text-[10.5px] font-extrabold text-indigo-800 bg-indigo-50/80 border border-indigo-200/70 rounded-lg py-1 px-2 text-center">
+                    ⚡ 미적분이 확통 대비 <span class="text-indigo-600 underline font-black">{{ (Number(currentSatAnalysis.subjectsDetail.math.hwaktongAvg) - Number(currentSatAnalysis.subjectsDetail.math.mijukAvg)).toFixed(2) }}등급</span> 우세
                   </div>
                 </div>
               </div>
 
               <!-- 영어 영역 카드 -->
-              <div class="bg-linear-to-br from-emerald-50/70 to-slate-50 p-3.5 rounded-2xl border border-emerald-100 flex flex-col justify-between">
+              <div class="bg-linear-to-br from-emerald-50/70 to-slate-50 p-4 rounded-2xl border border-emerald-100 flex flex-col justify-between space-y-3">
                 <div>
                   <div class="flex items-center justify-between mb-1.5">
                     <span class="text-xs font-black text-emerald-900 flex items-center gap-1">
@@ -267,35 +300,38 @@
                     <span class="text-[11px] font-mono text-emerald-800 font-bold bg-emerald-100/80 px-1.5 py-0.2 rounded">절대평가</span>
                   </div>
                   <div class="flex items-baseline gap-2 mb-2">
-                    <span class="text-xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.eng.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
+                    <span class="text-2xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.eng.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
                     <span class="text-[11px] font-semibold text-emerald-700">
                       {{ currentSatAnalysis.subjectsDetail.eng.totalCount }}명 응시
                     </span>
                   </div>
 
-                  <!-- 1~9 등급 시각화 게이지 바 -->
-                  <div class="space-y-1 mb-3">
-                    <div class="flex justify-between text-[10px] text-slate-400 font-bold">
+                  <!-- 1~9 등급 수직선 위치 마커 (5.44등급 지점에 핀) -->
+                  <div class="relative pt-1 pb-2">
+                    <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
+                    <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
                       <span>1등급(우수)</span>
+                      <span>5등급</span>
                       <span>9등급</span>
                     </div>
-                    <div class="h-2 w-full bg-slate-200 rounded-full relative overflow-hidden">
-                      <div
-                        class="h-full bg-linear-to-r from-emerald-600 via-teal-500 to-rose-400 rounded-full"
-                        :style="{ width: Math.max(10, Math.min(100, (10 - Number(currentSatAnalysis.subjectsDetail.eng.totalAvg)) / 9 * 100)) + '%' }"
-                      ></div>
+                    <!-- 현재 등급 위치 핀 -->
+                    <div
+                      class="absolute top-0 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
+                      :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.eng.totalAvg) }"
+                    >
+                      <span class="w-3 h-3 rounded-full bg-emerald-600 border-2 border-white shadow-xs"></span>
                     </div>
                   </div>
                 </div>
 
                 <!-- 영어 최저 충족 가이드 배너 -->
-                <div class="pt-2 border-t border-emerald-100/80 text-[11px] text-emerald-900 space-y-1">
+                <div class="pt-2.5 border-t border-emerald-100/80 text-[11px] text-emerald-900 space-y-1">
                   <div class="font-extrabold flex items-center gap-1 text-emerald-800">
                     <span>🎯</span>
                     <span>수능 최저의 핵심 전략 영역</span>
                   </div>
                   <p class="text-[10px] text-emerald-700/90 leading-tight m-0">
-                    상대평가 부담 없이 2~3등급 안정 확보 시 수시 최저 충족 성공률 급상승
+                    상대평가(6등급대) 부담 없이 2~3등급 안정 확보 시 수시 최저 충족 성공률 급상승
                   </p>
                 </div>
               </div>
@@ -2293,7 +2329,7 @@ const {
 const localCustomMockRecords = ref([])
 
 onMounted(() => {
-  if (selectedAcademicYear.value === '2027' && (!mockExamRecords.value || mockExamRecords.value.length === 0)) {
+  if (Number(selectedAcademicYear.value) >= 2027 && (!mockExamRecords.value || mockExamRecords.value.length === 0)) {
     loadMockExamData().catch(() => {})
   }
   loadCsatPassRateData().catch(() => {})
@@ -2334,7 +2370,7 @@ onUnmounted(() => {
 })
 
 watch(selectedAcademicYear, (newYear) => {
-  if (newYear === '2027' && (!mockExamRecords.value || mockExamRecords.value.length === 0)) {
+  if (Number(newYear) >= 2027 && (!mockExamRecords.value || mockExamRecords.value.length === 0)) {
     loadMockExamData().catch(() => {})
   }
 })
@@ -2348,8 +2384,8 @@ watch(selectedAcademicYear, (newYear) => {
 
 // 내신 5과목(국어, 수학, 영어, 사탐, 과탐) 평균 등급
 const currentGpaRaw = computed(() => {
-  if (selectedAcademicYear.value !== '2027') {
-    // 2026학년도 기준
+  if (Number(selectedAcademicYear.value) < 2027) {
+    // 2026학년도 이하 과거 연도 기준
     return [4.20, 4.50, 4.80, 4.60, 4.40]
   }
 
@@ -2450,10 +2486,17 @@ function extractExamMonth(r) {
 }
 
 // 실제 데이터에 존재하는 모의고사 회차 옵션 목록 (각 월별 응시 인원수 포함)
-const availableExamMonthOptions = computed(() => {
-  const records = (mockExamRecords.value && mockExamRecords.value.length > 0)
+
+// 고3 대입 분석 전용: 3학년 레코드만 선별 (1·2학년 데이터 통계 오염 방지)
+const highSchoolMockRecords = computed(() => {
+  const all = (mockExamRecords.value && mockExamRecords.value.length > 0)
     ? mockExamRecords.value
     : (localCustomMockRecords.value || [])
+  return all.filter(r => Number(r.grade) === 3 || !r.grade)
+})
+
+const availableExamMonthOptions = computed(() => {
+  const records = highSchoolMockRecords.value
 
   const countByMonth = {}
   records.forEach(r => {
@@ -2475,6 +2518,14 @@ const availableExamMonthOptions = computed(() => {
     }
   })
 })
+
+// 1~9등급 수직선 위치 비율 계산 헬퍼 (1등급: 0% [좌측], 9등급: 100% [우측])
+const getRankMarkerLeft = (grade) => {
+  const g = Number(grade)
+  if (isNaN(g) || g <= 0) return '50%'
+  const clamped = Math.max(1, Math.min(9, g))
+  return (((clamped - 1) / 8) * 100).toFixed(1) + '%'
+}
 
 // 등급 유효성 검증 및 절대평가/원점수/표준점수 환산 헬퍼 (1~9등급 보장)
 const cleanGradeNum = (val) => {
@@ -2882,9 +2933,7 @@ const currentSatAnalysis = computed(() => {
   }
 
   // 2027학년도 대입 분석: 2027모의가채점 연계
-  const records = (mockExamRecords.value && mockExamRecords.value.length > 0)
-    ? mockExamRecords.value
-    : (localCustomMockRecords.value || [])
+  const records = highSchoolMockRecords.value
 
   const monthKey = selectedMockExamMonth.value
 
@@ -2912,9 +2961,7 @@ const currentSatAnalysis = computed(() => {
 // 모의고사 회차별 성적 추이 라인 차트 데이터 & 옵션
 // -------------------------------------------------------------
 const mockExamTrendSeries = computed(() => {
-  const records = (mockExamRecords.value && mockExamRecords.value.length > 0)
-    ? mockExamRecords.value
-    : (localCustomMockRecords.value || [])
+  const records = highSchoolMockRecords.value
 
   // 표준 회차 순서 (3월, 5월, 6월, 7월, 9월, 10월)
   const standardMonths = ['3', '5', '6', '7', '9', '10']
@@ -3255,7 +3302,7 @@ const radarInsightsHtml = computed(() => {
   const gpa = currentGpaRaw.value
   const sat = currentSatAnalysis.value.grades
   const isCsat = currentSatAnalysis.value.isCsat
-  const is2027 = selectedAcademicYear.value === '2027'
+  const is2027 = Number(selectedAcademicYear.value) >= 2027
 
   if (!is2027) {
     return '국어(1.90등급↓), 수학(1.30등급↓), 탐구(1.4~1.9등급↓) 등 모든 과목에서 <strong>수능 등급이 내신 대비 1.3~1.9등급 낮게 형성</strong>되는 명확한 격차를 보입니다. 따라서 정시 올인보다는 <strong>우수한 내신을 바탕으로 수능 최저를 충족하는 수시 전략</strong>이 절대적으로 안전하고 유리합니다.'

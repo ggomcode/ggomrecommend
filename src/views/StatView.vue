@@ -222,7 +222,7 @@
           </div>
 
           <!-- 2. 데이터가 없는 경우 (미등록 연도 또는 탭 부재, 수능최저 시뮬레이터는 제외) -->
-          <div v-else-if="currentTab !== 'csatTarget' && (!applications || applications.length === 0)" class="flex flex-col items-center justify-center py-20 text-center">
+          <div v-else-if="currentTab !== 'csatTarget' && currentTab !== 'grade2Analysis' && currentTab !== 'grade1Analysis' && (!applications || applications.length === 0)" class="flex flex-col items-center justify-center py-20 text-center">
             <div class="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center mb-4 text-2xl shadow-xs">
               📂
             </div>
@@ -255,7 +255,9 @@
 
           <!-- 3. 정상 데이터 탭 화면 -->
           <Transition v-else name="fade" mode="out-in">
-            <component :is="activeTabComponent" />
+            <LowerGradeMockAnalysisTab v-if="currentTab === 'grade2Analysis'" :grade="2" key="grade2" />
+            <LowerGradeMockAnalysisTab v-else-if="currentTab === 'grade1Analysis'" :grade="1" key="grade1" />
+            <component v-else :is="activeTabComponent" />
           </Transition>
         </div>
 
@@ -279,7 +281,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import StatHeader from '../stat/components/StatHeader.vue'
@@ -298,6 +300,7 @@ import RuralStatTab from '../stat/components/tabs/RuralStatTab.vue'
 import ParentCounselTab from '../stat/components/tabs/ParentCounselTab.vue'
 import HighSchoolAdmissionTab from '../stat/components/tabs/HighSchoolAdmissionTab.vue'
 import CsatTargetSimulatorTab from '../stat/components/tabs/CsatTargetSimulatorTab.vue'
+import LowerGradeMockAnalysisTab from '../stat/components/tabs/LowerGradeMockAnalysisTab.vue'
 import { useStatData } from '../stat/composables/useStatData'
 import { schoolName } from '../utils/schoolConfig'
 import {
@@ -320,7 +323,8 @@ import {
   GraduationCap,
   Compass,
   Award,
-  Trees
+  Trees,
+  BookOpen
 } from 'lucide-vue-next'
 import { clearStatSessionPassword, getStatSessionPassword, hasRuralSheetConfigured } from '../api/statApi'
 
@@ -331,8 +335,30 @@ const {
   applications, 
   isLoadingYearData, 
   yearDataError, 
-  reloadCurrentYear 
+  reloadCurrentYear,
+  setAcademicYear
 } = useStatData()
+
+// 고1·2 성적분석 메뉴 진입 시 학사일정 학년도(2026) 고정 및 복귀 제어
+const previousAdmissionYear = ref(selectedAcademicYear.value || '2027')
+
+
+watch(currentTab, (newTab, oldTab) => {
+  if (newTab === 'grade2Analysis' || newTab === 'grade1Analysis') {
+    if (oldTab !== 'grade2Analysis' && oldTab !== 'grade1Analysis') {
+      previousAdmissionYear.value = selectedAcademicYear.value || '2027'
+    }
+    // 고1·2 분석은 당해 학사 학년도인 2026학년도로 고정
+    if (selectedAcademicYear.value !== '2026') {
+      setAcademicYear('2026')
+    }
+  } else if (oldTab === 'grade2Analysis' || oldTab === 'grade1Analysis') {
+    // 대입 분석 메뉴로 복귀 시 이전 대입 학년도 복원
+    if (previousAdmissionYear.value && selectedAcademicYear.value !== previousAdmissionYear.value) {
+      setAcademicYear(previousAdmissionYear.value)
+    }
+  }
+})
 
 // 사이드바 접기/펼치기 상태
 const collapsed = ref(false)

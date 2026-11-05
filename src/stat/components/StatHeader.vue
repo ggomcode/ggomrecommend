@@ -238,6 +238,7 @@ const props = defineProps({
   }
 })
 import KcueYearSheetModal from './KcueYearSheetModal.vue'
+import PromotionProcessModal from './modals/PromotionProcessModal.vue'
 import { useRouter } from 'vue-router'
 import { useStatData } from '../composables/useStatData'
 import { schoolName } from '../../utils/schoolConfig'
@@ -279,6 +280,25 @@ const adminMaskTooltip = computed(() => {
 })
 
 const isYearSheetModalOpen = ref(false)
+
+const isPromotionModalOpen = ref(false)
+
+const isLowerGradeMode = computed(() => {
+  const tabId = props.currentTabItem?.id
+  return tabId === 'grade2Analysis' || tabId === 'grade1Analysis'
+})
+
+const displayedAcademicYear = computed(() => {
+  return isLowerGradeMode.value ? '2026' : selectedAcademicYear.value
+})
+
+async function handlePromotionApplied(promotedRecords) {
+  isPromotionModalOpen.value = false
+  // 모의고사 성적 재로드 및 알림
+  await loadMockExamData(true)
+  alert(`신학년도 진급 처리가 성공적으로 반영되었습니다.\n총 ${promotedRecords?.length || 0}건의 모의고사 성적이 승격 매핑되었습니다.`)
+}
+
 
 const currentScopeLabel = computed(() => {
   const opt = scopeOptions.find(o => o.value === selectedScope.value)
