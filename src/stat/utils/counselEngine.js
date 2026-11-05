@@ -566,82 +566,51 @@ export function evaluateCardDiagnosis(app, studentGpa, mockRecord, csatPassRateT
  */
 export function ensureCompetitionRates(app, targetYear = '2027', csatPassRateTable = []) {
   const y = parseInt(String(targetYear).replace(/[^0-9]/g, ''), 10) || 2027
-  const yearList = [String(y - 2), String(y - 1), String(y)]
 
-  // 1) 이미 app.competitionRates가 있고 최소 1개 연도의 rate가 유효한 경우 그대로 유지 (누락된 연도만 보완)
+  // 1) 이미 app.competitionRates가 있고 객체 형태인 경우 복사
   const existing = (app && app.competitionRates && typeof app.competitionRates === 'object') 
     ? { ...app.competitionRates } 
     : {}
 
-  const hasAnyValid = yearList.some(yk => {
-    const it = existing[yk]
-    return it && it.rate !== null && it.rate !== undefined && !isNaN(Number(it.rate))
-  })
-
-  // 만약 대상 3개년이 모두 유효하다면 그대로 반환
-  const allValid = yearList.every(yk => {
-    const it = existing[yk]
-    return it && it.rate !== null && it.rate !== undefined && !isNaN(Number(it.rate))
-  })
-  if (allValid) {
-    return existing
+  // 2) 단일 경쟁률(app.competitionRate) 속성이 있는 경우 해당 확정 연도에 매핑
+  if (app && app.competitionRate && typeof app.competitionRate === 'number' && !isNaN(app.competitionRate)) {
+    const refYear = String(y)
+    if (!existing[refYear] || existing[refYear].rate === null || existing[refYear].rate === undefined) {
+      existing[refYear] = {
+        quota: String(app.quota || ''),
+        applicants: String(app.applyCount || Math.round((app.quota || 1) * app.competitionRate)),
+        rate: app.competitionRate,
+        raw: `${app.competitionRate}:1`
+      }
+    }
   }
 
-  // 2) 벤치마크 기본 경쟁률 산정
-  let baseRate = 9.2
+  // 3) csatPassRateTable에 명시된 공인 경쟁률 탐색 (대학·학과 모두 일치하는 실측치만)
   if (csatPassRateTable && csatPassRateTable.length > 0) {
     const uName = String(app.univName || '').replace(/\(.*\)/g, '').trim()
     const dName = String(app.dept || '').trim()
+    
     const found = csatPassRateTable.find(p => {
       const pu = String(p.univName || '').replace(/\(.*\)/g, '').trim()
       const pd = String(p.dept || '').trim()
-      return (uName.includes(pu) || pu.includes(uName)) && (!dName || dName.includes(pd) || pd.includes(dName))
-    }) || csatPassRateTable.find(p => {
-      const pu = String(p.univName || '').replace(/\(.*\)/g, '').trim()
-      return uName.includes(pu) || pu.includes(uName)
+      return pu && pd && (uName.includes(pu) || pu.includes(uName)) && (dName.includes(pd) || pd.includes(dName))
     })
 
     if (found && (found.initialRate || found.realRate)) {
-      baseRate = Number(found.initialRate || found.realRate) || 9.2
-    }
-  }
-
-  // 대학 및 학과 유형 가중치
-  const u = String(app.univName || '')
-  const d = String(app.dept || '')
-  const t = String(app.admissionType || '')
-  if (/의예|의학|한의|약학|치의|수의/.test(d)) {
-    baseRate = Math.max(baseRate, 26.5)
-  } else if (/논술/.test(t)) {
-    baseRate = Math.max(baseRate, 38.4)
-  } else if (/고려대|연세대|성균관|한양대|서강대/.test(u)) {
-    baseRate = Math.max(baseRate, 14.2)
-  } else if (/중앙대|경희대|한국외|시립대|건국대|동국대|홍익/.test(u)) {
-    baseRate = Math.max(baseRate, 12.8)
-  } else if (/국민대|숭실대|세종대|단국대|가천대|아주대|인하대/.test(u)) {
-    baseRate = Math.max(baseRate, 10.5)
-  } else if (/경기대|명지대|상명대|가톨릭/.test(u)) {
-    baseRate = Math.max(baseRate, 8.8)
-  }
-
-  const quota = app.quota || 12
-  const rCurrent = baseRate
-  const rPrev1 = parseFloat((baseRate * 0.94).toFixed(1))
-  const rPrev2 = parseFloat((baseRate * 0.89).toFixed(1))
-  const rateTrend = [rPrev2, rPrev1, rCurrent]
-
-  yearList.forEach((yr, idx) => {
-    if (!existing[yr] || existing[yr].rate === null || existing[yr].rate === undefined) {
-      const assignedRate = rateTrend[idx]
-      existing[yr] = {
-        quota: existing[yr]?.quota || String(quota),
-        applicants: existing[yr]?.applicants || String(Math.round(quota * assignedRate)),
-        rate: assignedRate,
-        raw: `${assignedRate}:1`
+      const benchmarkRate = Number(found.initialRate || found.realRate)
+      const refYear = String(y)
+      if (!existing[refYear] || existing[refYear].rate === null || existing[refYear].rate === undefined) {
+        existing[refYear] = {
+          quota: String(app.quota || ''),
+          applicants: '',
+          rate: benchmarkRate,
+          raw: `${benchmarkRate}:1`
+        }
       }
     }
-  })
+  }
 
+  // 임의의 가짜 수치(8.2:1 / 8.6:1 / 9.2:1)는 주입하지 않고 정직하게 유지
   return existing
 }
 

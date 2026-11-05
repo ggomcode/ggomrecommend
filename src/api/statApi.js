@@ -282,7 +282,7 @@ export async function testKcueSheetTabConnection(sheetId, tabName) {
       return { success: false, message: '탭 데이터가 비어 있습니다.', rowCount: 0 }
     }
     // 간단한 행 수 계산
-    const lines = csv.trim().split(/\r?\n/)
+    const lines = csv.trim().split(/\r?\r\n/)
     if (lines.length <= 1) {
       return { success: true, message: '헤더만 존재하거나 데이터가 적습니다.', rowCount: lines.length - 1 }
     }
@@ -347,6 +347,28 @@ export function parseKcueRows(csvText, customPassword = null) {
     const clean = String(h).replace(/[\r\n\s]+/g, '').trim()
     colMap[clean] = idx
   })
+
+  // 3. CE:DR 매칭 열(2027: CM=90, 2026: CW=100, 2025: DC=106) 동적 인덱스 탐색
+  const findMatchingColIdx = (yr, typePattern, fallbackIdx) => {
+    const yrShort = yr.slice(2)
+    const idx = rawHeaders.findIndex(h => {
+      const s = String(h || '').replace(/[\r\n\s]+/g, '')
+      return (s.includes(yr) || s.includes(yrShort)) && typePattern.test(s)
+    })
+    return idx !== -1 ? idx : fallbackIdx
+  }
+
+  const col2027Rate = findMatchingColIdx('2027', /경쟁/, 90)
+  const col2027Quota = findMatchingColIdx('2027', /모집|정원/, 86)
+  const col2027App = findMatchingColIdx('2027', /지원|접수/, 88)
+
+  const col2026Rate = findMatchingColIdx('2026', /경쟁/, 100)
+  const col2026Quota = findMatchingColIdx('2026', /모집|정원/, 98)
+  const col2026App = findMatchingColIdx('2026', /지원|접수/, 99)
+
+  const col2025Rate = findMatchingColIdx('2025', /경쟁/, 106)
+  const col2025Quota = findMatchingColIdx('2025', /모집|정원/, 104)
+  const col2025App = findMatchingColIdx('2025', /지원|접수/, 105)
 
   const result = []
 
@@ -436,28 +458,55 @@ export function parseKcueRows(csvText, customPassword = null) {
     const isGraduate = String(classNum).includes('졸업') || grade !== 3
     const studentKey = `${classNum}-${studentNum}_${name}`
 
-    // 경쟁률 수치 파싱 헬퍼 (예: "15.4", "15.4:1", "15.4 : 1" 등 지원)
+    // 경쟁률 수치 파싱 헬퍼 (CM: 숫자 "8.5", CW/DC: "5.25 : 1" 등 모든 형태 지원)
     const parseRateVal = (val) => {
       if (val === null || val === undefined || val === '') return null
+      if (typeof val === 'number') {
+        return isNaN(val) ? null : parseFloat(val.toFixed(2))
+      }
       const str = String(val).trim()
-      if (str === '자료없음' || str === '-' || str === '미매칭' || str === 'N/A') return null
+      if (str === '자료없음' || str === '-' || str === '미매칭' || str === 'N/A' || str === '') return null
+      // "5.25 : 1" 또는 "5.25:1" 또는 순수 숫자 "8.5"
       const match = str.match(/([0-9]+(?:\.[0-9]+)?)/)
       if (match) {
         const n = parseFloat(match[1])
-        return isNaN(n) ? null : n
+        return isNaN(n) ? null : parseFloat(n.toFixed(2))
       }
       return null
     }
 
-    // 물리적 열 인덱스 또는 헤더명으로 값 추출 (CI, CK, CM 등)
+    // 물리적 열 인덱스(CE:DR 구간 CM=90, CW=100, DC=106) 또는 헤더명으로 값 추출
     const getColOrKeyVal = (colIdx, ...keys) => {
-      // 1) rowData 또는 헤더명 매핑 우선
+      // 1) keys로 getVal 시도 (rowData 또는 colMap)
       const namedVal = getVal(...keys)
       if (namedVal !== '' && namedVal !== null && namedVal !== undefined) return namedVal
-      // 2) 행 배열의 물리적 열 인덱스
+
+      // 2) rawHeaders의 해당 인덱스 헤더명으로 rowData 조회
+      const headerNameAtCol = rawHeaders && rawHeaders[colIdx] ? rawHeaders[colIdx] : null
+      if (headerNameAtCol && rowData) {
+        if (rowData[headerNameAtCol] !== undefined && rowData[headerNameAtCol] !== null && rowData[headerNameAtCol] !== '') {
+          return rowData[headerNameAtCol]
+        }
+        const cleanH = String(headerNameAtCol).replace(/[\r\n\s]+/g, '')
+        for (const k of Object.keys(rowData)) {
+          if (k.replace(/[\r\n\s]+/g, '') === cleanH) {
+            const v = rowData[k]
+            if (v !== undefined && v !== null && v !== '') return v
+          }
+        }
+      }
+
+      // 3) rowData의 인덱스 키 조회 (객체가 인덱스 번호로 매핑된 경우)
+      if (rowData) {
+        if (rowData[colIdx] !== undefined && rowData[colIdx] !== null && rowData[colIdx] !== '') return rowData[colIdx]
+        if (rowData[String(colIdx)] !== undefined && rowData[String(colIdx)] !== null && rowData[String(colIdx)] !== '') return rowData[String(colIdx)]
+      }
+
+      // 4) 원본 행 배열 r의 물리적 열 인덱스 (가장 확실함)
       if (r && r[colIdx] !== undefined && r[colIdx] !== null && r[colIdx] !== '') {
         return r[colIdx]
       }
+
       return ''
     }
 
@@ -468,29 +517,30 @@ export function parseKcueRows(csvText, customPassword = null) {
       const q = parseFloat(String(quotaVal || '').replace(/[^0-9.]/g, ''))
       const a = parseFloat(String(appVal || '').replace(/[^0-9.]/g, ''))
       if (q > 0 && a >= 0) {
-        return parseFloat((a / q).toFixed(1))
+        return parseFloat((a / q).toFixed(2))
       }
       return null
     }
 
-    // 2027: CI=86 (모집), CK=88 (지원), CM=90 (경쟁률 수치) / 89 (경쟁률 표시용)
-    // 2026: CU=98 (모집), CV=99 (지원), CW=100 (경쟁률)
-    // 2025: DA=104 (모집), DB=105 (지원), DC=106 (경쟁률)
-    // 2024: DG=110 (모집), DH=111 (지원), DI=112 (경쟁률)
-    const rawRate2027 = getColOrKeyVal(90, '[2027_매칭]경쟁률(수치)', '[2027_매칭]경쟁률(표시용)', '[2027_매칭]경쟁률', '2027경쟁률', '27경쟁률', '경쟁률(2027)', '경쟁률') || getColOrKeyVal(89, '[2027_매칭]경쟁률(표시용)')
-    const rawRate2026 = getColOrKeyVal(100, '[2026_매칭]경쟁률(수치)', '[2026_매칭]경쟁률(표시용)', '[2026_매칭]경쟁률', '2026경쟁률', '26경쟁률', '경쟁률(2026)')
-    const rawRate2025 = getColOrKeyVal(106, '[2025_매칭]경쟁률(수치)', '[2025_매칭]경쟁률(표시용)', '[2025_매칭]경쟁률', '2025경쟁률', '25경쟁률', '경쟁률(2025)')
-    const rawRate2024 = getColOrKeyVal(112, '[2024_매칭]경쟁률(수치)', '[2024_매칭]경쟁률(표시용)', '[2024_매칭]경쟁률', '2024경쟁률', '24경쟁률', '경쟁률(2024)')
-    const rawRate2023 = getColOrKeyVal(118, '[2023_매칭]경쟁률(수치)', '[2023_매칭]경쟁률(표시용)', '[2023_매칭]경쟁률', '2023경쟁률', '23경쟁률', '경쟁률(2023)')
+    // [CE:DR 매칭 열 기준]
+    // 2027: CI=86 (모집), CK=88 (지원), CM=90 (2027경쟁률 - 숫자만 존재)
+    // 2026: CU=98 (모집), CV=99 (지원), CW=100 (2026경쟁률 - '5.25 : 1' 형식)
+    // 2025: DA=104 (모집), DB=105 (지원), DC=106 (2025경쟁률 - '5.25 : 1' 형식)
+    // 2024: DG=110 (모집), DH=111 (지원), DI=112 (2024경쟁률)
+    const rawRate2027 = getColOrKeyVal(col2027Rate, '[2027_매칭]경쟁률(수치)', '[2027_매칭]경쟁률(표시용)', '[2027_매칭]경쟁률', '2027경쟁률', '27경쟁률', '경쟁률(2027)', '2027_경쟁률', '2027 수시 경쟁률') || getColOrKeyVal(89, '[2027_매칭]경쟁률(표시용)')
+    const rawRate2026 = getColOrKeyVal(col2026Rate, '[2026_매칭]경쟁률(수치)', '[2026_매칭]경쟁률(표시용)', '[2026_매칭]경쟁률', '2026경쟁률', '26경쟁률', '경쟁률(2026)', '2026_경쟁률')
+    const rawRate2025 = getColOrKeyVal(col2025Rate, '[2025_매칭]경쟁률(수치)', '[2025_매칭]경쟁률(표시용)', '[2025_매칭]경쟁률', '2025경쟁률', '25경쟁률', '경쟁률(2025)', '2025_경쟁률')
+    const rawRate2024 = getColOrKeyVal(112, '[2024_매칭]경쟁률(수치)', '[2024_매칭]경쟁률(표시용)', '[2024_매칭]경쟁률', '2024경쟁률', '24경쟁률', '경쟁률(2024)', '2024_경쟁률')
+    const rawRate2023 = getColOrKeyVal(118, '[2023_매칭]경쟁률(수치)', '[2023_매칭]경쟁률(표시용)', '[2023_매칭]경쟁률', '2023경쟁률', '23경쟁률', '경쟁률(2023)', '2023_경쟁률')
 
-    const quota2027 = getColOrKeyVal(86, '[2027_매칭]모집인원(표시용)', '[2027_매칭]모집인원(합산용)', '[2027_매칭]모집인원', '2027모집인원', '27모집인원', '모집인원(2027)')
-    const app2027 = getColOrKeyVal(88, '[2027_매칭]지원인원', '2027지원인원', '27지원인원', '지원인원(2027)')
+    const quota2027 = getColOrKeyVal(col2027Quota, '[2027_매칭]모집인원(표시용)', '[2027_매칭]모집인원(합산용)', '[2027_매칭]모집인원', '2027모집인원', '27모집인원', '모집인원(2027)')
+    const app2027 = getColOrKeyVal(col2027App, '[2027_매칭]지원인원', '2027지원인원', '27지원인원', '지원인원(2027)')
 
-    const quota2026 = getColOrKeyVal(98, '[2026_매칭]모집인원(표시용)', '[2026_매칭]모집인원', '2026모집인원', '26모집인원', '모집인원(2026)')
-    const app2026 = getColOrKeyVal(99, '[2026_매칭]지원인원', '2026지원인원', '26지원인원', '지원인원(2026)')
+    const quota2026 = getColOrKeyVal(col2026Quota, '[2026_매칭]모집인원(표시용)', '[2026_매칭]모집인원', '2026모집인원', '26모집인원', '모집인원(2026)')
+    const app2026 = getColOrKeyVal(col2026App, '[2026_매칭]지원인원', '2026지원인원', '26지원인원', '지원인원(2026)')
 
-    const quota2025 = getColOrKeyVal(104, '[2025_매칭]모집인원(표시용)', '[2025_매칭]모집인원', '2025모집인원', '25모집인원', '모집인원(2025)')
-    const app2025 = getColOrKeyVal(105, '[2025_매칭]지원인원', '2025지원인원', '25지원인원', '지원인원(2025)')
+    const quota2025 = getColOrKeyVal(col2025Quota, '[2025_매칭]모집인원(표시용)', '[2025_매칭]모집인원', '2025모집인원', '25모집인원', '모집인원(2025)')
+    const app2025 = getColOrKeyVal(col2025App, '[2025_매칭]지원인원', '2025지원인원', '25지원인원', '지원인원(2025)')
 
     const quota2024 = getColOrKeyVal(110, '[2024_매칭]모집인원(표시용)', '[2024_매칭]모집인원', '2024모집인원', '24모집인원', '모집인원(2024)')
     const app2024 = getColOrKeyVal(111, '[2024_매칭]지원인원', '2024지원인원', '24지원인원', '지원인원(2024)')
@@ -498,36 +548,49 @@ export function parseKcueRows(csvText, customPassword = null) {
     const quota2023 = getColOrKeyVal(116, '[2023_매칭]모집인원(표시용)', '[2023_매칭]모집인원', '2023모집인원', '23모집인원', '모집인원(2023)')
     const app2023 = getColOrKeyVal(117, '[2023_매칭]지원인원', '2023지원인원', '23지원인원', '지원인원(2023)')
 
+    const formatRawRate = (val, rate) => {
+      if (val !== null && val !== undefined && val !== '') {
+        const s = String(val).trim()
+        if (s.includes(':')) return s.replace(/\s+/g, '')
+        return `${s}:1`
+      }
+      return rate !== null ? `${rate}:1` : ''
+    }
+
+    const r2025 = calcRate(rawRate2025, quota2025, app2025)
+    const r2026 = calcRate(rawRate2026, quota2026, app2026)
+    const r2027 = calcRate(rawRate2027, quota2027, app2027)
+
     const competitionRates = {
       '2023': {
         quota: quota2023,
         applicants: app2023,
         rate: calcRate(rawRate2023, quota2023, app2023),
-        raw: String(rawRate2023 || '').trim()
+        raw: formatRawRate(rawRate2023, calcRate(rawRate2023, quota2023, app2023))
       },
       '2024': {
         quota: quota2024,
         applicants: app2024,
         rate: calcRate(rawRate2024, quota2024, app2024),
-        raw: String(rawRate2024 || '').trim()
+        raw: formatRawRate(rawRate2024, calcRate(rawRate2024, quota2024, app2024))
       },
       '2025': {
         quota: quota2025,
         applicants: app2025,
-        rate: calcRate(rawRate2025, quota2025, app2025),
-        raw: String(rawRate2025 || '').trim()
+        rate: r2025,
+        raw: formatRawRate(rawRate2025, r2025)
       },
       '2026': {
         quota: quota2026,
         applicants: app2026,
-        rate: calcRate(rawRate2026, quota2026, app2026),
-        raw: String(rawRate2026 || '').trim()
+        rate: r2026,
+        raw: formatRawRate(rawRate2026, r2026)
       },
       '2027': {
         quota: quota2027,
         applicants: app2027,
-        rate: calcRate(rawRate2027, quota2027, app2027),
-        raw: String(rawRate2027 || '').trim()
+        rate: r2027,
+        raw: formatRawRate(rawRate2027, r2027)
       }
     }
 

@@ -11,7 +11,7 @@
           <div class="flex items-center gap-2 mb-2">
             <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
               <Sparkles :size="12" class="text-indigo-300" />
-              <span>예비 고3 & 대입 상담 특화 사전 도구</span>
+              <span>고3 수시 지원 상담 & 수능최저 충족 정밀 진단</span>
             </span>
             <span class="text-xs text-indigo-300/80 font-mono">
               총 {{ rawTableData.length.toLocaleString() }}개 전형·학과 수록
@@ -60,7 +60,7 @@
           </div>
           <div>
             <h3 class="text-sm font-bold text-slate-800 m-0">성적 기준 설정 (진단 대상)</h3>
-            <p class="text-[11px] text-slate-500 m-0">우리 학교 학생 성적을 불러오거나, 예비 고3 상담용 가상 성적을 직접 조작하세요.</p>
+            <p class="text-[11px] text-slate-500 m-0">우리 학교 고3 학생의 모의고사 성적을 불러오거나, 수시 상담용 목표 등급을 직접 조정하세요.</p>
           </div>
         </div>
 
@@ -80,7 +80,7 @@
             :class="scoreInputMode === 'manual' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900 bg-transparent'"
           >
             <SlidersHorizontal :size="14" />
-            <span>가상 등급 직접 조정 (예비고3)</span>
+            <span>목표 등급 직접 조정 (수시 시뮬레이션)</span>
           </button>
         </div>
       </div>

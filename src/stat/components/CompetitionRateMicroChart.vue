@@ -8,6 +8,9 @@
         </svg>
         최근 3개년 경쟁률 추이
       </span>
+      <span v-if="!hasAnyData" class="text-[9.5px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+        대교협 원자료 미매칭
+      </span>
     </div>
 
     <!-- Micro Chart Area -->
@@ -121,6 +124,9 @@
               <template v-if="getItem(year).quota || getItem(year).applicants">
                 {{ getItem(year).quota || '-' }}명/{{ getItem(year).applicants || '-' }}명
               </template>
+              <template v-else-if="getItem(year).rate !== null">
+                {{ formatRate(getItem(year).rate) }}
+              </template>
               <template v-else>
                 미매칭
               </template>
@@ -157,7 +163,7 @@ const targetYearNum = computed(() => {
 
 const targetYearStr = computed(() => String(targetYearNum.value))
 
-// 선택된 학년도 기준 3개년 동적 산출 (예: 2026 -> ['2024', '2025', '2026'], 2027 -> ['2025', '2026', '2027'])
+// 선택된 학년도 기준 최근 3개년 동적 산출 (2027학년도 수시인 경우 2025, 2026, 2027)
 const years = computed(() => {
   const y = targetYearNum.value
   return [String(y - 2), String(y - 1), String(y)]
@@ -214,7 +220,11 @@ const hasAnyData = computed(() => {
 
 function formatRate(val) {
   if (val === null || val === undefined) return '-'
-  return `${Number(val).toFixed(1)}:1`
+  const n = Number(val)
+  if (isNaN(n)) return '-'
+  // 소수점 둘째자리가 있으면 둘째자리까지('5.25:1'), 아니면 첫째자리까지('8.5:1')
+  const formatted = n % 1 === 0 ? n.toFixed(1) : (n.toFixed(2).endsWith('0') ? n.toFixed(1) : n.toFixed(2))
+  return `${formatted}:1`
 }
 
 function getBarHeight(rate) {
