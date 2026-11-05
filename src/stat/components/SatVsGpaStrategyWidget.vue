@@ -98,7 +98,7 @@
           </div>
 
           <!-- Radar Chart Container -->
-          <div class="h-[340px] sm:h-[370px] relative flex items-center justify-center my-2">
+          <div class="h-85 sm:h-92.5 relative flex items-center justify-center my-2">
             <Radar :data="radarChartData" :options="radarChartOptions" />
           </div>
 
@@ -187,7 +187,7 @@
             <!-- 1. 시각화 그래프 인포그래픽 카드 (VISUAL 또는 BOTH 모드) -->
             <div v-if="mockVisualMode === 'VISUAL' || mockVisualMode === 'BOTH'" class="grid grid-cols-1 md:grid-cols-3 gap-3">
               <!-- 국어 영역 카드 -->
-              <div class="bg-gradient-to-br from-blue-50/70 to-slate-50 p-3.5 rounded-2xl border border-blue-100 flex flex-col justify-between">
+              <div class="bg-linear-to-br from-blue-50/70 to-slate-50 p-3.5 rounded-2xl border border-blue-100 flex flex-col justify-between">
                 <div>
                   <div class="flex items-center justify-between mb-1.5">
                     <span class="text-xs font-black text-blue-900 flex items-center gap-1">
@@ -211,7 +211,7 @@
                     </div>
                     <div class="h-2 w-full bg-slate-200 rounded-full relative overflow-hidden">
                       <div
-                        class="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-rose-400 rounded-full"
+                        class="h-full bg-linear-to-r from-blue-600 via-indigo-500 to-rose-400 rounded-full"
                         :style="{ width: Math.max(10, Math.min(100, (10 - Number(currentSatAnalysis.subjectsDetail.kor.totalAvg)) / 9 * 100)) + '%' }"
                       ></div>
                     </div>
@@ -239,7 +239,7 @@
               </div>
 
               <!-- 수학 영역 카드 -->
-              <div class="bg-gradient-to-br from-indigo-50/70 to-slate-50 p-3.5 rounded-2xl border border-indigo-100 flex flex-col justify-between">
+              <div class="bg-linear-to-br from-indigo-50/70 to-slate-50 p-3.5 rounded-2xl border border-indigo-100 flex flex-col justify-between">
                 <div>
                   <div class="flex items-center justify-between mb-1.5">
                     <span class="text-xs font-black text-indigo-900 flex items-center gap-1">
@@ -263,7 +263,7 @@
                     </div>
                     <div class="h-2 w-full bg-slate-200 rounded-full relative overflow-hidden">
                       <div
-                        class="h-full bg-gradient-to-r from-indigo-600 via-purple-500 to-rose-400 rounded-full"
+                        class="h-full bg-linear-to-r from-indigo-600 via-purple-500 to-rose-400 rounded-full"
                         :style="{ width: Math.max(10, Math.min(100, (10 - Number(currentSatAnalysis.subjectsDetail.math.totalAvg)) / 9 * 100)) + '%' }"
                       ></div>
                     </div>
@@ -294,7 +294,7 @@
               </div>
 
               <!-- 영어 영역 카드 -->
-              <div class="bg-gradient-to-br from-emerald-50/70 to-slate-50 p-3.5 rounded-2xl border border-emerald-100 flex flex-col justify-between">
+              <div class="bg-linear-to-br from-emerald-50/70 to-slate-50 p-3.5 rounded-2xl border border-emerald-100 flex flex-col justify-between">
                 <div>
                   <div class="flex items-center justify-between mb-1.5">
                     <span class="text-xs font-black text-emerald-900 flex items-center gap-1">
@@ -318,7 +318,7 @@
                     </div>
                     <div class="h-2 w-full bg-slate-200 rounded-full relative overflow-hidden">
                       <div
-                        class="h-full bg-gradient-to-r from-emerald-600 via-teal-500 to-rose-400 rounded-full"
+                        class="h-full bg-linear-to-r from-emerald-600 via-teal-500 to-rose-400 rounded-full"
                         :style="{ width: Math.max(10, Math.min(100, (10 - Number(currentSatAnalysis.subjectsDetail.eng.totalAvg)) / 9 * 100)) + '%' }"
                       ></div>
                     </div>
@@ -579,7 +579,7 @@
               type="button"
               @click="syncFromGoogleSheetMockData"
               :disabled="isAnalyzingMock"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 transition-all cursor-pointer shadow-2xs"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-linear-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 transition-all cursor-pointer shadow-2xs"
             >
               <span>🌐</span>
               <span v-if="isAnalyzingMock">가채점 시트 연동 중...</span>
@@ -602,7 +602,7 @@
             <button
               type="button"
               @click="loadSampleMockData"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 text-orange-800 hover:from-orange-100 hover:to-amber-100 transition-all cursor-pointer shadow-2xs"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-linear-to-r from-orange-50 to-amber-50 border border-orange-200 text-orange-800 hover:from-orange-100 hover:to-amber-100 transition-all cursor-pointer shadow-2xs"
             >
               <span>💡</span>
               <span>115명 실증 샘플 로드</span>
@@ -665,7 +665,7 @@
       </div>
 
       <!-- 사탐런 인포그래픽 상단 배너 (공식 vs 원자료 분석 동적 전환) -->
-      <div class="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 rounded-3xl p-6 text-white shadow-md relative overflow-hidden">
+      <div class="bg-linear-to-r from-amber-500 via-orange-500 to-rose-500 rounded-3xl p-6 text-white shadow-md relative overflow-hidden">
         <div class="relative z-10">
           <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur-xs">
@@ -1071,7 +1071,7 @@
             </div>
 
             <!-- 차트 모드: Chart.js Bar Chart -->
-            <div v-else class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs h-[450px]">
+            <div v-else class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs h-112.5">
               <Bar :data="satamChartData" :options="satamChartOptions" />
             </div>
           </div>
@@ -1228,7 +1228,7 @@
             </div>
 
             <!-- 차트 모드: Chart.js Bar Chart -->
-            <div v-else class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs h-[450px]">
+            <div v-else class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs h-112.5">
               <Bar :data="gwatamChartData" :options="gwatamChartOptions" />
             </div>
           </div>
@@ -1247,7 +1247,7 @@
         <span class="text-xs text-slate-400 font-medium hidden sm:inline">실질 경쟁률 하락 효과 & 성적대별 전략</span>
       </div>
       <!-- 1. Hero Banner: 공교육 가치 중심 헤더 -->
-      <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-7 shadow-lg relative overflow-hidden">
+      <div class="bg-linear-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-7 shadow-lg relative overflow-hidden">
         <div class="relative z-10">
           <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-cyan-300 border border-cyan-400/30">
@@ -1297,7 +1297,7 @@
         <!-- 3개 전형 유형별 공식 충족률 카드 -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <!-- 교과 -->
-          <div class="p-4 rounded-2xl bg-gradient-to-br from-blue-50/70 to-indigo-50/40 border border-blue-100 space-y-2">
+          <div class="p-4 rounded-2xl bg-linear-to-br from-blue-50/70 to-indigo-50/40 border border-blue-100 space-y-2">
             <div class="flex items-center justify-between">
               <span class="text-xs font-black text-blue-900 flex items-center gap-1.5">
                 <span>📘</span>
@@ -1318,7 +1318,7 @@
           </div>
 
           <!-- 종합 -->
-          <div class="p-4 rounded-2xl bg-gradient-to-br from-emerald-50/70 to-teal-50/40 border border-emerald-100 space-y-2">
+          <div class="p-4 rounded-2xl bg-linear-to-br from-emerald-50/70 to-teal-50/40 border border-emerald-100 space-y-2">
             <div class="flex items-center justify-between">
               <span class="text-xs font-black text-emerald-900 flex items-center gap-1.5">
                 <span>📗</span>
@@ -1339,7 +1339,7 @@
           </div>
 
           <!-- 논술 -->
-          <div class="p-4 rounded-2xl bg-gradient-to-br from-purple-50/70 to-fuchsia-50/40 border border-purple-100 space-y-2">
+          <div class="p-4 rounded-2xl bg-linear-to-br from-purple-50/70 to-fuchsia-50/40 border border-purple-100 space-y-2">
             <div class="flex items-center justify-between">
               <span class="text-xs font-black text-purple-900 flex items-center gap-1.5">
                 <span>📕</span>
@@ -1488,7 +1488,7 @@
         </div>
 
         <!-- Metric 2: 4~5등급 선배 실제 합격률 격차 -->
-        <div class="bg-gradient-to-br from-rose-50 to-orange-50 rounded-3xl p-5 border border-rose-200/80 shadow-2xs">
+        <div class="bg-linear-to-br from-rose-50 to-orange-50 rounded-3xl p-5 border border-rose-200/80 shadow-2xs">
           <div class="flex items-center justify-between text-xs font-bold text-rose-800 mb-2">
             <span>🏆 4~5등급 선배 최저 합격 실증</span>
             <span class="px-2 py-0.5 rounded-full bg-rose-200 text-rose-800 font-bold text-[10px]">+35.3%p 우위</span>
@@ -1655,7 +1655,7 @@
                     </div>
                     <div class="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
                       <div 
-                        class="h-full bg-gradient-to-r from-indigo-500 to-blue-600 rounded-full transition-all duration-500"
+                        class="h-full bg-linear-to-r from-indigo-500 to-blue-600 rounded-full transition-all duration-500"
                         :style="{ width: Math.min(100, Math.max(12, (item.realRate / item.initialRate) * 100)) + '%' }"
                       ></div>
                     </div>
@@ -1678,8 +1678,8 @@
                         :class="[
                           'h-full rounded-full transition-all duration-500',
                           item.isAllPass 
-                            ? 'bg-gradient-to-r from-amber-400 to-orange-500' 
-                            : 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                            ? 'bg-linear-to-r from-amber-400 to-orange-500' 
+                            : 'bg-linear-to-r from-emerald-500 to-teal-500'
                         ]"
                         :style="{ width: Math.min(100, Math.max(8, (item.effectiveRate / item.initialRate) * 100)) + '%' }"
                       ></div>
@@ -1690,7 +1690,7 @@
 
               <!-- Card Bottom -->
               <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span class="truncate max-w-[210px]">{{ item.note }}</span>
+                <span class="truncate max-w-52.5">{{ item.note }}</span>
                 <span class="text-indigo-600 font-bold text-[10px] shrink-0 ml-1">호버/클릭 상세 ➔</span>
               </div>
 
@@ -1868,7 +1868,7 @@
             </div>
 
             <!-- 1. 3단 경쟁률 급락 시각화 카드 -->
-            <div class="grid grid-cols-3 gap-2.5 p-4 rounded-2xl bg-gradient-to-r from-slate-50 via-indigo-50/40 to-emerald-50/50 border border-slate-200">
+            <div class="grid grid-cols-3 gap-2.5 p-4 rounded-2xl bg-linear-to-r from-slate-50 via-indigo-50/40 to-emerald-50/50 border border-slate-200">
               <div class="text-center">
                 <span class="text-[11px] text-slate-500 block font-medium">① 최초 외형</span>
                 <span class="text-2xl font-black text-slate-400 font-mono mt-0.5 block">{{ selectedModalItem.initialRate }}:1</span>
@@ -1957,7 +1957,7 @@
       </Teleport>
 
       <!-- 5. 공교육 감동 실증: 4등급 이하 선배들의 실제 최저 역전 합격 명예의 전당 -->
-      <div class="bg-gradient-to-br from-slate-50 via-rose-50/30 to-slate-50 rounded-3xl p-6 border border-rose-200/70 shadow-2xs space-y-4">
+      <div class="bg-linear-to-br from-slate-50 via-rose-50/30 to-slate-50 rounded-3xl p-6 border border-rose-200/70 shadow-2xs space-y-4">
         <div class="flex items-center justify-between pb-3 border-b border-rose-200/50">
           <div>
             <div class="flex items-center gap-2">
@@ -2222,7 +2222,7 @@
           :class="[
             'p-5 rounded-3xl border transition-all duration-200 cursor-pointer flex flex-col justify-between',
             expandedCard === card.num
-              ? 'bg-gradient-to-br from-indigo-50/70 to-blue-50/70 border-indigo-300 shadow-md ring-2 ring-indigo-200'
+              ? 'bg-linear-to-br from-indigo-50/70 to-blue-50/70 border-indigo-300 shadow-md ring-2 ring-indigo-200'
               : 'bg-slate-50/70 hover:bg-white border-slate-200/90 hover:border-slate-300'
           ]"
         >
