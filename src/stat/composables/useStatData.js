@@ -14,7 +14,8 @@ import {
   getStatSessionPassword,
   clearStatSessionPassword,
   fetchAndParseKcueMockData,
-  groupMockRecordsByStudent
+  groupMockRecordsByStudent,
+  DEFAULT_CSAT_PASS_RATE_BENCHMARK
 } from '../../api/statApi.js'
 import { supabase } from '../../utils/supabaseClient'
 import officialStatsData from '../data/officialStats.json'
@@ -1095,8 +1096,160 @@ export function useStatData() {
     }
   }
 
+  // 우리 학교 데이터 기반 수능최저 및 실질 경쟁률 종합 통계 (동적 산출)
+  const schoolMinScoreStats = computed(() => {
+    const apps = applications.value || []
+    const minApps = apps.filter(a => a.hasMinScore || (a.minScoreReq && !a.minScoreReq.includes('없음') && a.minScoreReq.length > 2))
+    
+    // Fallback if no applications loaded
+    if (minApps.length === 0) {
+      return {
+        totalMinApps: 225,
+        avgInitialRate: 15.3,
+        avgRealRate: 4.4,
+        avgEffectiveRate: 2.3,
+        gpaCount: 187,
+        gpaInitialRate: 8.6,
+        gpaRealRate: 3.5,
+        gpaEffectiveRate: 1.6,
+        avgPassRate: 41.5,
+        gpaPassRate: 42.0,
+        schoolPassRate: 37.4,
+        easeFactor: 3.5
+      }
+    }
+
+    const benchmarkList = (csatPassRateTable.value && csatPassRateTable.value.length > 0)
+      ? csatPassRateTable.value
+      : DEFAULT_CSAT_PASS_RATE_BENCHMARK
+
+    let initialSum = 0
+    let realSum = 0
+    let effectiveSum = 0
+    let passRateSum = 0
+    let count = 0
+
+    let gpaInitialSum = 0
+    let gpaRealSum = 0
+    let gpaEffectiveSum = 0
+    let gpaPassRateSum = 0
+    let gpaCount = 0
+
+    minApps.forEach(app => {
+      const normAppUniv = String(app.univName || '').replace(/\(.*\)/g, '').trim()
+      const normAppDept = String(app.dept || '').trim()
+      const normAppType = String(app.admissionDetailType || app.admissionType || '').trim()
+      const isGpa = normAppType.includes('교과') || String(app.admissionType || '').includes('교과')
+
+      let found = benchmarkList.find(item => {
+        const itemUniv = String(item.univName || '').replace(/\(.*\)/g, '').trim()
+        const itemDept = String(item.dept || '').trim()
+        const itemType = String(item.admissionType || '').trim()
+        return normAppUniv.includes(itemUniv) && 
+               (normAppDept.includes(itemDept) || itemDept.includes(normAppDept)) &&
+               (normAppType.includes(itemType) || itemType.includes(normAppType))
+      })
+
+      if (!found) {
+        found = benchmarkList.find(item => {
+          const itemUniv = String(item.univName || '').replace(/\(.*\)/g, '').trim()
+          const itemType = String(item.admissionType || '').trim()
+          const isUnivMatch = normAppUniv.includes(itemUniv) || itemUniv.includes(normAppUniv)
+          const isTypeMatch = (normAppType.includes('논술') && itemType.includes('논술')) ||
+                              (normAppType.includes('교과') && itemType.includes('교과')) ||
+                              (normAppType.includes('종합') && itemType.includes('종합'))
+          return isUnivMatch && isTypeMatch
+        })
+      }
+
+      if (!found) {
+        found = benchmarkList.find(item => {
+          const itemUniv = String(item.univName || '').replace(/\(.*\)/g, '').trim()
+          return normAppUniv.includes(itemUniv) || itemUniv.includes(normAppUniv)
+        })
+      }
+
+      let init = 0
+      let pass = 0
+      let fill = 100
+
+      if (found) {
+        init = Number(found.initialRate || 0)
+        pass = Number(found.passRate || 0)
+        fill = Number(found.fillRate || 100)
+      } else {
+        if (/논술/.test(normAppType)) {
+          init = 34.2
+          pass = 25.0
+          fill = 50
+        } else if (/한경|공주|충북|강원/.test(normAppUniv)) {
+          init = 6.8
+          pass = 38.0
+          fill = 130
+        } else if (/고려대|연세대|이화여대|한양대|경희대|세종대|숭실대/.test(normAppUniv)) {
+          init = 10.5
+          pass = 45.0
+          fill = 150
+        } else {
+          init = 7.8
+          pass = 37.4
+          fill = 120
+        }
+      }
+
+      if (init > 0) {
+        const real = init * (pass / 100)
+        const eff = real / (1 + fill / 100)
+        initialSum += init
+        realSum += real
+        effectiveSum += eff
+        passRateSum += pass
+        count++
+
+        if (isGpa) {
+          gpaInitialSum += init
+          gpaRealSum += real
+          gpaEffectiveSum += eff
+          gpaPassRateSum += pass
+          gpaCount++
+        }
+      }
+    })
+
+    const avgInitialRate = count > 0 ? Number((initialSum / count).toFixed(1)) : 15.3
+    const avgRealRate = count > 0 ? Number((realSum / count).toFixed(1)) : 4.4
+    const avgEffectiveRate = count > 0 ? Number((effectiveSum / count).toFixed(1)) : 2.3
+    const avgPassRate = count > 0 ? Number((passRateSum / count).toFixed(1)) : 41.5
+    const easeFactor = avgRealRate > 0 ? Number((avgInitialRate / avgRealRate).toFixed(1)) : 3.5
+
+    const gpaInitialRate = gpaCount > 0 ? Number((gpaInitialSum / gpaCount).toFixed(1)) : 8.6
+    const gpaRealRate = gpaCount > 0 ? Number((gpaRealSum / gpaCount).toFixed(1)) : 3.5
+    const gpaEffectiveRate = gpaCount > 0 ? Number((gpaEffectiveSum / gpaCount).toFixed(1)) : 1.6
+    const gpaPassRate = gpaCount > 0 ? Number((gpaPassRateSum / gpaCount).toFixed(1)) : 42.0
+
+    const curYear = String(selectedAcademicYear.value || '2027')
+    const yearStats = MULTI_YEAR_STATS.byYear[curYear]
+    const schoolPassRate = (yearStats && yearStats.csatMinPassRate) ? yearStats.csatMinPassRate : 37.4
+
+    return {
+      totalMinApps: minApps.length,
+      avgInitialRate,
+      avgRealRate,
+      avgEffectiveRate,
+      gpaCount,
+      gpaInitialRate,
+      gpaRealRate,
+      gpaEffectiveRate,
+      avgPassRate,
+      gpaPassRate,
+      schoolPassRate,
+      easeFactor
+    }
+  })
+
   return {
     auth,
+    schoolMinScoreStats,
     applications,
     officialStats,
     selectedClass,

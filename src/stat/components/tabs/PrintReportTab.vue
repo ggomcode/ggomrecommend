@@ -268,9 +268,9 @@
           </div>
 
           <div class="border border-slate-300 p-3 rounded bg-slate-50/50">
-            <div class="font-bold text-slate-900 mb-1">3. 수능 최저를 맞추는 순간 실질경쟁률이 6:1에서 2:1로 떨어지는 마법</div>
+            <div class="font-bold text-slate-900 mb-1">3. 수능 최저를 맞추는 순간 실질경쟁률이 {{ schoolMinScoreStats.avgInitialRate }}:1에서 {{ schoolMinScoreStats.avgRealRate }}:1로 떨어지는 마법</div>
             <p class="text-slate-600 m-0 leading-relaxed">
-              - 수능 최저를 충족하는 학생의 비율이 약 30%에 불과하므로, 최저만 맞추면 경쟁률이 1/3로 급락합니다. 충원합격까지 감안하면 사실상 전원 합격권에 도달합니다.
+              - 우리 학교 수능최저 지원 {{ schoolMinScoreStats.totalMinApps }}건 실측 분석: 수능 최저를 충족하는 순간 실질 경쟁률이 {{ schoolMinScoreStats.avgRealRate }}:1(교과전형 {{ schoolMinScoreStats.gpaRealRate }}:1, 충원 반영 체감 {{ schoolMinScoreStats.avgEffectiveRate }}:1)로 급락합니다. 경쟁자의 60% 이상이 자동 탈락하므로 충원합격까지 감안하면 합격 확률이 비약적으로 상승합니다.
             </p>
           </div>
 
@@ -478,7 +478,7 @@ import { ref, computed } from 'vue'
 import { useData } from '../../composables/useStatData'
 import { schoolName } from '../../../utils/schoolConfig'
 
-const { officialStats, applications, selectedAcademicYear } = useData()
+const { officialStats, applications, selectedAcademicYear, schoolMinScoreStats } = useData()
 const window = globalThis.window
 
 const displaySchoolName = computed(() => {

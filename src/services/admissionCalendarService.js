@@ -321,8 +321,18 @@ export async function fetchAdmissionCalendarData({ forceRefresh = false } = {}) 
   const rawSheetId = await getAdmissionSheetId()
   const sheetId = extractSheetId(rawSheetId)
   if (!sheetId) {
-    // 관리자 설정에 ID가 아직 등록되지 않은 경우, 내장된 번들 기본 데이터 반환
-    return buildFallbackData()
+    // 관리자 설정에서 시트 ID를 반드시 입력해야 동작하며, 미등록 시 기본 데이터 자동 실행 안 함
+    return {
+      unconfigured: true,
+      majorList: [],
+      deadlineByDate: {},
+      fourYearByDate: {},
+      juniorByDate: {},
+      academicByDate: {},
+      academicEvents: [],
+      rangeEvents: [],
+      lastUpdated: null
+    }
   }
 
   try {

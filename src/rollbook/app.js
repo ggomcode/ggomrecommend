@@ -101,7 +101,8 @@ class App {
       this.updateStatusIndicator();
     } catch (err) {
       console.error('Error loading data:', err);
-      alert('구글 시트 데이터를 불러오는 중 오류가 발생했습니다. 인터넷 연결 또는 구글 시트 권한을 확인해 주세요.');
+      const msg = (err && err.message) ? err.message : '구글 시트 데이터를 불러오는 중 오류가 발생했습니다. 인터넷 연결 또는 구글 시트 권한을 확인해 주세요.';
+      alert(msg);
       this.updateStatusIndicator();
     } finally {
       this.showLoading(false);

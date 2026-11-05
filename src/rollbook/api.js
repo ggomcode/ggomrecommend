@@ -11,7 +11,7 @@ import { supabase } from '../utils/supabaseClient.js';
 
 export const ROLLBOOK_CONFIG = {
   // 1. 구글 스프레드시트 ID (단 하나만 필요)
-  SHEET_ID: '1-Ki9X_EKw5xEq-Pc-ba-PBU6VWhvdBun-1bkUjTTH0Q',
+  SHEET_ID: '',
 
   // 2. 스프레드시트 각 시트 GID 및 시트명 (gviz로 0초 만에 실시간 조회)
   GIDS: {
@@ -121,6 +121,9 @@ export const SheetAPI = {
 
   async loadAllData() {
     await this.syncConfigFromDatabase();
+    if (!this.sheetId) {
+      throw new Error('선택교과 출석관리 구글 스프레드시트 ID가 설정되지 않았습니다. 관리자 설정 > 환경 설정 > 구글 스프레드시트 DB 연동 설정에서 시트 ID를 등록해 주세요.');
+    }
     let attendanceCsv = '';
     let holidaysCsv = '';
     let recordsCsv = '';

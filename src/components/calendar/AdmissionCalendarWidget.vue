@@ -14,6 +14,19 @@
       </div>
     </div>
 
+    <!-- 0-0. 대입 일정 구글 시트 ID 미등록 안내 배너 -->
+    <div
+      v-if="isUnconfigured"
+      class="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-3xl p-8 text-center text-amber-900 dark:text-amber-200 shadow-sm space-y-3"
+    >
+      <div class="text-4xl">📅</div>
+      <h3 class="text-lg font-black tracking-tight">2027 대입 일정 구글 스프레드시트 ID가 설정되지 않았습니다</h3>
+      <p class="text-xs sm:text-sm text-amber-700 dark:text-amber-300 max-w-xl mx-auto leading-relaxed">
+        대입 일정(주요일정, 원서접수마감, 4년제/전문대 일정 등)을 연동하려면 관리자 설정의 '환경 설정'에서 <strong>2027 대입 일정 구글 스프레드시트 ID</strong>를 등록해 주세요.
+      </p>
+    </div>
+
+    <template v-else>
     <!-- 0-1. 학생/학급 맞춤 대입일정 선택 바 (교사/관리자: 학급 및 학생 드롭다운 선택, 학생: 본인 맞춤 안내) -->
     <div
       v-if="auth.isStudent || ((auth.isTeacher || auth.isAdmin) && studentList.length > 0)"
@@ -1264,6 +1277,7 @@
         </div>
       </div>
     </div>
+    </template>
 
   </div>
 </template>
@@ -1287,7 +1301,8 @@ import {
 const auth = useAuthStore()
 
 const loading = ref(false)
-const rawData = ref(defaultCalendarData)
+const rawData = ref(null)
+const isUnconfigured = computed(() => !rawData.value || rawData.value.unconfigured === true)
 
 // ── 학급 및 학생별 대입일정 맞춤 필터 상태 ────────────────────────
 const selectedClass = ref('ALL') // 'ALL' | 1 | 2 ... | 'GRAD'
@@ -1822,9 +1837,7 @@ async function refreshData(force = false) {
   loading.value = true
   try {
     const res = await fetchAdmissionCalendarData({ forceRefresh: force })
-    if (res && res.academicByDate && Object.keys(res.academicByDate).length > 0) {
-      rawData.value = res
-    }
+    rawData.value = res
   } catch (err) {
     console.error('Admission data fetch failed:', err)
   } finally {

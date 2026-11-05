@@ -466,7 +466,7 @@
           <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-700 space-y-3">
             <div class="flex items-center justify-between">
               <label class="block text-xs font-bold text-slate-800 dark:text-slate-200">
-                4) 2027 대입 일정 구글 스프레드시트 ID (로그인 화면 캘린더 연동)
+                4) 2027 대입 일정 구글 스프레드시트 ID (로그인 화면 캘린더 연동) <span class="text-rose-500 font-extrabold">*필수</span>
               </label>
               <a
                 v-if="realAdmissionSheetId"
@@ -484,7 +484,7 @@
               <input
                 v-model="admissionSheetIdInput"
                 type="text"
-                :placeholder="hasAdmissionSheetId ? '저장된 ID (마스킹됨)' : 'ID 또는 전체 시트 URL 입력'"
+                :placeholder="hasAdmissionSheetId ? '저장된 ID (마스킹됨)' : 'ID 또는 전체 시트 URL 입력 (필수)'"
                 class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white"
               />
               <button
@@ -509,7 +509,7 @@
           <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-700 space-y-3">
             <div class="flex items-center justify-between">
               <label class="block text-xs font-bold text-slate-800 dark:text-slate-200">
-                5) 선택교과 출석관리 구글 스프레드시트 ID (고3 이동수업 · 원적학급 출석부)
+                5) 선택교과 출석관리 구글 스프레드시트 ID (고3 이동수업 · 원적학급 출석부) <span class="text-rose-500 font-extrabold">*필수</span>
               </label>
               <a
                 v-if="realGoogleSheetRollbookId"
@@ -521,14 +521,13 @@
               </a>
             </div>
             <p class="text-[11px] text-slate-500 m-0 leading-relaxed">
-              출석관리 구글 시트 ID 또는 전체 URL을 입력하면 자동으로 ID만 추출하여 안전하게 저장됩니다.<br>
-              (시트 내 <code>출결사항</code>, <code>행사및휴업</code>, <code>출결기록</code>, <code>결석계 접수 대장</code> 시트 탭이 실시간 연동됩니다. 기본값: <code>1-Ki9X...</code>)
+              출석관리 구글 시트 ID 또는 전체 URL을 입력하면 자동으로 ID만 추출하여 안전하게 저장됩니다.
             </p>
             <div class="flex gap-2">
               <input
                 v-model="googleSheetRollbookId"
                 type="text"
-                :placeholder="hasGoogleSheetRollbookId ? '저장된 ID (마스킹됨)' : 'ID 또는 전체 시트 URL 입력 (기본: 1-Ki9X...)'"
+                :placeholder="hasGoogleSheetRollbookId ? '저장된 ID (마스킹됨)' : 'ID 또는 전체 시트 URL 입력 (필수)'"
                 class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-slate-800 dark:text-white"
               />
               <button
@@ -1488,11 +1487,15 @@ async function loadConfig() {
     hasAdmissionSheetId.value = !!dbAdmissionId
     admissionSheetIdInput.value = dbAdmissionId ? maskGoogleSheetId(dbAdmissionId) : ''
 
-    const dbRollbookId = configMap['google_sheet_rollbook_id'] || localStorage.getItem('pcm_google_sheet_rollbook_id') || '1-Ki9X_EKw5xEq-Pc-ba-PBU6VWhvdBun-1bkUjTTH0Q'
+    const dbRollbookId = configMap['google_sheet_rollbook_id'] || localStorage.getItem('pcm_google_sheet_rollbook_id') || ''
     realGoogleSheetRollbookId.value = dbRollbookId
     hasGoogleSheetRollbookId.value = !!dbRollbookId
     googleSheetRollbookId.value = dbRollbookId ? maskGoogleSheetId(dbRollbookId) : ''
-    localStorage.setItem('pcm_google_sheet_rollbook_id', dbRollbookId)
+    if (dbRollbookId) {
+      localStorage.setItem('pcm_google_sheet_rollbook_id', dbRollbookId)
+    } else {
+      localStorage.removeItem('pcm_google_sheet_rollbook_id')
+    }
 
     const dbRollbookGasUrl = configMap['google_sheet_rollbook_gas_url'] || localStorage.getItem('ggom_gas_webapp_url') || ''
     realGoogleSheetRollbookGasUrl.value = dbRollbookGasUrl
@@ -1652,10 +1655,16 @@ async function handleSaveAdmissionSheetId() {
       realAdmissionSheetId.value = targetVal
     }
 
+    if (!targetVal) {
+      alert('2027 대입 일정 구글 스프레드시트 ID는 필수 입력 항목입니다. 시트 ID 또는 URL을 입력해 주세요.')
+      admissionSheetLoading.value = false
+      return
+    }
+
     await saveAdmissionSheetId(targetVal)
     hasAdmissionSheetId.value = !!targetVal
     admissionSheetIdInput.value = targetVal ? maskGoogleSheetId(targetVal) : ''
-    alert(targetVal ? '2027 대입 일정 구글 스프레드시트 ID가 저장되었습니다.' : '대입 일정 시트 ID가 삭제(초기화)되었습니다.')
+    alert('2027 대입 일정 구글 스프레드시트 ID가 저장되었습니다.')
   } catch (e) {
     console.error(e)
     alert('대입 일정 시트 ID 저장 중 오류가 발생했습니다.')
@@ -1689,6 +1698,12 @@ async function saveGoogleSheetRollbookId() {
       realGoogleSheetRollbookId.value = targetVal
     }
 
+    if (!targetVal) {
+      alert('선택교과 출석관리 구글 스프레드시트 ID는 필수 입력 항목입니다. 시트 ID 또는 URL을 입력해 주세요.')
+      googleSheetRollbookLoading.value = false
+      return
+    }
+
     if (supabase) {
       const { error } = await supabase.from('config').upsert({ key: 'google_sheet_rollbook_id', value: targetVal }, { onConflict: 'key' })
       if (error) throw error
@@ -1702,7 +1717,7 @@ async function saveGoogleSheetRollbookId() {
 
     hasGoogleSheetRollbookId.value = !!targetVal
     googleSheetRollbookId.value = targetVal ? maskGoogleSheetId(targetVal) : ''
-    alert(targetVal ? '선택교과 출석관리 구글 스프레드시트 ID가 저장되었습니다.' : '출석관리 시트 ID가 삭제되었습니다.')
+    alert('선택교과 출석관리 구글 스프레드시트 ID가 저장되었습니다.')
   } catch (e) {
     console.error(e)
     alert('출석관리 구글 시트 ID 저장 중 오류가 발생했습니다: ' + e.message)
