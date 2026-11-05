@@ -340,7 +340,11 @@ const {
 } = useStatData()
 
 // 고1·2 성적분석 메뉴 진입 시 학사일정 학년도(2026) 고정 및 복귀 제어
+const collapsed = ref(false)
+const currentTab = ref('overview')
+
 const previousAdmissionYear = ref(selectedAcademicYear.value || '2027')
+
 
 
 watch(currentTab, (newTab, oldTab) => {
@@ -360,9 +364,6 @@ watch(currentTab, (newTab, oldTab) => {
   }
 })
 
-// 사이드바 접기/펼치기 상태
-const collapsed = ref(false)
-const currentTab = ref('overview')
 
 // 관리자 설정에서 '농어촌 및 기회균형 전형 구글 시트 ID' 등록 여부 확인 (미등록 시 메뉴 숨김)
 const initialRuralSheetId = typeof window !== 'undefined' ? localStorage.getItem('pcm_google_sheet_rural_id') : ''

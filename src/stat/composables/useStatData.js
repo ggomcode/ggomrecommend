@@ -4,7 +4,8 @@ import rawAppsData from '../data/applications.json'
 export { rawAppsData }
 import { MULTI_YEAR_STATS, computeYearMultiYearStats } from '../data/multiYearStats.js'
 import { 
-  getKcueSheetId, 
+  getKcueSheetId,
+  extractSheetId, 
   getKcueYearSheets, 
   DEFAULT_KCUE_YEAR_SHEETS, 
   fetchAndParseKcueYearData, 
