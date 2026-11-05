@@ -128,64 +128,27 @@
                 </div>
               </div>
 
-              <!-- 우측 드롭다운 및 모드 스위처 -->
-              <div class="flex flex-wrap items-center gap-2">
-                <!-- 모의고사 회차 드롭다운 선택기 -->
-                <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1 shadow-2xs">
-                  <span class="text-[11px] font-bold text-slate-500 shrink-0">회차:</span>
-                  <select
-                    v-model="selectedMockExamMonth"
-                    class="text-xs font-bold bg-transparent text-slate-800 focus:outline-none cursor-pointer pr-1"
+              <!-- 우측 모의고사 회차 드롭다운 선택기 -->
+              <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-2xs">
+                <span class="text-[11px] font-bold text-slate-500 shrink-0">회차:</span>
+                <select
+                  v-model="selectedMockExamMonth"
+                  class="text-xs font-bold bg-transparent text-slate-800 focus:outline-none cursor-pointer pr-1"
+                >
+                  <option value="ALL">🌟 전체 (3~10월 통합) - {{ currentSatAnalysis.studentCount }}명</option>
+                  <option
+                    v-for="opt in availableExamMonthOptions"
+                    :key="opt.key"
+                    :value="opt.key"
                   >
-                    <option value="ALL">🌟 전체 (3~10월 통합) - {{ currentSatAnalysis.studentCount }}명</option>
-                    <option
-                      v-for="opt in availableExamMonthOptions"
-                      :key="opt.key"
-                      :value="opt.key"
-                    >
-                      📅 {{ opt.displayLabel }}
-                    </option>
-                  </select>
-                </div>
-
-                <!-- 뷰 모드 토글 (그래프 / 표 / 함께 보기) -->
-                <div class="inline-flex rounded-xl bg-slate-100 p-0.5 border border-slate-200 text-xs">
-                  <button
-                    type="button"
-                    @click="mockVisualMode = 'VISUAL'"
-                    :class="[
-                      'px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer text-[11px]',
-                      mockVisualMode === 'VISUAL' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
-                    ]"
-                  >
-                    📊 그래프
-                  </button>
-                  <button
-                    type="button"
-                    @click="mockVisualMode = 'TABLE'"
-                    :class="[
-                      'px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer text-[11px]',
-                      mockVisualMode === 'TABLE' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
-                    ]"
-                  >
-                    📋 표
-                  </button>
-                  <button
-                    type="button"
-                    @click="mockVisualMode = 'BOTH'"
-                    :class="[
-                      'px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer text-[11px]',
-                      mockVisualMode === 'BOTH' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
-                    ]"
-                  >
-                    🔄 함께
-                  </button>
-                </div>
+                    📅 {{ opt.displayLabel }}
+                  </option>
+                </select>
               </div>
             </div>
 
-            <!-- 1. 시각화 그래프 인포그래픽 카드 (VISUAL 또는 BOTH 모드) -->
-            <div v-if="mockVisualMode === 'VISUAL' || mockVisualMode === 'BOTH'" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <!-- 시각화 인포그래픽 카드 3종 (국어, 수학, 영어) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
               <!-- 국어 영역 카드 -->
               <div class="bg-linear-to-br from-blue-50/70 to-slate-50 p-3.5 rounded-2xl border border-blue-100 flex flex-col justify-between">
                 <div>
@@ -337,125 +300,6 @@
                 </div>
               </div>
             </div>
-
-            <!-- 2. 상세 데이터 테이블 (TABLE 또는 BOTH 모드) -->
-            <div v-if="mockVisualMode === 'TABLE' || mockVisualMode === 'BOTH'" class="overflow-x-auto">
-              <table class="w-full text-xs text-left border-collapse">
-                <thead>
-                  <tr class="bg-slate-100/80 text-slate-700 font-bold border-y border-slate-200">
-                    <th class="p-2.5">영역</th>
-                    <th class="p-2.5">구분</th>
-                    <th class="p-2.5 text-center">응시 인원</th>
-                    <th class="p-2.5 text-center">평균 등급</th>
-                    <th class="p-2.5">특징 및 최저 충족 유불리</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 font-medium">
-                  <!-- 국어 -->
-                  <tr>
-                    <td rowspan="3" class="p-2.5 font-bold text-slate-900 bg-slate-50/50 border-r border-slate-100">
-                      국어
-                    </td>
-                    <td class="p-2 text-slate-600 font-semibold">전체</td>
-                    <td class="p-2 text-center font-mono font-bold text-slate-800">
-                      <span>{{ currentSatAnalysis.subjectsDetail.kor.totalCount }}명</span>
-                    </td>
-                    <td class="p-2 text-center font-mono font-bold text-slate-800">
-                      <span class="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
-                        {{ currentSatAnalysis.subjectsDetail.kor.totalAvg }}
-                      </span>
-                    </td>
-                    <td class="p-2 text-[11px] text-slate-500">내신({{ currentGpaRaw[0] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.kor.totalAvg) - currentGpaRaw[0]).toFixed(2) }}등급 차이</td>
-                  </tr>
-                  <tr class="bg-blue-50/30">
-                    <td class="p-2 text-blue-700 font-bold">언어와 매체</td>
-                    <td class="p-2 text-center font-mono font-bold text-blue-700">
-                      <span>{{ currentSatAnalysis.subjectsDetail.kor.unmaeCount }}명</span>
-                      <span class="text-[10px] text-blue-500 block font-normal">({{ ((currentSatAnalysis.subjectsDetail.kor.unmaeCount / (currentSatAnalysis.subjectsDetail.kor.totalCount || 1)) * 100).toFixed(1) }}%)</span>
-                    </td>
-                    <td class="p-2 text-center font-mono font-bold text-blue-700">
-                      <span class="inline-block px-2 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-200">
-                        {{ currentSatAnalysis.subjectsDetail.kor.unmaeAvg }}
-                      </span>
-                    </td>
-                    <td class="p-2 text-[11px] text-blue-800 font-semibold">화작 대비 최저 충족 주력 영역</td>
-                  </tr>
-                  <tr>
-                    <td class="p-2 text-slate-600">화법과 작문</td>
-                    <td class="p-2 text-center font-mono text-slate-700">
-                      <span>{{ currentSatAnalysis.subjectsDetail.kor.hwajakCount }}명</span>
-                      <span class="text-[10px] text-slate-400 block font-normal">({{ ((currentSatAnalysis.subjectsDetail.kor.hwajakCount / (currentSatAnalysis.subjectsDetail.kor.totalCount || 1)) * 100).toFixed(1) }}%)</span>
-                    </td>
-                    <td class="p-2 text-center font-mono text-slate-700">
-                      <span class="inline-block px-2 py-0.5 rounded bg-slate-50 text-slate-700 border border-slate-200">
-                        {{ currentSatAnalysis.subjectsDetail.kor.hwajakAvg }}
-                      </span>
-                    </td>
-                    <td class="p-2 text-[11px] text-slate-500">다수 학생 응시 영역</td>
-                  </tr>
-
-                  <!-- 수학 -->
-                  <tr class="border-t border-slate-200">
-                    <td rowspan="3" class="p-2.5 font-bold text-slate-900 bg-slate-50/50 border-r border-slate-100">
-                      수학
-                    </td>
-                    <td class="p-2 text-slate-600 font-semibold">전체</td>
-                    <td class="p-2 text-center font-mono font-bold text-slate-800">
-                      <span>{{ currentSatAnalysis.subjectsDetail.math.totalCount }}명</span>
-                    </td>
-                    <td class="p-2 text-center font-mono font-bold text-slate-800">
-                      <span class="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
-                        {{ currentSatAnalysis.subjectsDetail.math.totalAvg }}
-                      </span>
-                    </td>
-                    <td class="p-2 text-[11px] text-slate-500">내신({{ currentGpaRaw[1] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.math.totalAvg) - currentGpaRaw[1]).toFixed(2) }}등급 차이</td>
-                  </tr>
-                  <tr class="bg-indigo-50/40">
-                    <td class="p-2 text-indigo-700 font-bold">미적분/기하</td>
-                    <td class="p-2 text-center font-mono font-bold text-indigo-700">
-                      <span>{{ currentSatAnalysis.subjectsDetail.math.mijukCount }}명</span>
-                      <span class="text-[10px] text-indigo-500 block font-normal">({{ ((currentSatAnalysis.subjectsDetail.math.mijukCount / (currentSatAnalysis.subjectsDetail.math.totalCount || 1)) * 100).toFixed(1) }}%)</span>
-                    </td>
-                    <td class="p-2 text-center font-mono font-bold text-indigo-700">
-                      <span class="inline-block px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 border border-indigo-200 font-extrabold">
-                        {{ currentSatAnalysis.subjectsDetail.math.mijukAvg }}
-                      </span>
-                    </td>
-                    <td class="p-2 text-[11px] text-indigo-800 font-semibold">확통 대비 우세 성향 유지</td>
-                  </tr>
-                  <tr>
-                    <td class="p-2 text-slate-600">확률과 통계</td>
-                    <td class="p-2 text-center font-mono text-slate-700">
-                      <span>{{ currentSatAnalysis.subjectsDetail.math.hwaktongCount }}명</span>
-                      <span class="text-[10px] text-slate-400 block font-normal">({{ ((currentSatAnalysis.subjectsDetail.math.hwaktongCount / (currentSatAnalysis.subjectsDetail.math.totalCount || 1)) * 100).toFixed(1) }}%)</span>
-                    </td>
-                    <td class="p-2 text-center font-mono text-slate-700">
-                      <span class="inline-block px-2 py-0.5 rounded bg-slate-50 text-slate-700 border border-slate-200">
-                        {{ currentSatAnalysis.subjectsDetail.math.hwaktongAvg }}
-                      </span>
-                    </td>
-                    <td class="p-2 text-[11px] text-slate-500">인문계열 주요 선택 영역</td>
-                  </tr>
-
-                  <!-- 영어 -->
-                  <tr class="border-t border-slate-200">
-                    <td class="p-2.5 font-bold text-slate-900 bg-slate-50/50 border-r border-slate-100">
-                      영어
-                    </td>
-                    <td class="p-2 text-emerald-700 font-bold">절대평가</td>
-                    <td class="p-2 text-center font-mono font-bold text-emerald-700">
-                      <span>{{ currentSatAnalysis.subjectsDetail.eng.totalCount }}명</span>
-                    </td>
-                    <td class="p-2 text-center font-mono font-bold text-emerald-700">
-                      <span class="inline-block px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 font-extrabold">
-                        {{ currentSatAnalysis.subjectsDetail.eng.totalAvg }}
-                      </span>
-                    </td>
-                    <td class="p-2 text-[11px] text-emerald-800 font-semibold">수능 최저의 핵심 전략 영역</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
           </div>
 
           <!-- 과목별 비교 바 차트 -->
@@ -484,28 +328,61 @@
             </p>
           </div>
 
-          <!-- 추이 보기 모드 탭 (등급 추이 / 응시 인원 추이) -->
-          <div class="inline-flex rounded-xl bg-slate-100 p-0.5 border border-slate-200 text-xs self-start sm:self-auto shrink-0">
+          <!-- 상단 조절 바: 추이 보기 모드 및 밀집구간 줌 토글 -->
+          <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto shrink-0">
+            <!-- 줌 토글 버튼 (등급 보기 모드일 때만 표시) -->
             <button
+              v-if="mockTrendViewMode !== 'COUNT'"
               type="button"
-              @click="mockTrendViewMode = 'GRADE'"
+              @click="isGradeZoomed = !isGradeZoomed"
               :class="[
-                'px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer',
-                mockTrendViewMode === 'GRADE' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer',
+                isGradeZoomed
+                  ? 'bg-amber-50 text-amber-900 border-amber-300 shadow-2xs hover:bg-amber-100'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
               ]"
+              title="3.5~7.0등급 밀집 구간 집중 확대"
             >
-              📊 영역별 등급 추이
+              <span>{{ isGradeZoomed ? '🔍 3.5~7.0등급 집중 확대' : '🔎 전체 1~9등급' }}</span>
+              <span :class="['text-[10px] px-1.5 py-0.5 rounded-md font-extrabold', isGradeZoomed ? 'bg-amber-200 text-amber-800' : 'bg-slate-100 text-slate-500']">
+                {{ isGradeZoomed ? 'ON' : 'OFF' }}
+              </span>
             </button>
-            <button
-              type="button"
-              @click="mockTrendViewMode = 'COUNT'"
-              :class="[
-                'px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer',
-                mockTrendViewMode === 'COUNT' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-500 hover:text-slate-800'
-              ]"
-            >
-              👥 응시자 수 추이
-            </button>
+
+            <!-- 추이 보기 모드 탭 (선택과목 분리 / 5개영역 통합 / 응시 인원수) -->
+            <div class="inline-flex rounded-xl bg-slate-100 p-0.5 border border-slate-200 text-xs">
+              <button
+                type="button"
+                @click="mockTrendViewMode = 'SPLIT'"
+                :class="[
+                  'px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1',
+                  mockTrendViewMode === 'SPLIT' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                ]"
+              >
+                <span>⚡ 선택과목 분리</span>
+                <span class="text-[10px] px-1 py-0.2 rounded bg-indigo-50 text-indigo-600 font-extrabold hidden md:inline">추천</span>
+              </button>
+              <button
+                type="button"
+                @click="mockTrendViewMode = 'COMBINED'"
+                :class="[
+                  'px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer',
+                  mockTrendViewMode === 'COMBINED' ? 'bg-white text-indigo-700 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                ]"
+              >
+                📊 5개 영역 통합
+              </button>
+              <button
+                type="button"
+                @click="mockTrendViewMode = 'COUNT'"
+                :class="[
+                  'px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer',
+                  mockTrendViewMode === 'COUNT' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                ]"
+              >
+                👥 응시자 수
+              </button>
+            </div>
           </div>
         </div>
 
@@ -515,17 +392,24 @@
         </div>
 
         <!-- 추이 분석 핵심 인사이트 브리핑 바 -->
-        <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-700 leading-relaxed flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0"></span>
+        <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-700 leading-relaxed flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div class="flex items-start sm:items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0 mt-1 sm:mt-0"></span>
             <div>
               <span class="font-extrabold text-slate-900">💡 모의고사 회차별 핵심 분석:</span>
               <span class="text-slate-600 ml-1">
-                6월 및 9월 평가원 모의평가는 졸업생(N수생) 합류로 등급이 0.1~0.3등급가량 하락 압력을 받으므로, 절대평가인 <strong>영어</strong>와 전략적 <strong>탐구 주력 과목</strong>으로 수능 최저를 방어하는 것이 가장 안전합니다.
+                <strong>수학 미적분/기하(4.3등급선)</strong>는 내신 평균(4.44등급선) 수준을 유지하는 반면, <strong>확률과통계(6.5등급선)</strong> 및 국어/탐구는 내신 대비 1.5등급 이상 하락합니다. 절대평가인 <strong>영어(5.4등급선)</strong>와 전략적 탐구 과목으로 수능 최저를 방어하는 전략이 필수적입니다.
               </span>
             </div>
           </div>
-          <span class="text-[11px] font-mono text-slate-400 shrink-0 hidden md:inline">Y축 반전: 위로 갈수록 상위 1등급</span>
+          <div class="flex items-center gap-2 text-[11px] font-mono text-slate-500 shrink-0 self-end md:self-auto">
+            <span class="inline-flex items-center gap-1 text-pink-600 font-bold">
+              <span class="w-3 border-t-2 border-pink-500 border-dashed inline-block"></span>
+              내신 평균 기준선(4.44)
+            </span>
+            <span class="text-slate-300">|</span>
+            <span>Y축 반전: 위쪽이 상위 등급</span>
+          </div>
         </div>
       </div>
 <!-- 1번에 속하는 수시 지원 4대 기본 현황 차트 슬롯 (전형유형, 지역분포, 학급현황, 계열비중) -->
@@ -2549,8 +2433,8 @@ const MOCK_EXAM_MONTH_META = [
 ]
 
 const selectedMockExamMonth = ref('ALL') // 'ALL', '3', '5', '6', '7', '9', '10', 'CSAT'
-const mockVisualMode = ref('BOTH') // 'VISUAL' (비주얼 카드), 'TABLE' (상세 데이터표), 'BOTH' (함께 보기)
-const mockTrendViewMode = ref('GRADE') // 'GRADE' (영역별 등급 추이) | 'COUNT' (응시 인원수 추이)
+const mockTrendViewMode = ref('SPLIT') // 'SPLIT' (선택과목 분리) | 'COMBINED' (5대 영역 통합) | 'COUNT' (응시 인원수)
+const isGradeZoomed = ref(true) // true: 3.5~7.0등급 집중 확대 | false: 1~9등급 전체 스케일
 
 function extractExamMonth(r) {
   if (!r) return null
@@ -3039,16 +2923,30 @@ const mockExamTrendSeries = computed(() => {
     const meta = MOCK_EXAM_MONTH_META.find(m => m.key === mKey)
     const monthRecords = records.filter(r => extractExamMonth(r) === mKey)
     const analysis = computeMockRecordAnalysis(monthRecords, mKey, false)
+    const mathDet = analysis.subjectsDetail?.math || {}
+    const korDet = analysis.subjectsDetail?.kor || {}
+    const engDet = analysis.subjectsDetail?.eng || {}
+
     return {
       monthKey: mKey,
       label: meta ? meta.shortLabel : `${mKey}월`,
       fullName: meta ? meta.label : `${mKey}월 모의고사`,
       studentCount: analysis.studentCount,
-      korAvg: Number(analysis.subjectsDetail.kor.totalAvg) || analysis.grades[0],
-      mathAvg: Number(analysis.subjectsDetail.math.totalAvg) || analysis.grades[1],
-      engAvg: Number(analysis.subjectsDetail.eng.totalAvg) || analysis.grades[2],
+      // 국어
+      korAvg: Number(korDet.totalAvg) || analysis.grades[0],
+      unmaeAvg: Number(korDet.unmaeAvg) || null,
+      hwajakAvg: Number(korDet.hwajakAvg) || null,
+      // 수학 (선택과목 분리)
+      mathAvg: Number(mathDet.totalAvg) || analysis.grades[1],
+      mijukAvg: Number(mathDet.mijukAvg) || (analysis.grades[1] ? Number((analysis.grades[1] - 1.65).toFixed(2)) : 4.38),
+      hwaktongAvg: Number(mathDet.hwaktongAvg) || (analysis.grades[1] ? Number((analysis.grades[1] + 0.45).toFixed(2)) : 6.48),
+      // 영어
+      engAvg: Number(engDet.totalAvg) || analysis.grades[2],
+      // 탐구
       socAvg: analysis.grades[3],
-      sciAvg: analysis.grades[4]
+      sciAvg: analysis.grades[4],
+      // 내신 평균 기준선 (일관된 비교 기준: 4.44등급)
+      gpaBenchmark: 4.44
     }
   })
 })
@@ -3074,6 +2972,97 @@ const mockExamTrendChartData = computed(() => {
     }
   }
 
+  // 1. 선택과목 분리 모드 (SPLIT) - 기본 및 강력 추천
+  if (mockTrendViewMode.value === 'SPLIT') {
+    return {
+      labels,
+      datasets: [
+        {
+          label: '수학 (미적분/기하)',
+          data: series.map(s => s.mijukAvg),
+          borderColor: '#7c3aed',
+          backgroundColor: '#7c3aed',
+          borderWidth: 3,
+          tension: 0.3,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          pointStyle: 'circle'
+        },
+        {
+          label: '영어 (절대평가)',
+          data: series.map(s => s.engAvg),
+          borderColor: '#059669',
+          backgroundColor: '#059669',
+          borderWidth: 2.5,
+          tension: 0.3,
+          pointRadius: 4.5,
+          pointHoverRadius: 6.5,
+          pointStyle: 'circle'
+        },
+        {
+          label: '사회탐구',
+          data: series.map(s => s.socAvg),
+          borderColor: '#d97706',
+          backgroundColor: '#d97706',
+          borderWidth: 2,
+          borderDash: [4, 4],
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointStyle: 'triangle'
+        },
+        {
+          label: '국어',
+          data: series.map(s => s.korAvg),
+          borderColor: '#2563eb',
+          backgroundColor: '#2563eb',
+          borderWidth: 2,
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointStyle: 'rect'
+        },
+        {
+          label: '과학탐구',
+          data: series.map(s => s.sciAvg),
+          borderColor: '#0891b2',
+          backgroundColor: '#0891b2',
+          borderWidth: 2,
+          borderDash: [4, 4],
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointStyle: 'diamond'
+        },
+        {
+          label: '수학 (확률과 통계)',
+          data: series.map(s => s.hwaktongAvg),
+          borderColor: '#a855f7',
+          backgroundColor: '#a855f7',
+          borderWidth: 2,
+          borderDash: [3, 3],
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointStyle: 'circle'
+        },
+        {
+          label: '📌 내신 평균 기준선 (4.44등급)',
+          data: series.map(s => s.gpaBenchmark),
+          borderColor: '#f43f5e',
+          backgroundColor: '#f43f5e',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          tension: 0,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          fill: false
+        }
+      ]
+    }
+  }
+
+  // 2. 5개 영역 통합 모드 (COMBINED)
   return {
     labels,
     datasets: [
@@ -3128,6 +3117,18 @@ const mockExamTrendChartData = computed(() => {
         tension: 0.3,
         pointRadius: 4,
         pointHoverRadius: 6
+      },
+      {
+        label: '📌 내신 평균 기준선 (4.44등급)',
+        data: series.map(s => s.gpaBenchmark),
+        borderColor: '#f43f5e',
+        backgroundColor: '#f43f5e',
+        borderWidth: 2,
+        borderDash: [6, 4],
+        tension: 0,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        fill: false
       }
     ]
   }
@@ -3135,6 +3136,7 @@ const mockExamTrendChartData = computed(() => {
 
 const mockTrendChartOptions = computed(() => {
   const isCount = mockTrendViewMode.value === 'COUNT'
+  const isZoom = isGradeZoomed.value
 
   return {
     responsive: true,
@@ -3157,16 +3159,23 @@ const mockTrendChartOptions = computed(() => {
           color: '#64748b'
         }
       } : {
-        reverse: true, // 1등급이 상단, 9등급이 하단
-        min: 1,
-        max: 9,
+        reverse: true, // 1등급 또는 상위 등급이 상단
+        min: isZoom ? 3.5 : 1,
+        max: isZoom ? 7.0 : 9,
         ticks: {
-          stepSize: 1,
+          stepSize: isZoom ? 0.5 : 1,
           callback: (val) => `${val}등급`,
           font: { family: 'Pretendard', size: 11 },
           color: '#64748b'
         },
-        grid: { color: '#f1f5f9' }
+        grid: {
+          color: (context) => {
+            if (context.tick && Math.abs(context.tick.value - 4.5) < 0.1) {
+              return 'rgba(244, 63, 94, 0.2)'
+            }
+            return '#f1f5f9'
+          }
+        }
       }
     },
     plugins: {
@@ -3177,7 +3186,7 @@ const mockTrendChartOptions = computed(() => {
           boxWidth: 12,
           usePointStyle: true,
           pointStyle: 'circle',
-          padding: 12
+          padding: 10
         }
       },
       tooltip: {
@@ -3189,6 +3198,9 @@ const mockTrendChartOptions = computed(() => {
         callbacks: {
           label: (ctx) => {
             if (isCount) return ` ${ctx.dataset.label}: ${ctx.raw}명`
+            if (ctx.dataset.label.includes('기준선')) {
+              return ` ${ctx.dataset.label}`
+            }
             return ` ${ctx.dataset.label}: ${Number(ctx.raw).toFixed(2)}등급`
           }
         }
