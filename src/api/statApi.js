@@ -196,13 +196,27 @@ let cachedActualTabs = null
 let cachedActualTabsTime = 0
 
 /**
+ * 타임아웃(기본 4초)이 적용된 fetch 헬퍼 (무한 로딩 및 네트워크 대기 방지)
+ */
+async function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal })
+    return res
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
  * 구글 스프레드시트에 실제로 존재하는 시트 탭(Sheet Names) 목록 조회
  * (XLSX export 엔드포인트를 통해 실제 탭 목록을 정확히 파악하여,
  * 존재하지 않는 탭 요청 시 구글 GViz가 첫 번째 탭을 허수로 반환하는 문제를 방지)
  */
 export async function getActualGoogleSheetTabs(sheetId, forceReload = false) {
   const cleanId = extractSheetId(sheetId)
-  if (!cleanId) return []
+  if (!cleanId || cleanId === DEFAULT_KCUE_SHEET_ID) return []
 
   const now = Date.now()
   if (!forceReload && cachedActualTabs && (now - cachedActualTabsTime < 300000)) {
@@ -211,7 +225,7 @@ export async function getActualGoogleSheetTabs(sheetId, forceReload = false) {
 
   try {
     const url = `https://docs.google.com/spreadsheets/d/${cleanId}/export?format=xlsx&_t=${now}`
-    const res = await fetch(url)
+    const res = await fetchWithTimeout(url, {}, 4000)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const buffer = await res.arrayBuffer()
     const wb = XLSX.read(buffer, { type: 'buffer' })
@@ -224,7 +238,8 @@ export async function getActualGoogleSheetTabs(sheetId, forceReload = false) {
     console.warn('[statApi] Failed to fetch actual sheet tabs via xlsx:', err)
   }
 
-  return cachedActualTabs || ['2027수시', '2026수시', '기본통계']
+  // 실패 시 가짜 탭을 반환하지 않고 빈 배열을 반환하여 불필요한 404 연쇄 호출 차단
+  return cachedActualTabs || []
 }
 
 /**
@@ -232,10 +247,12 @@ export async function getActualGoogleSheetTabs(sheetId, forceReload = false) {
  */
 export async function fetchKcueSheetTabCsv(sheetId, tabName) {
   const cleanId = extractSheetId(sheetId)
-  if (!cleanId) throw new Error('구글 시트 ID가 지정되지 않았습니다.')
+  if (!cleanId || cleanId === DEFAULT_KCUE_SHEET_ID) {
+    throw new Error('유효한 구글 시트 ID가 설정되지 않았습니다.')
+  }
   const url = `${buildSheetTabGvizUrl(cleanId, tabName)}&_t=${Date.now()}`
   
-  const res = await fetch(url)
+  const res = await fetchWithTimeout(url, {}, 4500)
   if (!res.ok) {
     throw new Error(`[${tabName}] 탭을 읽을 수 없습니다. (HTTP ${res.status}) 시트의 공유 권한 및 탭 이름을 확인하세요.`)
   }

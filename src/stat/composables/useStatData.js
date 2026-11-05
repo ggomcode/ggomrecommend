@@ -306,36 +306,39 @@ function updateOfficialStats(strYear, appsList) {
 async function loadPeriodData(year, period = '수시', forceReload = false) {
   const strYear = String(year)
   const cacheKey = `${strYear}_${period}`
-  const hasPassword = !!getStatSessionPassword()
 
   if (!forceReload && yearlyApplicationsCache.value[cacheKey] && yearlyApplicationsCache.value[cacheKey].length > 0) {
-    if (!(hasPassword && yearlyApplicationsCache.value[cacheKey] === rawAppsData)) {
-      return yearlyApplicationsCache.value[cacheKey]
+    return yearlyApplicationsCache.value[cacheKey]
+  }
+
+  const rawSheetId = await getKcueSheetId()
+  const sheetId = extractSheetId(rawSheetId)
+
+  // 1. 구글 시트 ID가 미설정이거나 데모 기본값인 경우: 2027 수시는 번들 원자료(rawAppsData) 즉시 반환
+  if (!sheetId || sheetId === DEFAULT_KCUE_SHEET_ID) {
+    if (strYear === '2027' && period === '수시') {
+      yearlyApplicationsCache.value[cacheKey] = rawAppsData
+      return rawAppsData
     }
+    return []
   }
 
-  // 2027 수시 기본값 fallback (비밀번호가 전혀 없는 순수 데모 상태일 때만 사용)
-  if (strYear === '2027' && period === '수시' && !forceReload && !hasPassword) {
-    yearlyApplicationsCache.value[cacheKey] = rawAppsData
-    return rawAppsData
-  }
-
-  const sheetId = await getKcueSheetId()
   try {
     const loaded = await fetchAndParseKcueYearData(sheetId, strYear, period)
     if (loaded && loaded.length > 0) {
       yearlyApplicationsCache.value[cacheKey] = loaded
       return loaded
     }
-    // 구글 시트에 데이터가 없고 비밀번호도 없는 경우 fallback
-    if (strYear === '2027' && period === '수시' && !hasPassword) {
+    // 시트에서 데이터를 찾지 못한 경우: 2027 수시는 번들 원자료로 안전 복구
+    if (strYear === '2027' && period === '수시') {
       yearlyApplicationsCache.value[cacheKey] = rawAppsData
       return rawAppsData
     }
     return []
   } catch (e) {
     console.warn(`[useStatData] Failed to load ${strYear}${period} tab:`, e)
-    if (strYear === '2027' && period === '수시' && !hasPassword) {
+    // 네트워크 404나 오류 발생 시에도 2027 수시는 정상 번들 데이터로 100% 안전 복구
+    if (strYear === '2027' && period === '수시') {
       yearlyApplicationsCache.value[cacheKey] = rawAppsData
       return rawAppsData
     }
@@ -344,11 +347,7 @@ async function loadPeriodData(year, period = '수시', forceReload = false) {
 }
 
 /**
- * 학년도 및 스코프(모집시기/대학구분) 동시 적용 및 데이터 갱신
- */
-/**
  * 특정 대입 학년도의 전체 지원자 데이터(수시+정시) 독립 조회
- * StatView의 전역 applications.value를 변형시키지 않고, 캘린더나 외부 위젯에서 특정 학년도 원자료를 안전하게 조회
  */
 export async function getApplicationsForAcademicYear(targetYear = '2027', forceReload = false) {
   const strYear = String(targetYear)
@@ -356,13 +355,6 @@ export async function getApplicationsForAcademicYear(targetYear = '2027', forceR
 
   if (!forceReload && yearlyApplicationsCache.value[combinedKey] && yearlyApplicationsCache.value[combinedKey].length > 0) {
     return yearlyApplicationsCache.value[combinedKey]
-  }
-
-  const hasPassword = !!getStatSessionPassword()
-  // 2027 기본 데모 fallback (구글시트 세션 비밀번호 미입력 시 번들된 2027 원자료 즉시 반환)
-  if (strYear === '2027' && !hasPassword && !forceReload) {
-    yearlyApplicationsCache.value[combinedKey] = rawAppsData
-    return rawAppsData
   }
 
   try {
@@ -394,13 +386,32 @@ async function applyYearAndScope(year, scope, forceReload = false) {
   yearDataError.value = null
 
   isLoadingYearData.value = true
+
+  // 무한 로딩 방지 비상 타임아웃 세이프가드 (5초 초과 시 강제 해제)
+  const safeguardTimer = setTimeout(() => {
+    if (isLoadingYearData.value) {
+      console.warn('[useStatData] Safeguard timer triggered: force clearing isLoadingYearData')
+      if (!applications.value || applications.value.length === 0) {
+        if (selectedAcademicYear.value === '2027') {
+          applications.value = rawAppsData
+          updateOfficialStats('2027', rawAppsData)
+        }
+      }
+      isLoadingYearData.value = false
+    }
+  }, 5000)
+
   try {
-    // 1. 구글 시트의 '기본통계' 탭(학년도별 3학년 재학생 총원 및 학급 수) 로드
+    // 1. 구글 시트의 '기본통계' 탭 로드
     if (forceReload || Object.keys(basicSchoolStats.value).length === 0) {
-      const sheetId = await getKcueSheetId()
-      const basic = await fetchBasicSchoolStats(sheetId, forceReload)
-      if (basic && typeof basic === 'object') {
-        basicSchoolStats.value = basic
+      try {
+        const sheetId = await getKcueSheetId()
+        const basic = await fetchBasicSchoolStats(sheetId, forceReload)
+        if (basic && typeof basic === 'object') {
+          basicSchoolStats.value = basic
+        }
+      } catch (err) {
+        console.warn('[useStatData] fetchBasicSchoolStats error caught:', err)
       }
     }
 
@@ -416,6 +427,11 @@ async function applyYearAndScope(year, scope, forceReload = false) {
       combined = await loadPeriodData(strYear, '수시', forceReload)
     }
 
+    // 2027학년도인데 비어있는 경우 안전 복구
+    if (combined.length === 0 && strYear === '2027') {
+      combined = rawAppsData
+    }
+
     applications.value = combined
     updateOfficialStats(strYear, combined)
 
@@ -425,8 +441,13 @@ async function applyYearAndScope(year, scope, forceReload = false) {
     }
   } catch (e) {
     console.warn(`[useStatData] applyYearAndScope failed:`, e)
+    if (strYear === '2027') {
+      applications.value = rawAppsData
+      updateOfficialStats('2027', rawAppsData)
+    }
     yearDataError.value = e.message || '데이터를 불러오는 중 오류가 발생했습니다.'
   } finally {
+    clearTimeout(safeguardTimer)
     isLoadingYearData.value = false
   }
 }
