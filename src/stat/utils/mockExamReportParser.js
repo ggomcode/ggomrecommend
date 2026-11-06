@@ -39,6 +39,35 @@ export const MOCK_RESULT_STANDARD_HEADERS = [
   '제2외국어(등급)'
 ]
 
+// 구글 시트 '2027모의결과' 표준 44개 컬럼(A~AR) 1행/2행 복합 헤더 표준
+export const KCUE_MOCK_44_HEADERS_ROW1 = [
+  '월', '계열번호', '학년', '반', '번호', '이름',
+  '국어', '', '', '', '', '', '',
+  '수학', '', '', '', '', '', '',
+  '영어', '', '', '',
+  '탐구영역',
+  '선택1', '', '', '', '',
+  '선택2', '', '', '', '',
+  '한국사', '', '', '',
+  '제2외국어', '', '', '', ''
+]
+
+export const KCUE_MOCK_44_HEADERS_ROW2 = [
+  '', '', '', '', '', '',
+  '국어선택', '공통원점수', '선택원점수', '원점수총점', '표준점수', '백분위', '등급',
+  '수학선택', '공통원점수', '선택원점수', '원점수총점', '표준점수', '백분위', '등급',
+  '원점수', '표준점수', '백분위', '등급',
+  '',
+  '과목명', '원점수', '표준점수', '백분위', '등급',
+  '과목명', '원점수', '표준점수', '백분위', '등급',
+  '원점수', '표준점수', '백분위', '등급',
+  '과목명', '원점수', '표준점수', '백분위', '등급'
+]
+
+// 하위 호환성을 위한 별칭
+export const KCUE_MOCK_54_HEADERS_ROW1 = KCUE_MOCK_44_HEADERS_ROW1
+export const KCUE_MOCK_54_HEADERS_ROW2 = KCUE_MOCK_44_HEADERS_ROW2
+
 
 /**
  * PDF 본문 텍스트 레이어로부터 학년, 반, 응시 월(시험명), 학교명, 실시일 정밀 추출
@@ -716,24 +745,31 @@ async function parseMockExamExcel(arrayBuffer, options = {}) {
         legacyStudentKey: `${classNum}-${studentNum}_${name}`,
         examName: defaultExamName,
         korSubject: getVal(row, '국어_선택') || '화법과 작문',
+        korRawScore: parseNum(getVal(row, '국어_원점수')),
         korStandardScore: parseNum(getVal(row, '국어_표준점수')),
         korPercentile: parseNum(getVal(row, '국어_백분위')),
         korGrade: parseNum(getVal(row, '국어_등급')),
         mathSubject: getVal(row, '수학_선택') || '확률과 통계',
+        mathRawScore: parseNum(getVal(row, '수학_원점수')),
         mathStandardScore: parseNum(getVal(row, '수학_표준점수')),
         mathPercentile: parseNum(getVal(row, '수학_백분위')),
         mathGrade: parseNum(getVal(row, '수학_등급')),
+        engRawScore: parseNum(getVal(row, '영어_원점수')),
         engGrade: parseNum(getVal(row, '영어_등급')),
+        histRawScore: parseNum(getVal(row, '한국사_원점수')),
         histGrade: parseNum(getVal(row, '한국사_등급')),
         inquiry1: getVal(row, '탐구영역1_선택', '탐구1_선택') || '',
+        inq1RawScore: parseNum(getVal(row, '탐구영역1_원점수', '탐구1_원점수')),
         inq1StandardScore: parseNum(getVal(row, '탐구영역1_표준점수', '탐구1_표준점수')),
         inq1Percentile: parseNum(getVal(row, '탐구영역1_백분위', '탐구1_백분위')),
         inq1Grade: parseNum(getVal(row, '탐구영역1_등급', '탐구1_등급')),
         inquiry2: getVal(row, '탐구영역2_선택', '탐구2_선택') || '',
+        inq2RawScore: parseNum(getVal(row, '탐구영역2_원점수', '탐구2_원점수')),
         inq2StandardScore: parseNum(getVal(row, '탐구영역2_표준점수', '탐구2_표준점수')),
         inq2Percentile: parseNum(getVal(row, '탐구영역2_백분위', '탐구2_백분위')),
         inq2Grade: parseNum(getVal(row, '탐구영역2_등급', '탐구2_등급')),
-        secondLangSubject: getVal(row, '제2외국어_과목명', '제2외국어_선택') || '-',
+        secondLangSubject: getVal(row, '제2외국어_과목명', '제2외국어_선택') || '',
+        secondLangRawScore: parseNum(getVal(row, '제2외국어_원점수')),
         secondLangGrade: parseNum(getVal(row, '제2외국어_등급'))
       })
     }
@@ -842,35 +878,75 @@ async function parseMockExamExcel(arrayBuffer, options = {}) {
   }
 }
 
-export function convertStudentsToSheetRows(students = []) {
-  const rows = [MOCK_RESULT_STANDARD_HEADERS]
+export function extractMonthNum(examName) {
+  const m = String(examName || '').match(/(\d{1,2})월?/)
+  return m ? Number(m[1]) : 3
+}
+
+/**
+ * 학생 성적 객체 배열을 구글 시트 '2027모의결과' 44개 컬럼 규격(A~AR)으로 변환
+ * @param {Array} students 
+ * @param {Object} options { includeHeaders: boolean, defaultExamMonth: number|string }
+ * - includeHeaders: true 면 1행/2행 복합 헤더 포함 (엑셀 백업 다운로드용)
+ * - includeHeaders: false 면 순수 학생 데이터 행만 반환 (3행 A3 셀에 붙여넣기용)
+ */
+export function convertStudentsToSheetRows(students = [], options = {}) {
+  const { includeHeaders = false, defaultExamMonth = null } = options
+
+  const rows = []
+  if (includeHeaders) {
+    rows.push(KCUE_MOCK_44_HEADERS_ROW1)
+    rows.push(KCUE_MOCK_44_HEADERS_ROW2)
+  }
+
   for (const s of students) {
+    const month = defaultExamMonth ? Number(defaultExamMonth) : extractMonthNum(s.examName)
+    const seriesNum = 1 // 계열번호 기본값 1
     rows.push([
-      s.grade ?? 3,
-      s.classNum ?? '',
-      s.studentNum ?? '',
-      s.name ?? '',
-      s.examName ?? '',
-      s.korSubject ?? '',
-      s.korGrade ?? '',
-      s.korStandardScore ?? '',
-      s.korPercentile ?? '',
-      s.mathSubject ?? '',
-      s.mathGrade ?? '',
-      s.mathStandardScore ?? '',
-      s.mathPercentile ?? '',
-      s.engGrade ?? '',
-      s.histGrade ?? '',
-      s.inquiry1 ?? '',
-      s.inq1Grade ?? '',
-      s.inq1StandardScore ?? '',
-      s.inq1Percentile ?? '',
-      s.inquiry2 ?? '',
-      s.inq2Grade ?? '',
-      s.inq2StandardScore ?? '',
-      s.inq2Percentile ?? '',
-      s.secondLangSubject ?? '-',
-      s.secondLangGrade ?? ''
+      month,                                      // A: 월
+      seriesNum,                                  // B: 계열번호
+      s.grade ?? 3,                               // C: 학년
+      s.classNum ?? '',                           // D: 반
+      s.studentNum ?? '',                         // E: 번호
+      s.name ?? '',                               // F: 이름
+      s.korSubject ?? '',                         // G: 국어 국어선택
+      '',                                         // H: 공통원점수
+      '',                                         // I: 선택원점수
+      s.korRawScore ?? '',                        // J: 원점수총점
+      s.korStandardScore ?? '',                   // K: 표준점수
+      s.korPercentile ?? '',                      // L: 백분위
+      s.korGrade ?? '',                           // M: 등급
+      s.mathSubject ?? '',                        // N: 수학 수학선택
+      '',                                         // O: 공통원점수
+      '',                                         // P: 선택원점수
+      s.mathRawScore ?? '',                       // Q: 원점수총점
+      s.mathStandardScore ?? '',                  // R: 표준점수
+      s.mathPercentile ?? '',                     // S: 백분위
+      s.mathGrade ?? '',                          // T: 등급
+      s.engRawScore ?? '',                        // U: 영어 원점수
+      '',                                         // V: 영어 표준점수
+      '',                                         // W: 영어 백분위
+      s.engGrade ?? '',                           // X: 영어 등급
+      '',                                         // Y: 탐구영역
+      s.inquiry1 ?? '',                           // Z: 선택1 과목명
+      s.inq1RawScore ?? '',                       // AA: 선택1 원점수
+      s.inq1StandardScore ?? '',                  // AB: 선택1 표준점수
+      s.inq1Percentile ?? '',                     // AC: 선택1 백분위
+      s.inq1Grade ?? '',                          // AD: 선택1 등급
+      s.inquiry2 ?? '',                           // AE: 선택2 과목명
+      s.inq2RawScore ?? '',                       // AF: 선택2 원점수
+      s.inq2StandardScore ?? '',                  // AG: 선택2 표준점수
+      s.inq2Percentile ?? '',                     // AH: 선택2 백분위
+      s.inq2Grade ?? '',                          // AI: 선택2 등급
+      s.histRawScore ?? '',                       // AJ: 한국사 원점수
+      '',                                         // AK: 한국사 표준점수
+      '',                                         // AL: 한국사 백분위
+      s.histGrade ?? '',                          // AM: 한국사 등급
+      (s.secondLangSubject && s.secondLangSubject !== '-') ? s.secondLangSubject : '', // AN: 제2외국어 과목명
+      s.secondLangRawScore ?? '',                 // AO: 제2외국어 원점수
+      '',                                         // AP: 제2외국어 표준점수
+      '',                                         // AQ: 제2외국어 백분위
+      s.secondLangGrade ?? ''                     // AR: 제2외국어 등급
     ])
   }
   return rows

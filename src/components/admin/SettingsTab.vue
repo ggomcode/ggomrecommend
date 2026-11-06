@@ -460,6 +460,31 @@
                 {{ googleSheetKcueLoading ? '저장 중…' : 'ID 저장' }}
               </button>
             </div>
+
+            <!-- 모의고사 성적 실시간 쓰기 연동용 GAS Web App URL (선택사항) -->
+            <div class="pt-2 border-t border-slate-200/60 dark:border-slate-800">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                  ⚡ 모의고사 성적 실시간 시트 쓰기 연동용 GAS Web App URL (선택사항)
+                </span>
+                <span class="text-[10px] text-slate-400">모의고사 성적표 업로드 시 구글 시트에 원격 자동 저장을 원할 때 입력</span>
+              </div>
+              <div class="flex gap-2">
+                <input
+                  v-model="googleSheetKcueGasUrl"
+                  type="text"
+                  :placeholder="hasGoogleSheetKcueGasUrl ? '저장된 Web App URL (마스킹됨)' : 'https://script.google.com/macros/s/.../exec'"
+                  class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-slate-800 dark:text-white"
+                />
+                <button
+                  @click="saveGoogleSheetKcueGasUrl"
+                  :disabled="googleSheetKcueGasLoading"
+                  class="text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg px-3.5 cursor-pointer transition-colors whitespace-nowrap"
+                >
+                  {{ googleSheetKcueGasLoading ? '저장 중…' : 'URL 저장' }}
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- 4. 2027 대입 일정 구글 스프레드시트 ID (로그인 화면 캘린더 연동) -->
@@ -1060,6 +1085,11 @@ const realGoogleSheetKcueId = ref('')
 const googleSheetKcueLoading = ref(false)
 const hasGoogleSheetKcueId = ref(false)
 
+const googleSheetKcueGasUrl = ref('')
+const realGoogleSheetKcueGasUrl = ref('')
+const hasGoogleSheetKcueGasUrl = ref(false)
+const googleSheetKcueGasLoading = ref(false)
+
 const admissionSheetIdInput = ref('')
 const realAdmissionSheetId = ref('')
 const hasAdmissionSheetId = ref(false)
@@ -1482,6 +1512,11 @@ async function loadConfig() {
     hasGoogleSheetKcueId.value = !!dbKcueId
     googleSheetKcueId.value = dbKcueId ? maskGoogleSheetId(dbKcueId) : ''
 
+    const dbKcueGasUrl = configMap['google_sheet_kcue_gas_url'] || localStorage.getItem('pcm_google_sheet_kcue_gas_url') || localStorage.getItem('ggom_master_gas_webapp_url') || ''
+    realGoogleSheetKcueGasUrl.value = dbKcueGasUrl
+    hasGoogleSheetKcueGasUrl.value = !!dbKcueGasUrl
+    googleSheetKcueGasUrl.value = dbKcueGasUrl ? maskGoogleSheetId(dbKcueGasUrl) : ''
+
     const dbAdmissionId = await getAdmissionSheetId(false)
     realAdmissionSheetId.value = dbAdmissionId
     hasAdmissionSheetId.value = !!dbAdmissionId
@@ -1640,6 +1675,41 @@ async function saveGoogleSheetKcueId() {
     alert('대교협 시트 ID 저장 중 오류가 발생했습니다.')
   } finally {
     googleSheetKcueLoading.value = false
+  }
+}
+
+async function saveGoogleSheetKcueGasUrl() {
+  googleSheetKcueGasLoading.value = true
+  try {
+    const inputVal = googleSheetKcueGasUrl.value.trim()
+    let targetVal = inputVal
+    if (inputVal.includes('•')) {
+      targetVal = realGoogleSheetKcueGasUrl.value
+    } else {
+      realGoogleSheetKcueGasUrl.value = targetVal
+    }
+
+    if (supabase) {
+      const { error } = await supabase.from('config').upsert({ key: 'google_sheet_kcue_gas_url', value: targetVal }, { onConflict: 'key' })
+      if (error) throw error
+    }
+
+    if (targetVal) {
+      localStorage.setItem('pcm_google_sheet_kcue_gas_url', targetVal)
+      localStorage.setItem('ggom_master_gas_webapp_url', targetVal)
+    } else {
+      localStorage.removeItem('pcm_google_sheet_kcue_gas_url')
+      localStorage.removeItem('ggom_master_gas_webapp_url')
+    }
+
+    hasGoogleSheetKcueGasUrl.value = !!targetVal
+    googleSheetKcueGasUrl.value = targetVal ? maskGoogleSheetId(targetVal) : ''
+    alert(targetVal ? '대교협 및 모의고사 구글 시트 Web App URL이 저장되었습니다.' : 'Web App URL이 삭제되었습니다.')
+  } catch (e) {
+    console.error(e)
+    alert('Web App URL 저장 중 오류가 발생했습니다: ' + e.message)
+  } finally {
+    googleSheetKcueGasLoading.value = false
   }
 }
 

@@ -30,7 +30,7 @@ export function decryptAES(cipherText, password) {
 }
 
 export const KCUE_SHEET_KEY = 'google_sheet_kcue_id'
-export const DEFAULT_KCUE_SHEET_ID = '1U5Vnx2x8gnXQlI3N4deyaurKxj-naZP0cRBb3lQnT4o'
+export const DEFAULT_KCUE_SHEET_ID = '1hkgi-WKdbh_cIK1Ctzv3BBxqKLe50DCKAT8cmT9wbWg'
 
 // 하위 호환성을 위한 키 및 기본값
 export const KCUE_YEAR_SHEETS_KEY = 'kcue_year_sheets'
@@ -80,9 +80,10 @@ export function getKcueTabName(year, type = '수시') {
 /**
  * 대교협 구글 스프레드시트 웹 접속 URL
  */
-export function buildSheetWebUrl(sheetId = null) {
+export function buildSheetWebUrl(sheetId = null, gid = null) {
   const cleanId = sheetId ? extractSheetId(sheetId) : DEFAULT_KCUE_SHEET_ID
-  return `https://docs.google.com/spreadsheets/d/${cleanId}/edit`
+  const hash = gid ? `#gid=${gid}` : ''
+  return `https://docs.google.com/spreadsheets/d/${cleanId}/edit${hash}`
 }
 
 /**
@@ -151,6 +152,55 @@ export async function saveKcueSheetId(id) {
     localStorage.removeItem(`pcm_${KCUE_SHEET_KEY}`)
   }
   return cleanId
+}
+
+export const KCUE_GAS_URL_KEY = 'google_sheet_kcue_gas_url'
+
+/**
+ * 대교협 및 모의고사 성적 실시간 쓰기 연동용 GAS Web App URL 조회
+ */
+export async function getKcueGasUrl() {
+  const cached = localStorage.getItem(`pcm_${KCUE_GAS_URL_KEY}`) || localStorage.getItem('ggom_master_gas_webapp_url')
+  let gasUrl = cached ? cached.trim() : ''
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('config')
+        .select('value')
+        .eq('key', KCUE_GAS_URL_KEY)
+        .maybeSingle()
+
+      if (!error && data && data.value != null && String(data.value).trim()) {
+        gasUrl = String(data.value).trim()
+        localStorage.setItem(`pcm_${KCUE_GAS_URL_KEY}`, gasUrl)
+        localStorage.setItem('ggom_master_gas_webapp_url', gasUrl)
+      }
+    } catch (_) {}
+  }
+
+  return gasUrl
+}
+
+/**
+ * 대교협 및 모의고사 성적 실시간 쓰기 연동용 GAS Web App URL 저장
+ */
+export async function saveKcueGasUrl(url) {
+  const cleanUrl = (url || '').trim()
+  if (supabase) {
+    const { error } = await supabase
+      .from('config')
+      .upsert({ key: KCUE_GAS_URL_KEY, value: cleanUrl }, { onConflict: 'key' })
+    if (error) throw error
+  }
+  if (cleanUrl) {
+    localStorage.setItem(`pcm_${KCUE_GAS_URL_KEY}`, cleanUrl)
+    localStorage.setItem('ggom_master_gas_webapp_url', cleanUrl)
+  } else {
+    localStorage.removeItem(`pcm_${KCUE_GAS_URL_KEY}`)
+    localStorage.removeItem('ggom_master_gas_webapp_url')
+  }
+  return cleanUrl
 }
 
 export const RURAL_SHEET_KEY = 'google_sheet_rural_id'
