@@ -5,10 +5,10 @@
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div class="flex items-center gap-2 mb-1.5">
-            <span class="px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 text-[11px] font-bold">
-              성적일람표 다중 업로드 엔진
+            <span class="px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 text-[11px] font-bold">
+              1·2·3학년 전 학년 엑셀 등록
             </span>
-            <span class="px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 text-[11px] font-mono font-bold">
+            <span class="px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 text-[11px] font-mono font-bold">
               {{ autoAdmissionYear }}학년도 대입 연동
             </span>
           </div>
@@ -17,8 +17,8 @@
             <span>모의고사 성적일람표 등록</span>
           </h1>
           <p class="text-xs text-slate-300 mt-2 m-0 leading-relaxed max-w-2xl">
-            교육청 전국연합학력평가 및 평가원 모의평가 성적일람표(PDF/엑셀)를 다중 업로드하여 자동으로 파싱합니다.<br class="hidden sm:inline" />
-            업로드 일자({{ todayFormatted }})에 따라 <code class="px-1.5 py-0.5 rounded bg-indigo-800/80 text-amber-300 font-mono font-bold">{{ targetSheetName }}</code> 시트에 통합 적재되며, 1·2·3학년 성적이 학년도별로 자동 분류됩니다.
+            대교협 상담프로그램에서 추출한 <strong>전교생 모의고사 엑셀 파일(.xlsx)</strong>을 업로드하여 1·2·3학년 전체 성적을 한 번에 등록합니다.<br class="hidden sm:inline" />
+            1학년, 2학년, 3학년 모두 동일한 방식으로 등록되며, <code class="px-1.5 py-0.5 rounded bg-indigo-800/80 text-amber-300 font-mono font-bold">{{ targetSheetName }}</code> 시트에 학년별로 통합 분류 적재됩니다.
           </p>
         </div>
 
@@ -35,9 +35,138 @@
       </div>
     </div>
 
-    <!-- 2. 업로드 컨트롤 바 (학년 선택 + 드롭존) -->
+    <!-- 2. [아코디언 가이드] 대교협 상담프로그램 엑셀 다운로드 방법 안내 -->
+    <div class="bg-white rounded-2xl shadow-sm border border-indigo-200/80 overflow-hidden transition-all duration-200">
+      <!-- 아코디언 헤더 (클릭 시 접기/펼치기) -->
+      <button
+        type="button"
+        @click="isGuideOpen = !isGuideOpen"
+        class="w-full p-4 sm:p-5 flex items-center justify-between gap-3 text-left bg-gradient-to-r from-indigo-50/70 via-sky-50/50 to-white hover:bg-indigo-50/90 transition-colors border-none cursor-pointer"
+      >
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
+            <FileSpreadsheet :size="20" />
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded-md bg-indigo-600 text-white text-[10.5px] font-black tracking-wide">
+                필독 가이드
+              </span>
+              <span class="text-xs sm:text-sm font-black text-slate-800">
+                대교협 프로그램에서 모의고사 엑셀(.xlsx) 파일 내려받는 방법
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5 m-0 hidden sm:block">
+              대교협에서 1) <strong>수능/모의 성적표 PDF 등록</strong> 후 2) <strong>선택회차 입력내용 엑셀다운</strong>을 클릭하여 받는 방법 안내입니다.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0 text-indigo-700 font-bold text-xs">
+          <span>{{ isGuideOpen ? '가이드 접기' : '방법 보기' }}</span>
+          <ChevronUp v-if="isGuideOpen" :size="18" />
+          <ChevronDown v-else :size="18" />
+        </div>
+      </button>
+
+      <!-- 아코디언 본문 -->
+      <div v-show="isGuideOpen" class="p-5 sm:p-6 border-t border-indigo-100 bg-white space-y-5">
+        <!-- 4단계 프로세스 카드 그리드 -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3.5">
+          <!-- STEP 1 -->
+          <div class="bg-slate-50 rounded-xl p-4 border border-slate-200/80 flex flex-col justify-between space-y-2">
+            <div>
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="w-5 h-5 rounded-full bg-slate-800 text-white text-[11px] font-black flex items-center justify-center">1</span>
+                <span class="text-xs font-bold text-slate-800">대교협 메뉴 이동</span>
+              </div>
+              <p class="text-[11.5px] text-slate-600 m-0 leading-relaxed">
+                대교협 상담프로그램 상단 메뉴에서<br />
+                <strong class="text-slate-900">[학생자료입력/생성]</strong> → <strong class="text-indigo-700">[수능/모의고사 성적 DB 생성]</strong> 창으로 이동합니다.
+              </p>
+            </div>
+            <div class="pt-2 text-[10.5px] text-slate-400 border-t border-slate-200/60 font-mono">
+              메뉴: 수능/모의고사 성적 DB 생성
+            </div>
+          </div>
+
+          <!-- STEP 2 -->
+          <div class="bg-slate-50 rounded-xl p-4 border border-slate-200/80 flex flex-col justify-between space-y-2">
+            <div>
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="w-5 h-5 rounded-full bg-slate-800 text-white text-[11px] font-black flex items-center justify-center">2</span>
+                <span class="text-xs font-bold text-slate-800">학년 & 회차 선택</span>
+              </div>
+              <p class="text-[11.5px] text-slate-600 m-0 leading-relaxed">
+                상단에서 <strong class="text-slate-900">1학년 / 2학년 / 3학년</strong> 중 등록할 학년 라디오를 선택하고, 해당 <strong class="text-indigo-700">모의고사 회차</strong>(예: 3학년 3월, 2학년 3월 등)를 선택합니다.
+              </p>
+            </div>
+            <div class="pt-2 text-[10.5px] text-slate-400 border-t border-slate-200/60 font-mono">
+              회차: 1·2·3학년 해당 모의고사 선택
+            </div>
+          </div>
+
+          <!-- STEP 3 (선행 필수: PDF 등록) -->
+          <div class="bg-indigo-50/60 rounded-xl p-4 border border-indigo-200 flex flex-col justify-between space-y-2 relative">
+            <span class="absolute top-2.5 right-2.5 text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-indigo-200/80 text-indigo-900">
+              선행 필수
+            </span>
+            <div>
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-black flex items-center justify-center">3</span>
+                <span class="text-xs font-bold text-indigo-950">PDF 성적표 등록</span>
+              </div>
+              <p class="text-[11.5px] text-indigo-950/80 m-0 leading-relaxed">
+                우측 파란색 버튼인<br />
+                <span class="inline-block my-1 px-2 py-0.5 rounded bg-blue-600 text-white font-bold text-[11px] shadow-2xs">
+                  수능/모의 성적표 PDF 등록
+                </span>을 클릭하여 교육청/평가원 성적표 PDF를 등록합니다.
+              </p>
+            </div>
+            <div class="pt-2 text-[10.5px] text-indigo-700 border-t border-indigo-200/60">
+              ✓ 대교협이 11개 반 전교생을 자동 DB화
+            </div>
+          </div>
+
+          <!-- STEP 4 (핵심: 엑셀다운) -->
+          <div class="bg-emerald-50/60 rounded-xl p-4 border border-emerald-200 flex flex-col justify-between space-y-2 relative">
+            <span class="absolute top-2.5 right-2.5 text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-emerald-200/80 text-emerald-900">
+              엑셀 다운
+            </span>
+            <div>
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="w-5 h-5 rounded-full bg-emerald-600 text-white text-[11px] font-black flex items-center justify-center">4</span>
+                <span class="text-xs font-bold text-emerald-950">전교생 엑셀 다운</span>
+              </div>
+              <p class="text-[11.5px] text-emerald-950/80 m-0 leading-relaxed">
+                등록 후, 우측 아래의<br />
+                <span class="inline-flex items-center gap-1 my-1 px-2 py-0.5 rounded bg-white border border-emerald-500 text-emerald-800 font-bold text-[11px] shadow-2xs">
+                  <FileSpreadsheet :size="12" class="text-emerald-600" />
+                  선택회차 입력내용 엑셀다운
+                </span>을 클릭해 <code class="font-bold text-emerald-900">.xlsx</code> 파일로 저장합니다.
+              </p>
+            </div>
+            <div class="pt-2 text-[10.5px] text-emerald-700 font-bold border-t border-emerald-200/60">
+              ✓ 11개 반 전체가 1개 파일로 통합 저장됨
+            </div>
+          </div>
+        </div>
+
+        <!-- 하단 팁 카드 -->
+        <div class="rounded-xl p-3.5 bg-amber-50/80 border border-amber-200/80 flex items-start gap-2.5 text-xs text-amber-900 leading-relaxed">
+          <span class="text-base leading-none">💡</span>
+          <div>
+            <strong>1학년, 2학년, 3학년 모두 100% 동일한 방법으로 진행됩니다!</strong><br />
+            - 대교협 프로그램에서 1·2·3학년 모두 <strong>[수능/모의 성적표 PDF 등록]</strong> 후 <strong>[선택회차 입력내용 엑셀다운]</strong>을 받아 이곳에 업로드하시면 됩니다.<br />
+            - 엑셀 파일 내부의 학년(1, 2, 3) 정보가 그대로 보존되어 구글 시트 <code class="font-bold text-indigo-900">{{ targetSheetName }}</code>에 통합 적재되므로, <strong>[1학년 대입 분석]</strong>, <strong>[2학년 대입 분석]</strong>, <strong>[3학년 모의고사 분석]</strong> 메뉴에서 각 학년 데이터가 자동으로 정확하게 조회됩니다!
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 업로드 컨트롤 바 (학년 선택 + 엑셀 중심 드롭존) -->
     <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 space-y-5">
-      <!-- 2-1. 학년 선택 드롭다운 -->
+      <!-- 3-1. 학년 선택 드롭다운 -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
         <div class="flex items-center gap-2">
           <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
@@ -64,16 +193,16 @@
         </div>
       </div>
 
-      <!-- 2-2. 복수 파일 드롭다운존 (Drag & Drop Zone) -->
+      <!-- 3-2. 엑셀 파일 중심 드래그앤드롭 영역 (Drag & Drop Zone) -->
       <div
         @dragover.prevent="isDragging = true"
         @dragleave.prevent="isDragging = false"
         @drop.prevent="handleFileDrop"
         :class="[
-          'relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-200 cursor-pointer',
+          'relative border-2 border-dashed rounded-2xl p-8 sm:p-10 text-center transition-all duration-200 cursor-pointer',
           isDragging 
-            ? 'border-indigo-500 bg-indigo-50/60 scale-[1.005]' 
-            : 'border-slate-300 hover:border-indigo-400 hover:bg-slate-50/60 bg-slate-50/30'
+            ? 'border-emerald-500 bg-emerald-50/60 scale-[1.005]' 
+            : 'border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/20 bg-slate-50/40'
         ]"
         @click="triggerFileInput"
       >
@@ -81,39 +210,44 @@
           ref="fileInputRef"
           type="file"
           multiple
-          accept=".pdf,.xlsx,.xls,.csv"
+          accept=".xlsx,.xls,.csv,.pdf"
           class="hidden"
           @change="handleFileInputChange"
         />
 
         <div class="flex flex-col items-center justify-center space-y-3 pointer-events-none">
-          <div class="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center shadow-inner">
-            <UploadCloud :size="28" />
+          <div class="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-inner">
+            <FileSpreadsheet :size="32" />
           </div>
           <div class="space-y-1">
-            <div class="text-sm font-bold text-slate-800">
-              <span class="text-indigo-600 underline">파일을 선택</span>하거나 여기로 드래그하여 놓으세요
+            <div class="text-base font-black text-slate-800">
+              대교협에서 다운로드한 <span class="text-emerald-700 underline underline-offset-4">모의고사 엑셀 파일(.xlsx)</span>을 올려주세요
             </div>
-            <p class="text-xs text-slate-400 m-0">
-              지원 형식: <strong>PDF</strong>(교육청 학평 성적일람표 / 평가원 모의평가) 및 <strong>엑셀</strong>(.xlsx, .xls, .csv)
+            <p class="text-xs text-slate-500 m-0">
+              클릭하여 파일을 선택하거나, 이 영역으로 엑셀 파일을 드래그하여 끌어다 놓으세요.
             </p>
           </div>
-          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200/70 text-[11px] font-semibold text-slate-600">
-            <span>✨</span>
-            <span>여러 학급(1반, 2반, 3반...) 성적표를 한 번에 복수 선택하여 업로드할 수 있습니다.</span>
+          <div class="flex flex-wrap items-center justify-center gap-2 pt-1">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-300 text-[11.5px] font-bold text-emerald-800 shadow-2xs">
+              <span>📗 추천</span>
+              <span><strong>선택회차 입력내용 엑셀다운(.xlsx)</strong> 업로드 시 11개 반 전원 1초 즉시 반영</span>
+            </div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-[11px] font-medium text-slate-600">
+              <span>📄 반별 성적일람표 PDF 복수 등록도 지원</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 3. 업로드된 파일 목록 & 파싱 진행 상황 -->
+    <!-- 4. 업로드된 파일 목록 & 파싱 진행 상황 -->
     <div v-if="fileList.length > 0" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div class="space-y-1">
           <div class="flex items-center gap-2">
             <span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span>
             <h3 class="text-sm font-bold text-slate-800 m-0">
-              업로드된 학급 성적일람표 (총 {{ fileList.length }}개 반)
+              업로드된 모의고사 파일 (총 {{ fileList.length }}개)
             </h3>
           </div>
           <div class="flex items-center gap-2 text-xs text-slate-500 font-mono">
@@ -145,7 +279,7 @@
       <!-- 진행률 바 -->
       <div v-if="fileList.length > 0" class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
         <div
-          class="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all duration-300"
+          class="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 transition-all duration-300"
           :style="{ width: `${fileList.length ? (completedCount / fileList.length) * 100 : 0}%` }"
         ></div>
       </div>
@@ -199,6 +333,9 @@
               <span v-if="fItem.parsedClass" class="text-[10px] text-slate-500 font-bold mt-0.5">
                 {{ fItem.parsedClass }}반
               </span>
+              <span v-else-if="fItem.students.length > 30" class="text-[10px] text-emerald-700 font-bold mt-0.5">
+                전교생 일괄
+              </span>
             </div>
             <!-- 실패 배지 -->
             <div v-else-if="fItem.status === 'error'" class="flex flex-col items-end">
@@ -224,20 +361,20 @@
       </div>
     </div>
 
-    <!-- 4. 통합 파싱 결과 미리보기 및 저장 액션 -->
+    <!-- 5. 통합 파싱 결과 미리보기 및 저장 액션 -->
     <div v-if="allParsedStudents.length > 0" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 space-y-4">
-      <!-- 4-1. 구글 시트 반영 가이드 배너 -->
-      <div class="rounded-xl p-4 bg-gradient-to-r from-indigo-50 via-sky-50 to-emerald-50 border border-indigo-200/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <!-- 5-1. 구글 시트 반영 가이드 배너 -->
+      <div class="rounded-xl p-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 border border-emerald-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div class="space-y-1">
           <div class="flex items-center gap-2">
-            <span class="text-base">💡</span>
-            <span class="text-xs font-black text-indigo-950">
-              구글 시트 [{{ targetSheetName }}] 탭에 11개 반 데이터 즉시 반영 안내
+            <span class="text-base">📋</span>
+            <span class="text-xs font-black text-slate-900">
+              구글 시트 [{{ targetSheetName }}] 탭에 11개 반 데이터 즉시 반영
             </span>
           </div>
           <p class="text-[11.5px] text-slate-600 m-0 leading-relaxed">
-            아래 <strong class="text-indigo-700">구글 시트에 즉시 반영</strong> 버튼을 누르면 전체 취합 데이터가 <strong>클립보드에 자동 복사</strong>되고 <strong>구글 시트가 새 창으로 열립니다.</strong><br class="hidden sm:inline" />
-            구글 시트의 <code class="px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-900 font-mono font-bold">{{ targetSheetName }}</code> 탭 <strong>A1 셀</strong>을 클릭하고 <strong class="text-emerald-700 font-mono">Ctrl + V</strong>(붙여넣기)를 누르면 1초 만에 깔끔하게 채워집니다.
+            아래 <strong class="text-emerald-700">구글 시트에 즉시 반영</strong> 버튼을 누르면 11개 반 전체 성적이 <strong>클립보드에 자동 복사</strong>되고 <strong>구글 시트가 새 창으로 열립니다.</strong><br class="hidden sm:inline" />
+            열린 시트의 <code class="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 font-mono font-bold">{{ targetSheetName }}</code> 탭 <strong>A1 셀</strong>을 클릭하고 <strong class="text-indigo-700 font-mono">Ctrl + V</strong>(붙여넣기)를 누르면 전교생 성적이 완성됩니다.
           </p>
         </div>
 
@@ -245,7 +382,7 @@
           type="button"
           @click="handleSaveToGoogleSheet"
           :disabled="isSavingToSheet"
-          class="shrink-0 px-4 py-2.5 text-xs font-black text-white bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 disabled:opacity-50 rounded-xl border-none cursor-pointer transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+          class="shrink-0 px-4 py-2.5 text-xs font-black text-white bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 disabled:opacity-50 rounded-xl border-none cursor-pointer transition-all shadow-md hover:shadow-lg flex items-center gap-2"
         >
           <UploadCloud :size="15" />
           <span>{{ isSavingToSheet ? '구글 시트 반영 중…' : `구글 시트 [${targetSheetName}]에 즉시 반영` }}</span>
@@ -256,13 +393,13 @@
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div>
           <div class="flex items-center gap-2">
-            <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
+            <span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span>
             <h3 class="text-sm font-black text-slate-900 m-0">
               파싱 완료 학생 성적 미리보기 (총 {{ allParsedStudents.length }}명)
             </h3>
           </div>
           <p class="text-xs text-slate-400 mt-1 m-0">
-            11개 반 파일에서 취합된 전 과목 성적 명단입니다.
+            구글 시트 <code class="text-indigo-600 font-mono font-bold">{{ targetSheetName }}</code> 탭 규격에 100% 매핑된 명단입니다.
           </p>
         </div>
 
@@ -293,89 +430,78 @@
       <!-- 미리보기 테이블 -->
       <div class="overflow-x-auto rounded-xl border border-slate-200 max-h-96 overflow-y-auto">
         <table class="w-full text-left border-collapse text-xs">
-          <thead class="bg-slate-50 text-slate-600 font-bold sticky top-0 z-10 border-b border-slate-200">
+          <thead class="bg-slate-100/90 text-slate-700 font-bold sticky top-0 z-10 border-b border-slate-200 shadow-2xs">
             <tr>
-              <th class="py-2.5 px-3 whitespace-nowrap">학년</th>
-              <th class="py-2.5 px-3 whitespace-nowrap">반-번호</th>
-              <th class="py-2.5 px-3 whitespace-nowrap">성명</th>
-              <th class="py-2.5 px-3 whitespace-nowrap">시험명</th>
-              <th class="py-2.5 px-3 whitespace-nowrap">국어 (과목/표점/등급)</th>
-              <th class="py-2.5 px-3 whitespace-nowrap">수학 (과목/표점/등급)</th>
-              <th class="py-2.5 px-3 whitespace-nowrap text-center">영어</th>
-              <th class="py-2.5 px-3 whitespace-nowrap text-center">한국사</th>
-              <th class="py-2.5 px-3 whitespace-nowrap">탐구1 (과목/표점/등급)</th>
-              <th class="py-2.5 px-3 whitespace-nowrap">탐구2 (과목/표점/등급)</th>
-              <th class="py-2.5 px-3 whitespace-nowrap text-center">제2외</th>
+              <th class="py-2.5 px-3">학년</th>
+              <th class="py-2.5 px-3">반</th>
+              <th class="py-2.5 px-3">번호</th>
+              <th class="py-2.5 px-3">성명</th>
+              <th class="py-2.5 px-3">시험명</th>
+              <th class="py-2.5 px-3 bg-amber-50/70 text-amber-950">국어선택</th>
+              <th class="py-2.5 px-3 bg-amber-50/70 text-amber-950">국어(등/표/백)</th>
+              <th class="py-2.5 px-3 bg-blue-50/70 text-blue-950">수학선택</th>
+              <th class="py-2.5 px-3 bg-blue-50/70 text-blue-950">수학(등/표/백)</th>
+              <th class="py-2.5 px-3">영어</th>
+              <th class="py-2.5 px-3">한국사</th>
+              <th class="py-2.5 px-3 bg-purple-50/70 text-purple-950">탐구1(선택/등/표/백)</th>
+              <th class="py-2.5 px-3 bg-purple-50/70 text-purple-950">탐구2(선택/등/표/백)</th>
+              <th class="py-2.5 px-3">제2외국어</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100 font-mono text-[11.5px]">
+          <tbody class="divide-y divide-slate-100 text-slate-700">
             <tr
-              v-for="(st, sIdx) in allParsedStudents"
-              :key="st.studentKey + '_' + sIdx"
-              class="hover:bg-slate-50/80 transition-colors"
+              v-for="st in allParsedStudents"
+              :key="st.studentKey"
+              class="hover:bg-indigo-50/30 transition-colors"
             >
-              <td class="py-2 px-3 font-bold text-indigo-700">{{ st.grade }}학년</td>
-              <td class="py-2 px-3 text-slate-600">{{ st.classNum }}반 {{ st.studentNum }}번</td>
-              <td class="py-2 px-3 font-sans font-bold text-slate-900">{{ st.name }}</td>
-              <td class="py-2 px-3 font-sans text-slate-600">
-                <span class="px-1.5 py-0.2 rounded bg-slate-100 text-[10px] font-bold">
-                  {{ st.examName }}
-                </span>
-              </td>
+              <td class="py-2 px-3 font-mono font-bold text-slate-800">{{ st.grade }}</td>
+              <td class="py-2 px-3 font-mono">{{ st.classNum }}반</td>
+              <td class="py-2 px-3 font-mono text-slate-500">{{ st.studentNum }}</td>
+              <td class="py-2 px-3 font-bold text-slate-900">{{ st.name }}</td>
+              <td class="py-2 px-3 text-[11px] text-indigo-700 font-semibold">{{ st.examName }}</td>
+              
               <!-- 국어 -->
-              <td class="py-2 px-3">
-                <span class="font-sans text-slate-500 text-[10px] mr-1">{{ st.korSubject }}</span>
-                <span v-if="st.korStandardScore" class="font-bold text-slate-800 mr-1">{{ st.korStandardScore }}점</span>
-                <span v-if="st.korGrade" class="px-1 py-0.2 rounded bg-blue-50 text-blue-700 font-black text-[10px]">
-                  {{ st.korGrade }}등급
-                </span>
-                <span v-else class="text-slate-300">-</span>
+              <td class="py-2 px-3 text-slate-600 bg-amber-50/20 text-[11px]">{{ st.korSubject || '-' }}</td>
+              <td class="py-2 px-3 bg-amber-50/20 font-mono">
+                <span class="font-bold text-amber-900">{{ st.korGrade || '-' }}등급</span>
+                <span class="text-[10px] text-slate-400 ml-1">({{ st.korStandardScore || '-' }}/{{ st.korPercentile || '-' }})</span>
               </td>
+
               <!-- 수학 -->
-              <td class="py-2 px-3">
-                <span class="font-sans text-slate-500 text-[10px] mr-1">{{ st.mathSubject }}</span>
-                <span v-if="st.mathStandardScore" class="font-bold text-slate-800 mr-1">{{ st.mathStandardScore }}점</span>
-                <span v-if="st.mathGrade" class="px-1 py-0.2 rounded bg-purple-50 text-purple-700 font-black text-[10px]">
-                  {{ st.mathGrade }}등급
-                </span>
-                <span v-else class="text-slate-300">-</span>
+              <td class="py-2 px-3 text-slate-600 bg-blue-50/20 text-[11px]">{{ st.mathSubject || '-' }}</td>
+              <td class="py-2 px-3 bg-blue-50/20 font-mono">
+                <span class="font-bold text-blue-900">{{ st.mathGrade || '-' }}등급</span>
+                <span class="text-[10px] text-slate-400 ml-1">({{ st.mathStandardScore || '-' }}/{{ st.mathPercentile || '-' }})</span>
               </td>
-              <!-- 영어 -->
-              <td class="py-2 px-3 text-center">
-                <span v-if="st.engGrade" class="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 font-black text-[10px]">
-                  {{ st.engGrade }}등급
-                </span>
-                <span v-else class="text-slate-300">-</span>
-              </td>
-              <!-- 한국사 -->
-              <td class="py-2 px-3 text-center">
-                <span v-if="st.histGrade" class="px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 font-black text-[10px]">
-                  {{ st.histGrade }}등급
-                </span>
-                <span v-else class="text-slate-300">-</span>
-              </td>
+
+              <!-- 영어/한국사 -->
+              <td class="py-2 px-3 font-mono font-bold text-slate-800">{{ st.engGrade ? `${st.engGrade}등급` : '-' }}</td>
+              <td class="py-2 px-3 font-mono font-bold text-slate-800">{{ st.histGrade ? `${st.histGrade}등급` : '-' }}</td>
+
               <!-- 탐구1 -->
-              <td class="py-2 px-3">
-                <span class="font-sans text-slate-500 text-[10px] mr-1">{{ st.inquiry1 }}</span>
-                <span v-if="st.inq1StandardScore" class="font-bold text-slate-800 mr-1">{{ st.inq1StandardScore }}점</span>
-                <span v-if="st.inq1Grade" class="px-1 py-0.2 rounded bg-slate-100 text-slate-700 font-black text-[10px]">
-                  {{ st.inq1Grade }}등급
-                </span>
-                <span v-else class="text-slate-300">-</span>
+              <td class="py-2 px-3 bg-purple-50/20 text-[11px]">
+                <div class="font-semibold text-purple-950">{{ st.inquiry1 || '-' }}</div>
+                <div class="font-mono text-[10.5px] text-purple-700">
+                  {{ st.inq1Grade ? `${st.inq1Grade}등급` : '-' }}
+                  <span class="text-[10px] text-slate-400">({{ st.inq1StandardScore || '-' }}/{{ st.inq1Percentile || '-' }})</span>
+                </div>
               </td>
+
               <!-- 탐구2 -->
-              <td class="py-2 px-3">
-                <span class="font-sans text-slate-500 text-[10px] mr-1">{{ st.inquiry2 }}</span>
-                <span v-if="st.inq2StandardScore" class="font-bold text-slate-800 mr-1">{{ st.inq2StandardScore }}점</span>
-                <span v-if="st.inq2Grade" class="px-1 py-0.2 rounded bg-slate-100 text-slate-700 font-black text-[10px]">
-                  {{ st.inq2Grade }}등급
-                </span>
-                <span v-else class="text-slate-300">-</span>
+              <td class="py-2 px-3 bg-purple-50/20 text-[11px]">
+                <div class="font-semibold text-purple-950">{{ st.inquiry2 || '-' }}</div>
+                <div class="font-mono text-[10.5px] text-purple-700">
+                  {{ st.inq2Grade ? `${st.inq2Grade}등급` : '-' }}
+                  <span class="text-[10px] text-slate-400">({{ st.inq2StandardScore || '-' }}/{{ st.inq2Percentile || '-' }})</span>
+                </div>
               </td>
+
               <!-- 제2외국어 -->
-              <td class="py-2 px-3 text-center text-slate-400">
-                <span v-if="st.secondLangGrade">{{ st.secondLangGrade }}등급</span>
-                <span v-else>-</span>
+              <td class="py-2 px-3 text-slate-500 text-[11px]">
+                <span v-if="st.secondLangSubject && st.secondLangSubject !== '-'">
+                  {{ st.secondLangSubject }} ({{ st.secondLangGrade }}등급)
+                </span>
+                <span v-else class="text-slate-400">-</span>
               </td>
             </tr>
           </tbody>
@@ -391,6 +517,7 @@ import {
   UploadCloud,
   FileSpreadsheet,
   ChevronDown,
+  ChevronUp,
   Trash2,
   Copy,
   RefreshCw,
@@ -402,8 +529,7 @@ import {
   convertStudentsToSheetRows,
   getTargetCollegeAdmissionYear,
   getAcademicSchoolYear,
-  getTargetMockResultSheetName,
-  parseMetaFromFileName
+  getTargetMockResultSheetName
 } from '../../stat/utils/mockExamReportParser'
 import { getKcueSheetId, buildSheetWebUrl, DEFAULT_KCUE_SHEET_ID } from '../../api/statApi'
 import { dialog } from '../common/dialog'
@@ -417,6 +543,9 @@ const targetSheetName = computed(() => getTargetMockResultSheetName(now))
 const todayFormatted = computed(() => {
   return `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`
 })
+
+// 가이드 아코디언 토글 (기본 펼침)
+const isGuideOpen = ref(true)
 
 // 선택 학년 (기본값: 3학년)
 const selectedGrade = ref(3)
@@ -446,7 +575,6 @@ function handleFileInputChange(e) {
   if (files.length > 0) {
     addFilesToQueue(files)
   }
-  // reset input
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
@@ -460,7 +588,7 @@ function handleFileDrop(e) {
 
 /**
  * 다중 파일 큐 등록 및 순차 파싱
- * (파일명에 의존하지 않고, 파일 내부 실제 텍스트에서 학년/반/시험명을 100% 추출)
+ * (대교협 모의고사 엑셀 .xlsx 최우선 1순위 파싱)
  */
 async function addFilesToQueue(files) {
   const newItems = files.map(file => {
@@ -480,10 +608,12 @@ async function addFilesToQueue(files) {
 
   fileList.value.push(...newItems)
 
-  // 순차 파싱 실행 (개별 파일 에러 시에도 절대 멈추지 않고 다음 파일로 진행)
   for (const item of newItems) {
     try {
-      await processFileItem(item)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('파일 처리 시간 초과 (7초)')), 7000)
+      )
+      await Promise.race([processFileItem(item), timeoutPromise])
     } catch (err) {
       console.error(`파일 ${item.name} 처리 중 예외:`, err)
       item.status = 'error'
@@ -508,14 +638,13 @@ async function processFileItem(item) {
 
     item.status = 'success'
     item.students = res.students
-    // PDF 본문 텍스트에서 직접 추출한 메타데이터로 100% 반영
     item.parsedExamName = res.meta?.examName || ''
     item.parsedClass = res.meta?.classNum || ''
     if (res.meta?.grade) {
       item.selectedGrade = res.meta.grade
     }
   } catch (err) {
-    console.error(`[PDF Parser] ${item.name} 파싱 실패:`, err)
+    console.error(`[Mock Parser] ${item.name} 파싱 실패:`, err)
     item.status = 'error'
     item.error = err.message || '파일 처리 중 오류가 발생했습니다.'
   }
@@ -537,7 +666,7 @@ function formatFileSize(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
 }
 
-// 모든 성공 파일의 학생 레코드 합산 (PDF 본문에서 추출된 학년 -> 반 -> 번호 순으로 정렬)
+// 모든 성공 파일의 학생 레코드 합산 (학년 -> 반 -> 번호 오름차순 정렬)
 const allParsedStudents = computed(() => {
   const all = []
   for (const item of fileList.value) {
@@ -545,7 +674,6 @@ const allParsedStudents = computed(() => {
       all.push(...item.students)
     }
   }
-  // 학년 오름차순 -> 반 오름차순 -> 번호 오름차순 정렬
   return all.sort((a, b) => {
     const gradeDiff = (Number(a.grade) || 0) - (Number(b.grade) || 0)
     if (gradeDiff !== 0) return gradeDiff
@@ -569,12 +697,12 @@ function exportParsedToExcel() {
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, targetSheetName.value)
 
-  const fileName = `${targetSheetName.value}_파싱성적_${selectedGrade.value}학년_${todayFormatted.value.replace(/[\s년월]/g, '_')}.xlsx`
+  const fileName = `${targetSheetName.value}_성적일람표_${selectedGrade.value}학년_${todayFormatted.value.replace(/[\s년월]/g, '_')}.xlsx`
   XLSX.writeFile(wb, fileName)
 }
 
 /**
- * 구글 시트에 바로 붙여넣을 수 있는 탭 구분 텍스트 클립보드 복사
+ * 구글 시트에 바로 붙여넣을 수 있는 탭 구분 텍스트(TSV) 클립보드 복사
  */
 async function copyToClipboard() {
   if (allParsedStudents.value.length === 0) {
@@ -598,7 +726,7 @@ async function copyToClipboard() {
 }
 
 /**
- * 구글 시트 원본 '2027모의결과'에 즉시 반영 (클립보드 복사 + 구글 시트 자동 열기 + 엑셀 백업)
+ * 구글 시트 원본 '2027모의결과'에 즉시 반영 (클립보드 복사 + 구글 시트 자동 열기 + 백업 엑셀 다운)
  */
 async function handleSaveToGoogleSheet() {
   if (allParsedStudents.value.length === 0) {
@@ -645,11 +773,11 @@ async function handleSaveToGoogleSheet() {
 
     // 5. 사용자 안내 다이얼로그
     dialog.alert(
-      `📋 총 ${allParsedStudents.value.length}명(11개 반)의 모의고사 성적이 클립보드에 복사되었습니다!\n\n` +
+      `📋 총 ${allParsedStudents.value.length}명(전교생)의 모의고사 성적이 클립보드에 복사되었습니다!\n\n` +
       `1. 새 탭으로 열린 구글 시트에서 [${targetSheetName.value}] 탭을 클릭하세요.\n` +
       `   (만약 탭이 없다면 시트 하단 '+'를 눌러 '${targetSheetName.value}' 탭을 생성하세요)\n` +
       `2. [A1] 셀을 클릭하고 [Ctrl + V]를 누르면 11개 반 전체 성적이 즉시 반영됩니다!\n\n` +
-      `* 안전한 데이터 보관을 위해 '${targetSheetName.value}' 전용 엑셀 파일도 함께 다운로드되었습니다.`
+      `* 안전한 데이터 보관을 위해 '${targetSheetName.value}' 전용 엑셀 백업 파일도 함께 다운로드되었습니다.`
     )
   } catch (e) {
     dialog.alert('오류 발생: ' + e.message)
@@ -660,6 +788,5 @@ async function handleSaveToGoogleSheet() {
 </script>
 
 <style scoped>
-/* Scoped custom styling */
+/* Scoped styles */
 </style>
-

@@ -1,10 +1,44 @@
 import * as pdfjsLib from 'pdfjs-dist'
 import * as XLSX from 'xlsx'
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.js?url'
 
-// PDF.js 워커 설정 (안정적인 CDN 워커 사용 - 브라우저/Vite 환경 호환)
+// PDF.js 워커 설정 (Vite 번들 로컬 워커 우선 적용)
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker
+  } catch (_) {
+    // fallback
+  }
 }
+
+export const MOCK_RESULT_STANDARD_HEADERS = [
+  '학년',
+  '반',
+  '번호',
+  '성명',
+  '시험명',
+  '국어(선택)',
+  '국어(등급)',
+  '국어(표준점수)',
+  '국어(백분위)',
+  '수학(선택)',
+  '수학(등급)',
+  '수학(표준점수)',
+  '수학(백분위)',
+  '영어(등급)',
+  '한국사(등급)',
+  '탐구1(선택)',
+  '탐구1(등급)',
+  '탐구1(표준점수)',
+  '탐구1(백분위)',
+  '탐구2(선택)',
+  '탐구2(등급)',
+  '탐구2(표준점수)',
+  '탐구2(백분위)',
+  '제2외국어(과목)',
+  '제2외국어(등급)'
+]
+
 
 /**
  * PDF 본문 텍스트 레이어로부터 학년, 반, 응시 월(시험명), 학교명, 실시일 정밀 추출
@@ -224,25 +258,34 @@ async function parseMockExamPdf(arrayBuffer, options) {
   try {
     const loadingTask = pdfjsLib.getDocument({
       data: new Uint8Array(arrayBuffer),
-      cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-      cMapPacked: true
+      cMapPacked: true,
+      stopAtErrors: false
     })
-    // 10초 타임아웃 레이스로 워커 먹통/Hang 완벽 차단
+    // 3.5초 타임아웃 레이스로 워커 먹통/Hang 완벽 차단
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('PDF 파싱 1차 시간 초과 (10초)')), 10000)
+      setTimeout(() => reject(new Error('PDF 로드 시간 초과 (3.5초)')), 3500)
     )
     doc = await Promise.race([loadingTask.promise, timeoutPromise])
   } catch (err) {
-    console.warn('PDF cMaps 1차 로드 실패 또는 시간 초과, 기본 모드로 재시도:', err)
+    console.warn('[mockExamReportParser] PDF 로드 1차 실패, 메인 스레드 모드로 재시도:', err)
     try {
-      const fallbackTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) })
+      const fallbackTask = pdfjsLib.getDocument({ 
+        data: new Uint8Array(arrayBuffer),
+        disableFontFace: true,
+        stopAtErrors: false
+      })
       const timeoutPromise2 = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('PDF 파싱 2차 시간 초과 (8초)')), 8000)
+        setTimeout(() => reject(new Error('PDF 로드 최종 시간 초과 (2.5초)')), 2500)
       )
       doc = await Promise.race([fallbackTask.promise, timeoutPromise2])
     } catch (err2) {
-      console.error('PDF 로드 최종 실패:', err2)
-      throw new Error('PDF 파일을 열 수 없습니다: ' + (err2.message || '파일 손상 또는 미지원 형식'))
+      console.error('[mockExamReportParser] PDF 로드 최종 실패:', err2)
+      return {
+        success: false,
+        formatType: 'PDF_LOAD_FAILED',
+        error: 'PDF 파일을 열 수 없습니다: ' + (err2.message || '파일 손상 또는 미지원 형식'),
+        students: []
+      }
     }
   }
 
@@ -294,12 +337,12 @@ async function parseMockExamPdf(arrayBuffer, options) {
     }
   }
 
-  // 1. 텍스트 레이어가 비어있는 경우
+  // 1. 텍스트 레이어가 비어있는 경우 (인쇄용 Print to PDF 등 곡선 그래픽 PDF 감지)
   if (totalTextItems === 0) {
     return {
       success: false,
       formatType: 'IMAGE_OR_OUTLINE_PDF',
-      error: 'PDF 파일에 디지털 텍스트 레이어가 없습니다. 한컴PDF 인쇄본 대신 나이스(NEIS) 또는 평가원 시스템에서 직접 다운로드한 텍스트 PDF나 엑셀(.xlsx) 파일로 업로드해 주세요.',
+      error: 'PDF에 텍스트 데이터가 없습니다. (인쇄 메뉴의 Microsoft Print to PDF로 출력되어 글자가 선/곡선 그래픽으로 변환됨) 엑셀(.xlsx) 파일이나 뷰어 자체 [저장] PDF를 업로드해 주세요.',
       students: []
     }
   }
@@ -575,14 +618,138 @@ async function parseKicePages(doc, defaultMeta) {
  */
 async function parseMockExamExcel(arrayBuffer, options) {
   const wb = XLSX.read(arrayBuffer, { type: 'array' })
-  const sheetName = wb.SheetNames[0]
+  
+  // 1. 학교 모의고사 표준 '점수입력' 시트 또는 첫 번째 시트 탐색
+  const sheetName = wb.SheetNames.includes('점수입력') 
+    ? '점수입력' 
+    : wb.SheetNames[0]
   const ws = wb.Sheets[sheetName]
   const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1 })
 
   if (!rawRows || rawRows.length < 2) {
-    throw new Error('엑셀 파일에 데이터가 존재하지 않습니다.')
+    return {
+      success: false,
+      formatType: 'EMPTY_EXCEL',
+      error: '엑셀 파일에 데이터가 존재하지 않습니다.',
+      students: []
+    }
   }
 
+  // 파일명에서 시험명과 학년 감지
+  const fileMeta = parseMetaFromFileName(options.fileName)
+  let defaultExamName = fileMeta.examName
+  if (!defaultExamName) {
+    const fn = options.fileName || ''
+    if (fn.includes('03월') || fn.includes('3월')) defaultExamName = '3월 학평'
+    else if (fn.includes('04월') || fn.includes('4월')) defaultExamName = '4월 학평'
+    else if (fn.includes('06월') || fn.includes('6월')) defaultExamName = '6월 모평'
+    else if (fn.includes('07월') || fn.includes('7월')) defaultExamName = '7월 학평'
+    else if (fn.includes('09월') || fn.includes('9월')) defaultExamName = '9월 모평'
+    else if (fn.includes('10월') || fn.includes('10월')) defaultExamName = '10월 학평'
+    else if (fn.includes('11월') || fn.includes('11월')) defaultExamName = '11월 수능'
+    else defaultExamName = '전국연합 학평'
+  }
+
+  const parseNum = (v) => {
+    if (v === undefined || v === null || v === '' || v === '-') return null
+    const n = Number(String(v).replace(/[^0-9.]/g, ''))
+    return isNaN(n) ? null : n
+  }
+
+  // A. [최우선 1순위] 대교협 상담프로그램 '선택회차 입력내용 엑셀다운' 2행 복합 헤더 양식 감지
+  // 1행: 학년도, 학년, 반, 번호, 이름, 한국사, 국어, 수학, 영어, 탐구영역1, 탐구영역2, 제2외국어
+  // 2행: 원점수, 등급, 선택, 표준점수, 백분위, 등급 ...
+  const r0Str = (rawRows[0] || []).join(' ')
+  const r1Str = (rawRows[1] || []).join(' ')
+
+  const isKcueMockExcel = (r0Str.includes('학년도') || r0Str.includes('한국사') || r0Str.includes('탐구영역1')) &&
+                          (r1Str.includes('표준점수') || r1Str.includes('원점수') || r1Str.includes('백분위') || r1Str.includes('선택'))
+
+  if (isKcueMockExcel) {
+    // Forward-fill 알고리즘으로 1행 영역명과 2행 세부항목명을 결합하여 정확한 컬럼 맵 생성
+    let currentArea = ''
+    const colMap = {}
+    const maxCols = Math.max(rawRows[0]?.length || 0, rawRows[1]?.length || 0)
+    for (let c = 0; c < maxCols; c++) {
+      const top = String(rawRows[0]?.[c] || '').trim()
+      if (top) currentArea = top
+      const sub = String(rawRows[1]?.[c] || '').trim()
+      const full = (sub ? `${currentArea}_${sub}` : currentArea).replace(/\s+/g, '')
+      colMap[full] = c
+    }
+
+    const getVal = (row, ...keys) => {
+      for (const k of keys) {
+        const cleanK = k.replace(/\s+/g, '')
+        const idx = colMap[cleanK]
+        if (idx !== undefined && row[idx] !== undefined && row[idx] !== null && String(row[idx]).trim() !== '') {
+          return String(row[idx]).trim()
+        }
+      }
+      return ''
+    }
+
+    const students = []
+    for (let r = 2; r < rawRows.length; r++) {
+      const row = rawRows[r]
+      if (!row || row.length === 0) continue
+      const name = getVal(row, '이름', '성명', '학생명')
+      if (!name) continue
+
+      const grade = Number(getVal(row, '학년')) || fileMeta.grade || options.defaultGrade || 3
+      const classNum = String(getVal(row, '반') || '1')
+      const studentNum = Number(getVal(row, '번호')) || (r - 1)
+
+      students.push({
+        grade,
+        classNum,
+        studentNum,
+        name,
+        studentKey: `${grade}-${classNum}-${studentNum}_${name}`,
+        legacyStudentKey: `${classNum}-${studentNum}_${name}`,
+        examName: defaultExamName,
+        korSubject: getVal(row, '국어_선택') || '화법과 작문',
+        korStandardScore: parseNum(getVal(row, '국어_표준점수')),
+        korPercentile: parseNum(getVal(row, '국어_백분위')),
+        korGrade: parseNum(getVal(row, '국어_등급')),
+        mathSubject: getVal(row, '수학_선택') || '확률과 통계',
+        mathStandardScore: parseNum(getVal(row, '수학_표준점수')),
+        mathPercentile: parseNum(getVal(row, '수학_백분위')),
+        mathGrade: parseNum(getVal(row, '수학_등급')),
+        engGrade: parseNum(getVal(row, '영어_등급')),
+        histGrade: parseNum(getVal(row, '한국사_등급')),
+        inquiry1: getVal(row, '탐구영역1_선택', '탐구1_선택') || '',
+        inq1StandardScore: parseNum(getVal(row, '탐구영역1_표준점수', '탐구1_표준점수')),
+        inq1Percentile: parseNum(getVal(row, '탐구영역1_백분위', '탐구1_백분위')),
+        inq1Grade: parseNum(getVal(row, '탐구영역1_등급', '탐구1_등급')),
+        inquiry2: getVal(row, '탐구영역2_선택', '탐구2_선택') || '',
+        inq2StandardScore: parseNum(getVal(row, '탐구영역2_표준점수', '탐구2_표준점수')),
+        inq2Percentile: parseNum(getVal(row, '탐구영역2_백분위', '탐구2_백분위')),
+        inq2Grade: parseNum(getVal(row, '탐구영역2_등급', '탐구2_등급')),
+        secondLangSubject: getVal(row, '제2외국어_과목명', '제2외국어_선택') || '-',
+        secondLangGrade: parseNum(getVal(row, '제2외국어_등급'))
+      })
+    }
+
+    if (students.length > 0) {
+      return {
+        success: true,
+        formatType: 'KCUE_MOCK_EXCEL',
+        meta: {
+          fileName: options.fileName,
+          examName: defaultExamName,
+          grade: students[0]?.grade || options.defaultGrade,
+          studentCount: students.length,
+          targetAdmissionYear: options.targetAdmissionYear,
+          targetAcademicYear: options.targetAcademicYear,
+          targetSheetName: options.targetSheetName
+        },
+        students
+      }
+    }
+  }
+
+  // B. 일반 1행 헤더 엑셀 처리 (기존 로직)
   const header = rawRows[0] || []
   const colMap = {}
   header.forEach((h, idx) => {
@@ -609,8 +776,8 @@ async function parseMockExamExcel(arrayBuffer, options) {
 
     const classNum = getVal('반', '학급') || '1'
     const studentNum = Number(getVal('번호', '출석번호')) || r
-    const grade = Number(getVal('학년')) || options.defaultGrade
-    const examName = getVal('시험명', '회차', '모의고사', '구분') || '모의고사'
+    const grade = Number(getVal('학년')) || fileMeta.grade || options.defaultGrade
+    const examName = getVal('시험명', '회차', '모의고사', '구분') || defaultExamName
 
     students.push({
       grade,
@@ -620,26 +787,26 @@ async function parseMockExamExcel(arrayBuffer, options) {
       studentKey: `${grade}-${classNum}-${studentNum}_${name}`,
       legacyStudentKey: `${classNum}-${studentNum}_${name}`,
       examName,
-      korSubject: getVal('국어(과목)', '국어선택', '국어과목') || '화법과작문',
-      korStandardScore: Number(getVal('국어(표준점수)', '국어표점')) || null,
-      korPercentile: Number(getVal('국어(백분위)', '국어백분위')) || null,
-      korGrade: Number(getVal('국어(등급)', '국어등급')) || null,
-      mathSubject: getVal('수학(과목)', '수학선택', '수학과목') || '확률과통계',
-      mathStandardScore: Number(getVal('수학(표준점수)', '수학표점')) || null,
-      mathPercentile: Number(getVal('수학(백분위)', '수학백분위')) || null,
-      mathGrade: Number(getVal('수학(등급)', '수학등급')) || null,
-      engGrade: Number(getVal('영어(등급)', '영어등급')) || null,
-      histGrade: Number(getVal('한국사(등급)', '한국사등급')) || null,
-      inquiry1: getVal('탐구1(과목)', '탐구1과목', '사탐1', '과탐1') || '',
-      inq1StandardScore: Number(getVal('탐구1(표준점수)', '탐구1표점')) || null,
-      inq1Percentile: Number(getVal('탐구1(백분위)', '탐구1백분위')) || null,
-      inq1Grade: Number(getVal('탐구1(등급)', '탐구1등급')) || null,
-      inquiry2: getVal('탐구2(과목)', '탐구2과목', '사탐2', '과탐2') || '',
-      inq2StandardScore: Number(getVal('탐구2(표준점수)', '탐구2표점')) || null,
-      inq2Percentile: Number(getVal('탐구2(백분위)', '탐구2백분위')) || null,
-      inq2Grade: Number(getVal('탐구2(등급)', '탐구2등급')) || null,
+      korSubject: getVal('국어(과목)', '국어(선택)', '국어선택', '국어과목') || '화법과작문',
+      korStandardScore: parseNum(getVal('국어(표준점수)', '국어표점')),
+      korPercentile: parseNum(getVal('국어(백분위)', '국어백분위')),
+      korGrade: parseNum(getVal('국어(등급)', '국어등급')),
+      mathSubject: getVal('수학(과목)', '수학(선택)', '수학선택', '수학과목') || '확률과통계',
+      mathStandardScore: parseNum(getVal('수학(표준점수)', '수학표점')),
+      mathPercentile: parseNum(getVal('수학(백분위)', '수학백분위')),
+      mathGrade: parseNum(getVal('수학(등급)', '수학등급')),
+      engGrade: parseNum(getVal('영어(등급)', '영어등급')),
+      histGrade: parseNum(getVal('한국사(등급)', '한국사등급')),
+      inquiry1: getVal('탐구1(과목)', '탐구1(선택)', '탐구1과목', '사탐1', '과탐1') || '',
+      inq1StandardScore: parseNum(getVal('탐구1(표준점수)', '탐구1표점')),
+      inq1Percentile: parseNum(getVal('탐구1(백분위)', '탐구1백분위')),
+      inq1Grade: parseNum(getVal('탐구1(등급)', '탐구1등급')),
+      inquiry2: getVal('탐구2(과목)', '탐구2(선택)', '탐구2과목', '사탐2', '과탐2') || '',
+      inq2StandardScore: parseNum(getVal('탐구2(표준점수)', '탐구2표점')),
+      inq2Percentile: parseNum(getVal('탐구2(백분위)', '탐구2백분위')),
+      inq2Grade: parseNum(getVal('탐구2(등급)', '탐구2등급')),
       secondLangSubject: getVal('제2외국어(과목)', '제2외국어') || '-',
-      secondLangGrade: Number(getVal('제2외국어(등급)')) || null
+      secondLangGrade: parseNum(getVal('제2외국어(등급)'))
     })
   }
 
@@ -648,7 +815,7 @@ async function parseMockExamExcel(arrayBuffer, options) {
     formatType: 'EXCEL_SHEET',
     meta: {
       fileName: options.fileName,
-      examName: students[0]?.examName || '모의고사',
+      examName: students[0]?.examName || defaultExamName,
       grade: options.defaultGrade,
       studentCount: students.length,
       targetAdmissionYear: options.targetAdmissionYear,
@@ -659,40 +826,6 @@ async function parseMockExamExcel(arrayBuffer, options) {
   }
 }
 
-/**
- * 2027모의가채점 / 2027모의결과 표준 컬럼 헤더 목록
- */
-export const MOCK_RESULT_STANDARD_HEADERS = [
-  '학년',
-  '반',
-  '번호',
-  '이름',
-  '시험명',
-  '국어(과목)',
-  '국어(등급)',
-  '국어(표준점수)',
-  '국어(백분위)',
-  '수학(과목)',
-  '수학(등급)',
-  '수학(표준점수)',
-  '수학(백분위)',
-  '영어(등급)',
-  '한국사(등급)',
-  '탐구1(과목)',
-  '탐구1(등급)',
-  '탐구1(표준점수)',
-  '탐구1(백분위)',
-  '탐구2(과목)',
-  '탐구2(등급)',
-  '탐구2(표준점수)',
-  '탐구2(백분위)',
-  '제2외국어(과목)',
-  '제2외국어(등급)'
-]
-
-/**
- * 파싱된 학생 레코드 배열을 구글 시트 규격 2차원 배열로 변환
- */
 export function convertStudentsToSheetRows(students = []) {
   const rows = [MOCK_RESULT_STANDARD_HEADERS]
   for (const s of students) {

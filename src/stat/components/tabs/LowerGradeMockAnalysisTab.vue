@@ -73,17 +73,6 @@
           <ChevronDown class="w-3.5 h-3.5 text-slate-500 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
         </div>
       </div>
-
-      <!-- 성적일람표 등록 바로가기 -->
-      <div class="flex items-center gap-2">
-        <router-link
-          to="/system-settings"
-          class="text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-xl no-underline transition-colors flex items-center gap-1.5 shadow-2xs"
-        >
-          <span>📤</span>
-          <span>고{{ targetGrade }} 전국연합 성적표 업로드</span>
-        </router-link>
-      </div>
     </div>
 
     <!-- 3. 데이터가 없을 때 안내 -->
@@ -95,7 +84,7 @@
         {{ targetGrade }}학년 모의고사 데이터가 등록되지 않았습니다
       </h3>
       <p class="text-xs text-slate-500 m-0 max-w-md mx-auto">
-        [통합 시스템 설정] > [모의고사 성적 업로드] 메뉴에서 학사 {{ academicYear }}학년도 {{ targetGrade }}학년 전국연합 성적일람표(PDF)를 업로드해 주세요.
+        [통합 시스템 설정] > [모의고사 성적 업로드] 메뉴에서 {{ targetGrade }}학년 모의고사 엑셀 파일(.xlsx)을 등록해 주세요.
       </p>
     </div>
 
