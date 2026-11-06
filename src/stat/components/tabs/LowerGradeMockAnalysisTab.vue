@@ -4,33 +4,37 @@
     <div class="bg-linear-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-lg border border-indigo-900/40">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div class="flex items-center gap-2 mb-2">
+          <div class="flex flex-wrap items-center gap-2 mb-2">
             <span class="px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 text-[11px] font-bold">
-              일반 학사 {{ academicYear }}학년도 기준
+              학사 {{ academicYear }}학년도 모의고사
             </span>
             <span class="px-2.5 py-0.5 rounded-full bg-amber-500/30 text-amber-200 border border-amber-400/30 text-[11px] font-bold">
               고등학교 {{ targetGrade }}학년 전용
             </span>
-            <span v-if="targetGrade === 2" class="px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 text-[11px] font-mono font-bold">
-              2028학년도 대입 예비고3
+            <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 text-[11px] font-mono font-bold">
+              {{ targetAdmissionYear }}학년도 대입 ({{ targetGrade === 2 ? '예비고3' : '예비고2' }})
             </span>
           </div>
           <h1 class="text-xl sm:text-2xl font-black text-white m-0 tracking-tight flex items-center gap-2">
             <span>📈</span>
-            <span>고{{ targetGrade }} 전국연합학력평가 성적 분석</span>
+            <span>고{{ targetGrade }} 전국연합학력평가 성적 분석 ({{ targetAdmissionYear }}학년도 대입 대비)</span>
           </h1>
           <p class="text-xs text-slate-300 mt-2 m-0 max-w-2xl leading-relaxed">
-            구글 시트 <code class="px-1.5 py-0.5 rounded bg-indigo-800/80 text-amber-300 font-mono font-bold">2027모의결과</code> 시트에서 <strong>{{ targetGrade }}학년</strong> 데이터만 선별하여 회차별(3·6·9·11월) 성적 추이와 영역별 평균 등급을 종합 분석합니다.
+            해당 학사일정(<strong>{{ academicYear }}학년도</strong>)에 응시한 <strong>고{{ targetGrade }} 전국연합학력평가</strong> 성적표를 바탕으로 회차별(3·6·9·11월) 성적 추이를 분석하고, 직전 대입(<strong>{{ benchmarkAdmissionYear }}학년도 대입</strong>)의 합격선 및 수능최저 충족 기준을 연계하여 진학 설계를 지원합니다.
           </p>
         </div>
 
         <div class="bg-white/10 backdrop-blur-md rounded-xl p-3.5 border border-white/10 shrink-0 text-right space-y-1">
-          <div class="text-[11px] text-slate-300 font-medium">{{ targetGrade }}학년 응시 데이터</div>
+          <div class="text-[11px] text-slate-300 font-medium">고{{ targetGrade }} 응시 데이터 현황</div>
           <div class="text-lg font-black text-amber-300 font-mono">
             총 {{ gradeRecords.length }}건 (학생 {{ uniqueStudentsCount }}명)
           </div>
-          <div class="text-[10px] text-indigo-200">
-            상단 학년도: {{ academicYear }}학년도 고정 모드
+          <div class="text-[10px] text-indigo-200 flex items-center justify-end gap-1">
+            <span>대입학년도: {{ targetAdmissionYear }}학년도 고정</span>
+            <span class="text-amber-300">🔒</span>
+          </div>
+          <div class="text-[10px] text-slate-400">
+            분석 기준: {{ benchmarkAdmissionYear }}학년도 대입 결과 연계
           </div>
         </div>
       </div>
@@ -39,7 +43,7 @@
     <!-- 2. 필터 및 빠른 액션 바 -->
     <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-3">
       <!-- 회차 선택 -->
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <label class="text-xs font-bold text-slate-700">모의고사 회차:</label>
         <div class="relative">
           <select
@@ -77,7 +81,7 @@
           class="text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-xl no-underline transition-colors flex items-center gap-1.5 shadow-2xs"
         >
           <span>📤</span>
-          <span>고{{ targetGrade }} 성적일람표 업로드</span>
+          <span>고{{ targetGrade }} 전국연합 성적표 업로드</span>
         </router-link>
       </div>
     </div>
@@ -91,11 +95,11 @@
         {{ targetGrade }}학년 모의고사 데이터가 등록되지 않았습니다
       </h3>
       <p class="text-xs text-slate-500 m-0 max-w-md mx-auto">
-        [통합 시스템 설정] > [모의고사 성적 업로드] 메뉴에서 {{ targetGrade }}학년을 선택하고 성적일람표(PDF/엑셀)를 업로드해 주세요.
+        [통합 시스템 설정] > [모의고사 성적 업로드] 메뉴에서 학사 {{ academicYear }}학년도 {{ targetGrade }}학년 전국연합 성적일람표(PDF)를 업로드해 주세요.
       </p>
     </div>
 
-    <!-- 4. 주요 영역별 평균 등급 카드 그리드 -->
+    <!-- 4. 주요 영역별 평균 등급 카드 그리드 & 직전 대입 연계 벤치마크 -->
     <div v-else class="space-y-6">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- 국어 -->
@@ -171,6 +175,59 @@
           <div class="text-[11px] text-slate-500 flex justify-between pt-2 border-t border-slate-100">
             <span>1~4등급 충족률</span>
             <span class="font-bold text-amber-700 font-mono">{{ summaryStats.histPassRate }}%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 직전 대입 연계 수능최저 경쟁력 시뮬레이션 요약 카드 -->
+      <div class="bg-linear-to-r from-indigo-50/70 via-white to-sky-50/60 rounded-2xl p-5 border border-indigo-100 shadow-sm space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🎯</span>
+            <h3 class="text-sm font-bold text-slate-800 m-0">
+              직전 대입({{ benchmarkAdmissionYear }}학년도) 기준 주요 수능최저 모의 충족률
+            </h3>
+            <span class="text-[11px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
+              {{ targetAdmissionYear }}학년도 대입 경쟁력 진단
+            </span>
+          </div>
+          <div class="text-xs text-slate-500">
+            * 국·수·영·탐 상위 등급 조합 기준 (응시 인원 {{ filteredRecords.length }}명)
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          <div class="bg-white rounded-xl p-3.5 border border-slate-200/80 shadow-2xs">
+            <div class="text-xs font-bold text-slate-600 mb-1 flex items-center justify-between">
+              <span>상위권 대학 (2합 5 이내)</span>
+              <span class="text-[11px] text-indigo-600 font-mono font-bold">{{ csatBenchmark.twoSum5Count }}명</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span class="text-xl font-black text-indigo-950 font-mono">{{ csatBenchmark.twoSum5Rate }}%</span>
+              <span class="text-[10px] text-slate-400">주요 서울권 수시 충족선</span>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl p-3.5 border border-slate-200/80 shadow-2xs">
+            <div class="text-xs font-bold text-slate-600 mb-1 flex items-center justify-between">
+              <span>수도권 및 거점국립대 (2합 6 이내)</span>
+              <span class="text-[11px] text-sky-600 font-mono font-bold">{{ csatBenchmark.twoSum6Count }}명</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span class="text-xl font-black text-sky-950 font-mono">{{ csatBenchmark.twoSum6Rate }}%</span>
+              <span class="text-[10px] text-slate-400">수도권 학생부교과/종합 충족선</span>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl p-3.5 border border-slate-200/80 shadow-2xs">
+            <div class="text-xs font-bold text-slate-600 mb-1 flex items-center justify-between">
+              <span>최상위권 대학 (3합 7 이내)</span>
+              <span class="text-[11px] text-purple-600 font-mono font-bold">{{ csatBenchmark.threeSum7Count }}명</span>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span class="text-xl font-black text-purple-950 font-mono">{{ csatBenchmark.threeSum7Rate }}%</span>
+              <span class="text-[10px] text-slate-400">서·성·한 등 최상위 수시 충족선</span>
+            </div>
           </div>
         </div>
       </div>
@@ -266,7 +323,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ChevronDown } from 'lucide-vue-next'
-import { useStatData } from '../../composables/useStatData'
+import { useStatData, getGradeAdmissionYear, getCurrentAcademicYear } from '../../composables/useStatData'
 import { getAcademicSchoolYear } from '../../utils/mockExamReportParser'
 
 const props = defineProps({
@@ -277,9 +334,14 @@ const props = defineProps({
 })
 
 const targetGrade = computed(() => Number(props.grade) || 2)
+// 해당 학사일정 연도 (예: 2026.11 기준 2026학년도 학사, 2027.05 기준 2027학년도 학사)
 const academicYear = computed(() => getAcademicSchoolYear(new Date()))
+// 해당 학년의 대입 학년도 (예: 2026.11 기준 고2는 2028학년도, 고1은 2029학년도 대입)
+const targetAdmissionYear = computed(() => getGradeAdmissionYear(targetGrade.value))
+// 연계 분석 기준이 되는 직전 대입 학년도 (예: 2027학년도 대입)
+const benchmarkAdmissionYear = computed(() => selectedAcademicYear.value || getCurrentAcademicYear())
 
-const { mockExamRecords, loadMockExamData } = useStatData()
+const { mockExamRecords, loadMockExamData, selectedAcademicYear } = useStatData()
 
 onMounted(() => {
   if (!mockExamRecords.value || mockExamRecords.value.length === 0) {
@@ -379,5 +441,47 @@ const summaryStats = computed(() => {
     histPassRate
   }
 })
-</script>
 
+// 직전 대입 연계 수능최저 충족 시뮬레이션 지표
+const csatBenchmark = computed(() => {
+  const recs = filteredRecords.value
+  if (recs.length === 0) {
+    return {
+      twoSum5Count: 0, twoSum5Rate: '-',
+      twoSum6Count: 0, twoSum6Rate: '-',
+      threeSum7Count: 0, threeSum7Rate: '-'
+    }
+  }
+
+  let twoSum5 = 0
+  let twoSum6 = 0
+  let threeSum7 = 0
+
+  recs.forEach(r => {
+    // 국, 수, 영, 탐1, 탐2 등급 추출
+    const grades = [r.korGrade, r.mathGrade, r.engGrade, r.inq1Grade, r.inq2Grade]
+      .filter(g => g !== null && g !== undefined && !isNaN(g) && Number(g) > 0)
+      .map(Number)
+      .sort((a, b) => a - b) // 최우수 등급 오름차순 정렬
+
+    if (grades.length >= 2) {
+      const sum2 = grades[0] + grades[1]
+      if (sum2 <= 5) twoSum5++
+      if (sum2 <= 6) twoSum6++
+    }
+    if (grades.length >= 3) {
+      const sum3 = grades[0] + grades[1] + grades[2]
+      if (sum3 <= 7) threeSum7++
+    }
+  })
+
+  return {
+    twoSum5Count: twoSum5,
+    twoSum5Rate: ((twoSum5 / recs.length) * 100).toFixed(1),
+    twoSum6Count: twoSum6,
+    twoSum6Rate: ((twoSum6 / recs.length) * 100).toFixed(1),
+    threeSum7Count: threeSum7,
+    threeSum7Rate: ((threeSum7 / recs.length) * 100).toFixed(1)
+  }
+})
+</script>

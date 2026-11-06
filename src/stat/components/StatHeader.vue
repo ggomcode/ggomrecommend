@@ -23,20 +23,33 @@
 
       <!-- 통합 학년도 & 모집범위 & 새로고침 툴바 -->
       <div class="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/90 p-0.5 shadow-2xs shrink-0">
-        <!-- 1. 학년도 선택 드롭다운 -->
+        <!-- 1. 학년도 선택 드롭다운 (고1·2 분석 시 해당 학년 대입학년도로 고정 및 잠금) -->
         <div class="relative">
           <select
-            :value="selectedAcademicYear"
-            :disabled="isLoadingYearData"
+            :value="displayedAdmissionYear"
+            :disabled="isLoadingYearData || isLowerGradeMode"
             @change="e => handleYearChange(e.target.value)"
-            class="appearance-none pl-2 pr-6 py-1 rounded-md text-xs font-black bg-white text-amber-950 border border-amber-200/80 shadow-2xs hover:border-amber-400 focus:outline-none cursor-pointer disabled:opacity-60 transition-colors"
-            title="대입 학년도 선택"
+            :class="[
+              'appearance-none pl-2 pr-6 py-1 rounded-md text-xs font-black shadow-2xs focus:outline-none transition-colors',
+              isLowerGradeMode
+                ? 'bg-amber-50 text-amber-950 border border-amber-300/80 cursor-not-allowed select-none font-bold'
+                : 'bg-white text-amber-950 border border-amber-200/80 hover:border-amber-400 cursor-pointer disabled:opacity-60'
+            ]"
+            :title="lowerGradeDropdownTitle"
           >
-            <option v-for="y in availableAcademicYears" :key="y" :value="y">
-              {{ y }}학년도
+            <option v-if="isLowerGradeMode" :value="displayedAdmissionYear">
+              {{ displayedAdmissionYear }}학년도
             </option>
+            <template v-else>
+              <option v-for="y in availableAcademicYears" :key="y" :value="y">
+                {{ y }}학년도
+              </option>
+            </template>
           </select>
-          <svg class="w-3 h-3 text-amber-700 pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <span v-if="isLowerGradeMode" class="absolute right-1.5 top-1/2 -translate-y-1/2 text-amber-700 pointer-events-none text-[10px]" title="해당 학년 대입학년도 고정">
+            🔒
+          </span>
+          <svg v-else class="w-3 h-3 text-amber-700 pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
           </svg>
         </div>
@@ -240,7 +253,7 @@ const props = defineProps({
 import KcueYearSheetModal from './KcueYearSheetModal.vue'
 import PromotionProcessModal from './modals/PromotionProcessModal.vue'
 import { useRouter } from 'vue-router'
-import { useStatData } from '../composables/useStatData'
+import { useStatData, getGradeAdmissionYear } from '../composables/useStatData'
 import { schoolName } from '../../utils/schoolConfig'
 import { getKcueSheetId } from '../../api/statApi'
 
@@ -283,13 +296,27 @@ const isYearSheetModalOpen = ref(false)
 
 const isPromotionModalOpen = ref(false)
 
-const isLowerGradeMode = computed(() => {
+const targetGradeNumber = computed(() => {
   const tabId = props.currentTabItem?.id
-  return tabId === 'grade2Analysis' || tabId === 'grade1Analysis'
+  if (tabId === 'grade2Analysis') return 2
+  if (tabId === 'grade1Analysis') return 1
+  return null
 })
 
-const displayedAcademicYear = computed(() => {
-  return isLowerGradeMode.value ? '2026' : selectedAcademicYear.value
+const isLowerGradeMode = computed(() => targetGradeNumber.value !== null)
+
+const displayedAdmissionYear = computed(() => {
+  if (targetGradeNumber.value) {
+    return getGradeAdmissionYear(targetGradeNumber.value)
+  }
+  return selectedAcademicYear.value
+})
+
+const lowerGradeDropdownTitle = computed(() => {
+  if (targetGradeNumber.value) {
+    return `고${targetGradeNumber.value} 대입 분석: 해당 학년의 대입 학년도인 ${displayedAdmissionYear.value}학년도로 고정됩니다. (변경 불가)`
+  }
+  return '대입 학년도 선택'
 })
 
 async function handlePromotionApplied(promotedRecords) {

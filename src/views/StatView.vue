@@ -339,30 +339,8 @@ const {
   setAcademicYear
 } = useStatData()
 
-// 고1·2 성적분석 메뉴 진입 시 학사일정 학년도(2026) 고정 및 복귀 제어
 const collapsed = ref(false)
 const currentTab = ref('overview')
-
-const previousAdmissionYear = ref(selectedAcademicYear.value || '2027')
-
-
-
-watch(currentTab, (newTab, oldTab) => {
-  if (newTab === 'grade2Analysis' || newTab === 'grade1Analysis') {
-    if (oldTab !== 'grade2Analysis' && oldTab !== 'grade1Analysis') {
-      previousAdmissionYear.value = selectedAcademicYear.value || '2027'
-    }
-    // 고1·2 분석은 당해 학사 학년도인 2026학년도로 고정
-    if (selectedAcademicYear.value !== '2026') {
-      setAcademicYear('2026')
-    }
-  } else if (oldTab === 'grade2Analysis' || oldTab === 'grade1Analysis') {
-    // 대입 분석 메뉴로 복귀 시 이전 대입 학년도 복원
-    if (previousAdmissionYear.value && selectedAcademicYear.value !== previousAdmissionYear.value) {
-      setAcademicYear(previousAdmissionYear.value)
-    }
-  }
-})
 
 
 // 관리자 설정에서 '농어촌 및 기회균형 전형 구글 시트 ID' 등록 여부 확인 (미등록 시 메뉴 숨김)

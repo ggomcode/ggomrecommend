@@ -36,6 +36,20 @@ export function getCurrentAcademicYear(date = new Date()) {
 }
 
 /**
+ * 특정 학년의 대입 학년도 계산:
+ * - 3학년 (기본): getCurrentAcademicYear() (예: 2026.11 기준 '2027', 2027.05 기준 '2028')
+ * - 2학년: 기본 대입학년도 + 1년 (예: 2026.11 기준 '2028', 2027.05 기준 '2029')
+ * - 1학년: 기본 대입학년도 + 2년 (예: 2026.11 기준 '2029', 2027.05 기준 '2030')
+ */
+export function getGradeAdmissionYear(grade = 3, date = new Date()) {
+  const base = Number(getCurrentAcademicYear(date))
+  const g = Number(grade)
+  if (g === 2) return String(base + 1)
+  if (g === 1) return String(base + 2)
+  return String(base)
+}
+
+/**
  * 모집시기 및 대학구분 필터 옵션
  */
 export const SCOPE_OPTIONS = [
@@ -143,12 +157,14 @@ export async function loadMockExamData(forceReload = false) {
 }
 
 // Academic Year State & Multi-Year Sheet Management
+const currentAcademicYear = getCurrentAcademicYear() // 오늘(2026.11 기준) '2027' 대입
 const savedYear = localStorage.getItem('pcm_stat_selected_year')
-const initialYear = STANDARD_KCUE_YEARS.includes(savedYear) ? savedYear : '2027'
+// 저장된 연도가 유효하고 현재 대입 학년도 이상일 때만 유지 (과거 연도이거나 유효하지 않은 경우 현재 대입 학년도로 기본 선택)
+const initialYear = (savedYear && STANDARD_KCUE_YEARS.includes(savedYear) && Number(savedYear) >= Number(currentAcademicYear))
+  ? savedYear
+  : currentAcademicYear
 const selectedAcademicYear = ref(initialYear)
-if (savedYear !== initialYear) {
-  localStorage.setItem('pcm_stat_selected_year', initialYear)
-}
+localStorage.setItem('pcm_stat_selected_year', initialYear)
 
 const selectedScope = ref(localStorage.getItem('pcm_stat_selected_scope') || 'SUSI_ALL')
 const availableAcademicYears = ref([...STANDARD_KCUE_YEARS])
@@ -314,10 +330,10 @@ async function loadPeriodData(year, period = '수시', forceReload = false) {
   }
 
   const rawSheetId = await getKcueSheetId()
-  const sheetId = extractSheetId(rawSheetId)
+  const sheetId = extractSheetId(rawSheetId) || DEFAULT_KCUE_SHEET_ID
 
-  // 1. 구글 시트 ID가 미설정이거나 데모 기본값인 경우: 2027 수시는 번들 원자료(rawAppsData) 즉시 반환
-  if (!sheetId || sheetId === DEFAULT_KCUE_SHEET_ID) {
+  // 1. 구글 시트 ID가 전혀 없는 경우
+  if (!sheetId) {
     if (strYear === '2027' && period === '수시') {
       yearlyApplicationsCache.value[cacheKey] = rawAppsData
       return rawAppsData

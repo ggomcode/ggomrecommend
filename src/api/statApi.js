@@ -219,7 +219,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
  */
 export async function getActualGoogleSheetTabs(sheetId, forceReload = false) {
   const cleanId = extractSheetId(sheetId)
-  if (!cleanId || cleanId === DEFAULT_KCUE_SHEET_ID) return []
+  if (!cleanId) return []
 
   const now = Date.now()
   if (!forceReload && cachedActualTabs && (now - cachedActualTabsTime < 300000)) {
@@ -228,7 +228,7 @@ export async function getActualGoogleSheetTabs(sheetId, forceReload = false) {
 
   try {
     const url = `https://docs.google.com/spreadsheets/d/${cleanId}/export?format=xlsx&_t=${now}`
-    const res = await fetchWithTimeout(url, {}, 4000)
+    const res = await fetchWithTimeout(url, {}, 5000)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const buffer = await res.arrayBuffer()
     const wb = XLSX.read(buffer, { type: 'buffer' })
@@ -241,7 +241,6 @@ export async function getActualGoogleSheetTabs(sheetId, forceReload = false) {
     console.warn('[statApi] Failed to fetch actual sheet tabs via xlsx:', err)
   }
 
-  // 실패 시 가짜 탭을 반환하지 않고 빈 배열을 반환하여 불필요한 404 연쇄 호출 차단
   return cachedActualTabs || []
 }
 
@@ -250,12 +249,12 @@ export async function getActualGoogleSheetTabs(sheetId, forceReload = false) {
  */
 export async function fetchKcueSheetTabCsv(sheetId, tabName) {
   const cleanId = extractSheetId(sheetId)
-  if (!cleanId || cleanId === DEFAULT_KCUE_SHEET_ID) {
+  if (!cleanId) {
     throw new Error('유효한 구글 시트 ID가 설정되지 않았습니다.')
   }
   const url = `${buildSheetTabGvizUrl(cleanId, tabName)}&_t=${Date.now()}`
   
-  const res = await fetchWithTimeout(url, {}, 4500)
+  const res = await fetchWithTimeout(url, {}, 6000)
   if (!res.ok) {
     throw new Error(`[${tabName}] 탭을 읽을 수 없습니다. (HTTP ${res.status}) 시트의 공유 권한 및 탭 이름을 확인하세요.`)
   }
@@ -657,15 +656,20 @@ export function parseKcueRows(csvText, customPassword = null) {
 export async function fetchAndParseKcueYearData(sheetId, year, type = '수시', customPassword = null) {
   const tabName = getKcueTabName(year, type)
   
-  // 실제 구글 스프레드시트에 존재하는 탭인지 엄격하게 검증!
+  // 실제 구글 스프레드시트에 존재하는 탭 목록 확인 (XLSX 목록이 확보된 경우에만 필터링)
   const actualTabs = await getActualGoogleSheetTabs(sheetId)
-  if (!actualTabs.includes(tabName)) {
+  if (actualTabs && actualTabs.length > 0 && !actualTabs.includes(tabName)) {
     console.log(`[statApi] 구글 시트에 '${tabName}' 탭이 아직 등록되지 않았습니다. 빈 데이터를 반환합니다.`)
     return []
   }
 
-  const csv = await fetchKcueSheetTabCsv(sheetId, tabName)
-  return parseKcueRows(csv, customPassword)
+  try {
+    const csv = await fetchKcueSheetTabCsv(sheetId, tabName)
+    return parseKcueRows(csv, customPassword)
+  } catch (err) {
+    console.warn(`[statApi] '${tabName}' 탭 로드 실패:`, err)
+    return []
+  }
 }
 
 /**
