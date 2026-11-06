@@ -408,11 +408,11 @@
             </div>
           </div>
 
-          <!-- 3. 대교협 수시 지원 원자료 구글 시트 ID (꼼스탯 통계) -->
+          <!-- 3. 대교협 수시 지원 및 모의고사 성적 구글 시트 ID (꼼스탯 통계) -->
           <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-700 space-y-3">
             <div class="flex items-center justify-between">
               <label class="block text-xs font-bold text-slate-800 dark:text-slate-200">
-                3) 대교협 수시 지원 원자료 구글 시트 ID (수시 지원 통계 분석 시스템)
+                3) 대교협 수시 지원 및 모의고사 성적 구글 시트 ID (수시 및 모의고사 통계 분석 시스템)
               </label>
               <a
                 v-if="realGoogleSheetKcueId"
@@ -436,12 +436,10 @@
               <p class="m-0 text-slate-600 dark:text-slate-300 leading-normal">
                 대입학년도마다 별도의 시트 파일을 만들지 않고 <strong>본 구글 시트 1개</strong> 안에 시트 탭(
                 <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-indigo-600 dark:text-indigo-300">2027수시</code>, 
+                <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-indigo-600 dark:text-indigo-300">2027모의결과</code>, 
+                <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-indigo-600 dark:text-indigo-300">2027모의가채점</code>, 
                 <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-indigo-600 dark:text-indigo-300">2026수시</code>, 
-                <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-indigo-600 dark:text-indigo-300">2025수시</code>, 
-                <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-purple-600 dark:text-purple-300">2027정시</code>, 
-                <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-purple-600 dark:text-purple-300">2026정시</code>, 
-                <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-emerald-600 dark:text-emerald-300">2027통계</code>, 
-                <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-emerald-600 dark:text-emerald-300">2026통계</code> 등)을 추가하여 모든 학년도와 전형 자료를 하나로 통합 관리합니다.
+                <code class="px-1 py-0.2 bg-white dark:bg-slate-800 rounded font-mono font-bold text-emerald-600 dark:text-emerald-300">2027통계</code> 등)을 추가하여 모든 학년도와 모의고사 자료를 하나로 통합 관리합니다.
               </p>
             </div>
 
@@ -462,24 +460,30 @@
             </div>
 
             <!-- 모의고사 성적 실시간 쓰기 연동용 GAS Web App URL (선택사항) -->
-            <div class="pt-2 border-t border-slate-200/60 dark:border-slate-800">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                  ⚡ 모의고사 성적 실시간 시트 쓰기 연동용 GAS Web App URL (선택사항)
+            <div class="pt-2.5 border-t border-slate-200/80 dark:border-slate-800 space-y-1.5">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <span class="text-[11.5px] font-bold text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
+                  <span>⚡</span>
+                  <span>모의고사 성적 원격 자동 적재용 Web App URL (선택사항)</span>
                 </span>
-                <span class="text-[10px] text-slate-400">모의고사 성적표 업로드 시 구글 시트에 원격 자동 저장을 원할 때 입력</span>
+                <span class="text-[10px] text-slate-400">등록 시 모의고사 성적 등록 화면에서 1클릭 자동 저장 활성화</span>
               </div>
+              <p class="text-[10.5px] text-slate-500 m-0 leading-relaxed">
+                원본 구글 시트의 [확장 프로그램] ➔ [Apps Script]에서 웹 앱으로 배포한 URL(<code>https://script.google.com/macros/s/.../exec</code>)을 입력하고 저장하세요.
+              </p>
               <div class="flex gap-2">
                 <input
                   v-model="googleSheetKcueGasUrl"
                   type="text"
-                  :placeholder="hasGoogleSheetKcueGasUrl ? '저장된 Web App URL (마스킹됨)' : 'https://script.google.com/macros/s/.../exec'"
+                  @focus="handleKcueGasFocus"
+                  @blur="handleKcueGasBlur"
+                  :placeholder="hasGoogleSheetKcueGasUrl ? '저장된 Web App URL (마스킹됨 - 클릭하여 새로 입력)' : 'https://script.google.com/macros/s/.../exec'"
                   class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-slate-800 dark:text-white"
                 />
                 <button
                   @click="saveGoogleSheetKcueGasUrl"
                   :disabled="googleSheetKcueGasLoading"
-                  class="text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg px-3.5 cursor-pointer transition-colors whitespace-nowrap"
+                  class="text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap shadow-2xs"
                 >
                   {{ googleSheetKcueGasLoading ? '저장 중…' : 'URL 저장' }}
                 </button>
@@ -861,7 +865,7 @@
                         type="button"
                         @click.stop="setPresetExpireDate(m, 0)"
                         class="px-1.5 py-0.5 text-[10px] font-semibold rounded border border-amber-300 dark:border-amber-700 hover:bg-amber-200 bg-white dark:bg-slate-800 text-amber-900 dark:text-amber-200 transition-colors cursor-pointer"
-                        :class="{ '!bg-amber-600 !text-white !border-amber-700': m.secretAccessExpireDate === todayIsoDate }"
+                        :class="{ 'bg-amber-600! text-white! border-amber-700!': m.secretAccessExpireDate === todayIsoDate }"
                       >
                         오늘까지
                       </button>
@@ -869,7 +873,7 @@
                         type="button"
                         @click.stop="setPresetExpireDate(m, 1)"
                         class="px-1.5 py-0.5 text-[10px] font-semibold rounded border border-amber-300 dark:border-amber-700 hover:bg-amber-200 bg-white dark:bg-slate-800 text-amber-900 dark:text-amber-200 transition-colors cursor-pointer"
-                        :class="{ '!bg-amber-600 !text-white !border-amber-700': m.secretAccessExpireDate === getNextDayIsoDate(1) }"
+                        :class="{ 'bg-amber-600! text-white! border-amber-700!': m.secretAccessExpireDate === getNextDayIsoDate(1) }"
                       >
                         내일(+1일)
                       </button>
@@ -877,7 +881,7 @@
                         type="button"
                         @click.stop="setPresetExpireDate(m, 2)"
                         class="px-1.5 py-0.5 text-[10px] font-semibold rounded border border-amber-300 dark:border-amber-700 hover:bg-amber-200 bg-white dark:bg-slate-800 text-amber-900 dark:text-amber-200 transition-colors cursor-pointer"
-                        :class="{ '!bg-amber-600 !text-white !border-amber-700': m.secretAccessExpireDate === getNextDayIsoDate(2) }"
+                        :class="{ 'bg-amber-600! text-white! border-amber-700!': m.secretAccessExpireDate === getNextDayIsoDate(2) }"
                       >
                         모레(+2일)
                       </button>
@@ -885,7 +889,7 @@
                         type="button"
                         @click.stop="setPresetExpireDate(m, 6)"
                         class="px-1.5 py-0.5 text-[10px] font-semibold rounded border border-amber-300 dark:border-amber-700 hover:bg-amber-200 bg-white dark:bg-slate-800 text-amber-900 dark:text-amber-200 transition-colors cursor-pointer"
-                        :class="{ '!bg-amber-600 !text-white !border-amber-700': m.secretAccessExpireDate === getNextDayIsoDate(6) }"
+                        :class="{ 'bg-amber-600! text-white! border-amber-700!': m.secretAccessExpireDate === getNextDayIsoDate(6) }"
                       >
                         7일간
                       </button>
@@ -1710,6 +1714,18 @@ async function saveGoogleSheetKcueGasUrl() {
     alert('Web App URL 저장 중 오류가 발생했습니다: ' + e.message)
   } finally {
     googleSheetKcueGasLoading.value = false
+  }
+}
+
+function handleKcueGasFocus() {
+  if (googleSheetKcueGasUrl.value.includes('•')) {
+    googleSheetKcueGasUrl.value = ''
+  }
+}
+
+function handleKcueGasBlur() {
+  if (!googleSheetKcueGasUrl.value && realGoogleSheetKcueGasUrl.value) {
+    googleSheetKcueGasUrl.value = maskGoogleSheetId(realGoogleSheetKcueGasUrl.value)
   }
 }
 
