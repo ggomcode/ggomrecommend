@@ -224,6 +224,7 @@ export async function parseMockExamReportFile(file, options = {}) {
 
   const arrayBuffer = await file.arrayBuffer()
   const defaultGrade = Number(options.defaultGrade) || 3
+  const examName = options.examName || ''
   const uploadDate = options.uploadDate || new Date()
   const targetAdmissionYear = getTargetCollegeAdmissionYear(uploadDate)
   const targetAcademicYear = getAcademicSchoolYear(uploadDate)
@@ -233,6 +234,7 @@ export async function parseMockExamReportFile(file, options = {}) {
     return await parseMockExamPdf(arrayBuffer, {
       fileName,
       defaultGrade,
+      examName,
       targetAdmissionYear,
       targetAcademicYear,
       targetSheetName
@@ -241,6 +243,7 @@ export async function parseMockExamReportFile(file, options = {}) {
     return await parseMockExamExcel(arrayBuffer, {
       fileName,
       defaultGrade,
+      examName,
       targetAdmissionYear,
       targetAcademicYear,
       targetSheetName
@@ -616,41 +619,45 @@ async function parseKicePages(doc, defaultMeta) {
 /**
  * 엑셀 성적일람표 파싱
  */
-async function parseMockExamExcel(arrayBuffer, options) {
-  const wb = XLSX.read(arrayBuffer, { type: 'array' })
-  
-  // 1. 학교 모의고사 표준 '점수입력' 시트 또는 첫 번째 시트 탐색
-  const sheetName = wb.SheetNames.includes('점수입력') 
-    ? '점수입력' 
-    : wb.SheetNames[0]
-  const ws = wb.Sheets[sheetName]
-  const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1 })
+async function parseMockExamExcel(arrayBuffer, options = {}) {
+  try {
+    const data = new Uint8Array(arrayBuffer)
+    const wb = XLSX.read(data, { type: 'array' })
+    
+    // 1. 학교 모의고사 표준 '점수입력' 시트 또는 첫 번째 시트 탐색
+    const sheetName = wb.SheetNames.includes('점수입력') 
+      ? '점수입력' 
+      : wb.SheetNames[0]
+    const ws = wb.Sheets[sheetName]
+    const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1 })
 
-  if (!rawRows || rawRows.length < 2) {
-    return {
-      success: false,
-      formatType: 'EMPTY_EXCEL',
-      error: '엑셀 파일에 데이터가 존재하지 않습니다.',
-      students: []
+    if (!rawRows || rawRows.length < 2) {
+      return {
+        success: false,
+        formatType: 'EMPTY_EXCEL',
+        error: '엑셀 파일에 데이터가 존재하지 않습니다.',
+        students: []
+      }
     }
-  }
 
-  // 파일명에서 시험명과 학년 감지
-  const fileMeta = parseMetaFromFileName(options.fileName)
-  let defaultExamName = fileMeta.examName
-  if (!defaultExamName) {
-    const fn = options.fileName || ''
-    if (fn.includes('03월') || fn.includes('3월')) defaultExamName = '3월 학평'
-    else if (fn.includes('04월') || fn.includes('4월')) defaultExamName = '4월 학평'
-    else if (fn.includes('06월') || fn.includes('6월')) defaultExamName = '6월 모평'
-    else if (fn.includes('07월') || fn.includes('7월')) defaultExamName = '7월 학평'
-    else if (fn.includes('09월') || fn.includes('9월')) defaultExamName = '9월 모평'
-    else if (fn.includes('10월') || fn.includes('10월')) defaultExamName = '10월 학평'
-    else if (fn.includes('11월') || fn.includes('11월')) defaultExamName = '11월 수능'
-    else defaultExamName = '전국연합 학평'
-  }
+    // 파일명 및 옵션에서 시험명과 학년 감지 (사용자가 드롭다운에서 선택한 options.examName이 최우선 1순위!)
+    const fileMeta = parseMetaFromFileName(options.fileName)
+    let defaultExamName = options.examName || fileMeta.examName
+    if (!defaultExamName) {
+      const fn = options.fileName || ''
+      if (fn.includes('03월') || fn.includes('3월')) defaultExamName = '3월 학평'
+      else if (fn.includes('05월') || fn.includes('5월')) defaultExamName = '5월 학평'
+      else if (fn.includes('04월') || fn.includes('4월')) defaultExamName = '4월 학평'
+      else if (fn.includes('06월') || fn.includes('6월')) defaultExamName = '6월 모평'
+      else if (fn.includes('07월') || fn.includes('7월')) defaultExamName = '7월 학평'
+      else if (fn.includes('08월') || fn.includes('8월')) defaultExamName = '8월 모평'
+      else if (fn.includes('09월') || fn.includes('9월')) defaultExamName = '9월 모평'
+      else if (fn.includes('10월') || fn.includes('10월')) defaultExamName = '10월 학평'
+      else if (fn.includes('11월') || fn.includes('11월')) defaultExamName = '11월 수능'
+      else defaultExamName = '3월 학평'
+    }
 
-  const parseNum = (v) => {
+    const parseNum = (v) => {
     if (v === undefined || v === null || v === '' || v === '-') return null
     const n = Number(String(v).replace(/[^0-9.]/g, ''))
     return isNaN(n) ? null : n
@@ -811,18 +818,27 @@ async function parseMockExamExcel(arrayBuffer, options) {
   }
 
   return {
-    success: students.length > 0,
-    formatType: 'EXCEL_SHEET',
-    meta: {
-      fileName: options.fileName,
-      examName: students[0]?.examName || defaultExamName,
-      grade: options.defaultGrade,
-      studentCount: students.length,
-      targetAdmissionYear: options.targetAdmissionYear,
-      targetAcademicYear: options.targetAcademicYear,
-      targetSheetName: options.targetSheetName
-    },
-    students
+      success: students.length > 0,
+      formatType: 'EXCEL_SHEET',
+      meta: {
+        fileName: options.fileName,
+        examName: students[0]?.examName || defaultExamName,
+        grade: options.defaultGrade,
+        studentCount: students.length,
+        targetAdmissionYear: options.targetAdmissionYear,
+        targetAcademicYear: options.targetAcademicYear,
+        targetSheetName: options.targetSheetName
+      },
+      students
+    }
+  } catch (err) {
+    console.error('[mockExamReportParser] 엑셀 파싱 중 치명적 예외:', err)
+    return {
+      success: false,
+      formatType: 'ERROR_EXCEL',
+      error: '엑셀 파싱 오류: ' + (err.message || '알 수 없는 형식 오류'),
+      students: []
+    }
   }
 }
 

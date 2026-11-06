@@ -63,7 +63,7 @@
         </div>
 
         <div class="flex items-center gap-2 shrink-0 text-indigo-700 font-bold text-xs bg-white px-3 py-1.5 rounded-xl border border-indigo-200 shadow-2xs">
-          <span>{{ isGuideOpen ? '가이드 접기' : '전체 가이드 펼쳐보기' }}</span>
+          <span>{{ isGuideOpen ? '가이드 접기' : '등록 가이드 펼치기' }}</span>
           <ChevronUp v-if="isGuideOpen" :size="18" />
           <ChevronDown v-else :size="18" />
         </div>
@@ -294,34 +294,54 @@
 
     <!-- 3. 업로드 컨트롤 바 (학년 선택 + 엑셀 중심 드롭존) -->
     <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 space-y-5">
-      <!-- 3-1. 학년 선택 드롭다운 -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+      <!-- 3-1. 학년 및 모의고사 회차(몇 월) 선택 바 -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
         <div class="flex items-center gap-2">
           <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
-          <span class="text-sm font-bold text-slate-800">성적일람표 응시 학년 선택</span>
-          <span class="text-xs text-slate-400 font-normal">(*업로드할 파일의 해당 학년을 선택해 주세요)</span>
+          <span class="text-sm font-bold text-slate-800">모의고사 응시 정보 선택</span>
+          <span class="text-xs text-slate-400 font-normal">(*업로드할 파일의 학년과 모의고사 회차를 반드시 선택해 주세요)</span>
         </div>
 
-        <div class="flex items-center gap-2">
-          <label class="text-xs font-semibold text-slate-600">대상 학년:</label>
-          <div class="relative inline-block">
-            <select
-              v-model="selectedGrade"
-              class="appearance-none pl-3 pr-8 py-1.5 bg-indigo-50/80 hover:bg-indigo-100/70 border border-indigo-200 rounded-xl text-xs font-black text-indigo-950 focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer transition-colors"
-            >
-              <option :value="3">3학년 (고3 / {{ autoAdmissionYear }} 대입)</option>
-              <option :value="2">2학년 (고2 / {{ autoAcademicYear }} 학사)</option>
-              <option :value="1">1학년 (고1 / {{ autoAcademicYear }} 학사)</option>
-            </select>
-            <ChevronDown class="w-4 h-4 text-indigo-700 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- 대상 학년 선택 -->
+          <div class="flex items-center gap-1.5">
+            <label class="text-xs font-bold text-slate-600">학년:</label>
+            <div class="relative inline-block">
+              <select
+                v-model="selectedGrade"
+                class="appearance-none pl-3 pr-8 py-1.5 bg-indigo-50/80 hover:bg-indigo-100/70 border border-indigo-200 rounded-xl text-xs font-black text-indigo-950 focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer transition-colors"
+              >
+                <option :value="3">3학년 (고3 / {{ autoAdmissionYear }} 대입)</option>
+                <option :value="2">2학년 (고2 / 2028 대입)</option>
+                <option :value="1">1학년 (고1 / 2029 대입)</option>
+              </select>
+              <ChevronDown class="w-4 h-4 text-indigo-700 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+            </div>
           </div>
-          <span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200">
-            {{ selectedGrade }}학년 모드
+
+          <!-- 모의고사 회차(몇 월) 선택 드롭다운 (7개 목록) -->
+          <div class="flex items-center gap-1.5">
+            <label class="text-xs font-bold text-slate-600">시험 회차:</label>
+            <div class="relative inline-block">
+              <select
+                v-model="selectedExam"
+                class="appearance-none pl-3 pr-8 py-1.5 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-300 rounded-xl text-xs font-black text-emerald-950 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer transition-colors shadow-2xs"
+              >
+                <option v-for="exam in availableExamList" :key="exam.value" :value="exam.value">
+                  {{ exam.label }}
+                </option>
+              </select>
+              <ChevronDown class="w-4 h-4 text-emerald-700 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+            </div>
+          </div>
+
+          <span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200">
+            {{ selectedGrade }}학년 · {{ selectedExam }}
           </span>
         </div>
       </div>
 
-      <!-- 3-2. 엑셀 파일 중심 드래그앤드롭 영역 (Drag & Drop Zone) -->
+      <!-- 3-2. 단일 엑셀 파일 드래그앤드롭 영역 (Drag & Drop Zone) -->
       <div
         @dragover.prevent="isDragging = true"
         @dragleave.prevent="isDragging = false"
@@ -337,8 +357,7 @@
         <input
           ref="fileInputRef"
           type="file"
-          multiple
-          accept=".xlsx,.xls,.csv,.pdf"
+          accept=".xlsx,.xls,.csv"
           class="hidden"
           @change="handleFileInputChange"
         />
@@ -349,142 +368,106 @@
           </div>
           <div class="space-y-1">
             <div class="text-base font-black text-slate-800">
-              대교협에서 다운로드한 <span class="text-emerald-700 underline underline-offset-4">모의고사 엑셀 파일(.xlsx)</span>을 올려주세요
+              <span class="text-indigo-700 font-black">[{{ selectedGrade }}학년 · {{ selectedExam }}]</span> 대교협 엑셀 파일(.xlsx) 1개를 올려주세요
             </div>
             <p class="text-xs text-slate-500 m-0">
-              클릭하여 파일을 선택하거나, 이 영역으로 엑셀 파일을 드래그하여 끌어다 놓으세요.
+              회차(몇 월)별로 해당 시험 엑셀 파일 1개씩 단일 업로드하여 구글 시트에 반영합니다.
             </p>
           </div>
           <div class="flex flex-wrap items-center justify-center gap-2 pt-1">
             <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-300 text-[11.5px] font-bold text-emerald-800 shadow-2xs">
-              <span>📗 추천</span>
-              <span><strong>선택회차 입력내용 엑셀다운(.xlsx)</strong> 업로드 시 11개 반 전원 1초 즉시 반영</span>
+              <span>📗 단일 회차 등록</span>
+              <span><strong>선택회차 입력내용 엑셀다운(.xlsx)</strong> 1개 업로드 시 전교생 즉시 반영</span>
             </div>
             <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-[11px] font-medium text-slate-600">
-              <span>📄 반별 성적일람표 PDF 복수 등록도 지원</span>
+              <span>클릭하여 파일 선택 또는 드래그앤드롭</span>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 4. 업로드된 파일 목록 & 파싱 진행 상황 -->
+    <!-- 4. 등록된 모의고사 파일 상태 -->
     <div v-if="fileList.length > 0" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-        <div class="space-y-1">
-          <div class="flex items-center gap-2">
-            <span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span>
-            <h3 class="text-sm font-bold text-slate-800 m-0">
-              업로드된 모의고사 파일 (총 {{ fileList.length }}개)
-            </h3>
+        <div class="flex items-center gap-2">
+          <span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span>
+          <h3 class="text-sm font-bold text-slate-800 m-0">
+            등록된 모의고사 성적 파일
+          </h3>
+          <span class="text-xs font-bold text-indigo-700 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200">
+            {{ selectedGrade }}학년 · {{ selectedExam }}
+          </span>
+        </div>
+
+        <button
+          @click="clearAllFiles"
+          class="text-xs font-semibold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-2.5 py-1.5 rounded-lg transition-colors border-none cursor-pointer"
+        >
+          파일 비우기
+        </button>
+      </div>
+
+      <!-- 단일 파일 상태 카드 -->
+      <div
+        v-for="fItem in fileList"
+        :key="fItem.id"
+        class="p-4 rounded-xl border transition-all duration-150 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        :class="[
+          fItem.status === 'success' 
+            ? 'bg-emerald-50/40 border-emerald-200 shadow-xs' 
+            : fItem.status === 'error'
+            ? 'bg-rose-50/40 border-rose-200'
+            : 'bg-indigo-50/40 border-indigo-200 shadow-xs'
+        ]"
+      >
+        <div class="flex items-center gap-3.5 min-w-0">
+          <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 font-black text-sm shadow-xs">
+            XLS
           </div>
-          <div class="flex items-center gap-2 text-xs text-slate-500 font-mono">
-            <span class="text-emerald-700 font-bold">완료: {{ completedCount }}개</span>
-            <span>•</span>
-            <span v-if="parsingCount > 0" class="text-indigo-600 font-bold animate-pulse">분석 진행 중: {{ parsingCount }}개</span>
-            <span v-else class="text-slate-400">대기/완료</span>
-            <span v-if="errorCount > 0">•</span>
-            <span v-if="errorCount > 0" class="text-rose-600 font-bold">실패: {{ errorCount }}개</span>
+          <div class="truncate leading-tight space-y-1">
+            <div class="text-sm font-bold text-slate-800 truncate" :title="fItem.name">
+              {{ fItem.name }}
+            </div>
+            <div class="text-xs text-slate-500 flex items-center gap-2">
+              <span>{{ formatFileSize(fItem.size) }}</span>
+              <span>•</span>
+              <span class="font-bold text-indigo-700">{{ fItem.selectedGrade }}학년</span>
+              <span>•</span>
+              <span class="font-bold text-emerald-800">{{ fItem.parsedExamName }}</span>
+            </div>
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
-          <!-- 파싱 중 진행률 표시 -->
-          <div v-if="parsingCount > 0" class="flex items-center gap-2 px-3 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-xs text-indigo-700 font-bold">
-            <RefreshCw class="w-3.5 h-3.5 animate-spin" />
-            <span>순차 분석 중 ({{ completedCount }}/{{ fileList.length }})</span>
+        <div class="flex items-center gap-3 shrink-0">
+          <!-- 파싱 중 스피너 -->
+          <div v-if="fItem.status === 'parsing'" class="flex items-center gap-2 text-xs text-indigo-600 font-bold px-3 py-1.5 rounded-lg bg-indigo-100">
+            <RefreshCw class="w-4 h-4 animate-spin" />
+            <span>분석 진행 중…</span>
           </div>
 
+          <!-- 성공 배지 -->
+          <div v-else-if="fItem.status === 'success'" class="flex items-center gap-2">
+            <span class="px-3 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 shadow-2xs">
+              ✓ 전교생 {{ fItem.students.length }}명 파싱 완료
+            </span>
+          </div>
+
+          <!-- 실패 배지 -->
+          <div v-else-if="fItem.status === 'error'" class="flex flex-col items-end">
+            <span class="px-3 py-1 rounded-lg bg-rose-100 text-rose-800 text-xs font-bold" :title="fItem.error">
+              ⚠️ 파싱 실패: {{ fItem.error }}
+            </span>
+          </div>
+
+          <!-- 파일 삭제 -->
           <button
             @click="clearAllFiles"
-            class="text-xs font-semibold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-2.5 py-1.5 rounded-lg transition-colors border-none cursor-pointer"
+            class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-white border-none cursor-pointer transition-colors"
+            title="파일 비우기"
           >
-            전체 비우기
+            <Trash2 :size="16" />
           </button>
-        </div>
-      </div>
-
-      <!-- 진행률 바 -->
-      <div v-if="fileList.length > 0" class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-        <div
-          class="h-full bg-linear-to-r from-emerald-500 to-indigo-500 transition-all duration-300"
-          :style="{ width: `${fileList.length ? (completedCount / fileList.length) * 100 : 0}%` }"
-        ></div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div
-          v-for="(fItem, idx) in fileList"
-          :key="fItem.id"
-          class="p-3.5 rounded-xl border transition-all duration-150 flex items-center justify-between gap-3"
-          :class="[
-            fItem.status === 'success' 
-              ? 'bg-emerald-50/40 border-emerald-200' 
-              : fItem.status === 'error'
-              ? 'bg-rose-50/40 border-rose-200'
-              : fItem.status === 'parsing'
-              ? 'bg-indigo-50/40 border-indigo-200 shadow-xs'
-              : 'bg-slate-50 border-slate-200 opacity-70'
-          ]"
-        >
-          <div class="flex items-center gap-3 min-w-0">
-            <div 
-              class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-black text-xs shadow-2xs"
-              :class="fItem.name.endsWith('.pdf') ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'"
-            >
-              {{ fItem.name.endsWith('.pdf') ? 'PDF' : 'XLS' }}
-            </div>
-            <div class="truncate leading-tight">
-              <div class="text-xs font-bold text-slate-800 truncate" :title="fItem.name">
-                {{ fItem.name }}
-              </div>
-              <div class="text-[10.5px] text-slate-500 mt-0.5 flex items-center gap-1.5">
-                <span>{{ formatFileSize(fItem.size) }}</span>
-                <span>•</span>
-                <span class="font-bold text-indigo-700">{{ fItem.selectedGrade }}학년</span>
-                <span v-if="fItem.parsedExamName">• {{ fItem.parsedExamName }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-2 shrink-0">
-            <!-- 파싱 중 스피너 -->
-            <div v-if="fItem.status === 'parsing'" class="flex items-center gap-1 text-xs text-indigo-600 font-bold px-2 py-0.5 rounded bg-indigo-100/70">
-              <RefreshCw class="w-3.5 h-3.5 animate-spin" />
-              <span>분석 중…</span>
-            </div>
-            <!-- 성공 배지 -->
-            <div v-else-if="fItem.status === 'success'" class="flex flex-col items-end">
-              <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10.5px] font-bold">
-                ✓ {{ fItem.students.length }}명 완료
-              </span>
-              <span v-if="fItem.parsedClass" class="text-[10px] text-slate-500 font-bold mt-0.5">
-                {{ fItem.parsedClass }}반
-              </span>
-              <span v-else-if="fItem.students.length > 30" class="text-[10px] text-emerald-700 font-bold mt-0.5">
-                전교생 일괄
-              </span>
-            </div>
-            <!-- 실패 배지 -->
-            <div v-else-if="fItem.status === 'error'" class="flex flex-col items-end">
-              <span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-bold" :title="fItem.error">
-                ⚠️ 실패 (재시도)
-              </span>
-            </div>
-            <!-- 대기 배지 -->
-            <div v-else class="text-[10.5px] text-slate-400 font-mono">
-              대기 중
-            </div>
-
-            <!-- 개별 삭제 -->
-            <button
-              @click="removeFile(idx)"
-              class="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-white border-none cursor-pointer transition-colors"
-              title="파일 삭제"
-            >
-              <Trash2 :size="14" />
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -640,7 +623,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import {
   UploadCloud,
   FileSpreadsheet,
@@ -672,11 +655,54 @@ const todayFormatted = computed(() => {
   return `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일`
 })
 
-// 가이드 아코디언 토글 (기본 펼침)
-const isGuideOpen = ref(true)
+// 가이드 아코디언 토글 (기본 접힘)
+const isGuideOpen = ref(false)
 
 // 선택 학년 (기본값: 3학년)
 const selectedGrade = ref(3)
+
+// 선택된 학년 기준 대입 학년도 계산
+const currentTargetAdmissionYear = computed(() => {
+  const baseYear = autoAdmissionYear.value || '2027'
+  if (selectedGrade.value === 3) return String(baseYear)
+  if (selectedGrade.value === 2) return String(Number(baseYear) + 1)
+  if (selectedGrade.value === 1) return String(Number(baseYear) + 2)
+  return String(baseYear)
+})
+
+// 7개 모의고사 회차 드롭다운 목록 (2028 대입부터 9월 ➔ 8월 모평으로 변경)
+const availableExamList = computed(() => {
+  const is2028OrLater = Number(currentTargetAdmissionYear.value) >= 2028
+  const mopyeongFall = is2028OrLater ? '8월 모평' : '9월 모평'
+
+  return [
+    { value: '3월 학평', label: '3월 학평 (전국연합학력평가)' },
+    { value: '5월 학평', label: '5월 학평 (전국연합학력평가)' },
+    { value: '6월 모평', label: '6월 모평 (한국교육과정평가원)' },
+    { value: '7월 학평', label: '7월 학평 (전국연합학력평가)' },
+    { 
+      value: mopyeongFall, 
+      label: is2028OrLater 
+        ? '8월 모평 (2028대입 개편 모의평가)' 
+        : '9월 모평 (한국교육과정평가원)' 
+    },
+    { value: '10월 학평', label: '10월 학평 (전국연합학력평가)' },
+    { value: '11월 수능', label: '11월 수능 (대학수학능력시험)' }
+  ]
+})
+
+// 선택된 모의고사 회차 (기본값: 3월 학평)
+const selectedExam = ref('3월 학평')
+
+// 2028 대입 이상으로 학년 변경 시 8월/9월 모평 자동 싱크
+watch(availableExamList, (newList) => {
+  const exists = newList.some(e => e.value === selectedExam.value)
+  if (!exists) {
+    if (selectedExam.value === '9월 모평') selectedExam.value = '8월 모평'
+    else if (selectedExam.value === '8월 모평') selectedExam.value = '9월 모평'
+    else selectedExam.value = newList[0]?.value || '3월 학평'
+  }
+})
 
 // 드래그앤드롭 상태
 const isDragging = ref(false)
@@ -699,82 +725,71 @@ function triggerFileInput() {
 }
 
 function handleFileInputChange(e) {
-  const files = Array.from(e.target.files || [])
-  if (files.length > 0) {
-    addFilesToQueue(files)
+  const file = e.target.files?.[0]
+  if (file) {
+    processSingleFile(file)
   }
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
 function handleFileDrop(e) {
   isDragging.value = false
-  const files = Array.from(e.dataTransfer.files || [])
-  if (files.length > 0) {
-    addFilesToQueue(files)
+  const file = e.dataTransfer.files?.[0]
+  if (file) {
+    processSingleFile(file)
   }
 }
 
 /**
- * 다중 파일 큐 등록 및 순차 파싱
- * (대교협 모의고사 엑셀 .xlsx 최우선 1순위 파싱)
+ * 단일 엑셀 파일 등록 및 실시간 즉시 파싱
+ * (회차별 단일 파일 업로드 구조로 100% 반응형 및 무한대기 방지)
  */
-async function addFilesToQueue(files) {
-  const newItems = files.map(file => {
-    return {
-      id: `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      file,
-      name: file.name,
-      size: file.size,
-      selectedGrade: selectedGrade.value,
-      status: 'pending', // pending, parsing, success, error
-      error: '',
-      students: [],
-      parsedExamName: '',
-      parsedClass: ''
-    }
-  })
+async function processSingleFile(file) {
+  clearAllFiles()
 
-  fileList.value.push(...newItems)
-
-  for (const item of newItems) {
-    try {
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('파일 처리 시간 초과 (7초)')), 7000)
-      )
-      await Promise.race([processFileItem(item), timeoutPromise])
-    } catch (err) {
-      console.error(`파일 ${item.name} 처리 중 예외:`, err)
-      item.status = 'error'
-      item.error = err.message || '처리 오류'
-    }
+  const itemObj = {
+    id: `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    file,
+    name: file.name,
+    size: file.size,
+    selectedGrade: selectedGrade.value,
+    selectedExam: selectedExam.value,
+    status: 'parsing',
+    error: '',
+    students: [],
+    parsedExamName: selectedExam.value,
+    parsedClass: ''
   }
-}
 
-async function processFileItem(item) {
-  item.status = 'parsing'
+  fileList.value.push(itemObj)
+  const targetItem = fileList.value[0]
+
   try {
-    const res = await parseMockExamReportFile(item.file, {
-      defaultGrade: item.selectedGrade,
+    // UI 스피너 즉각 노출을 위한 짧은 틱
+    await new Promise(r => setTimeout(r, 50))
+
+    const res = await parseMockExamReportFile(file, {
+      defaultGrade: targetItem.selectedGrade,
+      examName: targetItem.selectedExam,
       uploadDate: now
     })
 
-    if (!res.success) {
-      item.status = 'error'
-      item.error = res.error || '성적 데이터를 추출하지 못했습니다.'
-      return
-    }
-
-    item.status = 'success'
-    item.students = res.students
-    item.parsedExamName = res.meta?.examName || ''
-    item.parsedClass = res.meta?.classNum || ''
-    if (res.meta?.grade) {
-      item.selectedGrade = res.meta.grade
+    if (!res || !res.success) {
+      targetItem.status = 'error'
+      targetItem.error = res?.error || '성적 데이터를 추출하지 못했습니다.'
+    } else {
+      targetItem.status = 'success'
+      targetItem.students = res.students || []
+      targetItem.parsedExamName = targetItem.selectedExam || res.meta?.examName || ''
+      targetItem.parsedClass = res.meta?.classNum || ''
+      if (res.meta?.grade) {
+        targetItem.selectedGrade = res.meta.grade
+      }
     }
   } catch (err) {
-    console.error(`[Mock Parser] ${item.name} 파싱 실패:`, err)
-    item.status = 'error'
-    item.error = err.message || '파일 처리 중 오류가 발생했습니다.'
+    console.error(`[Mock Parser] ${targetItem.name} 처리 오류:`, err)
+    targetItem.status = 'error'
+    targetItem.error = err.message || '파일 처리 중 오류가 발생했습니다.'
   }
 }
 
@@ -825,7 +840,7 @@ function exportParsedToExcel() {
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, targetSheetName.value)
 
-  const fileName = `${targetSheetName.value}_성적일람표_${selectedGrade.value}학년_${todayFormatted.value.replace(/[\s년월]/g, '_')}.xlsx`
+  const fileName = `${targetSheetName.value}_${selectedExam.value}_${selectedGrade.value}학년_${todayFormatted.value.replace(/[\s년월]/g, '_')}.xlsx`
   XLSX.writeFile(wb, fileName)
 }
 
@@ -901,10 +916,10 @@ async function handleSaveToGoogleSheet() {
 
     // 5. 사용자 안내 다이얼로그
     dialog.alert(
-      `📋 총 ${allParsedStudents.value.length}명(전교생)의 모의고사 성적이 클립보드에 복사되었습니다!\n\n` +
+      `📋 총 ${allParsedStudents.value.length}명(전교생 ${selectedExam.value}) 성적이 클립보드에 복사되었습니다!\n\n` +
       `1. 새 탭으로 열린 구글 시트에서 [${targetSheetName.value}] 탭을 클릭하세요.\n` +
       `   (만약 탭이 없다면 시트 하단 '+'를 눌러 '${targetSheetName.value}' 탭을 생성하세요)\n` +
-      `2. [A1] 셀을 클릭하고 [Ctrl + V]를 누르면 11개 반 전체 성적이 즉시 반영됩니다!\n\n` +
+      `2. [A1] 셀을 클릭하고 [Ctrl + V]를 누르면 전교생 성적이 즉시 반영됩니다!\n\n` +
       `* 안전한 데이터 보관을 위해 '${targetSheetName.value}' 전용 엑셀 백업 파일도 함께 다운로드되었습니다.`
     )
   } catch (e) {
