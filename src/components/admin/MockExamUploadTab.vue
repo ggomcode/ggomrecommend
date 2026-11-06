@@ -35,132 +35,260 @@
       </div>
     </div>
 
-    <!-- 2. [아코디언 가이드] 대교협 상담프로그램 엑셀 다운로드 방법 안내 -->
+    <!-- 2. [아코디언 가이드] 모의고사 성적 등록 매뉴얼: PDF 저장 ➔ 대교협 등록 ➔ 엑셀 추출 ➔ 시트 반영 -->
     <div class="bg-white rounded-2xl shadow-sm border border-indigo-200/80 overflow-hidden transition-all duration-200">
       <!-- 아코디언 헤더 (클릭 시 접기/펼치기) -->
       <button
         type="button"
         @click="isGuideOpen = !isGuideOpen"
-        class="w-full p-4 sm:p-5 flex items-center justify-between gap-3 text-left bg-linear-to-r from-indigo-50/70 via-sky-50/50 to-white hover:bg-indigo-50/90 transition-colors border-none cursor-pointer"
+        class="w-full p-4 sm:p-5 flex items-center justify-between gap-3 text-left bg-linear-to-r from-indigo-50/80 via-sky-50/60 to-white hover:bg-indigo-50 transition-colors border-none cursor-pointer"
       >
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
-            <FileSpreadsheet :size="20" />
+          <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
+            <FileSpreadsheet :size="22" />
           </div>
           <div>
             <div class="flex items-center gap-2">
               <span class="px-2 py-0.5 rounded-md bg-indigo-600 text-white text-[10.5px] font-black tracking-wide">
                 필독 가이드
               </span>
-              <span class="text-xs sm:text-sm font-black text-slate-800">
-                대교협 프로그램에서 모의고사 엑셀(.xlsx) 파일 내려받는 방법
+              <span class="text-xs sm:text-sm font-black text-slate-900">
+                모의고사 성적 등록 매뉴얼: PDF 저장 ➔ 대교협 등록 ➔ 엑셀 추출 ➔ 시트 반영
               </span>
             </div>
-            <p class="text-xs text-slate-500 mt-0.5 m-0 hidden sm:block">
-              대교협에서 1) <strong>수능/모의 성적표 PDF 등록</strong> 후 2) <strong>선택회차 입력내용 엑셀다운</strong>을 클릭하여 받는 방법 안내입니다.
+            <p class="text-xs text-slate-500 mt-1 m-0 hidden sm:block">
+              1) 성적통지시스템 PDF 저장 방법 ➔ 2) 대교협 프로그램에 PDF 업로드 ➔ 3) 대교협 엑셀 다운로드 ➔ 4) 본 시스템 등록 전 과정 안내
             </p>
           </div>
         </div>
 
-        <div class="flex items-center gap-2 shrink-0 text-indigo-700 font-bold text-xs">
-          <span>{{ isGuideOpen ? '가이드 접기' : '방법 보기' }}</span>
+        <div class="flex items-center gap-2 shrink-0 text-indigo-700 font-bold text-xs bg-white px-3 py-1.5 rounded-xl border border-indigo-200 shadow-2xs">
+          <span>{{ isGuideOpen ? '가이드 접기' : '전체 가이드 펼쳐보기' }}</span>
           <ChevronUp v-if="isGuideOpen" :size="18" />
           <ChevronDown v-else :size="18" />
         </div>
       </button>
 
       <!-- 아코디언 본문 -->
-      <div v-show="isGuideOpen" class="p-5 sm:p-6 border-t border-indigo-100 bg-white space-y-5">
-        <!-- 4단계 프로세스 카드 그리드 -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-3.5">
-          <!-- STEP 1 -->
-          <div class="bg-slate-50 rounded-xl p-4 border border-slate-200/80 flex flex-col justify-between space-y-2">
-            <div>
-              <div class="flex items-center gap-2 mb-1.5">
-                <span class="w-5 h-5 rounded-full bg-slate-800 text-white text-[11px] font-black flex items-center justify-center">1</span>
-                <span class="text-xs font-bold text-slate-800">대교협 메뉴 이동</span>
+      <div v-show="isGuideOpen" class="p-5 sm:p-7 border-t border-indigo-100 bg-white space-y-7">
+        
+        <!-- 4단계 핵심 프로세스 카드 그리드 -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <!-- STEP 1: PDF 저장 -->
+          <div class="bg-slate-50/80 rounded-2xl p-4.5 border border-slate-200/90 flex flex-col justify-between space-y-3 relative hover:border-indigo-300 transition-colors">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="w-6 h-6 rounded-full bg-slate-800 text-white text-xs font-black flex items-center justify-center">1</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">출발 단계</span>
               </div>
+              <h4 class="text-xs sm:text-sm font-black text-slate-900 m-0">성적일람표 PDF 저장</h4>
               <p class="text-[11.5px] text-slate-600 m-0 leading-relaxed">
-                대교협 상담프로그램 상단 메뉴에서<br />
-                <strong class="text-slate-900">[학생자료입력/생성]</strong> → <strong class="text-indigo-700">[수능/모의고사 성적 DB 생성]</strong> 창으로 이동합니다.
+                교육청 학평 성적처리시스템 또는 평가원 수능성적통지시스템에서 <strong>[학급별 성적일람표]</strong>를 조회합니다.
               </p>
+              <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200/70 text-[11px] text-amber-900 leading-snug">
+                <strong>💡 리포트 뷰어 저장 요령:</strong><br />
+                화면에 '저장' 버튼이 없는 경우, 상단 <strong>[인쇄(프린터 모양)]</strong>를 누른 후 인쇄 대상을 <strong class="text-indigo-800">'PDF로 저장'</strong>으로 선택하여 파일로 저장하세요.
+              </div>
             </div>
-            <div class="pt-2 text-[10.5px] text-slate-400 border-t border-slate-200/60 font-mono">
-              메뉴: 수능/모의고사 성적 DB 생성
+            <div class="pt-2 text-[10.5px] text-slate-500 border-t border-slate-200/60 font-mono">
+              결과: 반별 .pdf 파일 확보
             </div>
           </div>
 
-          <!-- STEP 2 -->
-          <div class="bg-slate-50 rounded-xl p-4 border border-slate-200/80 flex flex-col justify-between space-y-2">
-            <div>
-              <div class="flex items-center gap-2 mb-1.5">
-                <span class="w-5 h-5 rounded-full bg-slate-800 text-white text-[11px] font-black flex items-center justify-center">2</span>
-                <span class="text-xs font-bold text-slate-800">학년 & 회차 선택</span>
+          <!-- STEP 2: 대교협 PDF 등록 -->
+          <div class="bg-blue-50/50 rounded-2xl p-4.5 border border-blue-200 flex flex-col justify-between space-y-3 relative hover:border-blue-400 transition-colors">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-black flex items-center justify-center">2</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">대교협 등록</span>
               </div>
-              <p class="text-[11.5px] text-slate-600 m-0 leading-relaxed">
-                상단에서 <strong class="text-slate-900">1학년 / 2학년 / 3학년</strong> 중 등록할 학년 라디오를 선택하고, 해당 <strong class="text-indigo-700">모의고사 회차</strong>(예: 3학년 3월, 2학년 3월 등)를 선택합니다.
+              <h4 class="text-xs sm:text-sm font-black text-blue-950 m-0">대교협에 PDF 등록</h4>
+              <p class="text-[11.5px] text-blue-950/80 m-0 leading-relaxed">
+                대교협 프로그램 상단 메뉴 <strong>[학생자료입력/생성]</strong> ➔ <strong>[수능/모의고사 성적 DB 생성]</strong> 창으로 이동합니다.<br />
+                해당 학년(1·2·3학년)과 시험 회차를 선택합니다.
               </p>
-            </div>
-            <div class="pt-2 text-[10.5px] text-slate-400 border-t border-slate-200/60 font-mono">
-              회차: 1·2·3학년 해당 모의고사 선택
-            </div>
-          </div>
-
-          <!-- STEP 3 (선행 필수: PDF 등록) -->
-          <div class="bg-indigo-50/60 rounded-xl p-4 border border-indigo-200 flex flex-col justify-between space-y-2 relative">
-            <span class="absolute top-2.5 right-2.5 text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-indigo-200/80 text-indigo-900">
-              선행 필수
-            </span>
-            <div>
-              <div class="flex items-center gap-2 mb-1.5">
-                <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-black flex items-center justify-center">3</span>
-                <span class="text-xs font-bold text-indigo-950">PDF 성적표 등록</span>
-              </div>
-              <p class="text-[11.5px] text-indigo-950/80 m-0 leading-relaxed">
-                우측 파란색 버튼인<br />
-                <span class="inline-block my-1 px-2 py-0.5 rounded bg-blue-600 text-white font-bold text-[11px] shadow-2xs">
+              <div class="p-2.5 rounded-lg bg-white border border-blue-300 text-[11px] text-blue-900 leading-snug shadow-2xs">
+                <strong>👉 우측 상단 파란색 버튼 클릭:</strong><br />
+                <span class="inline-block mt-1 px-2.5 py-1 rounded bg-blue-600 text-white font-black text-[11px]">
                   수능/모의 성적표 PDF 등록
-                </span>을 클릭하여 교육청/평가원 성적표 PDF를 등록합니다.
-              </p>
-            </div>
-            <div class="pt-2 text-[10.5px] text-indigo-700 border-t border-indigo-200/60">
-              ✓ 대교협이 11개 반 전교생을 자동 DB화
-            </div>
-          </div>
-
-          <!-- STEP 4 (핵심: 엑셀다운) -->
-          <div class="bg-emerald-50/60 rounded-xl p-4 border border-emerald-200 flex flex-col justify-between space-y-2 relative">
-            <span class="absolute top-2.5 right-2.5 text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-emerald-200/80 text-emerald-900">
-              엑셀 다운
-            </span>
-            <div>
-              <div class="flex items-center gap-2 mb-1.5">
-                <span class="w-5 h-5 rounded-full bg-emerald-600 text-white text-[11px] font-black flex items-center justify-center">4</span>
-                <span class="text-xs font-bold text-emerald-950">전교생 엑셀 다운</span>
+                </span><br />
+                <span class="text-[10px] text-slate-500 mt-1 block">STEP 1의 PDF를 등록하면 대교협이 전교생을 100% 오류 없이 DB화합니다.</span>
               </div>
-              <p class="text-[11.5px] text-emerald-950/80 m-0 leading-relaxed">
-                등록 후, 우측 아래의<br />
-                <span class="inline-flex items-center gap-1 my-1 px-2 py-0.5 rounded bg-white border border-emerald-500 text-emerald-800 font-bold text-[11px] shadow-2xs">
-                  <FileSpreadsheet :size="12" class="text-emerald-600" />
-                  선택회차 입력내용 엑셀다운
-                </span>을 클릭해 <code class="font-bold text-emerald-900">.xlsx</code> 파일로 저장합니다.
-              </p>
             </div>
-            <div class="pt-2 text-[10.5px] text-emerald-700 font-bold border-t border-emerald-200/60">
-              ✓ 11개 반 전체가 1개 파일로 통합 저장됨
+            <div class="pt-2 text-[10.5px] text-blue-700 border-t border-blue-200 font-bold">
+              ✓ 대교협 자체 DB 생성 완료
+            </div>
+          </div>
+
+          <!-- STEP 3: 대교협 엑셀 다운로드 -->
+          <div class="bg-emerald-50/50 rounded-2xl p-4.5 border border-emerald-200 flex flex-col justify-between space-y-3 relative hover:border-emerald-400 transition-colors">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-black flex items-center justify-center">3</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">엑셀 추출 (핵심)</span>
+              </div>
+              <h4 class="text-xs sm:text-sm font-black text-emerald-950 m-0">전교생 엑셀 다운로드</h4>
+              <p class="text-[11.5px] text-emerald-950/80 m-0 leading-relaxed">
+                PDF 등록이 끝나면, 바로 그 창의 우측 하단에 있는 초록색 엑셀 아이콘 버튼을 클릭합니다.
+              </p>
+              <div class="p-2.5 rounded-lg bg-white border border-emerald-400 text-[11px] text-emerald-950 leading-snug shadow-2xs">
+                <strong>👉 우측 하단 주황 테두리 버튼 클릭:</strong><br />
+                <span class="inline-flex items-center gap-1.5 mt-1 px-2.5 py-1 rounded bg-white border-2 border-amber-500 text-slate-800 font-black text-[11px]">
+                  <FileSpreadsheet :size="13" class="text-emerald-600" />
+                  선택회차 입력내용 엑셀다운
+                </span><br />
+                <span class="text-[10px] text-emerald-700 font-medium mt-1 block">11개 반 전교생 300여 명의 성적이 담긴 .xlsx 파일이 컴퓨터로 다운로드됩니다.</span>
+              </div>
+            </div>
+            <div class="pt-2 text-[10.5px] text-emerald-700 border-t border-emerald-200 font-bold">
+              ✓ 통합 엑셀(.xlsx) 파일 확보
+            </div>
+          </div>
+
+          <!-- STEP 4: 본 시스템 등록 & 구글 시트 반영 -->
+          <div class="bg-indigo-50/50 rounded-2xl p-4.5 border border-indigo-200 flex flex-col justify-between space-y-3 relative hover:border-indigo-400 transition-colors">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center">4</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">최종 반영</span>
+              </div>
+              <h4 class="text-xs sm:text-sm font-black text-indigo-950 m-0">본 화면 업로드 & 반영</h4>
+              <p class="text-[11.5px] text-indigo-950/80 m-0 leading-relaxed">
+                다운로드받은 엑셀 파일(.xlsx)을 바로 아래 <strong>[드래그 & 드롭 영역]</strong>에 올려놓습니다.
+              </p>
+              <div class="p-2.5 rounded-lg bg-white border border-indigo-300 text-[11px] text-indigo-950 leading-snug shadow-2xs">
+                <strong>👉 구글 시트 1초 반영:</strong><br />
+                성적표가 파싱되면 상단의 <strong class="text-emerald-700">[구글 시트에 즉시 반영]</strong> 버튼을 누르고, 새 탭의 <code class="bg-indigo-50 px-1 font-bold text-indigo-800">{{ targetSheetName }}</code> 탭 <strong>A1 셀</strong>에서 <strong>Ctrl + V</strong> 누르면 끝!
+              </div>
+            </div>
+            <div class="pt-2 text-[10.5px] text-indigo-700 border-t border-indigo-200 font-bold">
+              ✓ 전교생 모의고사 DB 구축 완료!
             </div>
           </div>
         </div>
 
-        <!-- 하단 팁 카드 -->
-        <div class="rounded-xl p-3.5 bg-amber-50/80 border border-amber-200/80 flex items-start gap-2.5 text-xs text-amber-900 leading-relaxed">
-          <span class="text-base leading-none">💡</span>
-          <div>
-            <strong>1학년, 2학년, 3학년 모두 100% 동일한 방법으로 진행됩니다!</strong><br />
-            - 대교협 프로그램에서 1·2·3학년 모두 <strong>[수능/모의 성적표 PDF 등록]</strong> 후 <strong>[선택회차 입력내용 엑셀다운]</strong>을 받아 이곳에 업로드하시면 됩니다.<br />
-            - 엑셀 파일 내부의 학년(1, 2, 3) 정보가 그대로 보존되어 구글 시트 <code class="font-bold text-indigo-900">{{ targetSheetName }}</code>에 통합 적재되므로, <strong>[1학년 대입 분석]</strong>, <strong>[2학년 대입 분석]</strong>, <strong>[3학년 모의고사 분석]</strong> 메뉴에서 각 학년 데이터가 자동으로 정확하게 조회됩니다!
+        <!-- 실제 대교협 상담프로그램 화면 목업 (UI Preview) -->
+        <div class="rounded-2xl border border-slate-300 overflow-hidden shadow-xs bg-slate-100">
+          <!-- 윈도우 타이틀바 -->
+          <div class="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2 font-mono">
+              <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+              <span class="font-bold ml-1">대교협 대입상담프로그램 - [수능/모의고사 성적 DB 생성] 실제 화면 예시</span>
+            </div>
+            <span class="text-[10px] text-slate-300">💡 아래 두 버튼의 위치를 꼭 확인해 주세요!</span>
+          </div>
+
+          <!-- 목업 본체 (캡처 이미지 레이아웃 100% 재현) -->
+          <div class="p-4 sm:p-5 bg-slate-50 flex flex-col md:flex-row gap-5 justify-between items-start">
+            <!-- 좌측 옵션 영역 -->
+            <div class="space-y-4 flex-1">
+              <div class="flex items-center gap-3">
+                <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                <span class="text-sm font-bold text-slate-800">수능/모의고사 성적 DB 생성</span>
+                <div class="flex items-center gap-3 ml-4 text-xs font-semibold text-slate-700">
+                  <label class="flex items-center gap-1 cursor-pointer">
+                    <input type="radio" name="mock_grade_demo" disabled /> 1학년
+                  </label>
+                  <label class="flex items-center gap-1 cursor-pointer">
+                    <input type="radio" name="mock_grade_demo" disabled /> 2학년
+                  </label>
+                  <label class="flex items-center gap-1 cursor-pointer font-bold text-blue-700">
+                    <input type="radio" name="mock_grade_demo" checked disabled /> ● 3학년 (1·2학년도 동일)
+                  </label>
+                </div>
+              </div>
+
+              <!-- 모의고사 선택 바 -->
+              <div class="bg-white p-3 rounded-lg border border-slate-300 flex flex-col sm:flex-row sm:items-center gap-2 text-xs">
+                <span class="font-bold text-slate-600 shrink-0">&gt; 모의고사 선택:</span>
+                <div class="px-2.5 py-1 rounded bg-slate-100 border border-slate-300 font-mono font-bold text-slate-800 flex-1 truncate">
+                  2026년 03월 - 서울특별시교육청_3학년 (또는 해당 연월 모의고사)
+                </div>
+              </div>
+
+              <div class="text-[11px] text-rose-600 font-bold">
+                ※ [대교협 모의고사 전송] 학생 개인 정보는 제외하고 성적만 전송됩니다.
+              </div>
+              <div class="text-[11px] text-slate-500 space-y-0.5">
+                <div>- 응시하지 않은 영역은 해당 셀을 모두 빈칸으로 해야합니다.</div>
+                <div>- 과목명은 엑셀 콤보박스에 나타나는 과목명과 일치해야 합니다.</div>
+                <div>- .pdf 확장자만 업로드 가능합니다.</div>
+              </div>
+            </div>
+
+            <!-- 우측 핵심 버튼 그룹 (실제 캡처 화면 1:1 배치) -->
+            <div class="w-full md:w-72 bg-white p-3.5 rounded-xl border border-slate-300 space-y-2 shrink-0 shadow-xs">
+              <div class="text-[10.5px] font-bold text-slate-500 pb-1 border-b border-slate-200">
+                대교협 프로그램 우측 버튼 목록
+              </div>
+              
+              <!-- 1. 대교협 전송 버튼 -->
+              <button type="button" disabled class="w-full py-1.5 px-3 rounded bg-sky-700 text-white font-bold text-xs opacity-70 cursor-not-allowed">
+                대교협 모의고사 전송
+              </button>
+
+              <!-- 2. [핵심 버튼 1] 수능/모의 성적표 PDF 등록 -->
+              <div class="relative p-1.5 rounded-lg bg-blue-50 border-2 border-blue-500">
+                <div class="w-full py-1.5 px-3 rounded bg-blue-600 text-white font-black text-xs text-center shadow-xs">
+                  수능/모의 성적표 PDF 등록
+                </div>
+                <div class="mt-1 text-[10.5px] text-blue-900 font-black text-center">
+                  👆 1단계: 여기를 눌러 PDF 등록!
+                </div>
+              </div>
+
+              <!-- 3. 선택회차 삭제 등 -->
+              <button type="button" disabled class="w-full py-1 px-3 rounded bg-rose-200 text-rose-800 font-semibold text-[11px] opacity-60 cursor-not-allowed">
+                선택회차 삭제
+              </button>
+
+              <!-- 4. [핵심 버튼 2] 선택회차 입력내용 엑셀다운 -->
+              <div class="relative p-1.5 rounded-lg bg-amber-50 border-2 border-amber-500 mt-2">
+                <div class="w-full py-1.5 px-3 rounded bg-white border border-emerald-600 text-slate-900 font-black text-xs flex items-center justify-center gap-1.5 shadow-xs">
+                  <FileSpreadsheet :size="14" class="text-emerald-600" />
+                  <span>선택회차 입력내용 엑셀다운</span>
+                </div>
+                <div class="mt-1 text-[10.5px] text-amber-950 font-black text-center">
+                  👆 2단계: PDF 등록 후 여기를 눌러 엑셀 다운로드!
+                </div>
+              </div>
+
+              <!-- 5. 보조 버튼들 -->
+              <div class="space-y-1 pt-1 opacity-50">
+                <div class="text-[10px] text-center text-slate-500 border rounded py-0.5">수능/모의 통합엑셀양식 받기</div>
+                <div class="text-[10px] text-center text-slate-500 border rounded py-0.5">모의고사 가채점 양식 받기</div>
+              </div>
+            </div>
           </div>
         </div>
+
+        <!-- 1·2·3학년 공통 안내 및 FAQ 카드 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+          <div class="rounded-xl p-3.5 bg-indigo-50/70 border border-indigo-200 text-xs text-indigo-950 leading-relaxed space-y-1">
+            <div class="font-black flex items-center gap-1.5 text-indigo-900">
+              <span>📌</span>
+              <span>1학년, 2학년, 3학년 모두 100% 동일합니다</span>
+            </div>
+            <p class="text-[11.5px] text-indigo-950/80 m-0">
+              대교협 창 상단에서 <strong>1학년 / 2학년 / 3학년</strong> 중 해당하는 학년 라디오를 선택하고, 똑같이 <strong>[수능/모의 성적표 PDF 등록]</strong> ➔ <strong>[선택회차 입력내용 엑셀다운]</strong>을 받아 올리시면 됩니다.<br />
+              시트에 적재된 후 <strong>[1학년 대입 분석]</strong>, <strong>[2학년 대입 분석]</strong>, <strong>[3학년 모의고사 분석]</strong> 메뉴에서 각 학년 데이터가 자동으로 정확하게 조회됩니다.
+            </p>
+          </div>
+
+          <div class="rounded-xl p-3.5 bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-950 leading-relaxed space-y-1">
+            <div class="font-black flex items-center gap-1.5 text-emerald-900">
+              <span>✨</span>
+              <span>왜 대교협 엑셀 방식을 사용하나요?</span>
+            </div>
+            <p class="text-[11.5px] text-emerald-950/80 m-0">
+              일부 교육청 성적표 PDF는 벡터 선/드로잉으로 출력되어 웹 브라우저에서 텍스트 인식이 멈추거나 누락될 수 있습니다.<br />
+              반면 대교협의 <strong>[선택회차 입력내용 엑셀다운]</strong>을 통하면 11개 반 전교생 300여 명의 점수가 <strong>오차 0%의 순수 숫자 엑셀로 일괄 추출</strong>되므로 가장 빠르고 안전합니다!
+            </p>
+          </div>
+        </div>
+
       </div>
     </div>
 
