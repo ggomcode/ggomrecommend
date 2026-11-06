@@ -1,7 +1,7 @@
 <template>
   <div class="py-8 px-4 sm:px-10 max-w-6xl mx-auto space-y-6">
     <!-- 1. 헤더 안내 배너 -->
-    <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-lg border border-indigo-900/40">
+    <div class="bg-linear-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-lg border border-indigo-900/40">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div class="flex items-center gap-2 mb-1.5">
@@ -41,7 +41,7 @@
       <button
         type="button"
         @click="isGuideOpen = !isGuideOpen"
-        class="w-full p-4 sm:p-5 flex items-center justify-between gap-3 text-left bg-gradient-to-r from-indigo-50/70 via-sky-50/50 to-white hover:bg-indigo-50/90 transition-colors border-none cursor-pointer"
+        class="w-full p-4 sm:p-5 flex items-center justify-between gap-3 text-left bg-linear-to-r from-indigo-50/70 via-sky-50/50 to-white hover:bg-indigo-50/90 transition-colors border-none cursor-pointer"
       >
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
@@ -279,7 +279,7 @@
       <!-- 진행률 바 -->
       <div v-if="fileList.length > 0" class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
         <div
-          class="h-full bg-gradient-to-r from-emerald-500 to-indigo-500 transition-all duration-300"
+          class="h-full bg-linear-to-r from-emerald-500 to-indigo-500 transition-all duration-300"
           :style="{ width: `${fileList.length ? (completedCount / fileList.length) * 100 : 0}%` }"
         ></div>
       </div>
@@ -364,7 +364,7 @@
     <!-- 5. 통합 파싱 결과 미리보기 및 저장 액션 -->
     <div v-if="allParsedStudents.length > 0" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 space-y-4">
       <!-- 5-1. 구글 시트 반영 가이드 배너 -->
-      <div class="rounded-xl p-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 border border-emerald-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div class="rounded-xl p-4 bg-linear-to-r from-emerald-50 via-teal-50 to-indigo-50 border border-emerald-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div class="space-y-1">
           <div class="flex items-center gap-2">
             <span class="text-base">📋</span>
@@ -382,7 +382,7 @@
           type="button"
           @click="handleSaveToGoogleSheet"
           :disabled="isSavingToSheet"
-          class="shrink-0 px-4 py-2.5 text-xs font-black text-white bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 disabled:opacity-50 rounded-xl border-none cursor-pointer transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+          class="shrink-0 px-4 py-2.5 text-xs font-black text-white bg-linear-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 disabled:opacity-50 rounded-xl border-none cursor-pointer transition-all shadow-md hover:shadow-lg flex items-center gap-2"
         >
           <UploadCloud :size="15" />
           <span>{{ isSavingToSheet ? '구글 시트 반영 중…' : `구글 시트 [${targetSheetName}]에 즉시 반영` }}</span>
