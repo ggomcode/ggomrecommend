@@ -1,12 +1,145 @@
-import * as pdfjsLib from 'pdfjs-dist/build/pdf.js'
+import * as pdfjsLib from 'pdfjs-dist'
 import * as XLSX from 'xlsx'
 
-// PDF.js 워커 설정 (Vite 브라우저 환경)
-if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.js',
-    import.meta.url
-  ).toString()
+// PDF.js 워커 설정 (안정적인 CDN 워커 사용 - 브라우저/Vite 환경 호환)
+if (typeof window !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+}
+
+/**
+ * PDF 본문 텍스트 레이어로부터 학년, 반, 응시 월(시험명), 학교명, 실시일 정밀 추출
+ * - 교육청 전국연합학력평가 표준 성적일람표 양식 (상단 학년/반/학교명 테이블)
+ * - 평가원 모의평가 양식 (제목 및 학생 9자리 수험번호 체계)
+ * - 일반 텍스트 라인 (학년/반 표기)
+ * @param {Array} allRowCells Y좌표별 클러스터링된 행 셀 목록
+ * @param {Array} allTextItems 원시 PDF 텍스트 아이템 배열
+ * @returns {Object} { grade, classNum, schoolName, examName, year, examDate }
+ */
+export function extractMetaFromPdfContent(allRowCells = [], allTextItems = []) {
+  const meta = {
+    grade: null,
+    classNum: null,
+    schoolName: '',
+    examName: '',
+    year: '',
+    examDate: ''
+  }
+
+  // 1. 공백 제거 전체 텍스트에서 시험명 및 학년도 정규식 추출
+  const fullTextClean = allTextItems.map(it => it.str || '').join('').replace(/\s+/g, '')
+
+  // 1-1. 표준 시험명 매칭 (예: '2026학년도 10월 전국연합학력평가', '2027학년도 대학수학능력시험 6월 모의평가')
+  const mExam = fullTextClean.match(/(\d{4})학년도.*?(\d{1,2})월.*?(전국연합학력평가|모의평가|학력평가|대학수학능력시험)/)
+  if (mExam) {
+    meta.year = mExam[1]
+    const month = mExam[2]
+    const type = mExam[3].includes('모의평가') ? '모평' : '학평'
+    meta.examName = `${month}월 ${type}`
+  } else {
+    // 3월, 4월, 6월, 7월, 9월, 10월, 11월 단순 탐색
+    const mSimple = fullTextClean.match(/(\d{1,2})월(전국연합학력평가|모의평가|학평|모평)/)
+    if (mSimple) {
+      meta.examName = `${mSimple[1]}월 ${mSimple[2].includes('모평') || mSimple[2].includes('모의평가') ? '모평' : '학평'}`
+    }
+  }
+
+  // 2. 교육청 학평 표준 헤더 테이블 탐색: [학년, 반, 학교명, 학급인원, 실시일]
+  // Y좌표 내림차순(상단 -> 하단) 정렬된 allRowCells를 순회
+  for (let idx = 0; idx < allRowCells.length; idx++) {
+    const row = allRowCells[idx]
+    const cleanLine = (row.lineStr || '').replace(/\s+/g, '')
+
+    if (cleanLine.includes('학년') && cleanLine.includes('반') && cleanLine.includes('학교명')) {
+      // 헤더 행 발견 -> 바로 아래 1~4개 행 내에서 [학년, 반, 학교명] 데이터 행 탐색
+      for (let offset = 1; offset <= 4 && (idx + offset) < allRowCells.length; offset++) {
+        const nextRow = allRowCells[idx + offset]
+        const c = nextRow.cells || []
+
+        // c: ["3", "1", "포곡고등학교", "11", "11/255902", ..., "2026.10.20."]
+        if (c.length >= 3 && /^[1-3]$/.test(c[0]) && /^\d{1,2}$/.test(c[1])) {
+          meta.grade = Number(c[0])
+          meta.classNum = String(parseInt(c[1], 10))
+          meta.schoolName = c[2]
+
+          const dateCell = c.find(val => /\d{4}\.\s*\d{1,2}\.\s*\d{1,2}/.test(val))
+          if (dateCell) meta.examDate = dateCell
+          break
+        }
+      }
+      if (meta.classNum) break
+    }
+  }
+
+  // 3. 평가원 모의평가(6모/9모) 양식 감지 및 학교명·반 추출
+  // 예: '학교명(학원명):경기포곡고등학교1반'
+  for (const row of allRowCells) {
+    const clean = (row.lineStr || '').replace(/\s+/g, '')
+    const mKice = clean.match(/학교명.*?[:：]([가-힣\s]+?)(\d{1,2})반/)
+    if (mKice) {
+      meta.schoolName = mKice[1].trim()
+      meta.classNum = String(parseInt(mKice[2], 10))
+      meta.grade = 3
+      break
+    }
+  }
+
+  // 만약 헤더에서 반을 못 찾았을 경우: 평가원 9자리 수험번호(예: 178350103) 분석
+  if (!meta.classNum) {
+    for (const row of allRowCells) {
+      const examineeCell = row.cells.find(c => /^\d{9}$/.test(c))
+      if (examineeCell) {
+        // 수험번호 6~7번째 자리가 반
+        meta.classNum = String(parseInt(examineeCell.slice(5, 7), 10))
+        meta.grade = 3 // 평가원 모평은 고3
+        break
+      }
+    }
+  }
+
+  // 4. 일반 텍스트 내에서 "3학년 1반" 또는 "제 1 반" 형태 감지
+  if (!meta.classNum) {
+    for (const row of allRowCells) {
+      const clean = row.lineStr.replace(/\s+/g, '')
+      const m = clean.match(/([1-3])학년\s*(\d{1,2})반/)
+      if (m) {
+        meta.grade = Number(m[1])
+        meta.classNum = String(parseInt(m[2], 10))
+        break
+      }
+    }
+  }
+
+  return meta
+}
+
+/**
+ * 파일명에서 학년, 반, 응시 월, 시험명 보조 추출 (최후의 비상용 Fallback)
+ */
+export function parseMetaFromFileName(fileName = '') {
+  const meta = { grade: null, classNum: null, month: null, examName: null }
+  if (!fileName) return meta
+
+  // 반 탐색: '1반', '_1반', '10반' 등
+  const classMatch = fileName.match(/(?:^|[^\d])(\d{1,2})\s*반/)
+  if (classMatch) {
+    meta.classNum = String(parseInt(classMatch[1], 10))
+  }
+
+  // 월 탐색: '3월', '6월', '9월', '10월', '11월'
+  const monthMatch = fileName.match(/(?:^|[^\d])(\d{1,2})\s*월/)
+  if (monthMatch) {
+    meta.month = Number(monthMatch[1])
+    const isMopyeong = fileName.includes('모평') || fileName.includes('모의평가')
+    meta.examName = `${meta.month}월 ${isMopyeong ? '모평' : '학평'}`
+  }
+
+  // 학년 탐색: '1학년', '2학년', '3학년' 또는 '고1', '고2', '고3'
+  const gradeMatch = fileName.match(/([1-3])\s*학년|고\s*([1-3])/i)
+  if (gradeMatch) {
+    meta.grade = Number(gradeMatch[1] || gradeMatch[2])
+  }
+
+  return meta
 }
 
 /**
@@ -91,26 +224,37 @@ async function parseMockExamPdf(arrayBuffer, options) {
   try {
     const loadingTask = pdfjsLib.getDocument({
       data: new Uint8Array(arrayBuffer),
+      cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
       cMapPacked: true
     })
-    doc = await loadingTask.promise
+    // 10초 타임아웃 레이스로 워커 먹통/Hang 완벽 차단
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('PDF 파싱 1차 시간 초과 (10초)')), 10000)
+    )
+    doc = await Promise.race([loadingTask.promise, timeoutPromise])
   } catch (err) {
-    console.error('PDF 로드 실패:', err)
-    throw new Error('PDF 파일을 열 수 없습니다: ' + (err.message || '파일 손상 또는 미지원 형식'))
+    console.warn('PDF cMaps 1차 로드 실패 또는 시간 초과, 기본 모드로 재시도:', err)
+    try {
+      const fallbackTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) })
+      const timeoutPromise2 = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('PDF 파싱 2차 시간 초과 (8초)')), 8000)
+      )
+      doc = await Promise.race([fallbackTask.promise, timeoutPromise2])
+    } catch (err2) {
+      console.error('PDF 로드 최종 실패:', err2)
+      throw new Error('PDF 파일을 열 수 없습니다: ' + (err2.message || '파일 손상 또는 미지원 형식'))
+    }
   }
 
   const allRowCells = []
+  const allRawTextItems = []
   let totalTextItems = 0
-  let detectedTitle = ''
-  let detectedSchool = ''
-  let detectedGrade = options.defaultGrade
-  let detectedClass = ''
-  let detectedExamName = ''
 
   for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
     const page = await doc.getPage(pageNum)
     const content = await page.getTextContent()
     totalTextItems += content.items.length
+    allRawTextItems.push(...content.items)
 
     // Y 좌표별로 항목 수집
     const rows = {}
@@ -147,25 +291,6 @@ async function parseMockExamPdf(arrayBuffer, options) {
 
       const lineStr = cells.join(' ')
       allRowCells.push({ page: pageNum, y, cells, lineStr })
-
-      // 제목 및 시험명 감지
-      if (!detectedTitle && (lineStr.includes('전국연합학력평가') || lineStr.includes('모의평가') || lineStr.includes('대학수학능력시험'))) {
-        detectedTitle = lineStr
-        const mExam = lineStr.match(/([0-9]{1,2})\s*월\s*(전국연합학력평가|모의평가|학평|모평)?/)
-        if (mExam) {
-          detectedExamName = `${mExam[1]}월 학평`
-          if (lineStr.includes('모의평가')) detectedExamName = `${mExam[1]}월 모평`
-        }
-      }
-
-      // 학년·반·학교 감지 (예: "3 1 포곡고등학교", cells: ["3", "1", "포곡고등학교", ...])
-      if (!detectedClass && cells.length >= 3) {
-        if (/^[1-3]$/.test(cells[0]) && /^\d{1,2}$/.test(cells[1]) && /고등학교|고|학교/.test(cells[2])) {
-          detectedGrade = Number(cells[0])
-          detectedClass = String(cells[1])
-          detectedSchool = cells[2]
-        }
-      }
     }
   }
 
@@ -179,35 +304,54 @@ async function parseMockExamPdf(arrayBuffer, options) {
     }
   }
 
-  // 2. 양식 자동 분류
-  const isMoeReport = allRowCells.some(r => r.lineStr.includes('전국연합학력평가') || r.lineStr.includes('성적일람표1(학급별)'))
-  const isKiceReport = allRowCells.some(r => r.lineStr.includes('대학수학능력시험') || r.lineStr.includes('모의평가 성적일람표'))
+  // 2. ★ 핵심: 파일명이 아닌 PDF 본문 텍스트에서 학년, 반, 응시 월(시험명), 학교명 우선 추출!
+  const pdfMeta = extractMetaFromPdfContent(allRowCells, allRawTextItems)
+  const fileMeta = parseMetaFromFileName(options.fileName) // 최후의 보루 fallback
+
+  const effectiveGrade = pdfMeta.grade || fileMeta.grade || options.defaultGrade || 3
+  const effectiveClass = pdfMeta.classNum || fileMeta.classNum || '1'
+  const effectiveExamName = pdfMeta.examName || fileMeta.examName || '전국연합 학평'
+  const effectiveSchool = pdfMeta.schoolName || ''
+
+  // 3. 양식 자동 분류 (공백 제거 텍스트 기준 판별)
+  const fullTextClean = allRawTextItems.map(it => it.str || '').join('').replace(/\s+/g, '')
+  const isKiceReport = fullTextClean.includes('대학수학능력시험') || 
+                       fullTextClean.includes('모의평가성적일람표') || 
+                       allRawTextItems.some(it => /^\d{9}$/.test(it.str?.trim()))
+  const isMoeReport = fullTextClean.includes('전국연합학력평가') || 
+                      fullTextClean.includes('성적일람표1(학급별)') ||
+                      (!isKiceReport && allRowCells.some(r => r.cells.length >= 10 && /^\d{1,2}$/.test(r.cells[0]) && /^[가-힣]{2,4}$/.test(r.cells[1])))
 
   let students = []
   let formatType = 'UNKNOWN'
 
-  if (isMoeReport || (!isKiceReport && allRowCells.some(r => r.cells.length >= 20 && /^\d{1,2}$/.test(r.cells[0]) && /^[가-힣]{2,4}$/.test(r.cells[1])))) {
-    formatType = 'MOE_ACADEMIC_EVALUATION' // 교육청 학평 (가로 1행)
-    students = parseMoeClusteredRows(allRowCells, {
-      grade: detectedGrade || options.defaultGrade,
-      classNum: detectedClass || '1',
-      examName: detectedExamName || '10월 학평'
+  if (isKiceReport) {
+    formatType = 'KICE_MOCK_EVALUATION' // 평가원 모평 (6모·9모: 수험번호 9자리 + 4행 블록 구조)
+    students = parseKicePages(doc, {
+      grade: effectiveGrade,
+      classNum: effectiveClass,
+      examName: effectiveExamName
     })
-  } else if (isKiceReport) {
-    formatType = 'KICE_MOCK_EVALUATION' // 평가원 모평 (수험번호 9자리 + 4행 블록)
-    students = parseKiceClusteredRows(allRowCells, {
-      grade: detectedGrade || options.defaultGrade,
-      classNum: detectedClass || '1',
-      examName: detectedExamName || '6월 모평'
+  } else if (isMoeReport) {
+    formatType = 'MOE_ACADEMIC_EVALUATION' // 교육청 학평 (3모·4모·7모·10모: 가로 1행 구조)
+    students = parseMoeClusteredRows(allRowCells, {
+      grade: effectiveGrade,
+      classNum: effectiveClass,
+      examName: effectiveExamName
     })
   } else {
     // 범용
     formatType = 'GENERAL_REPORT'
     students = parseMoeClusteredRows(allRowCells, {
-      grade: detectedGrade || options.defaultGrade,
-      classNum: detectedClass || '1',
-      examName: detectedExamName || '모의고사'
+      grade: effectiveGrade,
+      classNum: effectiveClass,
+      examName: effectiveExamName
     })
+  }
+
+  // parseKicePages가 비동기이므로 await 처리 필요
+  if (students instanceof Promise) {
+    students = await students
   }
 
   return {
@@ -216,11 +360,12 @@ async function parseMockExamPdf(arrayBuffer, options) {
     meta: {
       fileName: options.fileName,
       totalTextItems,
-      detectedTitle: detectedTitle || detectedExamName,
-      examName: detectedExamName || (formatType === 'KICE_MOCK_EVALUATION' ? '6월 모평' : '10월 학평'),
-      grade: detectedGrade || options.defaultGrade,
-      classNum: detectedClass || '1',
-      schoolName: detectedSchool,
+      detectedTitle: effectiveExamName,
+      examName: effectiveExamName,
+      grade: effectiveGrade,
+      classNum: effectiveClass,
+      schoolName: effectiveSchool,
+      examDate: pdfMeta.examDate,
       studentCount: students.length,
       targetAdmissionYear: options.targetAdmissionYear,
       targetAcademicYear: options.targetAcademicYear,
@@ -237,14 +382,20 @@ function parseMoeClusteredRows(allRowCells, defaultMeta) {
   const students = []
 
   for (const rowObj of allRowCells) {
-    const c = rowObj.cells
-    if (!c || c.length < 15) continue
+    const rawC = rowObj.cells
+    if (!rawC || rawC.length < 10) continue
 
-    // 번호와 성명 검사: cells[0] 번호, cells[1] 성명
-    if (!/^\d{1,2}$/.test(c[0]) || !/^[가-힣]{2,4}$/.test(c[1])) {
-      continue
+    // 번호와 성명 시작 인덱스(offset) 탐색: 통상 c[0]=번호, c[1]=성명
+    let startIdx = -1
+    for (let k = 0; k <= Math.min(3, rawC.length - 2); k++) {
+      if (/^\d{1,2}$/.test(rawC[k]) && /^[가-힣]{2,4}$/.test(rawC[k + 1])) {
+        startIdx = k
+        break
+      }
     }
+    if (startIdx === -1) continue
 
+    const c = rawC.slice(startIdx)
     const studentNum = Number(c[0])
     const name = c[1]
 
@@ -303,122 +454,116 @@ function parseMoeClusteredRows(allRowCells, defaultMeta) {
 }
 
 /**
- * 평가원 모의평가 클러스터링 셀 파싱
+ * 평가원 모의평가(6월·9월 모의평가) 전용 4행 블록 파서
+ * - 1페이지당 약 10명의 학생이 4개 행(선택과목 / 표준점수 / 백분위 / 등급) 블록으로 배치됨
+ * - 9자리 수험번호(시도학교+반2자리+번호2자리) 및 성명, 7개 영역 정밀 추출
  */
-function parseKiceClusteredRows(allRowCells, defaultMeta) {
+async function parseKicePages(doc, defaultMeta) {
   const students = []
+  const parseNum = (v) => {
+    if (!v || v === '-') return null
+    const n = Number(String(v).replace(/[^0-9.]/g, ''))
+    return isNaN(n) ? null : n
+  }
 
-  for (let i = 0; i < allRowCells.length; i++) {
-    const row = allRowCells[i]
-    // cells에서 9자리 수험번호 탐색
-    const examineeCell = row.cells.find(c => /^\d{9}$/.test(c))
-    if (examineeCell) {
-      const examineeNum = examineeCell
-      const classNum = String(parseInt(examineeNum.slice(5, 7), 10))
-      const studentNum = parseInt(examineeNum.slice(7, 9), 10)
-      const name = row.cells.find(c => /^[가-힣]{2,4}$/.test(c)) || ''
+  const isLabel = (w) => ['선','택','과','목','선택과목','표','준','점','수','표준점수','백','분','위','백분위','등','급','등급'].includes(w)
 
-      // 이후 4행 블록
-      const block = allRowCells.slice(i, i + 6)
-      const parseNum = (v) => {
-        if (!v || v === '-') return null
-        const n = Number(String(v).replace(/[^0-9.]/g, ''))
-        return isNaN(n) ? null : n
+  for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
+    const page = await doc.getPage(pageNum)
+    const content = await page.getTextContent()
+    const items = content.items.filter(it => it.str && it.str.trim() !== '')
+
+    // Y좌표 그룹핑 (tolerance 4pt)
+    const rows = []
+    for (const it of items) {
+      const y = it.transform[5]
+      const x = it.transform[4]
+      let row = rows.find(r => Math.abs(r.y - y) <= 4)
+      if (!row) {
+        row = { y, items: [] }
+        rows.push(row)
       }
+      row.items.push({ x, str: it.str.trim() })
+    }
+    rows.sort((a, b) => b.y - a.y)
 
-      let korSubject = '화법과작문'
-      let korStandardScore = null
-      let korPercentile = null
-      let korGrade = null
-
-      let mathSubject = '확률과통계'
-      let mathStandardScore = null
-      let mathPercentile = null
-      let mathGrade = null
-
-      let engGrade = null
-      let histGrade = null
-
-      let inq1Subject = ''
-      let inq1StandardScore = null
-      let inq1Percentile = null
-      let inq1Grade = null
-
-      let inq2Subject = ''
-      let inq2StandardScore = null
-      let inq2Percentile = null
-      let inq2Grade = null
-
-      for (const b of block) {
-        const text = b.lineStr
-        if (text.includes('등 급') || /등급/.test(text)) {
-          const digits = b.cells.map(c => parseNum(c)).filter(n => n !== null && n >= 1 && n <= 9)
-          if (digits.length >= 4) {
-            histGrade = digits[0]
-            korGrade = digits[1]
-            mathGrade = digits[2]
-            engGrade = digits[3]
-            if (digits[4]) inq1Grade = digits[4]
-            if (digits[5]) inq2Grade = digits[5]
-          }
+    // 행별 단어 병합 (X gap <= 10pt)
+    const rowWords = rows.map(r => {
+      r.items.sort((a, b) => a.x - b.x)
+      const words = []
+      let cur = r.items[0].str
+      let lastX = r.items[0].x
+      for (let i = 1; i < r.items.length; i++) {
+        const it = r.items[i]
+        if (it.x - lastX <= 10) {
+          cur += it.str
+        } else {
+          words.push(cur)
+          cur = it.str
         }
-        if (text.includes('표준점수') || /표 준 점 수/.test(text)) {
-          const scores = b.cells.map(c => parseNum(c)).filter(n => n !== null && n >= 10)
-          if (scores.length >= 2) {
-            korStandardScore = scores[0]
-            mathStandardScore = scores[1]
-            if (scores[2]) inq1StandardScore = scores[2]
-            if (scores[3]) inq2StandardScore = scores[3]
-          }
-        }
-        if (text.includes('백분위') || /백 분 위/.test(text)) {
-          const pcts = b.cells.map(c => parseNum(c)).filter(n => n !== null)
-          if (pcts.length >= 2) {
-            korPercentile = pcts[0]
-            mathPercentile = pcts[1]
-            if (pcts[2]) inq1Percentile = pcts[2]
-            if (pcts[3]) inq2Percentile = pcts[3]
-          }
-        }
-        if (text.includes('선택과목') || /선 택 과 목/.test(text)) {
-          if (text.includes('언어와매체')) korSubject = '언어와매체'
-          if (text.includes('미적분')) mathSubject = '미적분'
-          if (text.includes('기하')) mathSubject = '기하'
-          const inqs = b.cells.filter(c => /생활과윤리|윤리와사상|한국지리|세계지리|세계사|동아시아사|경제|정치와법|사회문화|물리학|화학|생명과학|지구과학/.test(c))
-          if (inqs[0]) inq1Subject = inqs[0]
-          if (inqs[1]) inq2Subject = inqs[1]
-        }
+        lastX = it.x
       }
+      words.push(cur)
+      return { y: r.y, words }
+    })
 
-      students.push({
-        grade: defaultMeta.grade || 3,
-        classNum,
-        studentNum,
-        name,
-        studentKey: `${defaultMeta.grade || 3}-${classNum}-${studentNum}_${name}`,
-        legacyStudentKey: `${classNum}-${studentNum}_${name}`,
-        examName: defaultMeta.examName,
-        korSubject,
-        korStandardScore,
-        korPercentile,
-        korGrade,
-        mathSubject,
-        mathStandardScore,
-        mathPercentile,
-        mathGrade,
-        engGrade,
-        histGrade,
-        inquiry1: inq1Subject,
-        inq1StandardScore,
-        inq1Percentile,
-        inq1Grade,
-        inquiry2: inq2Subject,
-        inq2StandardScore,
-        inq2Percentile,
-        inq2Grade,
-        secondLangSubject: '-',
-        secondLangGrade: null
-      })
+    // 4행 블록 탐색
+    for (let i = 0; i < rowWords.length; i++) {
+      const rw = rowWords[i]
+      // 9자리 수험번호가 있는 행 탐색 (표준점수 행에 위치)
+      const exNum = rw.words.find(w => /^\d{9}$/.test(w))
+      if (exNum) {
+        const subjRow = i > 0 ? rowWords[i - 1] : null
+        const scoreRow = rw
+        const pctRow = (i + 1 < rowWords.length) ? rowWords[i + 1] : null
+        const gradeRow = (i + 2 < rowWords.length) ? rowWords[i + 2] : null
+
+        // 성명 추출: pctRow에서 성명 후보 탐색
+        let name = ''
+        if (pctRow) {
+          const candidate = pctRow.words.find(w => /^[가-힣]{2,4}$/.test(w) && !isLabel(w))
+          if (candidate) name = candidate
+        }
+
+        const classNum = String(parseInt(exNum.slice(5, 7), 10))
+        const studentNum = parseInt(exNum.slice(7, 9), 10)
+
+        const subjs = subjRow ? subjRow.words.filter(w => !isLabel(w)) : []
+        const scores = scoreRow.words.filter(w => w !== exNum && !isLabel(w))
+        const pcts = pctRow ? pctRow.words.filter(w => w !== name && !isLabel(w)) : []
+        const grades = gradeRow ? gradeRow.words.filter(w => !isLabel(w)) : []
+
+        // 7개 과목 슬롯: [0]=한국사, [1]=국어, [2]=수학, [3]=영어, [4]=탐구1, [5]=탐구2, [6]=제2외국어
+        students.push({
+          grade: defaultMeta.grade || 3,
+          classNum: classNum || defaultMeta.classNum || '1',
+          studentNum,
+          name,
+          studentKey: `${defaultMeta.grade || 3}-${classNum}-${studentNum}_${name}`,
+          legacyStudentKey: `${classNum}-${studentNum}_${name}`,
+          examName: defaultMeta.examName || '6월 모평',
+          korSubject: subjs[1] || '화법과작문',
+          korStandardScore: parseNum(scores[1]),
+          korPercentile: parseNum(pcts[1]),
+          korGrade: parseNum(grades[1]),
+          mathSubject: subjs[2] || '확률과통계',
+          mathStandardScore: parseNum(scores[2]),
+          mathPercentile: parseNum(pcts[2]),
+          mathGrade: parseNum(grades[2]),
+          engGrade: parseNum(grades[3]),
+          histGrade: parseNum(grades[0]),
+          inquiry1: subjs[4] || '',
+          inq1StandardScore: parseNum(scores[4]),
+          inq1Percentile: parseNum(pcts[4]),
+          inq1Grade: parseNum(grades[4]),
+          inquiry2: subjs[5] || '',
+          inq2StandardScore: parseNum(scores[5]),
+          inq2Percentile: parseNum(pcts[5]),
+          inq2Grade: parseNum(grades[5]),
+          secondLangSubject: subjs[6] || '-',
+          secondLangGrade: parseNum(grades[6])
+        })
+      }
     }
   }
 

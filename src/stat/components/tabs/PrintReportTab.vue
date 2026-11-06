@@ -38,7 +38,7 @@
           <span>A4 세로 딱 1페이지 인쇄 규격</span>
         </span>
         <button 
-          @click="window.print()"
+          @click="printReportDoc()"
           class="inline-flex items-center px-4 py-2 text-xs font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-600/30 transition-all cursor-pointer border-none"
         >
           <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
@@ -514,7 +514,114 @@ const getClassStudents = (classNum) => {
   const set = new Set(applications.value.filter(a => a.classNum === classNum).map(a => a.studentKey))
   return set.size
 }
+
+// A4 세로 1페이지 인쇄 전용 샌드박스 엔진
+function printReportDoc() {
+  const reportEl = document.querySelector('.report-page-a4')
+  if (!reportEl) {
+    window.print()
+    return
+  }
+
+  let iframe = document.getElementById('report-print-iframe')
+  if (!iframe) {
+    iframe = document.createElement('iframe')
+    iframe.id = 'report-print-iframe'
+    iframe.style.position = 'fixed'
+    iframe.style.right = '0'
+    iframe.style.bottom = '0'
+    iframe.style.width = '0'
+    iframe.style.height = '0'
+    iframe.style.border = '0'
+    iframe.style.visibility = 'hidden'
+    document.body.appendChild(iframe)
+  }
+
+  const doc = iframe.contentWindow.document
+  doc.open()
+
+  // 현재 문서의 모든 link rel="stylesheet" 및 style 태그 복사
+  const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+    .map(el => el.outerHTML)
+    .join('\n')
+
+  const title = reportMode.value === 'result2026'
+    ? '2026학년도 대학 입시 결과 분석 보고서'
+    : `${reportAdmissionYear.value}학년도 대입 수시모집 지원 통계 보고서`
+
+  doc.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${title}</title>
+  ${styles}
+  <style>
+    @page {
+      size: A4 portrait !important;
+      margin: 8mm 10mm !important;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      background: #ffffff !important;
+      color: #0f172a !important;
+      overflow: visible !important;
+    }
+    .report-page-a4 {
+      width: 190mm !important;
+      max-width: 190mm !important;
+      height: 279mm !important;
+      max-height: 279mm !important;
+      min-height: 279mm !important;
+      margin: 0 auto !important;
+      padding: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      border: none !important;
+      box-shadow: none !important;
+      background: #ffffff !important;
+      overflow: hidden !important;
+      page-break-after: avoid !important;
+      page-break-inside: avoid !important;
+      break-after: avoid !important;
+      break-inside: avoid !important;
+    }
+    table {
+      page-break-inside: avoid !important;
+    }
+  </style>
+</head>
+<body style="background: #ffffff !important; margin: 0 !important; padding: 0 !important;">
+  <div style="width: 190mm; margin: 0 auto;">
+    ${reportEl.outerHTML}
+  </div>
+</body>
+</html>`)
+  doc.close()
+
+  setTimeout(() => {
+    iframe.contentWindow.focus()
+    iframe.contentWindow.print()
+  }, 250)
+}
 </script>
+
+<style>
+/* 전역 A4 세로 인쇄 강제 규칙 (Ctrl+P 직접 인쇄 대응) */
+@media print {
+  @page {
+    size: A4 portrait !important;
+    margin: 8mm 10mm !important;
+  }
+}
+</style>
 
 <style scoped>
 /* 화면 미리보기 (A4 세로 비율 유지) */

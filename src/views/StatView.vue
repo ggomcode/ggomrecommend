@@ -486,6 +486,15 @@ async function handleLogout() {
 }
 </script>
 
+<style>
+@media print {
+  @page {
+    size: A4 portrait !important;
+    margin: 8mm 10mm !important;
+  }
+}
+</style>
+
 <style scoped>
 .fade-enter-active,
 .fade-leave-active {
