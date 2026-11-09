@@ -588,20 +588,42 @@
             </div>
 
             <!-- 시트 실시간 쓰기 연동용 GAS Web App URL (선택사항) -->
-            <div class="pt-2 border-t border-slate-200/60 dark:border-slate-800">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                  ⚡ 실시간 시트 쓰기 연동용 GAS Web App URL (선택사항)
+            <div class="pt-2 border-t border-slate-200/60 dark:border-slate-800 space-y-1.5">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
+                <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                  <span>⚡</span>
+                  <span>실시간 시트 쓰기 연동용 GAS Web App URL (선택사항)</span>
                 </span>
-                <span class="text-[10px] text-slate-400">구글 시트 '출결기록' 탭에 실시간 저장이 필요할 때 입력</span>
+                <div class="flex items-center gap-2">
+                  <a
+                    v-if="realGoogleSheetRollbookGasUrl"
+                    :href="realGoogleSheetRollbookGasUrl"
+                    target="_blank"
+                    class="text-[11px] text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 font-semibold flex items-center gap-1 hover:underline"
+                  >
+                    <span>🔗 웹앱 응답 확인</span>
+                  </a>
+                  <span class="text-[10px] text-slate-400">구글 시트 '출결기록' 탭에 실시간 저장이 필요할 때 입력</span>
+                </div>
               </div>
               <div class="flex gap-2">
                 <input
                   v-model="googleSheetRollbookGasUrl"
                   type="text"
-                  :placeholder="hasGoogleSheetRollbookGasUrl ? '저장된 Web App URL (마스킹됨)' : 'https://script.google.com/macros/s/.../exec'"
+                  @focus="handleRollbookGasFocus"
+                  @blur="handleRollbookGasBlur"
+                  :placeholder="hasGoogleSheetRollbookGasUrl ? '저장된 Web App URL (클릭하여 새로 입력)' : 'https://script.google.com/macros/s/.../exec'"
                   class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-slate-800 dark:text-white"
                 />
+                <button
+                  type="button"
+                  v-if="hasGoogleSheetRollbookGasUrl"
+                  @click="toggleShowRollbookGasUrl"
+                  class="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer whitespace-nowrap"
+                  :title="showRollbookGasUrl ? 'URL 마스킹' : '전체 URL 보기'"
+                >
+                  {{ showRollbookGasUrl ? '🙈 숨김' : '👁️ 전체보기' }}
+                </button>
                 <button
                   @click="saveGoogleSheetRollbookGasUrl"
                   :disabled="googleSheetRollbookGasLoading"
@@ -1159,6 +1181,7 @@ const googleSheetRollbookGasUrl = ref('')
 const realGoogleSheetRollbookGasUrl = ref('')
 const hasGoogleSheetRollbookGasUrl = ref(false)
 const googleSheetRollbookGasLoading = ref(false)
+const showRollbookGasUrl = ref(false)
 
 const allowAreaEdit = ref(false)
 const areaEditLoading = ref(false)
@@ -1896,13 +1919,36 @@ async function saveGoogleSheetRollbookGasUrl() {
     }
 
     hasGoogleSheetRollbookGasUrl.value = !!targetVal
-    googleSheetRollbookGasUrl.value = targetVal ? maskGasUrl(targetVal) : ''
+    googleSheetRollbookGasUrl.value = targetVal ? (showRollbookGasUrl.value ? targetVal : maskGasUrl(targetVal)) : ''
     alert(targetVal ? '선택교과 출석관리 GAS Web App URL이 저장되었습니다.' : '출석관리 GAS URL이 삭제되었습니다.')
   } catch (e) {
     console.error(e)
     alert('출석관리 GAS URL 저장 중 오류가 발생했습니다: ' + e.message)
   } finally {
     googleSheetRollbookGasLoading.value = false
+  }
+}
+
+function toggleShowRollbookGasUrl() {
+  showRollbookGasUrl.value = !showRollbookGasUrl.value
+  if (showRollbookGasUrl.value) {
+    googleSheetRollbookGasUrl.value = realGoogleSheetRollbookGasUrl.value
+  } else {
+    googleSheetRollbookGasUrl.value = maskGasUrl(realGoogleSheetRollbookGasUrl.value)
+  }
+}
+
+function handleRollbookGasFocus() {
+  if (googleSheetRollbookGasUrl.value.includes('•')) {
+    googleSheetRollbookGasUrl.value = realGoogleSheetRollbookGasUrl.value
+  }
+}
+
+function handleRollbookGasBlur() {
+  if (!showRollbookGasUrl.value && googleSheetRollbookGasUrl.value === realGoogleSheetRollbookGasUrl.value) {
+    googleSheetRollbookGasUrl.value = maskGasUrl(realGoogleSheetRollbookGasUrl.value)
+  } else if (!googleSheetRollbookGasUrl.value && realGoogleSheetRollbookGasUrl.value) {
+    googleSheetRollbookGasUrl.value = maskGasUrl(realGoogleSheetRollbookGasUrl.value)
   }
 }
 
