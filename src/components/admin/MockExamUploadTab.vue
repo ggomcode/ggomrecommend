@@ -145,25 +145,27 @@
             </div>
           </div>
 
-          <!-- STEP 4: 본 시스템 등록 & 구글 시트 원클릭 반영 -->
+          <!-- STEP 4: 본 시스템 등록 & 구글 시트 원클릭 누적 반영 -->
           <div class="bg-indigo-50/50 rounded-2xl p-4.5 border border-indigo-200 flex flex-col justify-between space-y-3 relative hover:border-indigo-400 transition-colors">
             <div class="space-y-2">
               <div class="flex items-center justify-between">
                 <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center">4</span>
                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">원클릭 반영</span>
               </div>
-              <h4 class="text-xs sm:text-sm font-black text-indigo-950 m-0">본 화면 업로드 & 반영</h4>
+              <h4 class="text-xs sm:text-sm font-black text-indigo-950 m-0">회차 선택 및 시트 반영</h4>
               <p class="text-[11.5px] text-indigo-950/80 m-0 leading-relaxed">
-                다운로드받은 대교협 엑셀 파일(.xlsx)을 바로 아래 <strong>[드롭 영역]</strong>에 올려놓습니다.
+                상단에서 <strong>[학년]</strong>과 <strong>[시험 회차]</strong>를 선택하고 대교협 엑셀(.xlsx)을 드롭 영역에 올립니다.
               </p>
-              <div class="p-2.5 rounded-lg bg-white border border-indigo-300 text-[11px] text-indigo-950 leading-snug shadow-2xs">
-                <strong>👉 원클릭 시트 직접 적재:</strong><br />
-                성적표가 파싱되면 <strong class="text-emerald-700">[구글 시트에 즉시 반영]</strong> 버튼만 누르면 끝!<br />
-                수동 복사·붙여넣기 없이 원본 시트 <code class="bg-indigo-50 px-1 font-bold text-indigo-800">{{ targetSheetName }}</code> 탭 <strong>3행부터 44개 컬럼</strong>으로 전교생 성적이 1초 만에 직접 꽂힙니다.
+              <div class="p-2.5 rounded-lg bg-white border border-indigo-300 text-[11px] text-indigo-950 leading-snug shadow-2xs space-y-1">
+                <strong>👉 [구글 시트에 즉시 반영] 클릭:</strong>
+                <div class="text-[10.5px] text-slate-700 leading-normal">
+                  • <strong>3월:</strong> 원본 시트 <code class="bg-indigo-50 px-1 font-bold text-indigo-800">{{ targetSheetName }}</code> 탭 <strong>3행~266행</strong> 적재<br />
+                  • <strong>5월/6월/9월 등:</strong> 덮어쓰지 않고 <strong>267행 이하로 자동 누적</strong> 및 월별 자동 정렬!
+                </div>
               </div>
             </div>
             <div class="pt-2 text-[10.5px] text-indigo-700 border-t border-indigo-200 font-bold">
-              ✓ 전교생 모의고사 DB 구축 완료!
+              ✓ 회차별 자동 누적 DB 구축 완료!
             </div>
           </div>
         </div>
@@ -350,27 +352,35 @@
           </div>
         </div>
 
-        <!-- 1·2·3학년 공통 안내 및 FAQ 카드 -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+        <!-- 1·2·3학년 공통 안내 및 스마트 누적 FAQ 카드 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
           <div class="rounded-xl p-3.5 bg-indigo-50/70 border border-indigo-200 text-xs text-indigo-950 leading-relaxed space-y-1">
             <div class="font-black flex items-center gap-1.5 text-indigo-900">
               <span>📌</span>
-              <span>1학년, 2학년, 3학년 모두 100% 동일합니다</span>
+              <span>1학년, 2학년, 3학년 모두 100% 동일</span>
             </div>
             <p class="text-[11.5px] text-indigo-950/80 m-0">
-              대교협 창 상단에서 <strong>1학년 / 2학년 / 3학년</strong> 중 해당하는 학년 라디오를 선택하고, 똑같이 <strong>[수능/모의 성적표 PDF 등록]</strong> ➔ <strong>[선택회차 입력내용 엑셀다운]</strong>을 받아 올리시면 됩니다.<br />
-              시트에 적재된 후 <strong>[1학년 대입 분석]</strong>, <strong>[2학년 대입 분석]</strong>, <strong>[3학년 모의고사 분석]</strong> 메뉴에서 각 학년 데이터가 자동으로 정확하게 조회됩니다.
+              대교협 창 상단에서 <strong>1학년 / 2학년 / 3학년</strong> 라디오를 선택하고, 똑같이 <strong>[수능/모의 성적표 PDF 등록]</strong> ➔ <strong>[선택회차 입력내용 엑셀다운]</strong>을 받아 올리시면 됩니다.
             </p>
           </div>
 
           <div class="rounded-xl p-3.5 bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-950 leading-relaxed space-y-1">
             <div class="font-black flex items-center gap-1.5 text-emerald-900">
               <span>✨</span>
-              <span>왜 대교협 엑셀 방식을 사용하나요?</span>
+              <span>회차별 자동 누적 & 중복 방지</span>
             </div>
             <p class="text-[11.5px] text-emerald-950/80 m-0">
-              일부 교육청 성적표 PDF는 벡터 선/드로잉으로 출력되어 웹 브라우저에서 텍스트 인식이 멈추거나 누락될 수 있습니다.<br />
-              반면 대교협의 <strong>[선택회차 입력내용 엑셀다운]</strong>을 통하면 11개 반 전교생 300여 명의 점수가 <strong>오차 0%의 순수 숫자 엑셀로 일괄 추출</strong>되므로 가장 빠르고 안전합니다!
+              3월(3~266행), 5월(267행~) 등 여러 시험을 차례로 올리시면 덮어쓰기 없이 행이 차곡차곡 누적됩니다. 만약 동일 회차를 다시 올리면 해당 회차만 최신으로 안전하게 자동 갱신됩니다.
+            </p>
+          </div>
+
+          <div class="rounded-xl p-3.5 bg-amber-50/70 border border-amber-200 text-xs text-amber-950 leading-relaxed space-y-1">
+            <div class="font-black flex items-center gap-1.5 text-amber-900">
+              <span>📊</span>
+              <span>탐구 원점수 0점 및 빈 컬럼 안내</span>
+            </div>
+            <p class="text-[11.5px] text-amber-950/80 m-0">
+              대교협 실채점 엑셀의 특성상 탐구 원점수가 0이거나 일부 컬럼이 비어 있을 수 있습니다. 모든 대입 분석 및 수능최저는 <strong>[등급·표준점수·백분위]</strong>로 계산되므로 분석에 오차가 전혀 없습니다.
             </p>
           </div>
         </div>
@@ -380,48 +390,49 @@
 
     <!-- 3. 업로드 컨트롤 바 (학년 선택 + 엑셀 중심 드롭존) -->
     <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 space-y-5">
-      <!-- 3-1. 학년 및 모의고사 회차(몇 월) 선택 바 -->
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-        <div class="flex items-center gap-2">
-          <span class="w-1.5 h-4 bg-indigo-600 rounded-full"></span>
-          <span class="text-sm font-bold text-slate-800">모의고사 응시 정보 선택</span>
-          <span class="text-xs text-slate-400 font-normal">(*업로드할 파일의 학년과 모의고사 회차를 반드시 선택해 주세요)</span>
+      <!-- 3-1. 학년 및 모의고사 회차(몇 월) 선택 바 (한 줄 깔끔 배치) -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-slate-100">
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="w-1.5 h-4 bg-indigo-600 rounded-full shrink-0"></span>
+          <span class="text-sm font-bold text-slate-800 whitespace-nowrap">응시 회차 선택</span>
+          <span class="text-xs text-slate-400 font-normal hidden lg:inline whitespace-nowrap">(*업로드할 학년과 회차)</span>
         </div>
 
-        <div class="flex flex-wrap items-center gap-3">
-          <!-- 대상 학년 선택 -->
-          <div class="flex items-center gap-1.5">
-            <label class="text-xs font-bold text-slate-600">학년:</label>
+        <div class="flex items-center gap-2 shrink-0 flex-nowrap">
+          <!-- 대상 학년 선택 드롭다운 버튼 -->
+          <div class="flex items-center gap-1 shrink-0">
+            <label class="text-xs font-bold text-slate-600 whitespace-nowrap">학년:</label>
             <div class="relative inline-block">
               <select
                 v-model="selectedGrade"
-                class="appearance-none pl-3 pr-8 py-1.5 bg-indigo-50/80 hover:bg-indigo-100/70 border border-indigo-200 rounded-xl text-xs font-black text-indigo-950 focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer transition-colors"
+                class="appearance-none pl-2.5 pr-7 py-1.5 bg-indigo-50 hover:bg-indigo-100/70 border border-indigo-200 rounded-lg text-xs font-bold text-indigo-950 focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer transition-colors whitespace-nowrap"
               >
-                <option :value="3">3학년 (고3 / {{ autoAdmissionYear }} 대입)</option>
-                <option :value="2">2학년 (고2 / 2028 대입)</option>
-                <option :value="1">1학년 (고1 / 2029 대입)</option>
+                <option :value="3">3학년 (고3)</option>
+                <option :value="2">2학년 (고2)</option>
+                <option :value="1">1학년 (고1)</option>
               </select>
-              <ChevronDown class="w-4 h-4 text-indigo-700 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+              <ChevronDown class="w-3.5 h-3.5 text-indigo-700 pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" />
             </div>
           </div>
 
-          <!-- 모의고사 회차(몇 월) 선택 드롭다운 (7개 목록) -->
-          <div class="flex items-center gap-1.5">
-            <label class="text-xs font-bold text-slate-600">시험 회차:</label>
+          <!-- 모의고사 회차(몇 월) 선택 드롭다운 버튼 -->
+          <div class="flex items-center gap-1 shrink-0">
+            <label class="text-xs font-bold text-slate-600 whitespace-nowrap">시험 회차:</label>
             <div class="relative inline-block">
               <select
                 v-model="selectedExam"
-                class="appearance-none pl-3 pr-8 py-1.5 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-300 rounded-xl text-xs font-black text-emerald-950 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer transition-colors shadow-2xs"
+                class="appearance-none pl-2.5 pr-7 py-1.5 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-300 rounded-lg text-xs font-bold text-emerald-950 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer transition-colors shadow-2xs whitespace-nowrap"
               >
                 <option v-for="exam in availableExamList" :key="exam.value" :value="exam.value">
-                  {{ exam.label }}
+                  {{ exam.value }}
                 </option>
               </select>
-              <ChevronDown class="w-4 h-4 text-emerald-700 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+              <ChevronDown class="w-3.5 h-3.5 text-emerald-700 pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" />
             </div>
           </div>
 
-          <span class="text-[11px] font-bold px-2 py-1 rounded-lg bg-indigo-50 text-indigo-800 border border-indigo-200">
+          <!-- 선택 요약 배지 -->
+          <span class="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white shadow-2xs whitespace-nowrap shrink-0">
             {{ selectedGrade }}학년 · {{ selectedExam }}
           </span>
         </div>
@@ -810,7 +821,7 @@ const isGuideOpen = ref(false)
 // Apps Script 수신 코드 복사 상태
 const copiedGasSnippet = ref(false)
 const gasSnippetCode = `/**
- * [모의고사 성적 원격 수신] 44개 컬럼 자동 적재 핸들러
+ * [모의고사 성적 원격 수신] 44개 컬럼 자동 적재 및 회차별 누적/자동 정렬 핸들러
  */
 function doGet(e) {
   return ContentService.createTextOutput(JSON.stringify({
@@ -832,7 +843,7 @@ function doPost(e) {
           ss = SpreadsheetApp.openById(payload.spreadsheetId);
         } catch (openErr) {
           const currentName = ss ? ss.getName() : '알 수 없음';
-          throw new Error('현재 Web App이 엉뚱한 구글 시트 [' + currentName + ']에 배포되어 있습니다.\n반드시 원본 모의고사 시트(' + payload.spreadsheetId + ') 창에서 [확장 프로그램 > Apps Script]를 열고 배포해 주세요.');
+          throw new Error('현재 Web App이 엉뚱한 구글 시트 [' + currentName + ']에 배포되어 있습니다.\\n반드시 원본 모의고사 시트(' + payload.spreadsheetId + ') 창에서 [확장 프로그램 > Apps Script]를 열고 배포해 주세요.');
         }
       }
     }
@@ -852,8 +863,43 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 필요 시 시트의 행과 열 자동 확장 (범위 초과 오류 방지)
-    const neededRows = 2 + rows.length;
+    // 2. 업로드할 회차(월) 번호 파악 (예: 3, 5, 6, 9 등)
+    const targetMonth = payload.month != null ? Number(payload.month) : (rows[0] ? Number(rows[0][0]) : null);
+
+    // 3. 기존 시트 데이터 확인 (1, 2행 복합 헤더 제외 3행부터)
+    const lastRow = sheet.getLastRow();
+    let combined = [];
+
+    if (lastRow <= 2) {
+      // 기존 데이터가 없으면 바로 신규 적재
+      combined = rows;
+    } else {
+      // 기존 학생 데이터(3행 ~ lastRow) 읽기
+      const existingData = sheet.getRange(3, 1, lastRow - 2, 44).getValues();
+
+      // 기존 데이터 중 '월(A열)'이 업로드 대상 월과 다른 회차 데이터만 유지 (동일 월 재업로드 시 중복 방지 및 최신화)
+      const otherMonthsData = existingData.filter(function(r) {
+        if (!r || r[0] === null || r[0] === undefined) return false;
+        const m = Number(String(r[0]).trim());
+        return !isNaN(m) && m > 0 && (targetMonth == null || m !== targetMonth);
+      });
+
+      // 기존 타 회차 데이터 + 이번 회차 데이터 결합
+      combined = otherMonthsData.concat(rows);
+    }
+
+    // 4. 모의고사 표준 정렬: 월(A열) 오름차순 -> 반(D열) 오름차순 -> 번호(E열) 오름차순
+    combined.sort(function(a, b) {
+      var mA = Number(a[0]) || 0, mB = Number(b[0]) || 0;
+      if (mA !== mB) return mA - mB;
+      var cA = Number(a[3]) || 0, cB = Number(b[3]) || 0;
+      if (cA !== cB) return cA - cB;
+      var nA = Number(a[4]) || 0, nB = Number(b[4]) || 0;
+      return nA - nB;
+    });
+
+    // 5. 시트 행/열 확장
+    const neededRows = 2 + combined.length;
     if (sheet.getMaxRows() < neededRows) {
       sheet.insertRowsAfter(sheet.getMaxRows(), neededRows - sheet.getMaxRows());
     }
@@ -861,13 +907,31 @@ function doPost(e) {
       sheet.insertColumnsAfter(sheet.getMaxColumns(), 44 - sheet.getMaxColumns());
     }
 
-    // 1·2행 헤더는 건드리지 않고, 3행 1열부터 44개 열(A~AR)에 전교생 성적 직접 적재
-    sheet.getRange(3, 1, rows.length, 44).setValues(rows);
+    // 6. 3행부터 깨끗하게 일괄 반영 (기존 잔여 행 클리어 포함)
+    if (lastRow > 2) {
+      const clearRows = Math.max(lastRow - 2, combined.length);
+      sheet.getRange(3, 1, clearRows, 44).clearContent();
+    }
+
+    sheet.getRange(3, 1, combined.length, 44).setValues(combined);
     SpreadsheetApp.flush();
+
+    // 이번 업로드된 회차의 실제 배치 시작행 및 종료행 계산
+    let startRowForThisExam = 3;
+    for (let i = 0; i < combined.length; i++) {
+      if (Number(combined[i][0]) === targetMonth) {
+        startRowForThisExam = 3 + i;
+        break;
+      }
+    }
+    const endRowForThisExam = startRowForThisExam + rows.length - 1;
 
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
       count: rows.length,
+      totalCount: combined.length,
+      startRow: startRowForThisExam,
+      endRow: endRowForThisExam,
       sheetName: sheetName,
       spreadsheetName: ss.getName(),
       spreadsheetId: ss.getId()
@@ -955,18 +1019,13 @@ const availableExamList = computed(() => {
   const mopyeongFall = is2028OrLater ? '8월 모평' : '9월 모평'
 
   return [
-    { value: '3월 학평', label: '3월 학평 (전국연합학력평가)' },
-    { value: '5월 학평', label: '5월 학평 (전국연합학력평가)' },
-    { value: '6월 모평', label: '6월 모평 (한국교육과정평가원)' },
-    { value: '7월 학평', label: '7월 학평 (전국연합학력평가)' },
-    { 
-      value: mopyeongFall, 
-      label: is2028OrLater 
-        ? '8월 모평 (2028대입 개편 모의평가)' 
-        : '9월 모평 (한국교육과정평가원)' 
-    },
-    { value: '10월 학평', label: '10월 학평 (전국연합학력평가)' },
-    { value: '11월 수능', label: '11월 수능 (대학수학능력시험)' }
+    { value: '3월 학평', label: '3월 학평' },
+    { value: '5월 학평', label: '5월 학평' },
+    { value: '6월 모평', label: '6월 모평' },
+    { value: '7월 학평', label: '7월 학평' },
+    { value: mopyeongFall, label: mopyeongFall },
+    { value: '10월 학평', label: '10월 학평' },
+    { value: '11월 수능', label: '11월 수능' }
   ]
 })
 
@@ -1150,8 +1209,10 @@ async function copyToClipboard() {
     }, 2500)
     dialog.alert(
       `📋 총 ${allParsedStudents.value.length}명(전교생 ${selectedExam.value}) 데이터가 클립보드에 복사되었습니다!\n\n` +
-      `구글 시트 '${targetSheetName.value}' 탭의 [A3] 셀을 클릭하고 [Ctrl + V]로 붙여넣으세요.\n` +
-      `(1행과 2행은 컬럼 이름이므로 3행부터 붙여넣으시면 44개 컬럼(A~AR)에 정확하게 들어맞습니다)`
+      `구글 시트 '${targetSheetName.value}' 탭에서 아래 위치를 클릭하고 [Ctrl + V]로 붙여넣으세요:\n\n` +
+      `• 첫 번째 시험(예: 3월)인 경우: [A3] 셀 클릭 후 붙여넣기\n` +
+      `• 추가 회차(예: 5월, 6월 등)인 경우: 기존 데이터 바로 다음 빈 행(예: 3월이 266행까지 있다면 [A267] 셀) 클릭 후 붙여넣기\n\n` +
+      `(1·2행 헤더를 보존하고 44개 컬럼(A~AR)에 정확하게 들어맞습니다)`
     )
   } catch (e) {
     dialog.alert('클립보드 복사 실패: ' + e.message)
@@ -1168,9 +1229,10 @@ async function handleSaveToGoogleSheet() {
   }
 
   // 1. 44개 컬럼 데이터 배열 생성 (1·2행 헤더 제외 3행부터 들어갈 학생 레코드)
+  const examMonth = extractMonthNum(selectedExam.value)
   const rows = convertStudentsToSheetRows(allParsedStudents.value, {
     includeHeaders: false,
-    defaultExamMonth: extractMonthNum(selectedExam.value)
+    defaultExamMonth: examMonth
   })
 
   // 2. Apps Script Web App URL 확인 (환경설정에서 동적 관리)
@@ -1222,6 +1284,8 @@ async function handleSaveToGoogleSheet() {
         action: 'saveMockResults',
         spreadsheetId: targetSheetId,
         sheetName: targetSheetName.value,
+        month: examMonth,
+        examName: selectedExam.value,
         rows
       })
     })
@@ -1245,15 +1309,19 @@ async function handleSaveToGoogleSheet() {
       const savedSheetName = resJson.spreadsheetName || '구글 시트'
       const savedTab = resJson.sheetName || targetSheetName.value
       const isExpectedSheet = !resJson.spreadsheetId || resJson.spreadsheetId === targetSheetId
+      const rowRangeInfo = (resJson.startRow && resJson.endRow)
+        ? `• 이번 적재 위치: [${resJson.startRow}행 ~ ${resJson.endRow}행] (전체 누적: ${resJson.totalCount || resJson.count}명)\n`
+        : `• 적재 완료: 전교생 ${resJson.count || allParsedStudents.value.length}명\n`
 
       await dialog.alert({
         title: '구글 시트 직접 반영 성공',
         message: `🎉 [구글 시트 직접 반영 성공!]\n\n` +
           `• 저장된 구글 시트: [${savedSheetName}]\n` +
           `• 저장된 시트 탭: [${savedTab}]\n` +
-          `• 적재 인원: 전교생 ${resJson.count || allParsedStudents.value.length}명 (${selectedExam.value})\n` +
-          `• 컬럼 규격: 3행부터 44개 컬럼(A열 '월' ~ AR열 '제2외국어 등급') 직접 적재 완료\n\n` +
-          (isExpectedSheet ? '' : `⚠️ 주의: 등록된 Web App이 원본 모의고사 시트가 아닌 [${savedSheetName}] 파일에 배포되어 해당 파일의 [${savedTab}] 탭에 저장되었습니다.\n(원본 시트에 넣으시려면 원본 시트 창에서 Apps Script를 열어 배포하셔야 합니다.)\n\n`) +
+          `• 이번 적재 시험: [${selectedExam.value}] ${resJson.count || allParsedStudents.value.length}명\n` +
+          rowRangeInfo +
+          `• 컬럼 규격: 44개 컬럼(A열 '월' ~ AR열 '제2외국어 등급') 자동 누적 및 정렬 완료\n\n` +
+          (isExpectedSheet ? '' : `⚠️ 주의: 등록된 Web App이 원본 모의고사 시트가 아닌 [${savedSheetName}] 파일에 배포되어 해당 파일의 [${savedTab}] 탭에 저장되었습니다.\n\n`) +
           `※ 안전한 데이터 보관을 위해 동일한 규격의 엑셀 백업 파일도 함께 저장되었습니다.`
       })
     } else {
@@ -1275,7 +1343,7 @@ async function handleSaveToGoogleSheet() {
         `2. Apps Script 배포 권한 확인:\n` +
         `   [배포] > [새 배포] 시 [액세스 권한]이 반드시 '모든 사용자(Anyone)'로 되어 있어야 브라우저 보안 차단(CORS)이 발생하지 않습니다.\n\n` +
         `⚡ [지금 당장 10초 만에 시트에 넣는 방법]:\n` +
-        `화면 상단의 [📋 시트 양식 TSV 복사] 버튼을 누른 뒤, 구글 시트 '${targetSheetName.value}' 탭의 [A3] 셀을 클릭하고 [Ctrl + V]로 붙여넣으시면 지금 즉시 44개 컬럼에 완벽하게 반영됩니다!`
+        `화면 상단의 [📋 시트 양식 TSV 복사] 버튼을 누른 뒤, 구글 시트 '${targetSheetName.value}' 탭의 기존 데이터 바로 다음 행(예: 267행 A267 셀)을 클릭하고 [Ctrl + V]로 붙여넣으시면 지금 즉시 44개 컬럼에 완벽하게 반영됩니다!`
     }
 
     await dialog.alert({
