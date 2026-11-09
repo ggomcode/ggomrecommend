@@ -761,7 +761,18 @@ function doGet(e) {
 function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents);
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss && payload.spreadsheetId) {
+      try { ss = SpreadsheetApp.openById(payload.spreadsheetId); } catch (_) {}
+    }
+    if (payload.spreadsheetId && ss && ss.getId() !== payload.spreadsheetId) {
+      try { ss = SpreadsheetApp.openById(payload.spreadsheetId); } catch (_) {}
+    }
+    if (!ss) {
+      return ContentService.createTextOutput(JSON.stringify({ success: false, error: '스프레드시트를 열 수 없습니다.' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     const sheetName = payload.sheetName || '2027모의결과';
     let sheet = ss.getSheetByName(sheetName);
     if (!sheet) sheet = ss.insertSheet(sheetName);
@@ -788,7 +799,8 @@ function doPost(e) {
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
       count: rows.length,
-      sheetName: sheetName
+      sheetName: sheetName,
+      spreadsheetName: ss.getName()
     })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({
@@ -1049,6 +1061,8 @@ async function handleSaveToGoogleSheet() {
 
   // 2. Apps Script Web App URL 확인 (환경설정에서 동적 관리)
   let gasUrl = await getKcueGasUrl()
+  const targetSheetId = await getKcueSheetId()
+
   if (!gasUrl) {
     const inputUrl = window.prompt(
       '구글 스프레드시트 배포 Web App URL이 아직 등록되지 않았습니다.\n\n' +
@@ -1058,7 +1072,10 @@ async function handleSaveToGoogleSheet() {
     if (!inputUrl || !inputUrl.trim()) {
       // 입력 취소 시 백업 엑셀만 다운로드
       exportParsedToExcel()
-      dialog.alert('Web App URL이 입력되지 않아 44개 컬럼 완성본 엑셀 파일 다운로드로 대체되었습니다.\n(관리자 설정 > 환경설정 탭에서 언제든 등록하실 수 있습니다.)')
+      dialog.alert({
+        title: 'Web App URL 미등록',
+        message: 'Web App URL이 등록되지 않아 44개 컬럼 완성본 엑셀 파일 다운로드로 대체되었습니다.\n(관리자 설정 > 환경설정 탭에서 언제든 등록하실 수 있습니다.)'
+      })
       return
     }
     gasUrl = await saveKcueGasUrl(inputUrl.trim())
@@ -1072,30 +1089,36 @@ async function handleSaveToGoogleSheet() {
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
         action: 'saveMockResults',
+        spreadsheetId: targetSheetId,
         sheetName: targetSheetName.value,
         rows
       })
     })
 
+    const resText = await res.text()
     let resJson = null
     try {
-      resJson = await res.json()
+      resJson = JSON.parse(resText)
     } catch (_) {
-      // 텍스트 응답일 경우
-      resJson = { success: res.ok }
+      console.error('GAS 응답이 JSON이 아님 (HTML 반환):', resText)
+      if (resText.includes('<html') || resText.includes('<!DOCTYPE')) {
+        throw new Error('웹앱이 Google 로그인 화면 또는 에러 HTML을 반환했습니다.\n(Apps Script 배포 시 [액세스 권한: 모든 사용자]로 배포되었는지 확인해 주세요)')
+      }
+      throw new Error(`웹앱 응답 형식 오류: ${resText.slice(0, 100)}`)
     }
 
-    if (resJson && resJson.success !== false) {
+    if (resJson && resJson.success === true) {
       // 4. 안전 백업 엑셀 자동 보관
       exportParsedToExcel()
 
-      dialog.alert(
-        `🎉 [구글 시트 직접 반영 성공!]\n\n` +
-        `• 대상 시트: 원본 구글 시트 [${targetSheetName.value}] 탭\n` +
-        `• 적재 인원: 전교생 ${allParsedStudents.value.length}명 (${selectedExam.value})\n` +
-        `• 컬럼 규격: 3행부터 44개 컬럼(A열 '월' ~ AR열 '제2외국어 등급') 직접 적재 완료\n\n` +
-        `※ 안전한 데이터 보관을 위해 동일한 규격의 엑셀 파일도 함께 저장되었습니다.`
-      )
+      await dialog.alert({
+        title: '구글 시트 직접 반영 성공',
+        message: `🎉 [구글 시트 직접 반영 성공!]\n\n` +
+          `• 대상 시트: 원본 구글 시트 [${targetSheetName.value}] 탭\n` +
+          `• 적재 인원: 전교생 ${allParsedStudents.value.length}명 (${selectedExam.value})\n` +
+          `• 컬럼 규격: 3행부터 44개 컬럼(A열 '월' ~ AR열 '제2외국어 등급') 직접 적재 완료\n\n` +
+          `※ 안전한 데이터 보관을 위해 동일한 규격의 엑셀 백업 파일도 함께 저장되었습니다.`
+      })
     } else {
       throw new Error(resJson?.error || '구글 시트 저장 응답 오류')
     }
@@ -1103,12 +1126,14 @@ async function handleSaveToGoogleSheet() {
     console.error('GAS Web App 전송 오류:', e)
     // 전송 실패 시 엑셀 다운로드 보완
     exportParsedToExcel()
-    dialog.alert(
-      `⚠️ 구글 시트 직접 전송 중 오류가 발생했습니다.\n\n` +
-      `오류 내용: ${e.message}\n\n` +
-      `* 안전을 위해 전교생 44개 컬럼 완성본 엑셀 파일이 다운로드되었습니다.\n` +
-      `* 등록된 Web App URL의 '액세스 권한: 모든 사용자' 설정을 확인해 주세요.`
-    )
+    await dialog.alert({
+      title: '구글 시트 직접 전송 실패',
+      level: 'error',
+      message: `⚠️ 구글 시트 직접 전송 중 오류가 발생했습니다.\n\n` +
+        `오류 내용: ${e.message}\n\n` +
+        `• 전교생 44개 컬럼 완성본 엑셀 파일이 다운로드되었습니다.\n` +
+        `• 시트 상단 [확장 프로그램] > [Apps Script]에서 최신 수신 코드를 붙여넣고 [새 버전]으로 배포했는지 확인해 주세요.`
+    })
   } finally {
     isSavingToSheet.value = false
   }

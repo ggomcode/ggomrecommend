@@ -16,17 +16,18 @@ export const dialogState = reactive({
 })
 
 function openDialog(opts) {
+  const normOpts = typeof opts === 'string' ? { message: opts } : (opts || {})
   return new Promise((resolve) => {
     // 동시 호출 시 이전 다이얼로그는 취소로 종결
     if (dialogState.open && dialogState.resolver) dialogState.resolver(false)
-    dialogState.kind             = opts.kind
-    dialogState.level            = opts.level ?? 'normal'
-    dialogState.title            = opts.title ?? ''
-    dialogState.message          = opts.message ?? ''
-    dialogState.confirmText      = opts.confirmText ?? '확인'
-    dialogState.cancelText       = opts.cancelText ?? '취소'
-    dialogState.dangerNotice     = opts.dangerNotice ?? ''
-    dialogState.finalConfirmText = opts.finalConfirmText ?? opts.confirmText ?? '확인'
+    dialogState.kind             = normOpts.kind
+    dialogState.level            = normOpts.level ?? 'normal'
+    dialogState.title            = normOpts.title ?? ''
+    dialogState.message          = normOpts.message ?? ''
+    dialogState.confirmText      = normOpts.confirmText ?? '확인'
+    dialogState.cancelText       = normOpts.cancelText ?? '취소'
+    dialogState.dangerNotice     = normOpts.dangerNotice ?? ''
+    dialogState.finalConfirmText = normOpts.finalConfirmText ?? normOpts.confirmText ?? '확인'
     dialogState.step             = 1
     dialogState.resolver         = resolve
     dialogState.open             = true
