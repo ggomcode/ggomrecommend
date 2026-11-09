@@ -30,7 +30,19 @@
 
       <div class="flex items-center space-x-3">
         <div class="text-xs text-slate-500">
-          검색된 학생: <strong class="text-indigo-600 font-bold">{{ studentList.length }}</strong>명 / 전체 246명
+          검색된 학생: <strong class="text-indigo-600 font-bold">{{ studentList.length }}</strong>명
+          <span v-if="studentClassFilter === 'ALL'">
+            / 전체 <strong>{{ totalStudentsCount }}</strong>명<span v-if="graduateStudentsCount > 0" class="text-slate-400 font-normal"> (재학생 {{ enrolledStudentsCount }}명 + 졸업생 {{ graduateStudentsCount }}명)</span>
+          </span>
+          <span v-else-if="studentClassFilter === 'ENROLLED'">
+            / 재학생 전체 <strong>{{ enrolledStudentsCount }}</strong>명
+          </span>
+          <span v-else-if="studentClassFilter === '졸업생' || studentClassFilter === 'GRADUATE'">
+            / 졸업생 전체 <strong>{{ graduateStudentsCount }}</strong>명
+          </span>
+          <span v-else>
+            / {{ studentClassFilter }}반 전체 <strong>{{ currentTargetTotalCount }}</strong>명
+          </span>
         </div>
         <button
           type="button"
@@ -1272,6 +1284,25 @@ const studentsMap = computed(() => {
   })
 
   return map
+})
+
+// 전체 학생 및 재학생/졸업생 수 동적 집계
+const allStudentsList = computed(() => Array.from(studentsMap.value.values()))
+const totalStudentsCount = computed(() => allStudentsList.value.length)
+const enrolledStudentsCount = computed(() => allStudentsList.value.filter(s => !s.isGraduate && s.classNum !== '졸업생').length)
+const graduateStudentsCount = computed(() => allStudentsList.value.filter(s => s.isGraduate || s.classNum === '졸업생').length)
+
+const currentTargetTotalCount = computed(() => {
+  if (studentClassFilter.value === 'ENROLLED') {
+    return enrolledStudentsCount.value
+  }
+  if (studentClassFilter.value === '졸업생' || studentClassFilter.value === 'GRADUATE') {
+    return graduateStudentsCount.value
+  }
+  if (studentClassFilter.value !== 'ALL') {
+    return allStudentsList.value.filter(s => String(s.classNum) === String(studentClassFilter.value)).length
+  }
+  return totalStudentsCount.value
 })
 
 // Filtered student list
