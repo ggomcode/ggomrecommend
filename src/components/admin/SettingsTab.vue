@@ -447,7 +447,7 @@
               <input
                 v-model="googleSheetKcueId"
                 type="text"
-                :placeholder="hasGoogleSheetKcueId ? '저장된 ID (마스킹됨)' : 'ID 또는 전체 시트 URL 입력 (예: 1U5Vnx2x8gn...)'"
+                :placeholder="hasGoogleSheetKcueId ? '저장된 ID (마스킹됨)' : 'ID 또는 전체 시트 URL 입력 (예: 1hkgi-WKdbh...)'"
                 class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-slate-800 dark:text-white"
               />
               <button
@@ -458,6 +458,9 @@
                 {{ googleSheetKcueLoading ? '저장 중…' : 'ID 저장' }}
               </button>
             </div>
+            <p class="text-[11px] text-amber-700 dark:text-amber-400 m-0 leading-relaxed">
+              ⚠️ <strong>시트 ID 구분 필수:</strong> 배포용 암호화 시트 ID(<code>1U5Vnx...</code>)가 아니라, <strong>원본 대교협/모의고사 성적 시트 ID(<code>1hkgi-WKdbh_cIK1Ctzv3BBxqKLe50DCKAT8cmT9wbWg</code>)</strong>를 등록하셔야 모의고사 성적 원자료가 올바른 원본 시트의 [2027모의결과] 탭에 적재됩니다.
+            </p>
 
             <!-- 모의고사 성적 실시간 쓰기 연동용 GAS Web App URL (선택사항) -->
             <div class="pt-2.5 border-t border-slate-200/80 dark:border-slate-800 space-y-1.5">

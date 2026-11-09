@@ -588,33 +588,64 @@
           </button>
         </div>
 
-        <!-- 연동된 Web App 상태 및 빠른 점검/변경 바 -->
-        <div class="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-emerald-200/60 text-xs">
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="text-slate-600 font-bold">📡 연동 Web App:</span>
-            <span v-if="configuredGasUrl" class="font-mono text-indigo-800 font-bold bg-white/90 px-2 py-0.5 rounded-md border border-indigo-200 shadow-2xs">
-              {{ maskGasUrl(configuredGasUrl) }}
-            </span>
-            <span v-else class="text-amber-800 font-bold bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-300">
-              ⚠️ Web App URL 미등록 (등록 필요)
-            </span>
-            <a
-              v-if="configuredGasUrl"
-              :href="configuredGasUrl"
-              target="_blank"
-              class="text-indigo-700 hover:text-indigo-900 font-bold flex items-center gap-1 hover:underline ml-1"
-              title="새 창에서 웹앱 응답 확인 (정상 시: 모의고사 성적 원격 수신 Web App이 정상 작동 중입니다)"
+        <!-- 연동된 구글 시트 및 Web App 상태 바 -->
+        <div class="flex flex-col gap-2 pt-2.5 border-t border-emerald-200/60 text-xs">
+          <!-- 1) 대상 시트 ID -->
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-slate-600 font-bold">📄 대상 구글 시트:</span>
+              <span class="font-mono text-emerald-800 font-bold bg-white/90 px-2 py-0.5 rounded-md border border-emerald-300 shadow-2xs">
+                {{ configuredSheetId ? maskGasUrl(configuredSheetId) : '1hkgi-WKdbh...' }}
+              </span>
+              <span v-if="configuredSheetId && configuredSheetId.includes('1U5Vnx')" class="text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                ⚠️ 배포용(암호화) 시트 ID임! 원본(1hkgi-W...)으로 변경 필요
+              </span>
+              <a
+                v-if="configuredSheetId"
+                :href="`https://docs.google.com/spreadsheets/d/${configuredSheetId}/edit`"
+                target="_blank"
+                class="text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1 hover:underline ml-1"
+              >
+                <span>🔗 시트 바로 열기</span>
+              </a>
+            </div>
+            <button
+              type="button"
+              @click="promptChangeSheetId"
+              class="text-[11px] font-bold text-slate-700 hover:text-emerald-700 bg-white hover:bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-300 cursor-pointer transition-colors shadow-2xs"
             >
-              <span>🔗 웹앱 응답 확인</span>
-            </a>
+              ⚙️ 시트 ID 변경
+            </button>
           </div>
-          <button
-            type="button"
-            @click="promptChangeGasUrl"
-            class="text-[11px] font-bold text-slate-700 hover:text-indigo-700 bg-white hover:bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-300 cursor-pointer transition-colors shadow-2xs"
-          >
-            ⚙️ Web App URL 등록/변경
-          </button>
+
+          <!-- 2) 연동 Web App -->
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-slate-600 font-bold">📡 연동 Web App:</span>
+              <span v-if="configuredGasUrl" class="font-mono text-indigo-800 font-bold bg-white/90 px-2 py-0.5 rounded-md border border-indigo-200 shadow-2xs">
+                {{ maskGasUrl(configuredGasUrl) }}
+              </span>
+              <span v-else class="text-amber-800 font-bold bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-300">
+                ⚠️ Web App URL 미등록 (등록 필요)
+              </span>
+              <a
+                v-if="configuredGasUrl"
+                :href="configuredGasUrl"
+                target="_blank"
+                class="text-indigo-700 hover:text-indigo-900 font-bold flex items-center gap-1 hover:underline ml-1"
+                title="새 창에서 웹앱 응답 확인"
+              >
+                <span>🔗 웹앱 응답 확인</span>
+              </a>
+            </div>
+            <button
+              type="button"
+              @click="promptChangeGasUrl"
+              class="text-[11px] font-bold text-slate-700 hover:text-indigo-700 bg-white hover:bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-300 cursor-pointer transition-colors shadow-2xs"
+            >
+              ⚙️ Web App URL 등록/변경
+            </button>
+          </div>
         </div>
       </div>
 
@@ -760,7 +791,7 @@ import {
   getAcademicSchoolYear,
   getTargetMockResultSheetName
 } from '../../stat/utils/mockExamReportParser'
-import { getKcueSheetId, buildSheetWebUrl, DEFAULT_KCUE_SHEET_ID, getKcueGasUrl, saveKcueGasUrl, maskGasUrl } from '../../api/statApi'
+import { getKcueSheetId, saveKcueSheetId, buildSheetWebUrl, DEFAULT_KCUE_SHEET_ID, getKcueGasUrl, saveKcueGasUrl, maskGasUrl } from '../../api/statApi'
 import { dialog } from '../common/dialog'
 
 // 현재 날짜 기준 대입/학사 학년도 자동 계산
@@ -793,12 +824,19 @@ function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents);
     let ss = SpreadsheetApp.getActiveSpreadsheet();
-    if (!ss && payload.spreadsheetId) {
-      try { ss = SpreadsheetApp.openById(payload.spreadsheetId); } catch (_) {}
+
+    // 1. 대상 스프레드시트 검증 및 매칭
+    if (payload.spreadsheetId) {
+      if (!ss || ss.getId() !== payload.spreadsheetId) {
+        try {
+          ss = SpreadsheetApp.openById(payload.spreadsheetId);
+        } catch (openErr) {
+          const currentName = ss ? ss.getName() : '알 수 없음';
+          throw new Error('현재 Web App이 엉뚱한 구글 시트 [' + currentName + ']에 배포되어 있습니다.\n반드시 원본 모의고사 시트(' + payload.spreadsheetId + ') 창에서 [확장 프로그램 > Apps Script]를 열고 배포해 주세요.');
+        }
+      }
     }
-    if (payload.spreadsheetId && ss && ss.getId() !== payload.spreadsheetId) {
-      try { ss = SpreadsheetApp.openById(payload.spreadsheetId); } catch (_) {}
-    }
+
     if (!ss) {
       return ContentService.createTextOutput(JSON.stringify({ success: false, error: '스프레드시트를 열 수 없습니다.' }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -831,7 +869,8 @@ function doPost(e) {
       success: true,
       count: rows.length,
       sheetName: sheetName,
-      spreadsheetName: ss.getName()
+      spreadsheetName: ss.getName(),
+      spreadsheetId: ss.getId()
     })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({
@@ -854,14 +893,30 @@ async function copyGasSnippet() {
   }
 }
 
-// 등록된 Web App URL 상태
+// 등록된 Web App URL 및 시트 ID 상태
 const configuredGasUrl = ref('')
+const configuredSheetId = ref('')
 
 onMounted(async () => {
   try {
     configuredGasUrl.value = await getKcueGasUrl()
+    configuredSheetId.value = await getKcueSheetId()
   } catch (_) {}
 })
+
+async function promptChangeSheetId() {
+  const current = configuredSheetId.value || DEFAULT_KCUE_SHEET_ID
+  const input = window.prompt(
+    '대교협 및 모의고사 성적 원본 구글 스프레드시트 ID를 입력해 주세요:\n\n' +
+    '※ 주의: 암호화 배포용 시트 ID(1U5Vnx...)가 아니라, 원본 대교협 시트 ID(1hkgi-WKdbh...)를 입력하셔야 합니다.',
+    current
+  )
+  if (input !== null && input.trim() !== current) {
+    const saved = await saveKcueSheetId(input.trim())
+    configuredSheetId.value = saved || DEFAULT_KCUE_SHEET_ID
+    dialog.alert('✓ 대교협 원본 시트 ID가 성공적으로 저장되었습니다.')
+  }
+}
 
 async function promptChangeGasUrl() {
   const current = configuredGasUrl.value || ''
@@ -1121,7 +1176,22 @@ async function handleSaveToGoogleSheet() {
   // 2. Apps Script Web App URL 확인 (환경설정에서 동적 관리)
   let gasUrl = await getKcueGasUrl()
   configuredGasUrl.value = gasUrl
-  const targetSheetId = await getKcueSheetId()
+  let targetSheetId = await getKcueSheetId()
+  configuredSheetId.value = targetSheetId
+
+  // 배포용 암호화 시트(1U5Vnx...)가 등록되어 있는 경우 자동 교정 안내
+  if (targetSheetId && targetSheetId.includes('1U5Vnx2x8gnXQlI3N4deyaurKxj-naZP0cRBb3lQnT4o')) {
+    const shouldFix = window.confirm(
+      '⚠️ [구글 시트 ID 확인 안내]\n\n' +
+      '현재 시스템 환경설정에 등록된 시트 ID가 "배포용 암호화 시트(1U5Vnx...)"로 설정되어 있습니다.\n\n' +
+      '모의고사 성적 원본 데이터는 "대교협 원본 시트(1hkgi-WKdbh_cIK1Ctzv3BBxqKLe50DCKAT8cmT9wbWg)"의 [2027모의결과] 탭에 적재되어야 합니다.\n\n' +
+      '대상 구글 시트를 "대교협 원본 시트(1hkgi-W...)"로 즉시 변경하여 저장하고 전송하시겠습니까?'
+    )
+    if (shouldFix) {
+      targetSheetId = await saveKcueSheetId(DEFAULT_KCUE_SHEET_ID)
+      configuredSheetId.value = targetSheetId
+    }
+  }
 
   if (!gasUrl) {
     const inputUrl = window.prompt(
@@ -1172,12 +1242,18 @@ async function handleSaveToGoogleSheet() {
       // 4. 안전 백업 엑셀 자동 보관
       exportParsedToExcel()
 
+      const savedSheetName = resJson.spreadsheetName || '구글 시트'
+      const savedTab = resJson.sheetName || targetSheetName.value
+      const isExpectedSheet = !resJson.spreadsheetId || resJson.spreadsheetId === targetSheetId
+
       await dialog.alert({
         title: '구글 시트 직접 반영 성공',
         message: `🎉 [구글 시트 직접 반영 성공!]\n\n` +
-          `• 대상 시트: 원본 구글 시트 [${targetSheetName.value}] 탭\n` +
-          `• 적재 인원: 전교생 ${allParsedStudents.value.length}명 (${selectedExam.value})\n` +
+          `• 저장된 구글 시트: [${savedSheetName}]\n` +
+          `• 저장된 시트 탭: [${savedTab}]\n` +
+          `• 적재 인원: 전교생 ${resJson.count || allParsedStudents.value.length}명 (${selectedExam.value})\n` +
           `• 컬럼 규격: 3행부터 44개 컬럼(A열 '월' ~ AR열 '제2외국어 등급') 직접 적재 완료\n\n` +
+          (isExpectedSheet ? '' : `⚠️ 주의: 등록된 Web App이 원본 모의고사 시트가 아닌 [${savedSheetName}] 파일에 배포되어 해당 파일의 [${savedTab}] 탭에 저장되었습니다.\n(원본 시트에 넣으시려면 원본 시트 창에서 Apps Script를 열어 배포하셔야 합니다.)\n\n`) +
           `※ 안전한 데이터 보관을 위해 동일한 규격의 엑셀 백업 파일도 함께 저장되었습니다.`
       })
     } else {
