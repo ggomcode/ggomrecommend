@@ -2480,7 +2480,8 @@ function extractExamMonth(r) {
     if ([3, 4, 5, 6, 7, 8, 9, 10, 11].includes(mo)) return String(mo)
   }
   const name = String(r.examName || '').trim()
-  const match = name.match(/(10|[3-9]|11)\s*월/)
+  if (/^(10|[3-9]|11)$/.test(name)) return name
+  const match = name.match(/(10|[3-9]|11)\s*월?/)
   if (match) return match[1]
   return null
 }

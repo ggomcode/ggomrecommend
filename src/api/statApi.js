@@ -1107,6 +1107,13 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
     colMap[clean] = idx
   })
 
+  // 44개 컬럼 표준 규격(A~AR열, 2027모의결과 등) 감지:
+  // targetTab이 '모의결과'를 포함하거나, 열 수가 40열 이상이고 '월', '이름'이 있는 경우
+  const isStandard44 = !isEncrypted && (
+    targetTab.includes('모의결과') ||
+    (rawHeaders.length >= 40 && (colMap['월'] !== undefined || colMap['월'] === 0) && colMap['이름'] !== undefined)
+  )
+
   const records = []
 
   for (let i = 1; i < rows.length; i++) {
@@ -1125,37 +1132,23 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       }
     }
 
-    const getVal = (...keys) => {
-      if (rowData) {
-        for (const k of keys) {
-          if (rowData[k] !== undefined && rowData[k] !== null && rowData[k] !== '') {
-            return String(rowData[k]).trim()
-          }
-          const cleanK = k.replace(/[\r\n\s]+/g, '')
-          for (const ak of Object.keys(rowData)) {
-            if (ak.replace(/[\r\n\s]+/g, '') === cleanK && rowData[ak] !== undefined && rowData[ak] !== null && rowData[ak] !== '') {
-              return String(rowData[ak]).trim()
-            }
-          }
-        }
-        return ''
-      } else {
-        for (const k of keys) {
-          const cleanK = k.replace(/[\r\n\s]+/g, '')
-          if (colMap[cleanK] !== undefined && r[colMap[cleanK]] !== undefined && r[colMap[cleanK]] !== null && r[colMap[cleanK]] !== '') {
-            return String(r[colMap[cleanK]]).trim()
-          }
-        }
-        return ''
-      }
-    }
-
-    const getNum = (...keys) => {
-      const v = getVal(...keys)
-      if (v === '' || v === null || v === undefined) return null
-      const n = Number(v)
-      return isNaN(n) ? null : n
-    }
+    let name = ''
+    let classNum = ''
+    let studentNum = ''
+    let grade = 3
+    let monthOrder = null
+    let examName = ''
+    let korSubject = ''
+    let mathSubject = ''
+    let inquiry1 = ''
+    let inquiry2 = ''
+    let korGrade = null
+    let mathGrade = null
+    let engGrade = null
+    let inq1Grade = null
+    let inq2Grade = null
+    let histGrade = null
+    let secondLangGrade = null
 
     // 등급 파싱 함수 (1~9 등급 검증 및 원점수/표준점수 등급 자동 환산)
     const parseGradeValue = (val, subjectType = 'NORMAL') => {
@@ -1274,132 +1267,196 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       return null
     }
 
-    const getGradeNum = (keys, subjectType = 'NORMAL') => {
-      // 1) 명시된 키 리스트 우선 탐색
-      for (const k of keys) {
-        const v = getVal(k)
-        const parsed = parseGradeValue(v, subjectType)
-        if (parsed !== null) return parsed
+    if (isStandard44) {
+      // 44개 컬럼 표준 규격 직접 인덱싱 파싱 (2027모의결과 탭 등)
+      name = String(r[5] || '').trim()
+      if (!name) continue
+
+      classNum = r[3] != null ? String(r[3]).trim() : ''
+      studentNum = r[4] != null ? String(r[4]).trim() : ''
+      grade = Number(r[2]) || 3
+
+      const rawMonth = r[0] != null ? String(r[0]).trim() : ''
+      const mNum = parseInt(rawMonth.replace(/[^0-9]/g, ''), 10)
+      if (!isNaN(mNum) && mNum >= 3 && mNum <= 11) {
+        monthOrder = mNum
+        const isMopyeong = [6, 9].includes(mNum)
+        examName = `${mNum}월 ${isMopyeong ? '모평' : '학평'}`
+      } else {
+        examName = rawMonth || targetTab
       }
 
-      // 2) rowData 또는 colMap 키 패턴 fallback 탐색
-      let pattern = null
-      if (subjectType === 'KOR') pattern = /(?:^|[^가-힣])(?:국어|언어|국)(?:$|[^가-힣]|.*?(?:등급|석차|표점|원점수|성적))/i
-      else if (subjectType === 'MATH') pattern = /(?:^|[^가-힣])(?:수학|수리|수)(?:$|[^가-힣]|.*?(?:등급|석차|표점|원점수|성적))/i
-      else if (subjectType === 'ENG') pattern = /(?:^|[^가-힣])(?:영어|외국어|영)(?:$|[^가-힣]|.*?(?:등급|석차|표점|원점수|성적))/i
-      else if (subjectType === 'HIST') pattern = /(?:^|[^가-힣])(?:한국사|국사|한)(?:$|[^가-힣]|.*?(?:등급|석차|표점|원점수|성적))/i
+      korSubject = r[6] != null ? String(r[6]).trim() : ''
+      korGrade = parseGradeValue(r[12], 'KOR')
 
-      if (pattern && rowData) {
-        for (const [rk, rv] of Object.entries(rowData)) {
-          if (pattern.test(rk)) {
-            const parsed = parseGradeValue(rv, subjectType)
-            if (parsed !== null) return parsed
+      mathSubject = r[13] != null ? String(r[13]).trim() : ''
+      mathGrade = parseGradeValue(r[19], 'MATH')
+
+      engGrade = parseGradeValue(r[23], 'ENG')
+
+      inquiry1 = r[25] != null ? String(r[25]).trim() : ''
+      inq1Grade = parseGradeValue(r[29], 'INQ')
+
+      inquiry2 = r[30] != null ? String(r[30]).trim() : ''
+      inq2Grade = parseGradeValue(r[34], 'INQ')
+
+      histGrade = parseGradeValue(r[38], 'HIST')
+      secondLangGrade = parseGradeValue(r[43], 'NORMAL')
+    } else {
+      // 일반/가채점 탭 유연 파싱 (헤더명 매핑 방식)
+      const getVal = (...keys) => {
+        if (rowData) {
+          for (const k of keys) {
+            if (rowData[k] !== undefined && rowData[k] !== null && rowData[k] !== '') {
+              return String(rowData[k]).trim()
+            }
+            const cleanK = k.replace(/[\r\n\s]+/g, '')
+            for (const ak of Object.keys(rowData)) {
+              if (ak.replace(/[\r\n\s]+/g, '') === cleanK && rowData[ak] !== undefined && rowData[ak] !== null && rowData[ak] !== '') {
+                return String(rowData[ak]).trim()
+              }
+            }
+          }
+          return ''
+        } else {
+          for (const k of keys) {
+            const cleanK = k.replace(/[\r\n\s]+/g, '')
+            if (colMap[cleanK] !== undefined && r[colMap[cleanK]] !== undefined && r[colMap[cleanK]] !== null && r[colMap[cleanK]] !== '') {
+              return String(r[colMap[cleanK]]).trim()
+            }
+          }
+          return ''
+        }
+      }
+
+      const getGradeNum = (keys, subjectType = 'NORMAL') => {
+        for (const k of keys) {
+          const v = getVal(k)
+          const parsed = parseGradeValue(v, subjectType)
+          if (parsed !== null) return parsed
+        }
+
+        let pattern = null
+        if (subjectType === 'KOR') pattern = /(?:^|[^가-힣])(?:국어|언어|국)(?:$|[^가-힣]|.*?(?:등급|석차|표점|원점수|성적))/i
+        else if (subjectType === 'MATH') pattern = /(?:^|[^가-힣])(?:수학|수리|수)(?:$|[^가-힣]|.*?(?:등급|석차|표점|원점수|성적))/i
+        else if (subjectType === 'ENG') pattern = /(?:^|[^가-힣])(?:영어|외국어|영)(?:$|[^가-힣]|.*?(?:등급|석차|표점|원점수|성적))/i
+        else if (subjectType === 'HIST') pattern = /(?:^|[^가-힣])(?:한국사|국사|한)(?:$|[^가-힣]|.*?(?:등급|석차|표점|원점수|성적))/i
+
+        if (pattern && rowData) {
+          for (const [rk, rv] of Object.entries(rowData)) {
+            if (pattern.test(rk)) {
+              const parsed = parseGradeValue(rv, subjectType)
+              if (parsed !== null) return parsed
+            }
+          }
+        }
+        return null
+      }
+
+      const getInqGrade = (inqIndex) => {
+        const specificKeys = inqIndex === 1
+          ? ['탐구1(등급)', '탐구1등급', '탐구1_등급', '제1선택_등급', '탐구1 등급', '사/과(1)_등급', '사탐1_등급', '과탐1_등급', '탐1_등급', '탐구1(원점수)', '탐구1원점수', '탐구1(표준점수)', '탐구1(표점)', '탐구1(백분위)', '탐구1점수', '탐구1']
+          : ['탐구2(등급)', '탐구2등급', '탐구2_등급', '제2선택_등급', '탐구2 등급', '사/과(2)_등급', '사탐2_등급', '과탐2_등급', '탐2_등급', '탐구2(원점수)', '탐구2원점수', '탐구2(표준점수)', '탐구2(표점)', '탐구2(백분위)', '탐구2점수', '탐구2']
+        
+        for (const k of specificKeys) {
+          const v = getVal(k)
+          const parsed = parseGradeValue(v, 'INQ')
+          if (parsed !== null) return parsed
+        }
+
+        if (rowData) {
+          const regex = inqIndex === 1 
+            ? /(?:탐구\s*1|선택\s*1|사탐\s*1|과탐\s*1|제1선택|1선택).*?(?:등급|표점|점수|성적)?/i
+            : /(?:탐구\s*2|선택\s*2|사탐\s*2|과탐\s*2|제2선택|2선택).*?(?:등급|표점|점수|성적)?/i
+          for (const [rk, rv] of Object.entries(rowData)) {
+            if (regex.test(rk)) {
+              const parsed = parseGradeValue(rv, 'INQ')
+              if (parsed !== null) return parsed
+            }
+          }
+        }
+        return null
+      }
+
+      name = getVal('이름', '성명', '학생명')
+      if (!name) continue
+
+      classNum = getVal('반', '학급') || ''
+      studentNum = getVal('번호', '출석번호') || ''
+      examName = getVal('시험명', '회차', '모의고사', '월', '구분', '시험구분', '시험', '학평', '모의평가')
+      if (!examName && r && r[0] != null && String(r[0]).trim()) {
+        examName = String(r[0]).trim()
+      }
+      if (!examName && rowData) {
+        for (const [k, v] of Object.entries(rowData)) {
+          const strV = String(v || '').trim()
+          if (strV.includes('수능') || /([0-9]{1,2})\s*월/.test(strV)) {
+            examName = strV
+            break
           }
         }
       }
-      return null
-    }
+      if (!examName) examName = targetTab
 
-    const getInqGrade = (inqIndex) => {
-      const specificKeys = inqIndex === 1
-        ? ['탐구1(등급)', '탐구1등급', '탐구1_등급', '제1선택_등급', '탐구1 등급', '사/과(1)_등급', '사탐1_등급', '과탐1_등급', '탐1_등급', '탐구1(원점수)', '탐구1원점수', '탐구1(표준점수)', '탐구1(표점)', '탐구1(백분위)', '탐구1점수', '탐구1']
-        : ['탐구2(등급)', '탐구2등급', '탐구2_등급', '제2선택_등급', '탐구2 등급', '사/과(2)_등급', '사탐2_등급', '과탐2_등급', '탐2_등급', '탐구2(원점수)', '탐구2원점수', '탐구2(표준점수)', '탐구2(표점)', '탐구2(백분위)', '탐구2점수', '탐구2']
-      
-      for (const k of specificKeys) {
-        const v = getVal(k)
-        const parsed = parseGradeValue(v, 'INQ')
-        if (parsed !== null) return parsed
+      const mMatch = examName.match(/(10|[3-9]|11)/)
+      if (mMatch) {
+        monthOrder = Number(mMatch[1])
       }
 
-      if (rowData) {
-        const regex = inqIndex === 1 
-          ? /(?:탐구\s*1|선택\s*1|사탐\s*1|과탐\s*1|제1선택|1선택).*?(?:등급|표점|점수|성적)?/i
-          : /(?:탐구\s*2|선택\s*2|사탐\s*2|과탐\s*2|제2선택|2선택).*?(?:등급|표점|점수|성적)?/i
-        for (const [rk, rv] of Object.entries(rowData)) {
-          if (regex.test(rk)) {
-            const parsed = parseGradeValue(rv, 'INQ')
-            if (parsed !== null) return parsed
-          }
+      korSubject = getVal(
+        '국어(과목)', '국어(선택)', '국어선택', '국어과목', '선택_국어',
+        '선택과목(국어)', '선택과목_국어', '국어선택과목', '국어_선택', '선택(국어)'
+      ) || ''
+      if (!korSubject) {
+        const gukVal = getVal('국어', '국')
+        if (gukVal && /화작|화법|언매|언어/.test(gukVal)) {
+          korSubject = gukVal
         }
       }
-      return null
-    }
 
-    const name = getVal('이름', '성명', '학생명')
-    if (!name) continue
-
-    const classNum = getVal('반', '학급') || ''
-    const studentNum = getVal('번호', '출석번호') || ''
-    let examName = getVal('시험명', '회차', '모의고사', '월', '구분', '시험구분', '시험', '학평', '모의평가')
-    if (!examName && r && r[0] != null && String(r[0]).trim()) {
-      examName = String(r[0]).trim()
-    }
-    if (!examName && rowData) {
-      for (const [k, v] of Object.entries(rowData)) {
-        const strV = String(v || '').trim()
-        if (strV.includes('수능') || /([0-9]{1,2})\s*월/.test(strV)) {
-          examName = strV
-          break
+      mathSubject = getVal(
+        '수학(과목)', '수학(선택)', '수학선택', '수학과목', '선택_수학',
+        '선택과목(수학)', '선택과목_수학', '수학선택과목', '수학_선택', '선택(수학)'
+      ) || ''
+      if (!mathSubject) {
+        const suVal = getVal('수학', '수')
+        if (suVal && /미적|기하|확률|확통/.test(suVal)) {
+          mathSubject = suVal
         }
       }
+
+      inquiry1 = getVal('탐구1(과목)', '탐구1', '선택과목1', '탐구과목1', '사탐/과탐1', '제1선택', '탐구1과목') || ''
+      inquiry2 = getVal('탐구2(과목)', '탐구2', '선택과목2', '탐구과목2', '사탐/과탐2', '제2선택', '탐구2과목') || ''
+
+      korGrade = getGradeNum([
+        '국어(등급)', '국어등급', '국어_등급', '국어 등급', '국(등급)', '국등급',
+        '국어(원점수)', '국어원점수', '국어_원점수', '국어(표준점수)', '국어(표점)', '국어(백분위)', '국어점수', '국어', '국'
+      ], 'KOR')
+      mathGrade = getGradeNum([
+        '수학(등급)', '수학등급', '수학_등급', '수학 등급', '수(등급)', '수등급',
+        '수학(원점수)', '수학원점수', '수학_원점수', '수학(표준점수)', '수학(표점)', '수학(백분위)', '수학점수', '수학', '수'
+      ], 'MATH')
+      engGrade = getGradeNum([
+        '영어(등급)', '영어등급', '영어_등급', '영어 등급', '영(등급)', '영등급',
+        '영어(원점수)', '영어원점수', '영어_원점수', '영어(표준점수)', '영어(표점)', '영어점수', '영어', '영'
+      ], 'ENG')
+      inq1Grade = getInqGrade(1)
+      inq2Grade = getInqGrade(2)
+      histGrade = getGradeNum([
+        '한국사(등급)', '한국사등급', '한국사_등급', '한국사 등급', '한(등급)', '한등급',
+        '한국사(원점수)', '한국사원점수', '한국사(표준점수)', '한국사점수', '한국사'
+      ], 'HIST')
+      secondLangGrade = getGradeNum([
+        '제2외국어(등급)', '제2외국어등급', '제2외국어_등급', '제2외국어',
+        '제2외국어(원점수)', '제2외국어(표준점수)'
+      ], 'NORMAL')
+
+      grade = Number(getVal('학년', '학년구분')) || (r && r[0] != null && [1, 2, 3].includes(Number(r[0])) ? Number(r[0]) : 3)
     }
-    if (!examName) examName = targetTab
-
-    // 국어 선택과목 (숫자 점수 오인식 방지)
-    let korSubject = getVal(
-      '국어(과목)', '국어(선택)', '국어선택', '국어과목', '선택_국어',
-      '선택과목(국어)', '선택과목_국어', '국어선택과목', '국어_선택', '선택(국어)'
-    ) || ''
-    if (!korSubject) {
-      const gukVal = getVal('국어', '국')
-      if (gukVal && /화작|화법|언매|언어/.test(gukVal)) {
-        korSubject = gukVal
-      }
-    }
-
-    // 수학 선택과목 (숫자 점수 오인식 방지)
-    let mathSubject = getVal(
-      '수학(과목)', '수학(선택)', '수학선택', '수학과목', '선택_수학',
-      '선택과목(수학)', '선택과목_수학', '수학선택과목', '수학_선택', '선택(수학)'
-    ) || ''
-    if (!mathSubject) {
-      const suVal = getVal('수학', '수')
-      if (suVal && /미적|기하|확률|확통/.test(suVal)) {
-        mathSubject = suVal
-      }
-    }
-
-    const inquiry1 = getVal('탐구1(과목)', '탐구1', '선택과목1', '탐구과목1', '사탐/과탐1', '제1선택', '탐구1과목') || ''
-    const inquiry2 = getVal('탐구2(과목)', '탐구2', '선택과목2', '탐구과목2', '사탐/과탐2', '제2선택', '탐구2과목') || ''
-
-    // 등급 파싱 (수능최저학력기준 판정용 & 과목별 통계용, 1~9등급 보장 및 원점수/표준점수 자동 환산)
-    const korGrade = getGradeNum([
-      '국어(등급)', '국어등급', '국어_등급', '국어 등급', '국(등급)', '국등급',
-      '국어(원점수)', '국어원점수', '국어_원점수', '국어(표준점수)', '국어(표점)', '국어(백분위)', '국어점수', '국어', '국'
-    ], 'KOR')
-    const mathGrade = getGradeNum([
-      '수학(등급)', '수학등급', '수학_등급', '수학 등급', '수(등급)', '수등급',
-      '수학(원점수)', '수학원점수', '수학_원점수', '수학(표준점수)', '수학(표점)', '수학(백분위)', '수학점수', '수학', '수'
-    ], 'MATH')
-    const engGrade = getGradeNum([
-      '영어(등급)', '영어등급', '영어_등급', '영어 등급', '영(등급)', '영등급',
-      '영어(원점수)', '영어원점수', '영어_원점수', '영어(표준점수)', '영어(표점)', '영어점수', '영어', '영'
-    ], 'ENG')
-    const inq1Grade = getInqGrade(1)
-    const inq2Grade = getInqGrade(2)
-    const histGrade = getGradeNum([
-      '한국사(등급)', '한국사등급', '한국사_등급', '한국사 등급', '한(등급)', '한등급',
-      '한국사(원점수)', '한국사원점수', '한국사(표준점수)', '한국사점수', '한국사'
-    ], 'HIST')
-    const secondLangGrade = getGradeNum([
-      '제2외국어(등급)', '제2외국어등급', '제2외국어_등급', '제2외국어',
-      '제2외국어(원점수)', '제2외국어(표준점수)'
-    ], 'NORMAL')
-
-    const grade = Number(getVal('학년', '학년구분')) || (r && r[0] != null && [1, 2, 3].includes(Number(r[0])) ? Number(r[0]) : 3)
 
     records.push({
       grade,
+      monthOrder: monthOrder || (parseInt(String(examName).replace(/[^0-9]/g, ''), 10) || null),
       examName,
       name,
       classNum,
