@@ -750,6 +750,14 @@ const copiedGasSnippet = ref(false)
 const gasSnippetCode = `/**
  * [모의고사 성적 원격 수신] 44개 컬럼 자동 적재 핸들러
  */
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({
+    success: true,
+    status: 'online',
+    message: '모의고사 성적 원격 수신 Web App이 정상 작동 중입니다.'
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
 function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents);
@@ -762,6 +770,15 @@ function doPost(e) {
     if (!rows || rows.length === 0) {
       return ContentService.createTextOutput(JSON.stringify({ success: false, error: '데이터가 없습니다.' }))
         .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 필요 시 시트의 행과 열 자동 확장 (범위 초과 오류 방지)
+    const neededRows = 2 + rows.length;
+    if (sheet.getMaxRows() < neededRows) {
+      sheet.insertRowsAfter(sheet.getMaxRows(), neededRows - sheet.getMaxRows());
+    }
+    if (sheet.getMaxColumns() < 44) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), 44 - sheet.getMaxColumns());
     }
 
     // 1·2행 헤더는 건드리지 않고, 3행 1열부터 44개 열(A~AR)에 전교생 성적 직접 적재

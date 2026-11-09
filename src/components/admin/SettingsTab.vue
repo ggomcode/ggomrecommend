@@ -466,7 +466,17 @@
                   <span>⚡</span>
                   <span>모의고사 성적 원격 자동 적재용 Web App URL (선택사항)</span>
                 </span>
-                <span class="text-[10px] text-slate-400">등록 시 모의고사 성적 등록 화면에서 1클릭 자동 저장 활성화</span>
+                <div class="flex items-center gap-2">
+                  <a
+                    v-if="realGoogleSheetKcueGasUrl"
+                    :href="realGoogleSheetKcueGasUrl"
+                    target="_blank"
+                    class="text-[11px] text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 font-semibold flex items-center gap-1 hover:underline"
+                  >
+                    <span>🔗 웹앱 응답 확인</span>
+                  </a>
+                  <span class="text-[10px] text-slate-400">등록 시 1클릭 원격 자동 저장 활성화</span>
+                </div>
               </div>
               <p class="text-[10.5px] text-slate-500 m-0 leading-relaxed">
                 원본 구글 시트의 [확장 프로그램] ➔ [Apps Script]에서 웹 앱으로 배포한 URL(<code>https://script.google.com/macros/s/.../exec</code>)을 입력하고 저장하세요.
@@ -477,9 +487,18 @@
                   type="text"
                   @focus="handleKcueGasFocus"
                   @blur="handleKcueGasBlur"
-                  :placeholder="hasGoogleSheetKcueGasUrl ? '저장된 Web App URL (마스킹됨 - 클릭하여 새로 입력)' : 'https://script.google.com/macros/s/.../exec'"
+                  :placeholder="hasGoogleSheetKcueGasUrl ? '저장된 Web App URL (클릭하여 새로 입력)' : 'https://script.google.com/macros/s/.../exec'"
                   class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-slate-800 dark:text-white"
                 />
+                <button
+                  type="button"
+                  v-if="hasGoogleSheetKcueGasUrl"
+                  @click="toggleShowKcueGasUrl"
+                  class="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer whitespace-nowrap"
+                  :title="showKcueGasUrl ? 'URL 마스킹' : '전체 URL 보기'"
+                >
+                  {{ showKcueGasUrl ? '🙈 숨김' : '👁️ 전체보기' }}
+                </button>
                 <button
                   @click="saveGoogleSheetKcueGasUrl"
                   :disabled="googleSheetKcueGasLoading"
@@ -1061,6 +1080,36 @@ function maskGoogleSheetId(id) {
   return str.slice(0, 4) + '••••••••••••••••' + str.slice(-4)
 }
 
+/**
+ * 구글 Apps Script Web App 배포 URL 전용 마스킹
+ * 실제 Web App ID의 앞 4글자 및 뒷 4글자를 노출하여 올바른 등록 여부 확인 지원
+ */
+function maskGasUrl(url) {
+  if (!url) return ''
+  const str = String(url).trim()
+  if (!str) return ''
+  if (str.includes('•')) return str
+
+  // https://script.google.com/macros/s/{DEPLOYMENT_ID}/exec
+  const match = str.match(/^(https?:\/\/script\.google\.com\/macros\/s\/)([^\/\?]+)(\/exec.*)?$/i)
+  if (match) {
+    const prefix = match[1]
+    const id = match[2]
+    const suffix = match[3] || '/exec'
+    const idHead = id.slice(0, 4)
+    const idTail = id.length > 8 ? id.slice(-4) : ''
+    return `${prefix}${idHead}••••••••${idTail}${suffix}`
+  }
+
+  // 배포 ID만 직접 입력된 경우
+  if (!str.startsWith('http')) {
+    if (str.length <= 8) return str.slice(0, 4) + '••••'
+    return str.slice(0, 4) + '••••••••' + str.slice(-4)
+  }
+
+  return str.slice(0, 10) + '••••••••' + str.slice(-6)
+}
+
 const inputSchoolName = ref('')
 const schoolNameLoading = ref(false)
 
@@ -1093,6 +1142,7 @@ const googleSheetKcueGasUrl = ref('')
 const realGoogleSheetKcueGasUrl = ref('')
 const hasGoogleSheetKcueGasUrl = ref(false)
 const googleSheetKcueGasLoading = ref(false)
+const showKcueGasUrl = ref(false)
 
 const admissionSheetIdInput = ref('')
 const realAdmissionSheetId = ref('')
@@ -1519,7 +1569,7 @@ async function loadConfig() {
     const dbKcueGasUrl = configMap['google_sheet_kcue_gas_url'] || localStorage.getItem('pcm_google_sheet_kcue_gas_url') || localStorage.getItem('ggom_master_gas_webapp_url') || ''
     realGoogleSheetKcueGasUrl.value = dbKcueGasUrl
     hasGoogleSheetKcueGasUrl.value = !!dbKcueGasUrl
-    googleSheetKcueGasUrl.value = dbKcueGasUrl ? maskGoogleSheetId(dbKcueGasUrl) : ''
+    googleSheetKcueGasUrl.value = dbKcueGasUrl ? maskGasUrl(dbKcueGasUrl) : ''
 
     const dbAdmissionId = await getAdmissionSheetId(false)
     realAdmissionSheetId.value = dbAdmissionId
@@ -1539,7 +1589,7 @@ async function loadConfig() {
     const dbRollbookGasUrl = configMap['google_sheet_rollbook_gas_url'] || localStorage.getItem('ggom_gas_webapp_url') || ''
     realGoogleSheetRollbookGasUrl.value = dbRollbookGasUrl
     hasGoogleSheetRollbookGasUrl.value = !!dbRollbookGasUrl
-    googleSheetRollbookGasUrl.value = dbRollbookGasUrl ? maskGoogleSheetId(dbRollbookGasUrl) : ''
+    googleSheetRollbookGasUrl.value = dbRollbookGasUrl ? maskGasUrl(dbRollbookGasUrl) : ''
 
     if (configMap['allow_area_edit']) {
       allowAreaEdit.value = configMap['allow_area_edit'] === 'true'
@@ -1707,7 +1757,7 @@ async function saveGoogleSheetKcueGasUrl() {
     }
 
     hasGoogleSheetKcueGasUrl.value = !!targetVal
-    googleSheetKcueGasUrl.value = targetVal ? maskGoogleSheetId(targetVal) : ''
+    googleSheetKcueGasUrl.value = targetVal ? (showKcueGasUrl.value ? targetVal : maskGasUrl(targetVal)) : ''
     alert(targetVal ? '대교협 및 모의고사 구글 시트 Web App URL이 저장되었습니다.' : 'Web App URL이 삭제되었습니다.')
   } catch (e) {
     console.error(e)
@@ -1717,15 +1767,26 @@ async function saveGoogleSheetKcueGasUrl() {
   }
 }
 
+function toggleShowKcueGasUrl() {
+  showKcueGasUrl.value = !showKcueGasUrl.value
+  if (showKcueGasUrl.value) {
+    googleSheetKcueGasUrl.value = realGoogleSheetKcueGasUrl.value
+  } else {
+    googleSheetKcueGasUrl.value = maskGasUrl(realGoogleSheetKcueGasUrl.value)
+  }
+}
+
 function handleKcueGasFocus() {
   if (googleSheetKcueGasUrl.value.includes('•')) {
-    googleSheetKcueGasUrl.value = ''
+    googleSheetKcueGasUrl.value = realGoogleSheetKcueGasUrl.value
   }
 }
 
 function handleKcueGasBlur() {
-  if (!googleSheetKcueGasUrl.value && realGoogleSheetKcueGasUrl.value) {
-    googleSheetKcueGasUrl.value = maskGoogleSheetId(realGoogleSheetKcueGasUrl.value)
+  if (!showKcueGasUrl.value && googleSheetKcueGasUrl.value === realGoogleSheetKcueGasUrl.value) {
+    googleSheetKcueGasUrl.value = maskGasUrl(realGoogleSheetKcueGasUrl.value)
+  } else if (!googleSheetKcueGasUrl.value && realGoogleSheetKcueGasUrl.value) {
+    googleSheetKcueGasUrl.value = maskGasUrl(realGoogleSheetKcueGasUrl.value)
   }
 }
 
@@ -1835,7 +1896,7 @@ async function saveGoogleSheetRollbookGasUrl() {
     }
 
     hasGoogleSheetRollbookGasUrl.value = !!targetVal
-    googleSheetRollbookGasUrl.value = targetVal ? maskGoogleSheetId(targetVal) : ''
+    googleSheetRollbookGasUrl.value = targetVal ? maskGasUrl(targetVal) : ''
     alert(targetVal ? '선택교과 출석관리 GAS Web App URL이 저장되었습니다.' : '출석관리 GAS URL이 삭제되었습니다.')
   } catch (e) {
     console.error(e)
