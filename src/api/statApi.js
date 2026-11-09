@@ -203,6 +203,31 @@ export async function saveKcueGasUrl(url) {
   return cleanUrl
 }
 
+/**
+ * Apps Script Web App URL 마스킹 헬퍼 (배포 ID 앞 4글자, 뒤 4글자 노출)
+ * 예: https://script.google.com/macros/s/AKfy••••••••cdef/exec
+ */
+export function maskGasUrl(url) {
+  if (!url) return ''
+  const trimmed = String(url).trim()
+  const match = trimmed.match(/^(https?:\/\/script\.google\.com\/macros\/s\/)([a-zA-Z0-9_-]+)(\/exec.*)?$/i)
+  if (match) {
+    const prefix = match[1]
+    const id = match[2]
+    const suffix = match[3] || '/exec'
+    if (id.length <= 8) {
+      return `${prefix}••••••••${suffix}`
+    }
+    const head = id.slice(0, 4)
+    const tail = id.slice(-4)
+    return `${prefix}${head}••••••••${tail}${suffix}`
+  }
+  if (trimmed.length > 20) {
+    return trimmed.slice(0, 10) + '••••••••' + trimmed.slice(-6)
+  }
+  return trimmed
+}
+
 export const RURAL_SHEET_KEY = 'google_sheet_rural_id'
 
 /**
