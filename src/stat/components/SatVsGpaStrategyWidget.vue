@@ -389,9 +389,9 @@
                   ? 'bg-amber-50 text-amber-900 border-amber-300 shadow-2xs hover:bg-amber-100'
                   : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
               ]"
-              title="3.5~7.0등급 밀집 구간 집중 확대"
+              :title="isGradeZoomed ? `${trendDynamicYRange.label} 데이터 밀집 구간 자동 최적화` : '전체 1~9등급 기본 스케일'"
             >
-              <span>{{ isGradeZoomed ? '🔍 3.5~7.0등급 집중 확대' : '🔎 전체 1~9등급' }}</span>
+              <span>{{ isGradeZoomed ? `🔍 ${trendDynamicYRange.label} 집중 확대` : '🔎 전체 1~9등급' }}</span>
               <span :class="['text-[10px] px-1.5 py-0.5 rounded-md font-extrabold', isGradeZoomed ? 'bg-amber-200 text-amber-800' : 'bg-slate-100 text-slate-500']">
                 {{ isGradeZoomed ? 'ON' : 'OFF' }}
               </span>
@@ -2990,9 +2990,12 @@ const mockExamTrendSeries = computed(() => {
     const engDet = analysis.subjectsDetail?.eng || {}
 
     const hasData = analysis.hasRealData && analysis.studentCount > 0
+    const countLabel = hasData ? ` (${analysis.studentCount}명)` : ''
+    const shortLabel = meta ? meta.shortLabel : `${mKey}월`
+
     return {
       monthKey: mKey,
-      label: meta ? meta.shortLabel : `${mKey}월`,
+      label: hasData ? `${shortLabel}${countLabel}` : shortLabel,
       fullName: meta ? meta.label : `${mKey}월 모의고사`,
       studentCount: analysis.studentCount,
       hasRealData: hasData,
@@ -3000,10 +3003,14 @@ const mockExamTrendSeries = computed(() => {
       korAvg: hasData ? (Number(korDet.totalAvg) || analysis.grades[0]) : null,
       unmaeAvg: hasData ? (Number(korDet.unmaeAvg) || null) : null,
       hwajakAvg: hasData ? (Number(korDet.hwajakAvg) || null) : null,
+      unmaeCount: hasData ? (korDet.unmaeCount || 0) : 0,
+      hwajakCount: hasData ? (korDet.hwajakCount || 0) : 0,
       // 수학 (선택과목 분리)
       mathAvg: hasData ? (Number(mathDet.totalAvg) || analysis.grades[1]) : null,
       mijukAvg: hasData ? (Number(mathDet.mijukAvg) || null) : null,
       hwaktongAvg: hasData ? (Number(mathDet.hwaktongAvg) || null) : null,
+      mijukCount: hasData ? (mathDet.mijukCount || 0) : 0,
+      hwaktongCount: hasData ? (mathDet.hwaktongCount || 0) : 0,
       // 영어
       engAvg: hasData ? (Number(engDet.totalAvg) || analysis.grades[2]) : null,
       // 탐구
@@ -3198,9 +3205,69 @@ const mockExamTrendChartData = computed(() => {
   }
 })
 
+// 실제 데이터에 따라 Y축 확대 범위를 완전 유동적(Dynamic)으로 산출하는 반응형 계산
+const trendDynamicYRange = computed(() => {
+  const series = mockExamTrendSeries.value || []
+  const allGrades = []
+
+  series.forEach(s => {
+    if (!s.hasRealData) return
+    const values = [
+      s.korAvg,
+      s.mathAvg,
+      s.mijukAvg,
+      s.hwaktongAvg,
+      s.engAvg,
+      s.socAvg,
+      s.sciAvg,
+      s.gpaBenchmark
+    ]
+    values.forEach(v => {
+      const n = Number(v)
+      if (!isNaN(n) && n >= 1.0 && n <= 9.0) {
+        allGrades.push(n)
+      }
+    })
+  })
+
+  // 데이터가 없을 때 안전 기본값
+  if (allGrades.length === 0) {
+    return {
+      zoomMin: 3.5,
+      zoomMax: 7.0,
+      zoomStep: 0.5,
+      label: '3.5~7.0등급'
+    }
+  }
+
+  const rawMin = Math.min(...allGrades) // 최고 성적 (가장 작은 숫자, 예: 2.8)
+  const rawMax = Math.max(...allGrades) // 최저 성적 (가장 큰 숫자, 예: 6.4)
+
+  // 상단(최고 등급) 여유 마진 0.4등급 확보 후 0.5 단위 절삭 (상한 1.0등급)
+  // 예: rawMin이 2.8등급이면 2.8 - 0.4 = 2.4 -> 2.0등급까지 Y축 상단이 열림 (절대 그래프 밖으로 벗어나지 않음)
+  let optimalMin = Math.max(1.0, Math.floor((rawMin - 0.4) * 2) / 2)
+  // 하단(최저 등급) 여유 마진 0.4등급 확보 후 0.5 단위 절상 (하한 9.0등급)
+  let optimalMax = Math.min(9.0, Math.ceil((rawMax + 0.4) * 2) / 2)
+
+  // 상하단 간격이 너무 좁으면 최소 2.5등급 이상 가시 구간 확보
+  if (optimalMax - optimalMin < 2.5) {
+    optimalMin = Math.max(1.0, Number((optimalMin - 0.5).toFixed(1)))
+    optimalMax = Math.min(9.0, Number((optimalMax + 0.5).toFixed(1)))
+  }
+
+  const rangeSpan = optimalMax - optimalMin
+  return {
+    zoomMin: optimalMin,
+    zoomMax: optimalMax,
+    zoomStep: rangeSpan > 4.5 ? 1.0 : 0.5,
+    label: `${optimalMin.toFixed(1)}~${optimalMax.toFixed(1)}등급`
+  }
+})
+
 const mockTrendChartOptions = computed(() => {
   const isCount = mockTrendViewMode.value === 'COUNT'
   const isZoom = isGradeZoomed.value
+  const yRange = trendDynamicYRange.value
 
   return {
     responsive: true,
@@ -3224,18 +3291,18 @@ const mockTrendChartOptions = computed(() => {
         }
       } : {
         reverse: true, // 1등급 또는 상위 등급이 상단
-        min: isZoom ? 3.5 : 1,
-        max: isZoom ? 7.0 : 9,
+        min: isZoom ? yRange.zoomMin : 1.0,
+        max: isZoom ? yRange.zoomMax : 9.0,
         ticks: {
-          stepSize: isZoom ? 0.5 : 1,
+          stepSize: isZoom ? yRange.zoomStep : 1.0,
           callback: (val) => `${val}등급`,
           font: { family: 'Pretendard', size: 11 },
           color: '#64748b'
         },
         grid: {
           color: (context) => {
-            if (context.tick && Math.abs(context.tick.value - 4.5) < 0.1) {
-              return 'rgba(244, 63, 94, 0.2)'
+            if (context.tick && Math.abs(context.tick.value - 4.44) < 0.1) {
+              return 'rgba(244, 63, 94, 0.25)'
             }
             return '#f1f5f9'
           }
@@ -3260,12 +3327,30 @@ const mockTrendChartOptions = computed(() => {
         titleFont: { family: 'Pretendard', size: 12, weight: 'bold' },
         bodyFont: { family: 'Pretendard', size: 11 },
         callbacks: {
+          title: (items) => {
+            if (!items.length) return ''
+            const idx = items[0].dataIndex
+            const s = mockExamTrendSeries.value[idx]
+            if (!s) return items[0].label
+            return s.hasRealData
+              ? `${s.fullName} (전체 응시: ${s.studentCount}명)`
+              : `${s.fullName} (성적 데이터 미등록)`
+          },
           label: (ctx) => {
             if (isCount) return ` ${ctx.dataset.label}: ${ctx.raw}명`
             if (ctx.dataset.label.includes('기준선')) {
               return ` ${ctx.dataset.label}`
             }
-            return ` ${ctx.dataset.label}: ${Number(ctx.raw).toFixed(2)}등급`
+            if (ctx.raw == null || isNaN(ctx.raw)) return null
+            const idx = ctx.dataIndex
+            const s = mockExamTrendSeries.value[idx]
+            let extra = ''
+            if (ctx.dataset.label.includes('미적분') && s?.mijukCount > 0) {
+              extra = ` (${s.mijukCount}명)`
+            } else if (ctx.dataset.label.includes('확률과 통계') && s?.hwaktongCount > 0) {
+              extra = ` (${s.hwaktongCount}명)`
+            }
+            return ` ${ctx.dataset.label}${extra}: ${Number(ctx.raw).toFixed(2)}등급`
           }
         }
       }
