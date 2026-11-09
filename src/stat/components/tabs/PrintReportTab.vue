@@ -233,14 +233,14 @@
             <tbody>
               <tr>
                 <td class="border border-slate-300 py-1 px-1 font-bold bg-slate-50">전향 인원</td>
-                <td class="border border-slate-300 py-1 px-1 font-bold text-amber-800 font-mono">56명 (48.7%)</td>
-                <td class="border border-slate-300 py-1 px-1 font-mono">30명 (26.1%)</td>
-                <td class="border border-slate-300 py-1 px-1 font-mono">26명 (22.6%)</td>
+                <td class="border border-slate-300 py-1 px-1 font-bold text-amber-800 font-mono">{{ reportSatamStats.totalCount }}명 ({{ reportSatamStats.totalRate }}%)</td>
+                <td class="border border-slate-300 py-1 px-1 font-mono">{{ reportSatamStats.run1Count }}명 ({{ reportSatamStats.run1Rate }}%)</td>
+                <td class="border border-slate-300 py-1 px-1 font-mono">{{ reportSatamStats.run2Count }}명 ({{ reportSatamStats.run2Rate }}%)</td>
               </tr>
             </tbody>
           </table>
           <div class="text-[9.5px] text-slate-600 p-1.5 bg-slate-50 border border-slate-200 rounded leading-tight">
-            자연계 48.7%가 사회탐구로 전환하였으며, <strong>사회·문화(127명, 5.94)</strong>와 <strong>생활과 윤리(111명, 6.00)</strong> 응시 집중으로 수능최저 방어에 주효함.
+            자연계 {{ reportSatamStats.totalRate }}%가 사회탐구로 전환하였으며, 수능최저 방어 및 전략 과목 확보에 주효함.
           </div>
         </div>
       </div>
@@ -426,16 +426,12 @@
           <div class="border border-slate-300 p-2 rounded">
             <div class="font-bold border-b border-slate-200 pb-0.5 mb-1 text-indigo-900">최다 출원 대학 TOP 10</div>
             <div class="grid grid-cols-2 gap-x-2 gap-y-0.5 text-slate-700">
-              <div>1. 한경국립대: <strong>56건</strong></div>
-              <div>6. 한국외대(용인): <strong>29건</strong></div>
-              <div>2. 백석대: <strong>40건</strong></div>
-              <div>7. 수원대: <strong>26건</strong></div>
-              <div>3. 경기대(수원): <strong>36건</strong></div>
-              <div>8. 명지대(용인): <strong>25건</strong></div>
-              <div>4. 강남대: <strong>36건</strong></div>
-              <div>9. 남서울대: <strong>23건</strong></div>
-              <div>5. 가천대(성남): <strong>34건</strong></div>
-              <div>10. 용인·평택: <strong>각 22건</strong></div>
+              <div v-for="item in topAppliedUnivs" :key="item.rank">
+                {{ item.rank }}. {{ item.name }}: <strong>{{ item.count }}건</strong>
+              </div>
+              <div v-if="topAppliedUnivs.length === 0" class="col-span-2 text-slate-400">
+                출원 데이터 없음
+              </div>
             </div>
           </div>
 
@@ -444,10 +440,10 @@
             <div>
               <div class="font-bold border-b border-slate-200 pb-0.5 mb-1 text-indigo-900">주요대 및 과기원 지원 현황</div>
               <ul class="space-y-0.5 text-slate-700 leading-tight">
-                <li>• <strong>설포연고서성한이 & 과기원:</strong> 총 <strong class="text-indigo-700">101건</strong> 출원</li>
-                <li>• <strong>메디컬 계열:</strong> 상지대 한의예과 <strong class="text-indigo-700">1건</strong></li>
-                <li>• <strong>거점 국립대학교:</strong> 총 <strong class="text-indigo-700">65건</strong> 출원</li>
-                <li>• <strong>학교장추천 전형:</strong> 65명 전원 지원 완료 (195건)</li>
+                <li>• <strong>설포연고서성한이 & 과기원:</strong> 총 <strong class="text-indigo-700">{{ targetGroupStats.topTierCount }}건</strong> 출원</li>
+                <li>• <strong>메디컬 계열:</strong> {{ targetGroupStats.medicalDesc }} (<strong class="text-indigo-700">{{ targetGroupStats.medicalCount }}건</strong>)</li>
+                <li>• <strong>거점 국립대학교:</strong> 총 <strong class="text-indigo-700">{{ targetGroupStats.nationalCount }}건</strong> 출원</li>
+                <li>• <strong>학교장추천 전형:</strong> {{ targetGroupStats.recStudents }}명 지원 ({{ targetGroupStats.recCount }}건)</li>
               </ul>
             </div>
             <div class="p-1 bg-slate-50 border border-slate-200 rounded text-[9px] text-slate-500 mt-1">
@@ -464,8 +460,81 @@
 import { ref, computed } from 'vue'
 import { useStatData } from '../../composables/useStatData'
 import { schoolName } from '../../../utils/schoolConfig'
+import { calculateSatamRunStats } from '../../utils/satamRunCalculator'
 
-const { officialStats, applications, selectedAcademicYear, schoolMinScoreStats } = useStatData()
+const { officialStats, applications, selectedAcademicYear, schoolMinScoreStats, mockExamRecords } = useStatData()
+
+// 사탐런 실측 통계 (모의고사 원자료 기준, 없을 시 베이스라인)
+const reportSatamStats = computed(() => {
+  if (mockExamRecords.value && mockExamRecords.value.length > 0) {
+    try {
+      const stats = calculateSatamRunStats(mockExamRecords.value)
+      if (stats && stats.naturalCohortCount > 0) {
+        return {
+          totalCount: stats.totalRunCount,
+          totalRate: stats.totalRunRate,
+          run1Count: stats.run1Count,
+          run1Rate: stats.run1Rate,
+          run2Count: stats.run2Count,
+          run2Rate: stats.run2Rate,
+          cohortCount: stats.naturalCohortCount
+        }
+      }
+    } catch (e) {}
+  }
+  return {
+    totalCount: 56,
+    totalRate: '48.7',
+    run1Count: 30,
+    run1Rate: '26.1',
+    run2Count: 26,
+    run2Rate: '22.6',
+    cohortCount: 115
+  }
+})
+
+// 동적 최다 출원 대학 TOP 10
+const topAppliedUnivs = computed(() => {
+  const map = {}
+  applications.value.forEach(app => {
+    const u = app.univName ? app.univName.trim() : ''
+    if (u) {
+      map[u] = (map[u] || 0) + 1
+    }
+  })
+  return Object.entries(map)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([name, count], index) => ({ rank: index + 1, name, count }))
+})
+
+// 동적 주요 대학군 및 특별 전형 지원 현황
+const targetGroupStats = computed(() => {
+  const apps = applications.value || []
+  const topTierKeywords = ['서울대', '연세대', '고려대', '서강대', '성균관대', '한양대', '이화여대', 'KAIST', '포항공대', 'POSTECH', 'GIST', 'DGIST', 'UNIST', '한국에너지공과대']
+  const nationalKeywords = ['강원대', '경북대', '경상국립대', '부산대', '전남대', '전북대', '제주대', '충남대', '충북대']
+  
+  const topTierCount = apps.filter(a => topTierKeywords.some(k => a.univName?.includes(k))).length
+  const medicalApps = apps.filter(a => /의예|치의|한의|수의|약학/.test(a.dept || ''))
+  const nationalCount = apps.filter(a => nationalKeywords.some(k => a.univName?.includes(k))).length
+  const recApps = apps.filter(a => a.isRecommendation)
+  const recStudents = new Set(recApps.map(a => a.studentKey)).size
+
+  let medicalDesc = '지원 내역 없음'
+  if (medicalApps.length > 0) {
+    const first = medicalApps[0]
+    medicalDesc = `${first.univName} ${first.dept}${medicalApps.length > 1 ? ` 외 ${medicalApps.length - 1}건` : ''}`
+  }
+
+  return {
+    topTierCount,
+    medicalCount: medicalApps.length,
+    medicalDesc,
+    nationalCount,
+    recCount: recApps.length,
+    recStudents
+  }
+})
 const window = globalThis.window
 
 const displaySchoolName = computed(() => {

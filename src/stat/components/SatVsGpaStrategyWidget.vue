@@ -21,7 +21,7 @@
       <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
         <div class="bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl text-right">
           <span class="text-[10px] text-amber-800 block font-semibold">사탐런 전향율</span>
-          <span class="text-sm font-black text-amber-700 font-mono">48.7% <span class="text-[11px] font-medium text-amber-600">(56명)</span></span>
+          <span class="text-sm font-black text-amber-700 font-mono">{{ (mockStats?.totalRunRate != null) ? `${mockStats.totalRunRate}%` : '48.7%' }} <span class="text-[11px] font-medium text-amber-600">({{ (mockStats?.totalRunCount != null) ? `${mockStats.totalRunCount}명` : '56명' }})</span></span>
         </div>
         <div class="bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl text-right" :title="`우리학교 수능최저 지원 ${schoolMinScoreStats.totalMinApps}건 실측 통계\n• 전체 (논술포함): 최초 ${schoolMinScoreStats.avgInitialRate}:1 ➔ 실질 ${schoolMinScoreStats.avgRealRate}:1 (체감 ${schoolMinScoreStats.avgEffectiveRate}:1)\n• 학생부교과 (${schoolMinScoreStats.gpaCount}건): 최초 ${schoolMinScoreStats.gpaInitialRate}:1 ➔ 실질 ${schoolMinScoreStats.gpaRealRate}:1 (체감 ${schoolMinScoreStats.gpaEffectiveRate}:1)`">
           <span class="text-[10px] text-blue-800 block font-semibold">최저 실질경쟁률</span>
@@ -131,7 +131,7 @@
                     v-model="selectedMockExamMonth"
                     class="appearance-none bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-3 py-1.5 pr-8 text-xs font-bold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer min-w-60"
                   >
-                    <option value="ALL">🌟 전체 (3~10월 통합) - {{ currentSatAnalysis.studentCount }}명</option>
+                    <option value="ALL">🌟 전체 (3~10월 통합){{ currentSatAnalysis.studentCount > 0 ? ` - ${currentSatAnalysis.studentCount}명` : ' (데이터 미등록)' }}</option>
                     <option
                       v-for="opt in availableExamMonthOptions"
                       :key="opt.key"
@@ -163,8 +163,11 @@
                   </div>
                   <div class="flex items-baseline gap-2 mb-2">
                     <span class="text-2xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.kor.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
-                    <span class="text-[11px] font-semibold text-rose-600">
+                    <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.kor.totalAvg !== '-'" class="text-[11px] font-semibold text-rose-600">
                       내신({{ currentGpaRaw[0] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.kor.totalAvg) - currentGpaRaw[0]).toFixed(2) }}↓
+                    </span>
+                    <span v-else class="text-[11px] text-slate-400 font-medium">
+                      데이터 미등록
                     </span>
                   </div>
 
@@ -178,6 +181,7 @@
                     </div>
                     <!-- 현재 등급 위치 핀 -->
                     <div
+                      v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.kor.totalAvg !== '-'"
                       class="absolute top-0 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
                       :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.kor.totalAvg) }"
                     >
@@ -229,12 +233,15 @@
                   </div>
                   <div class="flex items-baseline gap-2 mb-2">
                     <span class="text-2xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.math.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
-                    <span class="text-[11px] font-semibold text-rose-600">
+                    <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.math.totalAvg !== '-'" class="text-[11px] font-semibold text-rose-600">
                       내신({{ currentGpaRaw[1] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.math.totalAvg) - currentGpaRaw[1]).toFixed(2) }}↓
+                    </span>
+                    <span v-else class="text-[11px] text-slate-400 font-medium">
+                      데이터 미등록
                     </span>
                   </div>
 
-                  <!-- 1~9 등급 수직선 위치 마커 (6.03등급 지점에 정확히 핀) -->
+                  <!-- 1~9 등급 수직선 위치 마커 -->
                   <div class="relative pt-1 pb-2">
                     <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
                     <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
@@ -244,6 +251,7 @@
                     </div>
                     <!-- 현재 등급 위치 핀 -->
                     <div
+                      v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.math.totalAvg !== '-'"
                       class="absolute top-0 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
                       :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.math.totalAvg) }"
                     >
@@ -283,7 +291,7 @@
                   </div>
 
                   <!-- 직관적 격차 배지 -->
-                  <div class="text-[10.5px] font-extrabold text-indigo-800 bg-indigo-50/80 border border-indigo-200/70 rounded-lg py-1 px-2 text-center">
+                  <div v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.math.mijukAvg !== '-' && currentSatAnalysis.subjectsDetail.math.hwaktongAvg !== '-'" class="text-[10.5px] font-extrabold text-indigo-800 bg-indigo-50/80 border border-indigo-200/70 rounded-lg py-1 px-2 text-center">
                     ⚡ 미적분이 확통 대비 <span class="text-indigo-600 underline font-black">{{ (Number(currentSatAnalysis.subjectsDetail.math.hwaktongAvg) - Number(currentSatAnalysis.subjectsDetail.math.mijukAvg)).toFixed(2) }}등급</span> 우세
                   </div>
                 </div>
@@ -301,12 +309,15 @@
                   </div>
                   <div class="flex items-baseline gap-2 mb-2">
                     <span class="text-2xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.eng.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
-                    <span class="text-[11px] font-semibold text-emerald-700">
+                    <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.eng.totalCount > 0" class="text-[11px] font-semibold text-emerald-700">
                       {{ currentSatAnalysis.subjectsDetail.eng.totalCount }}명 응시
+                    </span>
+                    <span v-else class="text-[11px] text-slate-400 font-medium">
+                      데이터 미등록
                     </span>
                   </div>
 
-                  <!-- 1~9 등급 수직선 위치 마커 (5.44등급 지점에 핀) -->
+                  <!-- 1~9 등급 수직선 위치 마커 -->
                   <div class="relative pt-1 pb-2">
                     <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
                     <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
@@ -316,6 +327,7 @@
                     </div>
                     <!-- 현재 등급 위치 핀 -->
                     <div
+                      v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.eng.totalAvg !== '-'"
                       class="absolute top-0 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
                       :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.eng.totalAvg) }"
                     >
@@ -2215,6 +2227,7 @@ import {
   normalizeSubject
 } from '../utils/satamRunCalculator.js'
 import { fetchAndParseKcueMockData, DEFAULT_CSAT_PASS_RATE_BENCHMARK, OFFICIAL_CSAT_PASS_RATE_SUMMARY } from '../../api/statApi.js'
+import { schoolName } from '../../utils/schoolConfig'
 import { useStatData } from '../composables/useStatData.js'
 
 ChartJS.register(
@@ -2375,6 +2388,23 @@ watch(selectedAcademicYear, (newYear) => {
   }
 })
 
+// 모의고사 성적 레코드 로드 시 사탐런 통계 자동 산출 및 2027 모드 전환
+watch(mockExamRecords, (records) => {
+  if (records && records.length > 0) {
+    try {
+      const stats = calculateSatamRunStats(records)
+      if (stats && stats.naturalCohortCount > 0) {
+        mockStats.value = stats
+        if (Number(selectedAcademicYear.value) >= 2027) {
+          satamMode.value = 'MOCK_ANALYSIS'
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to calculate satam run stats automatically:', e)
+    }
+  }
+}, { immediate: true })
+
 // -------------------------------------------------------------
 // 1. Radar Chart Data (내신 vs 수능 5개 영역 방사형)
 // - 2026학년도: 보고서 1페이지 2026 수능 vs 내신 고정 데이터
@@ -2515,7 +2545,7 @@ const availableExamMonthOptions = computed(() => {
       ...item,
       count: cnt,
       hasData: cnt > 0,
-      displayLabel: cnt > 0 ? `${item.shortLabel} (${cnt}명)` : item.shortLabel
+      displayLabel: cnt > 0 ? `${item.shortLabel} (${cnt}명)` : `${item.shortLabel} (미등록)`
     }
   })
 })
@@ -2643,36 +2673,20 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
   const meta = MOCK_EXAM_MONTH_META.find(m => m.key === filterKey) || { shortLabel: filterKey, desc: '' }
   const isCsat = isCsatExplicit || filterKey === 'CSAT'
 
-  // 레코드가 비어있을 때의 현실적인 고교 모의고사 벤치마크 fallback
+  // 레코드가 비어있을 때 (해당 회차 데이터 미등록 상태 - 더미 데이터 절대 노출 금지)
   if (!targetRecords || targetRecords.length === 0) {
-    // 회차별 특성을 반영한 정밀 벤치마크 (3월: 재학생 단독, 6/9월: N수생 합류)
-    const benchmarks = {
-      'ALL': { count: 337, kor: 6.04, math: 6.03, eng: 5.44, soc: 5.88, sci: 6.20, unmae: 5.84, hwajak: 6.05, mijuk: 4.38, hwaktong: 6.48, unmaeCnt: 19, hwajakCnt: 269, mijukCnt: 61, hwaktongCnt: 223 },
-      '3': { count: 288, kor: 5.92, math: 5.88, eng: 5.25, soc: 5.75, sci: 6.08, unmae: 5.72, hwajak: 5.94, mijuk: 4.25, hwaktong: 6.35, unmaeCnt: 18, hwajakCnt: 270, mijukCnt: 62, hwaktongCnt: 222 },
-      '5': { count: 270, kor: 6.01, math: 5.96, eng: 5.38, soc: 5.82, sci: 6.14, unmae: 5.80, hwajak: 6.02, mijuk: 4.32, hwaktong: 6.42, unmaeCnt: 19, hwajakCnt: 251, mijukCnt: 60, hwaktongCnt: 210 },
-      '6': { count: 312, kor: 6.14, math: 6.16, eng: 5.58, soc: 5.95, sci: 6.28, unmae: 5.90, hwajak: 6.16, mijuk: 4.45, hwaktong: 6.58, unmaeCnt: 21, hwajakCnt: 291, mijukCnt: 63, hwaktongCnt: 249 },
-      '7': { count: 265, kor: 6.03, math: 6.00, eng: 5.40, soc: 5.84, sci: 6.16, unmae: 5.82, hwajak: 6.04, mijuk: 4.35, hwaktong: 6.45, unmaeCnt: 18, hwajakCnt: 247, mijukCnt: 59, hwaktongCnt: 206 },
-      '9': { count: 325, kor: 6.20, math: 6.22, eng: 5.62, soc: 6.02, sci: 6.34, unmae: 5.95, hwajak: 6.22, mijuk: 4.52, hwaktong: 6.64, unmaeCnt: 22, hwajakCnt: 303, mijukCnt: 65, hwaktongCnt: 260 },
-      '10': { count: 284, kor: 6.04, math: 6.03, eng: 5.44, soc: 5.88, sci: 6.20, unmae: 5.84, hwajak: 6.05, mijuk: 4.38, hwaktong: 6.48, unmaeCnt: 19, hwajakCnt: 265, mijukCnt: 61, hwaktongCnt: 223 },
-      'CSAT': { count: 227, kor: 6.26, math: 6.28, eng: 5.68, soc: 6.06, sci: 6.38, unmae: 6.02, hwajak: 6.28, mijuk: 4.58, hwaktong: 6.70, unmaeCnt: 16, hwajakCnt: 211, mijukCnt: 54, hwaktongCnt: 173 }
-    }
-    const b = benchmarks[filterKey] || benchmarks['ALL']
-    const subText = filterKey === 'ALL'
-      ? `2027 모의고사(3·5·6·7·9·10월) 응시 ${b.count}명 기준 (추정)`
-      : `2027 ${meta.shortLabel} 응시 ${b.count}명 기준 (추정)`
-
     return {
       mode: isCsat ? '2027_CSAT' : '2027_MOCK',
       isCsat,
       hasRealData: false,
-      studentCount: b.count,
+      studentCount: 0,
       label: filterKey === 'ALL' ? '모의고사 평균 등급 (3~10월 통합)' : `${meta.shortLabel} 평균 등급`,
-      subText,
-      grades: [b.kor, b.math, b.eng, b.soc, b.sci],
+      subText: `${meta.shortLabel} 성적 데이터 미등록`,
+      grades: [null, null, null, null, null],
       subjectsDetail: {
-        kor: { totalCount: b.count, totalAvg: b.kor.toFixed(2), unmaeCount: b.unmaeCnt, unmaeAvg: b.unmae.toFixed(2), hwajakCount: b.hwajakCnt, hwajakAvg: b.hwajak.toFixed(2) },
-        math: { totalCount: Math.round(b.count * 0.98), totalAvg: b.math.toFixed(2), mijukCount: b.mijukCnt, mijukAvg: b.mijuk.toFixed(2), hwaktongCount: b.hwaktongCnt, hwaktongAvg: b.hwaktong.toFixed(2) },
-        eng: { totalCount: b.count, totalAvg: b.eng.toFixed(2) }
+        kor: { totalCount: 0, totalAvg: '-', unmaeCount: 0, unmaeAvg: '-', hwajakCount: 0, hwajakAvg: '-' },
+        math: { totalCount: 0, totalAvg: '-', mijukCount: 0, mijukAvg: '-', hwaktongCount: 0, hwaktongAvg: '-' },
+        eng: { totalCount: 0, totalAvg: '-' }
       }
     }
   }
@@ -2975,24 +2989,26 @@ const mockExamTrendSeries = computed(() => {
     const korDet = analysis.subjectsDetail?.kor || {}
     const engDet = analysis.subjectsDetail?.eng || {}
 
+    const hasData = analysis.hasRealData && analysis.studentCount > 0
     return {
       monthKey: mKey,
       label: meta ? meta.shortLabel : `${mKey}월`,
       fullName: meta ? meta.label : `${mKey}월 모의고사`,
       studentCount: analysis.studentCount,
+      hasRealData: hasData,
       // 국어
-      korAvg: Number(korDet.totalAvg) || analysis.grades[0],
-      unmaeAvg: Number(korDet.unmaeAvg) || null,
-      hwajakAvg: Number(korDet.hwajakAvg) || null,
+      korAvg: hasData ? (Number(korDet.totalAvg) || analysis.grades[0]) : null,
+      unmaeAvg: hasData ? (Number(korDet.unmaeAvg) || null) : null,
+      hwajakAvg: hasData ? (Number(korDet.hwajakAvg) || null) : null,
       // 수학 (선택과목 분리)
-      mathAvg: Number(mathDet.totalAvg) || analysis.grades[1],
-      mijukAvg: Number(mathDet.mijukAvg) || (analysis.grades[1] ? Number((analysis.grades[1] - 1.65).toFixed(2)) : 4.38),
-      hwaktongAvg: Number(mathDet.hwaktongAvg) || (analysis.grades[1] ? Number((analysis.grades[1] + 0.45).toFixed(2)) : 6.48),
+      mathAvg: hasData ? (Number(mathDet.totalAvg) || analysis.grades[1]) : null,
+      mijukAvg: hasData ? (Number(mathDet.mijukAvg) || null) : null,
+      hwaktongAvg: hasData ? (Number(mathDet.hwaktongAvg) || null) : null,
       // 영어
-      engAvg: Number(engDet.totalAvg) || analysis.grades[2],
+      engAvg: hasData ? (Number(engDet.totalAvg) || analysis.grades[2]) : null,
       // 탐구
-      socAvg: analysis.grades[3],
-      sciAvg: analysis.grades[4],
+      socAvg: hasData ? analysis.grades[3] : null,
+      sciAvg: hasData ? analysis.grades[4] : null,
       // 내신 평균 기준선 (일관된 비교 기준: 4.44등급)
       gpaBenchmark: 4.44
     }
@@ -3268,34 +3284,39 @@ const radarChartData = computed(() => {
     return Number(Math.max(1, Math.min(9, 10 - valid)).toFixed(2))
   }
 
+  const datasets = [
+    {
+      label: '내신 평균 등급',
+      data: gpaRaw.map(toChartRadius),
+      rawGrades: gpaRaw,
+      backgroundColor: 'rgba(37, 99, 235, 0.22)',
+      borderColor: '#2563eb',
+      borderWidth: 2.5,
+      pointBackgroundColor: '#2563eb',
+      pointBorderColor: '#ffffff',
+      pointBorderWidth: 2,
+      pointRadius: 5
+    }
+  ]
+
+  if (currentSatAnalysis.value.hasRealData) {
+    datasets.push({
+      label: currentSatAnalysis.value.label,
+      data: satRaw.map(toChartRadius),
+      rawGrades: satRaw,
+      backgroundColor: 'rgba(245, 158, 11, 0.25)',
+      borderColor: '#f59e0b',
+      borderWidth: 2.5,
+      pointBackgroundColor: '#f59e0b',
+      pointBorderColor: '#ffffff',
+      pointBorderWidth: 2,
+      pointRadius: 5
+    })
+  }
+
   return {
     labels: ['국어', '수학', '영어', '사탐', '과탐'],
-    datasets: [
-      {
-        label: '내신 평균 등급',
-        data: gpaRaw.map(toChartRadius),
-        rawGrades: gpaRaw,
-        backgroundColor: 'rgba(37, 99, 235, 0.22)',
-        borderColor: '#2563eb',
-        borderWidth: 2.5,
-        pointBackgroundColor: '#2563eb',
-        pointBorderColor: '#ffffff',
-        pointBorderWidth: 2,
-        pointRadius: 5
-      },
-      {
-        label: currentSatAnalysis.value.label,
-        data: satRaw.map(toChartRadius),
-        rawGrades: satRaw,
-        backgroundColor: 'rgba(245, 158, 11, 0.25)',
-        borderColor: '#f59e0b',
-        borderWidth: 2.5,
-        pointBackgroundColor: '#f59e0b',
-        pointBorderColor: '#ffffff',
-        pointBorderWidth: 2,
-        pointRadius: 5
-      }
-    ]
+    datasets
   }
 })
 
@@ -3307,6 +3328,10 @@ const radarInsightsHtml = computed(() => {
 
   if (!is2027) {
     return '국어(1.90등급↓), 수학(1.30등급↓), 탐구(1.4~1.9등급↓) 등 모든 과목에서 <strong>수능 등급이 내신 대비 1.3~1.9등급 낮게 형성</strong>되는 명확한 격차를 보입니다. 따라서 정시 올인보다는 <strong>우수한 내신을 바탕으로 수능 최저를 충족하는 수시 전략</strong>이 절대적으로 안전하고 유리합니다.'
+  }
+
+  if (!currentSatAnalysis.value.hasRealData || sat[0] == null) {
+    return `<strong>${currentSatAnalysis.value.label}</strong> 성적 데이터가 아직 등록되지 않았습니다. 대교협 모의고사 엑셀을 업로드하시면 전 과목 내신-모평 격차 및 맞춤형 분석 리포트가 자동으로 생성됩니다.`
   }
 
   const diffKor = (sat[0] - gpa[0]).toFixed(2)
@@ -3992,8 +4017,8 @@ const statsForGrade4to6 = computed(() => {
   const minScoreRatio = totalCards4to6 > 0 ? ((minScoreCards4to6 / totalCards4to6) * 100).toFixed(1) : '34.8'
 
   return {
-    totalCards: totalCards4to6 || 620,
-    minCards: minScoreCards4to6 || 215,
+    totalCards: totalCards4to6,
+    minCards: minScoreCards4to6,
     minRatio: minScoreRatio
   }
 })
@@ -4007,64 +4032,70 @@ function toggleCard(num) {
   expandedCard.value = expandedCard.value === num ? null : num
 }
 
-const STRATEGY_CARDS = computed(() => [
-  {
-    num: 1,
-    badge: '내신 중심 교과 우세',
-    title: '등급에 관계없이 학생부교과 전형이 일관되게 유리합니다',
-    summary: '우리 학교의 과거 수시 결과에 비추어 볼 때 모든 등급대에서 교과 전형 합격률이 종합 전형을 앞섭니다.',
-    details: [
-      '1.0 ~ 1.9등급: 서울권 대학 주요 타깃 (교과 추천 적극 활용)',
-      '2.0 ~ 2.9등급: 서울 하위권 대학 & 지거국 본교 & 수도권 주요대학',
-      '3.0 ~ 3.9등급: 수도권 대학 & 지방 중위권 대학 (정량 교과 중심 안정 지원)',
-      '단, 교과/수능위주 전형도 최근 서류 정성평가(생기부) 반영 비율이 높아지고 있으므로 종합전형 병행 대비 필수',
-      '충실한 학생부 관리 시 종합 전형으로 0.5등급 내외 보완 합격 가능'
-    ]
-  },
-  {
-    num: 2,
-    badge: '농어촌·기회균형 양면성',
-    title: '상위권은 농어촌이 절대 유리, 중하위권은 경쟁 치열성을 경계',
-    summary: '1~2등급대 상위권은 농어촌 전형 합격률이 일반전형 대비 3배 이상 폭증하나, 중하위권은 오히려 역전 현상이 발생합니다.',
-    details: [
-      '상위권(내신 1~2등급대): 농어촌+기회균형 전형 적극 추천 (SKYSSHE 라인 합격률 일반 13.6% vs 농어촌 42.9%)',
-      '중하위권(내신 3등급 이하): 중위권 학생들의 농어촌 집중 몰림 현상으로 컷이 비정상적으로 상승할 위험 상존',
-      '수도권 주요대(KSSDAGIEK)의 경우 일반전형 합격률(22.9%)이 농어촌(16.1%)보다 오히려 높아 일반 교과 병행 지원이 안전'
-    ]
-  },
-  {
-    num: 3,
-    badge: '수능최저 마법',
-    title: `수능 최저학력기준을 맞추면 실질 경쟁률이 ${schoolMinScoreStats.value?.avgRealRate || 4.4}:1로 급락하는 마법`,
-    summary: '겉보기 합격률이 낮아 보인다고 최저 없는 전형만 찾지 마십시오. 최저를 맞추는 순간 경쟁자의 60% 이상이 탈락합니다.',
-    details: [
-      `우리 학교 지원 통계: 최초 경쟁률 평균 ${schoolMinScoreStats.value?.avgInitialRate || 15.3}:1 ➔ 최저 충족 실질 경쟁률 ${schoolMinScoreStats.value?.avgRealRate || 4.4}:1로 대폭 축소 (교과전형 ${schoolMinScoreStats.value?.gpaRealRate || 3.5}:1, 충원 반영 시 체감 ${schoolMinScoreStats.value?.avgEffectiveRate || 2.3}:1)`,
-      '최저 미반영 전형은 지원자가 폭주하여 외형 합격률에 비해 실제 합격선이 매우 촘촘함',
-      '수능최저 충족 시 경쟁자의 60% 이상이 자동 탈락하므로 내신 0.5~1.0등급을 극복하는 강력한 역전 발판',
-      '충원합격(추합)까지 감안하면 4등급 이하 학생도 수도권 및 거점 국립대 실질 합격선에 진입'
-    ]
-  },
-  {
-    num: 4,
-    badge: '수능의 진짜 목적',
-    title: '수능은 정시 파이터를 위한 것이 아니라, 수시 최저를 위한 전략 무기',
-    summary: '고3 재학생의 정시 성공 확률은 매우 낮습니다. 수능 공부는 정시가 아니라 수시 최저 충족이 목표여야 합니다.',
-    details: [
-      '포곡고 수능 평균 등급은 국어 6.10, 수학 5.80으로 정시 지원 시 수도권 4년제 합격권 진입이 극히 제한적',
-      '수능 공부의 목표를 4과목 정시 대비가 아닌 영어(절대평가, 평균 4.94) 및 사탐 1과목 등 2개 합 충족으로 압축할 것',
-      '사탐런(과탐→사탐 48.7%)을 통해 최저 충족 전략 과목을 조기에 확정하는 것이 성공의 열쇠'
-    ]
-  },
-  {
-    num: 5,
-    badge: '정시 지원 기준선',
-    title: '수시 원서 접수 전까지 정시로 갈 수 있는 대학 라인을 확정하십시오',
-    summary: '가고 싶은 대학 1~6순위 중 정시로 몇 번째 순위까지 갈 수 있는지 냉정하게 알고 수시 6장을 써야 합니다.',
-    details: [
-      '6월/9월 모의평가 백분위 기준으로 정시 지원 가능 대학을 객관적으로 산출',
-      '정시로 합격 가능한 대학 라인보다 아래인 대학은 수시에서 절대 쓰지 않는 수시 납치 방지선 설정',
-      '가고 싶은 대학 1~6순위 중 정시 가능권 이상의 상향/적정 대학으로 수시 6장을 전략적으로 배분'
-    ]
-  }
-])
+const STRATEGY_CARDS = computed(() => {
+  const currentSchool = (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리 학교'
+  const satamSummary = mockStats.value?.totalRunRate
+    ? `사탐런(과탐→사탐 ${mockStats.value.totalRunRate}%)을 통해 최저 충족 전략 과목을 조기에 확정하는 것이 성공의 열쇠`
+    : '사탐런(과탐→사탐)을 통해 최저 충족 전략 과목을 조기에 확정하는 것이 성공의 열쇠'
+  return [
+    {
+      num: 1,
+      badge: '내신 중심 교과 우세',
+      title: '등급에 관계없이 학생부교과 전형이 일관되게 유리합니다',
+      summary: `${currentSchool}의 과거 수시 결과에 비추어 볼 때 모든 등급대에서 교과 전형 합격률이 종합 전형을 앞섭니다.`,
+      details: [
+        '1.0 ~ 1.9등급: 서울권 대학 주요 타깃 (교과 추천 적극 활용)',
+        '2.0 ~ 2.9등급: 서울 하위권 대학 & 지거국 본교 & 수도권 주요대학',
+        '3.0 ~ 3.9등급: 수도권 대학 & 지방 중위권 대학 (정량 교과 중심 안정 지원)',
+        '단, 교과/수능위주 전형도 최근 서류 정성평가(생기부) 반영 비율이 높아지고 있으므로 종합전형 병행 대비 필수',
+        '충실한 학생부 관리 시 종합 전형으로 0.5등급 내외 보완 합격 가능'
+      ]
+    },
+    {
+      num: 2,
+      badge: '농어촌·기회균형 양면성',
+      title: '상위권은 농어촌이 절대 유리, 중하위권은 경쟁 치열성을 경계',
+      summary: '1~2등급대 상위권은 농어촌 전형 합격률이 일반전형 대비 3배 이상 폭증하나, 중하위권은 오히려 역전 현상이 발생합니다.',
+      details: [
+        '상위권(내신 1~2등급대): 농어촌+기회균형 전형 적극 추천 (SKYSSHE 라인 합격률 일반 13.6% vs 농어촌 42.9%)',
+        '중하위권(내신 3등급 이하): 중위권 학생들의 농어촌 집중 몰림 현상으로 컷이 비정상적으로 상승할 위험 상존',
+        '수도권 주요대(KSSDAGIEK)의 경우 일반전형 합격률(22.9%)이 농어촌(16.1%)보다 오히려 높아 일반 교과 병행 지원이 안전'
+      ]
+    },
+    {
+      num: 3,
+      badge: '수능최저 마법',
+      title: `수능 최저학력기준을 맞추면 실질 경쟁률이 ${schoolMinScoreStats.value?.avgRealRate || 4.4}:1로 급락하는 마법`,
+      summary: '겉보기 합격률이 낮아 보인다고 최저 없는 전형만 찾지 마십시오. 최저를 맞추는 순간 경쟁자의 60% 이상이 탈락합니다.',
+      details: [
+        `우리 학교 지원 통계: 최초 경쟁률 평균 ${schoolMinScoreStats.value?.avgInitialRate || 15.3}:1 ➔ 최저 충족 실질 경쟁률 ${schoolMinScoreStats.value?.avgRealRate || 4.4}:1로 대폭 축소 (교과전형 ${schoolMinScoreStats.value?.gpaRealRate || 3.5}:1, 충원 반영 시 체감 ${schoolMinScoreStats.value?.avgEffectiveRate || 2.3}:1)`,
+        '최저 미반영 전형은 지원자가 폭주하여 외형 합격률에 비해 실제 합격선이 매우 촘촘함',
+        '수능최저 충족 시 경쟁자의 60% 이상이 자동 탈락하므로 내신 0.5~1.0등급을 극복하는 강력한 역전 발판',
+        '충원합격(추합)까지 감안하면 4등급 이하 학생도 수도권 및 거점 국립대 실질 합격선에 진입'
+      ]
+    },
+    {
+      num: 4,
+      badge: '수능의 진짜 목적',
+      title: '수능은 정시 파이터를 위한 것이 아니라, 수시 최저를 위한 전략 무기',
+      summary: '고3 재학생의 정시 성공 확률은 매우 낮습니다. 수능 공부는 정시가 아니라 수시 최저 충족이 목표여야 합니다.',
+      details: [
+        `${currentSchool} 재학생 수능 평균 등급 분포상 정시 지원 시 수도권 4년제 합격권 진입이 제한적`,
+        '수능 공부의 목표를 4과목 정시 대비가 아닌 영어(절대평가) 및 사탐 1과목 등 2개 합 충족으로 압축할 것',
+        satamSummary
+      ]
+    },
+    {
+      num: 5,
+      badge: '정시 지원 기준선',
+      title: '수시 원서 접수 전까지 정시로 갈 수 있는 대학 라인을 확정하십시오',
+      summary: '가고 싶은 대학 1~6순위 중 정시로 몇 번째 순위까지 갈 수 있는지 냉정하게 알고 수시 6장을 써야 합니다.',
+      details: [
+        '6월/9월 모의평가 백분위 기준으로 정시 지원 가능 대학을 객관적으로 산출',
+        '정시로 합격 가능한 대학 라인보다 아래인 대학은 수시에서 절대 쓰지 않는 수시 납치 방지선 설정',
+        '가고 싶은 대학 1~6순위 중 정시 가능권 이상의 상향/적정 대학으로 수시 6장을 전략적으로 배분'
+      ]
+    }
+  ]
+})
 </script>

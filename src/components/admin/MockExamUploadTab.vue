@@ -159,8 +159,8 @@
               <div class="p-2.5 rounded-lg bg-white border border-indigo-300 text-[11px] text-indigo-950 leading-snug shadow-2xs space-y-1">
                 <strong>👉 [구글 시트에 즉시 반영] 클릭:</strong>
                 <div class="text-[10.5px] text-slate-700 leading-normal">
-                  • <strong>3월:</strong> 원본 시트 <code class="bg-indigo-50 px-1 font-bold text-indigo-800">{{ targetSheetName }}</code> 탭 <strong>3행~266행</strong> 적재<br />
-                  • <strong>5월/6월/9월 등:</strong> 덮어쓰지 않고 <strong>267행 이하로 자동 누적</strong> 및 월별 자동 정렬!
+                  • <strong>첫 회차:</strong> 원본 시트 <code class="bg-indigo-50 px-1 font-bold text-indigo-800">{{ targetSheetName }}</code> 탭 3행부터 44개 컬럼 규격으로 전교생 적재<br />
+                  • <strong>추가 회차(5월·6월·9월 등):</strong> 기존 성적을 덮어쓰지 않고 <strong>다음 행으로 자동 누적</strong> 및 회차별 자동 정렬!
                 </div>
               </div>
             </div>
@@ -582,7 +582,7 @@
           </div>
           <p class="text-[11.5px] text-slate-600 m-0 leading-relaxed">
             아래 <strong class="text-emerald-700">구글 시트에 즉시 반영</strong> 버튼을 누르면 <strong>{{ selectedExam }} 전교생 {{ allParsedStudents.length }}명의 성적이 원본 구글 시트로 직접 전송</strong>됩니다.<br class="hidden sm:inline" />
-            원본 시트의 <code class="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 font-mono font-bold">{{ targetSheetName }}</code> 탭 <strong>3행부터 44개 컬럼 규격(A~AR)에 맞춰 전교생 성적이 즉시 적재</strong>됩니다.
+            원본 시트의 <code class="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 font-mono font-bold">{{ targetSheetName }}</code> 탭 <strong>44개 컬럼 규격(A~AR)에 맞춰 회차별로 자동 적재(기존 회차 유지 및 누적)</strong>됩니다.
           </p>
         </div>
 

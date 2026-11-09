@@ -173,31 +173,40 @@
             <!-- 상향 -->
             <div class="bg-purple-50/70 border border-purple-200 rounded-xl p-2.5">
               <div class="text-[10px] font-bold text-purple-700 uppercase">🚀 상향 스나이핑 (최저 역전)</div>
-              <div class="font-bold text-slate-900 mt-1">{{ recommendations.reach[0]?.univName || '고려대/성균관대' }}</div>
-              <div class="text-[10px] text-purple-900 mt-0.5">{{ recommendations.reach[0]?.dept || '주요학과' }}</div>
-              <div class="text-[9px] text-slate-500 mt-1 leading-snug">
-                {{ recommendations.reach[0]?.reasonData?.csatEffect || '최저 충족 시 실질경쟁률 급락' }}
-              </div>
+              <template v-if="recommendations.reach && recommendations.reach.length > 0">
+                <div class="font-bold text-slate-900 mt-1">{{ recommendations.reach[0].univName }}</div>
+                <div class="text-[10px] text-purple-900 mt-0.5">{{ recommendations.reach[0].dept || '추천학과' }}</div>
+                <div class="text-[9px] text-slate-500 mt-1 leading-snug">
+                  {{ recommendations.reach[0].reasonData?.csatEffect || '최저 충족 시 실질경쟁률 급락' }}
+                </div>
+              </template>
+              <div v-else class="text-[11px] text-slate-400 mt-2 font-medium">추천 대학 없음</div>
             </div>
 
             <!-- 적정 -->
             <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-2.5">
               <div class="text-[10px] font-bold text-blue-700 uppercase">🎯 적정 승부처 (합격 유력)</div>
-              <div class="font-bold text-slate-900 mt-1">{{ recommendations.target[0]?.univName || '경희대/동국대' }}</div>
-              <div class="text-[10px] text-blue-900 mt-0.5">{{ recommendations.target[0]?.dept || '주요학과' }}</div>
-              <div class="text-[9px] text-slate-500 mt-1 leading-snug">
-                {{ recommendations.target[0]?.reasonData?.cutDiff || '내신 70% 컷 부합' }}
-              </div>
+              <template v-if="recommendations.target && recommendations.target.length > 0">
+                <div class="font-bold text-slate-900 mt-1">{{ recommendations.target[0].univName }}</div>
+                <div class="text-[10px] text-blue-900 mt-0.5">{{ recommendations.target[0].dept || '추천학과' }}</div>
+                <div class="text-[9px] text-slate-500 mt-1 leading-snug">
+                  {{ recommendations.target[0].reasonData?.cutDiff || '내신 70% 컷 부합' }}
+                </div>
+              </template>
+              <div v-else class="text-[11px] text-slate-400 mt-2 font-medium">추천 대학 없음</div>
             </div>
 
             <!-- 안정 -->
             <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-2.5">
               <div class="text-[10px] font-bold text-emerald-700 uppercase">🛡️ 합격 확보 (안전 벨트)</div>
-              <div class="font-bold text-slate-900 mt-1">{{ recommendations.safety[0]?.univName || '단국대/한경국립대' }}</div>
-              <div class="text-[10px] text-emerald-900 mt-0.5">{{ recommendations.safety[0]?.dept || '주요학과' }}</div>
-              <div class="text-[9px] text-slate-500 mt-1 leading-snug">
-                {{ recommendations.safety[0]?.reasonData?.cutDiff || '본교 선배 전원 합격선' }}
-              </div>
+              <template v-if="recommendations.safety && recommendations.safety.length > 0">
+                <div class="font-bold text-slate-900 mt-1">{{ recommendations.safety[0].univName }}</div>
+                <div class="text-[10px] text-emerald-900 mt-0.5">{{ recommendations.safety[0].dept || '추천학과' }}</div>
+                <div class="text-[9px] text-slate-500 mt-1 leading-snug">
+                  {{ recommendations.safety[0].reasonData?.cutDiff || '본교 선배 전원 합격선' }}
+                </div>
+              </template>
+              <div v-else class="text-[11px] text-slate-400 mt-2 font-medium">추천 대학 없음</div>
             </div>
           </div>
         </div>
