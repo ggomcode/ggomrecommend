@@ -571,96 +571,34 @@
 
     <!-- 5. 통합 파싱 결과 미리보기 및 저장 액션 -->
     <div v-if="allParsedStudents.length > 0" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 space-y-4">
-      <!-- 5-1. 구글 시트 반영 가이드 배너 -->
-      <div class="rounded-xl p-4 bg-linear-to-r from-emerald-50 via-teal-50 to-indigo-50 border border-emerald-200/80 flex flex-col gap-3">
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div class="space-y-1">
-            <div class="flex items-center gap-2">
-              <span class="text-base">📋</span>
-              <span class="text-xs font-black text-slate-900">
-                원본 구글 시트 [{{ targetSheetName }}] 탭에 44개 컬럼 규격(A~AR) 즉시 반영
-              </span>
-            </div>
-            <p class="text-[11.5px] text-slate-600 m-0 leading-relaxed">
-              아래 <strong class="text-emerald-700">구글 시트에 즉시 반영</strong> 버튼을 누르면 <strong>{{ selectedExam }} 전교생 {{ allParsedStudents.length }}명의 성적이 원본 구글 시트로 직접 전송</strong>됩니다.<br class="hidden sm:inline" />
-              원본 시트의 <code class="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 font-mono font-bold">{{ targetSheetName }}</code> 탭 <strong>3행부터 44개 컬럼 규격(A~AR)에 맞춰 전교생 성적이 즉시 적재</strong>됩니다.
-            </p>
+      <!-- 5-1. 구글 시트 반영 배너 (단일 반영 버튼만 깔끔하게 유지) -->
+      <div class="rounded-xl p-4 bg-linear-to-r from-emerald-50 via-teal-50 to-indigo-50 border border-emerald-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="text-base">📋</span>
+            <span class="text-xs font-black text-slate-900">
+              원본 구글 시트 [{{ targetSheetName }}] 탭에 44개 컬럼 규격(A~AR) 즉시 반영
+            </span>
           </div>
-
-          <button
-            type="button"
-            @click="handleSaveToGoogleSheet"
-            :disabled="isSavingToSheet"
-            class="shrink-0 px-4 py-2.5 text-xs font-black text-white bg-linear-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 disabled:opacity-50 rounded-xl border-none cursor-pointer transition-all shadow-md hover:shadow-lg flex items-center gap-2"
-          >
-            <UploadCloud :size="15" />
-            <span>{{ isSavingToSheet ? '구글 시트 반영 중…' : `구글 시트 [${targetSheetName}]에 즉시 반영` }}</span>
-            <ExternalLink :size="13" class="opacity-80" />
-          </button>
+          <p class="text-[11.5px] text-slate-600 m-0 leading-relaxed">
+            아래 <strong class="text-emerald-700">구글 시트에 즉시 반영</strong> 버튼을 누르면 <strong>{{ selectedExam }} 전교생 {{ allParsedStudents.length }}명의 성적이 원본 구글 시트로 직접 전송</strong>됩니다.<br class="hidden sm:inline" />
+            원본 시트의 <code class="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 font-mono font-bold">{{ targetSheetName }}</code> 탭 <strong>3행부터 44개 컬럼 규격(A~AR)에 맞춰 전교생 성적이 즉시 적재</strong>됩니다.
+          </p>
         </div>
 
-        <!-- 연동된 구글 시트 및 Web App 상태 바 -->
-        <div class="flex flex-col gap-2 pt-2.5 border-t border-emerald-200/60 text-xs">
-          <!-- 1) 대상 시트 ID -->
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="text-slate-600 font-bold">📄 대상 구글 시트:</span>
-              <span class="font-mono text-emerald-800 font-bold bg-white/90 px-2 py-0.5 rounded-md border border-emerald-300 shadow-2xs">
-                {{ configuredSheetId ? maskGasUrl(configuredSheetId) : '1hkgi-WKdbh...' }}
-              </span>
-              <span v-if="configuredSheetId && configuredSheetId.includes('1U5Vnx')" class="text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                ⚠️ 배포용(암호화) 시트 ID임! 원본(1hkgi-W...)으로 변경 필요
-              </span>
-              <a
-                v-if="configuredSheetId"
-                :href="`https://docs.google.com/spreadsheets/d/${configuredSheetId}/edit`"
-                target="_blank"
-                class="text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1 hover:underline ml-1"
-              >
-                <span>🔗 시트 바로 열기</span>
-              </a>
-            </div>
-            <button
-              type="button"
-              @click="promptChangeSheetId"
-              class="text-[11px] font-bold text-slate-700 hover:text-emerald-700 bg-white hover:bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-300 cursor-pointer transition-colors shadow-2xs"
-            >
-              ⚙️ 시트 ID 변경
-            </button>
-          </div>
-
-          <!-- 2) 연동 Web App -->
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="text-slate-600 font-bold">📡 연동 Web App:</span>
-              <span v-if="configuredGasUrl" class="font-mono text-indigo-800 font-bold bg-white/90 px-2 py-0.5 rounded-md border border-indigo-200 shadow-2xs">
-                {{ maskGasUrl(configuredGasUrl) }}
-              </span>
-              <span v-else class="text-amber-800 font-bold bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-300">
-                ⚠️ Web App URL 미등록 (등록 필요)
-              </span>
-              <a
-                v-if="configuredGasUrl"
-                :href="configuredGasUrl"
-                target="_blank"
-                class="text-indigo-700 hover:text-indigo-900 font-bold flex items-center gap-1 hover:underline ml-1"
-                title="새 창에서 웹앱 응답 확인"
-              >
-                <span>🔗 웹앱 응답 확인</span>
-              </a>
-            </div>
-            <button
-              type="button"
-              @click="promptChangeGasUrl"
-              class="text-[11px] font-bold text-slate-700 hover:text-indigo-700 bg-white hover:bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-300 cursor-pointer transition-colors shadow-2xs"
-            >
-              ⚙️ Web App URL 등록/변경
-            </button>
-          </div>
-        </div>
+        <button
+          type="button"
+          @click="handleSaveToGoogleSheet"
+          :disabled="isSavingToSheet"
+          class="shrink-0 px-4 py-2.5 text-xs font-black text-white bg-linear-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 disabled:opacity-50 rounded-xl border-none cursor-pointer transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+        >
+          <UploadCloud :size="15" />
+          <span>{{ isSavingToSheet ? '구글 시트 반영 중…' : `구글 시트 [${targetSheetName}]에 즉시 반영` }}</span>
+          <ExternalLink :size="13" class="opacity-80" />
+        </button>
       </div>
 
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+      <div class="flex items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div>
           <div class="flex items-center gap-2">
             <span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span>
@@ -671,29 +609,6 @@
           <p class="text-xs text-slate-400 mt-1 m-0">
             구글 시트 <code class="text-indigo-600 font-mono font-bold">{{ targetSheetName }}</code> 탭 규격에 100% 매핑된 명단입니다.
           </p>
-        </div>
-
-        <!-- 액션 서브 버튼 그룹 -->
-        <div class="flex flex-wrap items-center gap-2">
-          <!-- 클립보드 복사 -->
-          <button
-            type="button"
-            @click="copyToClipboard"
-            class="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl border border-slate-200 cursor-pointer transition-colors flex items-center gap-1.5 shadow-2xs"
-          >
-            <Copy :size="13" />
-            <span>{{ copySuccess ? '복사 완료! ✓' : '시트 양식 TSV 복사' }}</span>
-          </button>
-
-          <!-- 엑셀(.xlsx) 다운로드 -->
-          <button
-            type="button"
-            @click="exportParsedToExcel"
-            class="px-3.5 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-200 cursor-pointer transition-colors flex items-center gap-1.5 shadow-2xs"
-          >
-            <FileSpreadsheet :size="14" class="text-emerald-600" />
-            <span>{{ targetSheetName }} 전용 엑셀 다운로드</span>
-          </button>
         </div>
       </div>
 
@@ -1262,11 +1177,9 @@ async function handleSaveToGoogleSheet() {
       '(입력 시 관리자 환경설정에 자동 저장됩니다)'
     )
     if (!inputUrl || !inputUrl.trim()) {
-      // 입력 취소 시 백업 엑셀만 다운로드
-      exportParsedToExcel()
       dialog.alert({
         title: 'Web App URL 미등록',
-        message: 'Web App URL이 등록되지 않아 44개 컬럼 완성본 엑셀 파일 다운로드로 대체되었습니다.\n(관리자 설정 > 환경설정 탭에서 언제든 등록하실 수 있습니다.)'
+        message: 'Web App URL이 등록되지 않아 시트 전송이 취소되었습니다.\n(관리자 설정 > 환경설정 탭에서 등록하실 수 있습니다.)'
       })
       return
     }
@@ -1303,9 +1216,6 @@ async function handleSaveToGoogleSheet() {
     }
 
     if (resJson && resJson.success === true) {
-      // 4. 안전 백업 엑셀 자동 보관
-      exportParsedToExcel()
-
       const savedSheetName = resJson.spreadsheetName || '구글 시트'
       const savedTab = resJson.sheetName || targetSheetName.value
       const isExpectedSheet = !resJson.spreadsheetId || resJson.spreadsheetId === targetSheetId
@@ -1321,29 +1231,22 @@ async function handleSaveToGoogleSheet() {
           `• 이번 적재 시험: [${selectedExam.value}] ${resJson.count || allParsedStudents.value.length}명\n` +
           rowRangeInfo +
           `• 컬럼 규격: 44개 컬럼(A열 '월' ~ AR열 '제2외국어 등급') 자동 누적 및 정렬 완료\n\n` +
-          (isExpectedSheet ? '' : `⚠️ 주의: 등록된 Web App이 원본 모의고사 시트가 아닌 [${savedSheetName}] 파일에 배포되어 해당 파일의 [${savedTab}] 탭에 저장되었습니다.\n\n`) +
-          `※ 안전한 데이터 보관을 위해 동일한 규격의 엑셀 백업 파일도 함께 저장되었습니다.`
+          (isExpectedSheet ? '' : `⚠️ 주의: 등록된 Web App이 원본 모의고사 시트가 아닌 [${savedSheetName}] 파일에 배포되어 해당 파일의 [${savedTab}] 탭에 저장되었습니다.\n\n`)
       })
     } else {
       throw new Error(resJson?.error || '구글 시트 저장 응답 오류')
     }
   } catch (e) {
     console.error('GAS Web App 전송 오류:', e)
-    // 전송 실패 시 엑셀 다운로드 보완
-    exportParsedToExcel()
 
     let diagnoseMsg = ''
     if (e.message && e.message.includes('Failed to fetch')) {
       diagnoseMsg = 
         `\n\n🔍 [Failed to fetch 원인 진단 및 해결 방법]\n` +
-        `1. 등록된 웹앱 URL 확인:\n` +
-        `   상단의 [🔗 웹앱 응답 확인] 링크를 클릭했을 때 아래와 같은 메시지가 나와야 합니다:\n` +
-        `   {"success":true,"status":"online","message":"모의고사 성적 원격 수신 Web App이 정상 작동 중입니다."}\n` +
-        `   ※ 만약 "출결 & 결석계" 등 다른 웹앱 메시지가 나온다면, 1hkgi-W... 시트에서 새로 배포한 웹앱 URL로 교체하셔야 합니다.\n\n` +
-        `2. Apps Script 배포 권한 확인:\n` +
-        `   [배포] > [새 배포] 시 [액세스 권한]이 반드시 '모든 사용자(Anyone)'로 되어 있어야 브라우저 보안 차단(CORS)이 발생하지 않습니다.\n\n` +
-        `⚡ [지금 당장 10초 만에 시트에 넣는 방법]:\n` +
-        `화면 상단의 [📋 시트 양식 TSV 복사] 버튼을 누른 뒤, 구글 시트 '${targetSheetName.value}' 탭의 기존 데이터 바로 다음 행(예: 267행 A267 셀)을 클릭하고 [Ctrl + V]로 붙여넣으시면 지금 즉시 44개 컬럼에 완벽하게 반영됩니다!`
+        `1. Apps Script 배포 권한 확인:\n` +
+        `   [배포] > [새 배포] 시 [액세스 권한]이 반드시 '모든 사용자(Anyone)'로 설정되어야 합니다.\n\n` +
+        `2. 웹앱 URL 확인:\n` +
+        `   [관리자 설정 ➔ 환경설정]의 "모의고사 성적 실시간 쓰기 연동용 GAS Web App URL"이 최신 Web App 주소인지 확인해 주세요.`
     }
 
     await dialog.alert({
@@ -1351,8 +1254,7 @@ async function handleSaveToGoogleSheet() {
       level: 'error',
       message: `⚠️ 구글 시트 직접 전송 중 오류가 발생했습니다.\n\n` +
         `오류 내용: ${e.message}` +
-        diagnoseMsg +
-        `\n\n• 전교생 44개 컬럼 완성본 엑셀 파일이 다운로드되었습니다.`
+        diagnoseMsg
     })
   } finally {
     isSavingToSheet.value = false
