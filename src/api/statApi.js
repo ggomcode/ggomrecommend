@@ -1108,8 +1108,11 @@ export function smartMergeMockExamRecords(resultRecords = [], tentativeRecords =
   const resultExamMonths = new Set()
   validResultRecords.forEach(r => {
     const m = String(r.examName || '').match(/([0-9]{1,2})\s*월/)
-    if (m) resultExamMonths.add(m[1])
-    else if (r.examName) resultExamMonths.add(r.examName)
+    if (m) {
+      resultExamMonths.add(m[1])
+    } else if (r.examName) {
+      resultExamMonths.add(r.examName)
+    }
   })
 
   // 2. 결과 시트에 존재하는 (월_학생키) 집합

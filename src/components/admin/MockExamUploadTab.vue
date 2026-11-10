@@ -424,7 +424,7 @@
       <div class="flex flex-wrap items-center gap-3 pt-0.5">
         <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-emerald-200/90 shadow-2xs">
           <label class="text-xs font-bold text-slate-700 whitespace-nowrap">다운로드 회차:</label>
-          <div class="relative inline-block min-w-[210px]">
+          <div class="relative inline-block min-w-52.5">
             <select
               v-model="selectedExistingExamMonth"
               :disabled="isLoadingExistingSheetRecords || existingExamMonthOptions.length === 0"
@@ -808,7 +808,7 @@ import {
   saveKcueGasUrl,
   maskGasUrl,
   fetchAndParseKcueMockData,
-  hasAnyMockScore
+  hasAnyMockScore,
 } from '../../api/statApi'
 import { dialog } from '../common/dialog'
 
