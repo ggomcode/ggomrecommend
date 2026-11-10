@@ -951,3 +951,206 @@ export function convertStudentsToSheetRows(students = [], options = {}) {
   }
   return rows
 }
+
+// -----------------------------------------------------------------------------
+// [SEN진학 전용 29개 컬럼 규격] 서울시교육청 진학상담프로그램 호환 엑셀 내보내기
+// -----------------------------------------------------------------------------
+
+export const SEN_MOCK_29_HEADERS_ROW1 = [
+  '계열번호', '학년', '반', '번호', '이름',
+  '국어', '', '', '',
+  '수학', '', '', '',
+  '영어', '', '', '',
+  '사회탐구', '', '', '',
+  '과학탐구', '', '', '',
+  '한국사', '', '', ''
+]
+
+export const SEN_MOCK_29_HEADERS_ROW2 = [
+  '계열번호', '학년', '반', '번호', '이름',
+  '원점수', '표준점수', '백분위', '등급',
+  '원점수', '표준점수', '백분위', '등급',
+  '원점수', '표준점수', '백분위', '등급',
+  '원점수', '표준점수', '백분위', '등급',
+  '원점수', '표준점수', '백분위', '등급',
+  '원점수', '표준점수', '백분위', '등급'
+]
+
+const SOCIAL_SUBJECT_NAMES = [
+  '통합사회', '생활과 윤리', '윤리와 사상', '한국지리', '세계지리',
+  '동아시아사', '세계사', '경제', '정치와 법', '사회·문화', '사회문화',
+  '생윤', '윤사', '한지', '세지', '동사', '세사', '정법', '사문'
+]
+
+const SCIENCE_SUBJECT_NAMES = [
+  '통합과학',
+  '물리학Ⅰ', '물리학I', '물리학1', '물리Ⅰ', '물리I', '물리1',
+  '화학Ⅰ', '화학I', '화학1', '화1',
+  '생명과학Ⅰ', '생명과학I', '생명과학1', '생명Ⅰ', '생명I', '생명1', '생물Ⅰ', '생물I', '생물1',
+  '지구과학Ⅰ', '지구과학I', '지구과학1', '지구Ⅰ', '지구I', '지구1', '지학Ⅰ', '지학I', '지학1',
+  '물리학Ⅱ', '물리학II', '물리학2', '물리Ⅱ', '물리II', '물리2',
+  '화학Ⅱ', '화학II', '화학2', '화2',
+  '생명과학Ⅱ', '생명과학II', '생명과학2', '생명Ⅱ', '생명II', '생명2', '생물Ⅱ', '생물II', '생물2',
+  '지구과학Ⅱ', '지구과학II', '지구과학2', '지구Ⅱ', '지구II', '지구2', '지학Ⅱ', '지학II', '지학2'
+]
+
+export function isSocialSubject(sub) {
+  if (!sub || typeof sub !== 'string') return false
+  const c = sub.replace(/[\s·./]/g, '')
+  return SOCIAL_SUBJECT_NAMES.some(s => c.includes(s.replace(/[\s·./]/g, '')))
+}
+
+export function isScienceSubject(sub) {
+  if (!sub || typeof sub !== 'string') return false
+  const c = sub.replace(/[\s·./]/g, '')
+  return SCIENCE_SUBJECT_NAMES.some(s => c.includes(s.replace(/[\s·./]/g, '')))
+}
+
+/**
+ * 학생 성적 객체 배열을 서울시교육청 SEN진학 양식(29개 컬럼, 1·2행 복합 헤더, 3행부터 데이터)으로 변환
+ * @param {Array} students 
+ * @param {number|string} selectedGrade 
+ * @returns {Array[]} rows
+ */
+export function convertStudentsToSenExcelRows(students = [], selectedGrade = 3) {
+  const row1 = [...SEN_MOCK_29_HEADERS_ROW1]
+  const row2 = [...SEN_MOCK_29_HEADERS_ROW2]
+
+  const dataRows = []
+  for (const s of students) {
+    const socialInqs = []
+    const scienceInqs = []
+
+    if (s.inquiry1) {
+      const item1 = {
+        name: s.inquiry1,
+        raw: s.inq1RawScore,
+        std: s.inq1StandardScore,
+        pct: s.inq1Percentile,
+        grade: s.inq1Grade
+      }
+      if (isSocialSubject(s.inquiry1)) socialInqs.push(item1)
+      else if (isScienceSubject(s.inquiry1)) scienceInqs.push(item1)
+      else socialInqs.push(item1)
+    }
+
+    if (s.inquiry2) {
+      const item2 = {
+        name: s.inquiry2,
+        raw: s.inq2RawScore,
+        std: s.inq2StandardScore,
+        pct: s.inq2Percentile,
+        grade: s.inq2Grade
+      }
+      if (isSocialSubject(s.inquiry2)) socialInqs.push(item2)
+      else if (isScienceSubject(s.inquiry2)) scienceInqs.push(item2)
+      else if (scienceInqs.length > 0) scienceInqs.push(item2)
+      else socialInqs.push(item2)
+    }
+
+    // 계열번호 산출 (1: 인문, 2: 자연)
+    let seriesNum = 1
+    if (s.seriesNum) {
+      seriesNum = Number(s.seriesNum)
+    } else if (s.trackNum) {
+      seriesNum = Number(s.trackNum)
+    } else if (scienceInqs.length > 0 || (s.mathSubject && (s.mathSubject.includes('미적') || s.mathSubject.includes('기하')))) {
+      seriesNum = 2
+    }
+
+    // 탐구 성적 집계 함수 (2과목 합산/평균)
+    const aggregateInquiry = (inqs) => {
+      if (!inqs || inqs.length === 0) return ['', '', '', '']
+      if (inqs.length === 1) {
+        return [
+          inqs[0].raw != null && inqs[0].raw !== '' ? inqs[0].raw : '',
+          inqs[0].std != null && inqs[0].std !== '' ? inqs[0].std : '',
+          inqs[0].pct != null && inqs[0].pct !== '' ? inqs[0].pct : '',
+          inqs[0].grade != null && inqs[0].grade !== '' ? inqs[0].grade : ''
+        ]
+      }
+      const a = inqs[0]
+      const b = inqs[1]
+
+      // 원점수
+      let raw = ''
+      if (a.raw != null && a.raw !== '' && b.raw != null && b.raw !== '') {
+        raw = Number(a.raw) + Number(b.raw)
+      } else if (a.raw != null && a.raw !== '') {
+        raw = a.raw
+      } else if (b.raw != null && b.raw !== '') {
+        raw = b.raw
+      }
+
+      // 표준점수 (2과목 합산)
+      let std = ''
+      if (a.std != null && a.std !== '' && b.std != null && b.std !== '') {
+        std = Number(a.std) + Number(b.std)
+      } else if (a.std != null && a.std !== '') {
+        std = a.std
+      } else if (b.std != null && b.std !== '') {
+        std = b.std
+      }
+
+      // 백분위 (2과목 평균)
+      let pct = ''
+      if (a.pct != null && a.pct !== '' && b.pct != null && b.pct !== '') {
+        pct = Math.round(((Number(a.pct) + Number(b.pct)) / 2) * 10) / 10
+      } else if (a.pct != null && a.pct !== '') {
+        pct = a.pct
+      } else if (b.pct != null && b.pct !== '') {
+        pct = b.pct
+      }
+
+      // 등급 (2과목 평균)
+      let grade = ''
+      if (a.grade != null && a.grade !== '' && b.grade != null && b.grade !== '') {
+        grade = Math.round(((Number(a.grade) + Number(b.grade)) / 2) * 10) / 10
+      } else if (a.grade != null && a.grade !== '') {
+        grade = a.grade
+      } else if (b.grade != null && b.grade !== '') {
+        grade = b.grade
+      }
+
+      return [raw, std, pct, grade]
+    }
+
+    const [socRaw, socStd, socPct, socGrade] = aggregateInquiry(socialInqs)
+    const [sciRaw, sciStd, sciPct, sciGrade] = aggregateInquiry(scienceInqs)
+
+    dataRows.push([
+      seriesNum,                                              // A: 계열번호
+      Number(s.grade) || Number(selectedGrade) || 3,          // B: 학년
+      Number(s.classNum) || s.classNum || '',                 // C: 반
+      Number(s.studentNum) || s.studentNum || '',             // D: 번호
+      s.name || '',                                           // E: 이름
+      s.korRawScore != null && s.korRawScore !== '' ? s.korRawScore : '',               // F: 국어 원점수
+      s.korStandardScore != null && s.korStandardScore !== '' ? s.korStandardScore : '', // G: 국어 표준점수
+      s.korPercentile != null && s.korPercentile !== '' ? s.korPercentile : '',          // H: 국어 백분위
+      s.korGrade != null && s.korGrade !== '' ? s.korGrade : '',                         // I: 국어 등급
+      s.mathRawScore != null && s.mathRawScore !== '' ? s.mathRawScore : '',             // J: 수학 원점수
+      s.mathStandardScore != null && s.mathStandardScore !== '' ? s.mathStandardScore : '', // K: 수학 표준점수
+      s.mathPercentile != null && s.mathPercentile !== '' ? s.mathPercentile : '',        // L: 수학 백분위
+      s.mathGrade != null && s.mathGrade !== '' ? s.mathGrade : '',                       // M: 수학 등급
+      s.engRawScore != null && s.engRawScore !== '' ? s.engRawScore : '',                // N: 영어 원점수
+      s.engStandardScore != null && s.engStandardScore !== '' ? s.engStandardScore : '', // O: 영어 표준점수
+      s.engPercentile != null && s.engPercentile !== '' ? s.engPercentile : '',          // P: 영어 백분위
+      s.engGrade != null && s.engGrade !== '' ? s.engGrade : '',                         // Q: 영어 등급
+      socRaw,                                                 // R: 사회탐구 원점수
+      socStd,                                                 // S: 사회탐구 표준점수
+      socPct,                                                 // T: 사회탐구 백분위
+      socGrade,                                               // U: 사회탐구 등급
+      sciRaw,                                                 // V: 과학탐구 원점수
+      sciStd,                                                 // W: 과학탐구 표준점수
+      sciPct,                                                 // X: 과학탐구 백분위
+      sciGrade,                                               // Y: 과학탐구 등급
+      s.histRawScore != null && s.histRawScore !== '' ? s.histRawScore : '',             // Z: 한국사 원점수
+      s.histStandardScore != null && s.histStandardScore !== '' ? s.histStandardScore : '', // AA: 한국사 표준점수
+      s.histPercentile != null && s.histPercentile !== '' ? s.histPercentile : '',        // AB: 한국사 백분위
+      s.histGrade != null && s.histGrade !== '' ? s.histGrade : ''                        // AC: 한국사 등급
+    ])
+  }
+
+  return [row1, row2, ...dataRows]
+}
+

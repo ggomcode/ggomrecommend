@@ -598,7 +598,7 @@
         </button>
       </div>
 
-      <div class="flex items-center justify-between gap-3 pb-3 border-b border-slate-100">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div>
           <div class="flex items-center gap-2">
             <span class="w-1.5 h-4 bg-emerald-600 rounded-full"></span>
@@ -610,6 +610,16 @@
             구글 시트 <code class="text-indigo-600 font-mono font-bold">{{ targetSheetName }}</code> 탭 규격에 100% 매핑된 명단입니다.
           </p>
         </div>
+
+        <button
+          type="button"
+          @click="downloadSenExcel"
+          class="shrink-0 px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-300 cursor-pointer transition-colors flex items-center gap-2 shadow-2xs"
+          title="서울시교육청 SEN진학 29개 컬럼 규격으로 엑셀 다운로드"
+        >
+          <FileSpreadsheet :size="15" class="text-emerald-600" />
+          <span>SEN진학용 엑셀 다운로드</span>
+        </button>
       </div>
 
       <!-- 미리보기 테이블 -->
@@ -712,6 +722,7 @@ import * as XLSX from 'xlsx'
 import {
   parseMockExamReportFile,
   convertStudentsToSheetRows,
+  convertStudentsToSenExcelRows,
   extractMonthNum,
   getTargetCollegeAdmissionYear,
   getAcademicSchoolYear,
@@ -1078,6 +1089,67 @@ const allParsedStudents = computed(() => {
     return (Number(a.studentNum) || 0) - (Number(b.studentNum) || 0)
   })
 })
+
+/**
+ * 서울시교육청 SEN진학 양식(29개 컬럼 규격) 엑셀 다운로드
+ * 1·2행 복합 헤더(A~AC) 및 3행부터 학생 성적 데이터 출력
+ * 파일명: SEN진학_3학년_10월.xlsx
+ */
+function downloadSenExcel() {
+  if (allParsedStudents.value.length === 0) {
+    dialog.alert('내보낼 학생 데이터가 없습니다.')
+    return
+  }
+
+  const rows = convertStudentsToSenExcelRows(allParsedStudents.value, selectedGrade.value)
+  const ws = XLSX.utils.aoa_to_sheet(rows)
+
+  // 1·2행 복합 헤더 셀 병합 (A~E 열 상하 병합, F~AC 과목별 좌우 병합)
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } }, // A1:A2 계열번호
+    { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } }, // B1:B2 학년
+    { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } }, // C1:C2 반
+    { s: { r: 0, c: 3 }, e: { r: 1, c: 3 } }, // D1:D2 번호
+    { s: { r: 0, c: 4 }, e: { r: 1, c: 4 } }, // E1:E2 이름
+    { s: { r: 0, c: 5 }, e: { r: 0, c: 8 } }, // F1:I1 국어
+    { s: { r: 0, c: 9 }, e: { r: 0, c: 12 } }, // J1:M1 수학
+    { s: { r: 0, c: 13 }, e: { r: 0, c: 16 } }, // N1:Q1 영어
+    { s: { r: 0, c: 17 }, e: { r: 0, c: 20 } }, // R1:U1 사회탐구
+    { s: { r: 0, c: 21 }, e: { r: 0, c: 24 } }, // V1:Y1 과학탐구
+    { s: { r: 0, c: 25 }, e: { r: 0, c: 28 } }  // Z1:AC1 한국사
+  ]
+
+  // 열 너비 지정 (가독성 최적화)
+  ws['!cols'] = [
+    { wch: 10 }, // A: 계열번호
+    { wch: 7 },  // B: 학년
+    { wch: 7 },  // C: 반
+    { wch: 7 },  // D: 번호
+    { wch: 11 }, // E: 이름
+    // 국어 (원, 표, 백, 등)
+    { wch: 8 }, { wch: 9 }, { wch: 8 }, { wch: 7 },
+    // 수학 (원, 표, 백, 등)
+    { wch: 8 }, { wch: 9 }, { wch: 8 }, { wch: 7 },
+    // 영어 (원, 표, 백, 등)
+    { wch: 8 }, { wch: 9 }, { wch: 8 }, { wch: 7 },
+    // 사회탐구 (원, 표, 백, 등)
+    { wch: 8 }, { wch: 9 }, { wch: 8 }, { wch: 7 },
+    // 과학탐구 (원, 표, 백, 등)
+    { wch: 8 }, { wch: 9 }, { wch: 8 }, { wch: 7 },
+    // 한국사 (원, 표, 백, 등)
+    { wch: 8 }, { wch: 9 }, { wch: 8 }, { wch: 7 }
+  ]
+
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'SEN진학')
+
+  const monthNum = extractMonthNum(selectedExam.value)
+  const monthStr = monthNum ? `${monthNum}월` : selectedExam.value
+  const gradeStr = `${selectedGrade.value || 3}학년`
+  const fileName = `SEN진학_${gradeStr}_${monthStr}.xlsx`
+
+  XLSX.writeFile(wb, fileName)
+}
 
 /**
  * 엑셀(.xlsx) 파일로 내보내기 (1·2행 복합 헤더 포함 44개 컬럼 표준 엑셀)
