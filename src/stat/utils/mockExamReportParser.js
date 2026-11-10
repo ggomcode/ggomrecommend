@@ -1021,30 +1021,31 @@ export function convertStudentsToSenExcelRows(students = [], selectedGrade = 3) 
     const socialInqs = []
     const scienceInqs = []
 
-    if (s.inquiry1) {
+    if (s.inquiry1 || s.inq1Grade || s.inq1RawScore || s.inq1StandardScore) {
       const item1 = {
-        name: s.inquiry1,
+        name: s.inquiry1 || '',
         raw: s.inq1RawScore,
         std: s.inq1StandardScore,
         pct: s.inq1Percentile,
         grade: s.inq1Grade
       }
-      if (isSocialSubject(s.inquiry1)) socialInqs.push(item1)
-      else if (isScienceSubject(s.inquiry1)) scienceInqs.push(item1)
+      if (s.inquiry1 && isSocialSubject(s.inquiry1)) socialInqs.push(item1)
+      else if (s.inquiry1 && isScienceSubject(s.inquiry1)) scienceInqs.push(item1)
+      else if (Number(s.seriesNum) === 2 || Number(s.trackNum) === 2) scienceInqs.push(item1)
       else socialInqs.push(item1)
     }
 
-    if (s.inquiry2) {
+    if (s.inquiry2 || s.inq2Grade || s.inq2RawScore || s.inq2StandardScore) {
       const item2 = {
-        name: s.inquiry2,
+        name: s.inquiry2 || '',
         raw: s.inq2RawScore,
         std: s.inq2StandardScore,
         pct: s.inq2Percentile,
         grade: s.inq2Grade
       }
-      if (isSocialSubject(s.inquiry2)) socialInqs.push(item2)
-      else if (isScienceSubject(s.inquiry2)) scienceInqs.push(item2)
-      else if (scienceInqs.length > 0) scienceInqs.push(item2)
+      if (s.inquiry2 && isSocialSubject(s.inquiry2)) socialInqs.push(item2)
+      else if (s.inquiry2 && isScienceSubject(s.inquiry2)) scienceInqs.push(item2)
+      else if (scienceInqs.length > 0 || Number(s.seriesNum) === 2 || Number(s.trackNum) === 2) scienceInqs.push(item2)
       else socialInqs.push(item2)
     }
 

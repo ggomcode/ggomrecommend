@@ -1256,16 +1256,39 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
     let grade = 3
     let monthOrder = null
     let examName = ''
+    let seriesNum = 1
     let korSubject = ''
-    let mathSubject = ''
-    let inquiry1 = ''
-    let inquiry2 = ''
+    let korRawScore = ''
+    let korStandardScore = ''
+    let korPercentile = ''
     let korGrade = null
+    let mathSubject = ''
+    let mathRawScore = ''
+    let mathStandardScore = ''
+    let mathPercentile = ''
     let mathGrade = null
+    let engRawScore = ''
+    let engStandardScore = ''
+    let engPercentile = ''
     let engGrade = null
+    let inquiry1 = ''
+    let inq1RawScore = ''
+    let inq1StandardScore = ''
+    let inq1Percentile = ''
     let inq1Grade = null
+    let inquiry2 = ''
+    let inq2RawScore = ''
+    let inq2StandardScore = ''
+    let inq2Percentile = ''
     let inq2Grade = null
+    let histRawScore = ''
+    let histStandardScore = ''
+    let histPercentile = ''
     let histGrade = null
+    let secondLangSubject = ''
+    let secondLangRawScore = ''
+    let secondLangStandardScore = ''
+    let secondLangPercentile = ''
     let secondLangGrade = null
 
     // 등급 파싱 함수 (1~9 등급 검증 및 원점수/표준점수 등급 자동 환산)
@@ -1388,7 +1411,10 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
     if (isStandard44) {
       // 44개 컬럼 표준 규격 직접 인덱싱 파싱 (2027모의결과 탭 등)
       name = String(r[5] || '').trim()
-      if (!name) continue
+      if (!name || name === '이름' || name === '성명') continue
+
+      seriesNum = r[1] != null && r[1] !== '' ? Number(r[1]) : 1
+      if (isNaN(seriesNum)) seriesNum = 1
 
       classNum = r[3] != null ? String(r[3]).trim() : ''
       studentNum = r[4] != null ? String(r[4]).trim() : ''
@@ -1405,20 +1431,43 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       }
 
       korSubject = r[6] != null ? String(r[6]).trim() : ''
+      korRawScore = r[9] != null && r[9] !== '' ? String(r[9]).trim() : ''
+      korStandardScore = r[10] != null && r[10] !== '' ? String(r[10]).trim() : ''
+      korPercentile = r[11] != null && r[11] !== '' ? String(r[11]).trim() : ''
       korGrade = parseGradeValue(r[12], 'KOR')
 
       mathSubject = r[13] != null ? String(r[13]).trim() : ''
+      mathRawScore = r[16] != null && r[16] !== '' ? String(r[16]).trim() : ''
+      mathStandardScore = r[17] != null && r[17] !== '' ? String(r[17]).trim() : ''
+      mathPercentile = r[18] != null && r[18] !== '' ? String(r[18]).trim() : ''
       mathGrade = parseGradeValue(r[19], 'MATH')
 
+      engRawScore = r[20] != null && r[20] !== '' ? String(r[20]).trim() : ''
+      engStandardScore = r[21] != null && r[21] !== '' ? String(r[21]).trim() : ''
+      engPercentile = r[22] != null && r[22] !== '' ? String(r[22]).trim() : ''
       engGrade = parseGradeValue(r[23], 'ENG')
 
       inquiry1 = r[25] != null ? String(r[25]).trim() : ''
+      inq1RawScore = r[26] != null && r[26] !== '' ? String(r[26]).trim() : ''
+      inq1StandardScore = r[27] != null && r[27] !== '' ? String(r[27]).trim() : ''
+      inq1Percentile = r[28] != null && r[28] !== '' ? String(r[28]).trim() : ''
       inq1Grade = parseGradeValue(r[29], 'INQ')
 
       inquiry2 = r[30] != null ? String(r[30]).trim() : ''
+      inq2RawScore = r[31] != null && r[31] !== '' ? String(r[31]).trim() : ''
+      inq2StandardScore = r[32] != null && r[32] !== '' ? String(r[32]).trim() : ''
+      inq2Percentile = r[33] != null && r[33] !== '' ? String(r[33]).trim() : ''
       inq2Grade = parseGradeValue(r[34], 'INQ')
 
+      histRawScore = r[35] != null && r[35] !== '' ? String(r[35]).trim() : ''
+      histStandardScore = r[36] != null && r[36] !== '' ? String(r[36]).trim() : ''
+      histPercentile = r[37] != null && r[37] !== '' ? String(r[37]).trim() : ''
       histGrade = parseGradeValue(r[38], 'HIST')
+
+      secondLangSubject = r[39] != null ? String(r[39]).trim() : ''
+      secondLangRawScore = r[40] != null && r[40] !== '' ? String(r[40]).trim() : ''
+      secondLangStandardScore = r[41] != null && r[41] !== '' ? String(r[41]).trim() : ''
+      secondLangPercentile = r[42] != null && r[42] !== '' ? String(r[42]).trim() : ''
       secondLangGrade = parseGradeValue(r[43], 'NORMAL')
     } else {
       // 일반/가채점 탭 유연 파싱 (헤더명 매핑 방식)
@@ -1497,7 +1546,10 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       }
 
       name = getVal('이름', '성명', '학생명')
-      if (!name) continue
+      if (!name || name === '이름' || name === '성명') continue
+
+      seriesNum = Number(getVal('계열번호', '계열')) || 1
+      if (isNaN(seriesNum)) seriesNum = 1
 
       classNum = getVal('반', '학급') || ''
       studentNum = getVal('번호', '출석번호') || ''
@@ -1531,6 +1583,9 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
           korSubject = gukVal
         }
       }
+      korRawScore = getVal('국어(원점수)', '국어원점수', '국어_원점수', '국어원점수총점', '원점수총점(국어)')
+      korStandardScore = getVal('국어(표준점수)', '국어표준점수', '국어_표준점수', '국어(표점)', '국어표점')
+      korPercentile = getVal('국어(백분위)', '국어백분위', '국어_백분위')
 
       mathSubject = getVal(
         '수학(과목)', '수학(선택)', '수학선택', '수학과목', '선택_수학',
@@ -1542,9 +1597,23 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
           mathSubject = suVal
         }
       }
+      mathRawScore = getVal('수학(원점수)', '수학원점수', '수학_원점수', '수학원점수총점', '원점수총점(수학)')
+      mathStandardScore = getVal('수학(표준점수)', '수학표준점수', '수학_표준점수', '수학(표점)', '수학표점')
+      mathPercentile = getVal('수학(백분위)', '수학백분위', '수학_백분위')
+
+      engRawScore = getVal('영어(원점수)', '영어원점수', '영어_원점수')
+      engStandardScore = getVal('영어(표준점수)', '영어표준점수', '영어_표준점수')
+      engPercentile = getVal('영어(백분위)', '영어백분위', '영어_백분위')
 
       inquiry1 = getVal('탐구1(과목)', '탐구1', '선택과목1', '탐구과목1', '사탐/과탐1', '제1선택', '탐구1과목') || ''
+      inq1RawScore = getVal('탐구1(원점수)', '탐구1원점수', '탐구1_원점수', '선택1_원점수')
+      inq1StandardScore = getVal('탐구1(표준점수)', '탐구1표준점수', '탐구1_표준점수', '탐구1(표점)', '선택1_표준점수')
+      inq1Percentile = getVal('탐구1(백분위)', '탐구1백분위', '탐구1_백분위', '선택1_백분위')
+
       inquiry2 = getVal('탐구2(과목)', '탐구2', '선택과목2', '탐구과목2', '사탐/과탐2', '제2선택', '탐구2과목') || ''
+      inq2RawScore = getVal('탐구2(원점수)', '탐구2원점수', '탐구2_원점수', '선택2_원점수')
+      inq2StandardScore = getVal('탐구2(표준점수)', '탐구2표준점수', '탐구2_표준점수', '탐구2(표점)', '선택2_표준점수')
+      inq2Percentile = getVal('탐구2(백분위)', '탐구2백분위', '탐구2_백분위', '선택2_백분위')
 
       korGrade = getGradeNum([
         '국어(등급)', '국어등급', '국어_등급', '국어 등급', '국(등급)', '국등급',
@@ -1560,10 +1629,19 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       ], 'ENG')
       inq1Grade = getInqGrade(1)
       inq2Grade = getInqGrade(2)
+
+      histRawScore = getVal('한국사(원점수)', '한국사원점수', '한국사_원점수')
+      histStandardScore = getVal('한국사(표준점수)', '한국사표준점수')
+      histPercentile = getVal('한국사(백분위)', '한국사백분위')
       histGrade = getGradeNum([
         '한국사(등급)', '한국사등급', '한국사_등급', '한국사 등급', '한(등급)', '한등급',
         '한국사(원점수)', '한국사원점수', '한국사(표준점수)', '한국사점수', '한국사'
       ], 'HIST')
+
+      secondLangSubject = getVal('제2외국어(과목)', '제2외국어과목', '제2외국어', '제2외국어과목명')
+      secondLangRawScore = getVal('제2외국어(원점수)', '제2외국어원점수')
+      secondLangStandardScore = getVal('제2외국어(표준점수)', '제2외국어표준점수')
+      secondLangPercentile = getVal('제2외국어(백분위)', '제2외국어백분위')
       secondLangGrade = getGradeNum([
         '제2외국어(등급)', '제2외국어등급', '제2외국어_등급', '제2외국어',
         '제2외국어(원점수)', '제2외국어(표준점수)'
@@ -1579,18 +1657,41 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       name,
       classNum,
       studentNum,
+      seriesNum,
       studentKey: `${grade}-${classNum}-${studentNum}_${name}`,
       legacyStudentKey: `${classNum}-${studentNum}_${name}`,
       korSubject,
-      mathSubject,
-      inquiry1,
-      inquiry2,
+      korRawScore,
+      korStandardScore,
+      korPercentile,
       korGrade,
+      mathSubject,
+      mathRawScore,
+      mathStandardScore,
+      mathPercentile,
       mathGrade,
+      engRawScore,
+      engStandardScore,
+      engPercentile,
       engGrade,
+      inquiry1,
+      inq1RawScore,
+      inq1StandardScore,
+      inq1Percentile,
       inq1Grade,
+      inquiry2,
+      inq2RawScore,
+      inq2StandardScore,
+      inq2Percentile,
       inq2Grade,
+      histRawScore,
+      histStandardScore,
+      histPercentile,
       histGrade,
+      secondLangSubject,
+      secondLangRawScore,
+      secondLangStandardScore,
+      secondLangPercentile,
       secondLangGrade,
       rawRow: rowData || {}
     })

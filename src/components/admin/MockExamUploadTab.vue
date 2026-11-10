@@ -388,6 +388,86 @@
       </div>
     </div>
 
+    <!-- 2-1. [SEN진학 전용] 시트 저장 모의고사 SEN진학용 엑셀 다운로드 카드 -->
+    <div class="bg-linear-to-r from-emerald-50/90 via-teal-50/70 to-indigo-50/80 rounded-2xl p-5 sm:p-6 shadow-sm border border-emerald-200/90 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="p-1.5 rounded-lg bg-emerald-600 text-white shadow-2xs">
+              <Download :size="16" />
+            </span>
+            <h3 class="text-sm font-black text-slate-900 m-0">
+              시트 저장 모의고사 SEN진학용 엑셀 다운로드
+            </h3>
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+              29개 컬럼 표준
+            </span>
+          </div>
+          <p class="text-xs text-slate-600 m-0">
+            구글 시트(<code class="font-bold text-emerald-800">{{ targetSheetName }}</code> 탭 등)에 이미 저장된 모의고사 성적을 서울시교육청 SEN진학 양식(29개 컬럼, 1·2행 복합 헤더)으로 즉시 다운로드합니다.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          @click="loadExistingSheetData(true)"
+          :disabled="isLoadingExistingSheetRecords"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 hover:bg-white text-slate-600 hover:text-slate-900 text-xs font-semibold border border-slate-200 shadow-2xs cursor-pointer transition-colors shrink-0 disabled:opacity-50"
+          title="구글 시트 모의고사 데이터 최신 새로고침"
+        >
+          <RefreshCw :size="13" :class="{ 'animate-spin': isLoadingExistingSheetRecords }" />
+          <span>시트 데이터 새로고침</span>
+        </button>
+      </div>
+
+      <!-- 회차 선택 드롭다운 및 다운로드 버튼 바 -->
+      <div class="flex flex-wrap items-center gap-3 pt-0.5">
+        <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-emerald-200/90 shadow-2xs">
+          <label class="text-xs font-bold text-slate-700 whitespace-nowrap">다운로드 회차:</label>
+          <div class="relative inline-block min-w-[210px]">
+            <select
+              v-model="selectedExistingExamMonth"
+              :disabled="isLoadingExistingSheetRecords || existingExamMonthOptions.length === 0"
+              class="w-full appearance-none pl-2.5 pr-7 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-400 cursor-pointer transition-colors disabled:opacity-50"
+            >
+              <option v-if="isLoadingExistingSheetRecords" :value="null">
+                ⏳ 시트 데이터 조회 중...
+              </option>
+              <option v-else-if="existingExamMonthOptions.length === 0" :value="null">
+                등록된 {{ selectedGrade }}학년 모의고사 데이터가 없습니다
+              </option>
+              <option
+                v-for="opt in existingExamMonthOptions"
+                :key="opt.value"
+                :value="opt.value"
+              >
+                {{ opt.label }}
+              </option>
+            </select>
+            <ChevronDown :size="14" class="text-slate-500 pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" />
+          </div>
+        </div>
+
+        <button
+          type="button"
+          @click="downloadExistingMonthSenExcel"
+          :disabled="isLoadingExistingSheetRecords || !selectedExistingExamMonth"
+          class="px-4 py-2 text-xs font-bold text-white bg-linear-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl border-none cursor-pointer transition-all shadow-2xs hover:shadow flex items-center gap-2"
+        >
+          <FileSpreadsheet :size="15" />
+          <span>SEN진학용 엑셀 다운로드</span>
+        </button>
+
+        <div v-if="currentSelectedExistingMonthInfo" class="flex items-center gap-2 text-xs text-slate-600 font-medium">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span>저장 파일명:</span>
+          <code class="px-2 py-0.5 rounded-md bg-white text-emerald-900 border border-emerald-300 font-mono font-bold shadow-2xs">
+            {{ currentSelectedExistingMonthInfo.fileName }}
+          </code>
+        </div>
+      </div>
+    </div>
+
     <!-- 3. 업로드 컨트롤 바 (학년 선택 + 엑셀 중심 드롭존) -->
     <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 space-y-5">
       <!-- 3-1. 학년 및 모의고사 회차(몇 월) 선택 바 (한 줄 깔끔 배치) -->
@@ -716,7 +796,8 @@ import {
   Trash2,
   Copy,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  Download
 } from 'lucide-vue-next'
 import * as XLSX from 'xlsx'
 import {
@@ -728,7 +809,16 @@ import {
   getAcademicSchoolYear,
   getTargetMockResultSheetName
 } from '../../stat/utils/mockExamReportParser'
-import { getKcueSheetId, saveKcueSheetId, buildSheetWebUrl, DEFAULT_KCUE_SHEET_ID, getKcueGasUrl, saveKcueGasUrl, maskGasUrl } from '../../api/statApi'
+import {
+  getKcueSheetId,
+  saveKcueSheetId,
+  buildSheetWebUrl,
+  DEFAULT_KCUE_SHEET_ID,
+  getKcueGasUrl,
+  saveKcueGasUrl,
+  maskGasUrl,
+  fetchAndParseKcueMockData
+} from '../../api/statApi'
 import { dialog } from '../common/dialog'
 
 // 현재 날짜 기준 대입/학사 학년도 자동 계산
@@ -892,6 +982,7 @@ onMounted(async () => {
     configuredGasUrl.value = await getKcueGasUrl()
     configuredSheetId.value = await getKcueSheetId()
   } catch (_) {}
+  loadExistingSheetData()
 })
 
 async function promptChangeSheetId() {
@@ -929,6 +1020,93 @@ async function promptChangeGasUrl() {
 
 // 선택 학년 (기본값: 3학년)
 const selectedGrade = ref(3)
+
+// 구글 시트에 이미 저장된 모의고사 성적 (SEN진학 다운로드용) 상태
+const existingMockRecords = ref([])
+const isLoadingExistingSheetRecords = ref(false)
+const selectedExistingExamMonth = ref(null)
+
+const existingExamMonthOptions = computed(() => {
+  const g = Number(selectedGrade.value) || 3
+  const gradeRecords = existingMockRecords.value.filter(r => (Number(r.grade) || 3) === g)
+
+  const monthMap = new Map()
+  gradeRecords.forEach(r => {
+    let m = r.monthOrder
+    if (!m && r.examName) {
+      const match = String(r.examName).match(/(10|[3-9]|11)/)
+      if (match) m = Number(match[1])
+    }
+    if (!m) return
+
+    // 학생 이름이 있는 유효한 응시 데이터인지 확인
+    if (!r.name) return
+
+    if (!monthMap.has(m)) {
+      monthMap.set(m, {
+        month: m,
+        examName: r.examName || `${m}월 학평`,
+        count: 0,
+        students: []
+      })
+    }
+
+    const info = monthMap.get(m)
+    info.count++
+    info.students.push(r)
+  })
+
+  // 월 내림차순 정렬 (최신 시험인 10월, 9월... 순으로 상단 배치)
+  const sortedMonths = Array.from(monthMap.keys()).sort((a, b) => b - a)
+
+  return sortedMonths.map(m => {
+    const info = monthMap.get(m)
+    const isMopyeong = [6, 9].includes(m)
+    const typeLabel = isMopyeong ? '모평' : '학평'
+    return {
+      value: m,
+      label: `${m}월 ${typeLabel} (실응시 ${info.count}명)`,
+      month: m,
+      count: info.count,
+      students: info.students
+    }
+  })
+})
+
+const currentSelectedExistingMonthInfo = computed(() => {
+  if (!selectedExistingExamMonth.value) return null
+  const opt = existingExamMonthOptions.value.find(o => o.value === selectedExistingExamMonth.value)
+  if (!opt) return null
+  const gradeStr = `${selectedGrade.value || 3}학년`
+  const monthStr = `${opt.month}월`
+  return {
+    ...opt,
+    fileName: `SEN진학_${gradeStr}_${monthStr}.xlsx`
+  }
+})
+
+// 옵션 목록 변경 시 (학년 전환 또는 로딩 완료 등) 자동 기본 선택
+watch(existingExamMonthOptions, (newOpts) => {
+  if (newOpts && newOpts.length > 0) {
+    if (!selectedExistingExamMonth.value || !newOpts.some(o => o.value === selectedExistingExamMonth.value)) {
+      selectedExistingExamMonth.value = newOpts[0].value
+    }
+  } else {
+    selectedExistingExamMonth.value = null
+  }
+}, { immediate: true })
+
+async function loadExistingSheetData(force = false) {
+  isLoadingExistingSheetRecords.value = true
+  try {
+    const records = await fetchAndParseKcueMockData(null, null, null, force)
+    existingMockRecords.value = Array.isArray(records) ? records : []
+  } catch (err) {
+    console.warn('[MockExamUploadTab] 구글 시트 모의고사 데이터 로드 실패:', err)
+  } finally {
+    isLoadingExistingSheetRecords.value = false
+  }
+}
 
 // 선택된 학년 기준 대입 학년도 계산
 const currentTargetAdmissionYear = computed(() => {
@@ -1091,17 +1269,29 @@ const allParsedStudents = computed(() => {
 })
 
 /**
- * 서울시교육청 SEN진학 양식(29개 컬럼 규격) 엑셀 다운로드
+ * 서울시교육청 SEN진학 양식(29개 컬럼 규격) 엑셀 파일 생성 및 브라우저 다운로드 공통 핸들러
  * 1·2행 복합 헤더(A~AC) 및 3행부터 학생 성적 데이터 출력
- * 파일명: SEN진학_3학년_10월.xlsx
+ * @param {Array} students 학생 성적 객체 배열
+ * @param {number|string} grade 학년
+ * @param {number|string} monthNum 응시 월
  */
-function downloadSenExcel() {
-  if (allParsedStudents.value.length === 0) {
+function generateAndDownloadSenExcel(students = [], grade = 3, monthNum = null) {
+  if (!students || students.length === 0) {
     dialog.alert('내보낼 학생 데이터가 없습니다.')
     return
   }
 
-  const rows = convertStudentsToSenExcelRows(allParsedStudents.value, selectedGrade.value)
+  // 복사본 정렬: 반 -> 번호 오름차순
+  const sortedStudents = [...students].sort((a, b) => {
+    const cA = Number(a.classNum) || 0
+    const cB = Number(b.classNum) || 0
+    if (cA !== cB) return cA - cB
+    const nA = Number(a.studentNum) || 0
+    const nB = Number(b.studentNum) || 0
+    return nA - nB
+  })
+
+  const rows = convertStudentsToSenExcelRows(sortedStudents, grade)
   const ws = XLSX.utils.aoa_to_sheet(rows)
 
   // 1·2행 복합 헤더 셀 병합 (A~E 열 상하 병합, F~AC 과목별 좌우 병합)
@@ -1143,12 +1333,44 @@ function downloadSenExcel() {
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'SEN진학')
 
-  const monthNum = extractMonthNum(selectedExam.value)
-  const monthStr = monthNum ? `${monthNum}월` : selectedExam.value
-  const gradeStr = `${selectedGrade.value || 3}학년`
+  const monthStr = monthNum ? `${monthNum}월` : '모의고사'
+  const gradeStr = `${grade || 3}학년`
   const fileName = `SEN진학_${gradeStr}_${monthStr}.xlsx`
 
   XLSX.writeFile(wb, fileName)
+}
+
+/**
+ * 방금 업로드하여 파싱 완료된 학생 성적을 SEN진학용 엑셀로 다운로드
+ */
+function downloadSenExcel() {
+  if (allParsedStudents.value.length === 0) {
+    dialog.alert('내보낼 학생 데이터가 없습니다.')
+    return
+  }
+  generateAndDownloadSenExcel(
+    allParsedStudents.value,
+    selectedGrade.value,
+    extractMonthNum(selectedExam.value)
+  )
+}
+
+/**
+ * 구글 시트에 이미 등록된 회차를 선택하여 SEN진학용 엑셀로 즉시 다운로드
+ */
+function downloadExistingMonthSenExcel() {
+  if (!selectedExistingExamMonth.value) {
+    dialog.alert('다운로드할 모의고사 회차를 선택해 주세요.')
+    return
+  }
+
+  const opt = existingExamMonthOptions.value.find(o => o.value === selectedExistingExamMonth.value)
+  if (!opt || !opt.students || opt.students.length === 0) {
+    dialog.alert('선택한 회차의 학생 데이터가 없습니다.')
+    return
+  }
+
+  generateAndDownloadSenExcel(opt.students, selectedGrade.value, opt.month)
 }
 
 /**
@@ -1305,6 +1527,8 @@ async function handleSaveToGoogleSheet() {
           `• 컬럼 규격: 44개 컬럼(A열 '월' ~ AR열 '제2외국어 등급') 자동 누적 및 정렬 완료\n\n` +
           (isExpectedSheet ? '' : `⚠️ 주의: 등록된 Web App이 원본 모의고사 시트가 아닌 [${savedSheetName}] 파일에 배포되어 해당 파일의 [${savedTab}] 탭에 저장되었습니다.\n\n`)
       })
+      // 구글 시트 저장 후 저장된 모의고사 목록 최신으로 자동 갱신
+      loadExistingSheetData(true)
     } else {
       throw new Error(resJson?.error || '구글 시트 저장 응답 오류')
     }
