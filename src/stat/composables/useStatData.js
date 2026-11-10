@@ -405,7 +405,7 @@ async function applyYearAndScope(year, scope, forceReload = false) {
 
   isLoadingYearData.value = true
 
-  // 무한 로딩 방지 비상 타임아웃 세이프가드 (5초 초과 시 강제 해제)
+  // 무한 로딩 방지 비상 타임아웃 세이프가드 (8초 초과 시 강제 해제)
   const safeguardTimer = setTimeout(() => {
     if (isLoadingYearData.value) {
       console.warn('[useStatData] Safeguard timer triggered: force clearing isLoadingYearData')
@@ -417,7 +417,7 @@ async function applyYearAndScope(year, scope, forceReload = false) {
       }
       isLoadingYearData.value = false
     }
-  }, 5000)
+  }, 8000)
 
   try {
     // 1. 구글 시트의 '기본통계' 탭 로드
@@ -578,10 +578,10 @@ async function generateMultiYearStatsForYear(year, forceReload = true) {
 /**
  * 구글 시트에 존재하는 모든 수시 탭을 자동 감지하여 5개년 통계에 일괄 생성/동기화
  */
-async function syncAllAvailableSheetYears() {
+async function syncAllAvailableSheetYears(forceReload = false) {
   const sheetId = await getKcueSheetId()
   if (!sheetId) throw new Error('대교협 구글 스프레드시트 ID가 설정되지 않았습니다.')
-  const actualTabs = await getActualGoogleSheetTabs(sheetId, true)
+  const actualTabs = await getActualGoogleSheetTabs(sheetId, forceReload)
 
   const matchedYears = []
   for (const tab of actualTabs) {
@@ -598,7 +598,7 @@ async function syncAllAvailableSheetYears() {
   const results = []
   for (const y of matchedYears) {
     try {
-      const res = await generateMultiYearStatsForYear(y, true)
+      const res = await generateMultiYearStatsForYear(y, forceReload)
       results.push({ year: y, success: true, count: res.totalApplications, students: res.applicantStudents, avgGrade: res.avgGrade })
     } catch (err) {
       results.push({ year: y, success: false, error: err.message })

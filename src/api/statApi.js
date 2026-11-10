@@ -270,6 +270,38 @@ export async function hasRuralSheetConfigured() {
   return !!(sheetId && sheetId.trim().length > 0)
 }
 
+export const DEFAULT_KNOWN_TABS = [
+  '2027수시',
+  '2026수시',
+  '2025수시',
+  '2027모의결과',
+  '2027모의가채점',
+  '2027모의등급컷',
+  '2027수능최저',
+  '수능최저충족률',
+  '기본통계',
+  '진급명렬'
+]
+
+function getStoredTabs(cleanId) {
+  try {
+    const raw = localStorage.getItem(`pcm_actual_sheet_tabs_${cleanId}`)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+    }
+  } catch (_) {}
+  return null
+}
+
+function saveStoredTabs(cleanId, tabs) {
+  try {
+    if (Array.isArray(tabs) && tabs.length > 0) {
+      localStorage.setItem(`pcm_actual_sheet_tabs_${cleanId}`, JSON.stringify(tabs))
+    }
+  } catch (_) {}
+}
+
 let cachedActualTabs = null
 let cachedActualTabsTime = 0
 
@@ -289,34 +321,61 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
 
 /**
  * 구글 스프레드시트에 실제로 존재하는 시트 탭(Sheet Names) 목록 조회
- * (XLSX export 엔드포인트를 통해 실제 탭 목록을 정확히 파악하여,
- * 존재하지 않는 탭 요청 시 구글 GViz가 첫 번째 탭을 허수로 반환하는 문제를 방지)
+ * (XLSX export 엔드포인트를 통해 실제 탭 목록을 파악하여 허수 탭 접근 차단)
+ * - 로컬 캐시(localStorage / in-memory) 및 기본 알려진 탭으로 즉각 반환 (무한 대기 및 AbortError 방지)
+ * - forceReload 시에만 XLSX 엔드포인트를 적정 타임아웃(15초)과 bookSheets: true 초고속 모드로 조회하여 캐시 갱신
  */
 export async function getActualGoogleSheetTabs(sheetId, forceReload = false) {
   const cleanId = extractSheetId(sheetId)
-  if (!cleanId) return []
+  if (!cleanId) return [...DEFAULT_KNOWN_TABS]
 
   const now = Date.now()
+
+  // 1. 메모리 캐시 확인 (5분 이내 유효)
   if (!forceReload && cachedActualTabs && (now - cachedActualTabsTime < 300000)) {
     return cachedActualTabs
   }
 
-  try {
-    const url = `https://docs.google.com/spreadsheets/d/${cleanId}/export?format=xlsx&_t=${now}`
-    const res = await fetchWithTimeout(url, {}, 5000)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const buffer = await res.arrayBuffer()
-    const wb = XLSX.read(buffer, { type: 'buffer' })
-    if (wb && Array.isArray(wb.SheetNames) && wb.SheetNames.length > 0) {
-      cachedActualTabs = wb.SheetNames
-      cachedActualTabsTime = now
-      return cachedActualTabs
-    }
-  } catch (err) {
-    console.warn('[statApi] Failed to fetch actual sheet tabs via xlsx:', err)
+  // 2. localStorage 영구 캐시 확인
+  const stored = getStoredTabs(cleanId)
+  if (!forceReload && stored && stored.length > 0) {
+    cachedActualTabs = stored
+    cachedActualTabsTime = now
+    return cachedActualTabs
   }
 
-  return cachedActualTabs || []
+  // 3. forceReload가 아닐 때는 컴포넌트 마운트 및 렌더링 블로킹을 차단하기 위해 즉시 반환
+  if (!forceReload) {
+    const fallback = stored || [...DEFAULT_KNOWN_TABS]
+    cachedActualTabs = fallback
+    cachedActualTabsTime = now
+    return fallback
+  }
+
+  // 4. forceReload 시 실제 구글 시트 XLSX export로 백그라운드 갱신 시도
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${cleanId}/export?format=xlsx&_t=${now}`
+    const res = await fetchWithTimeout(url, {}, 15000)
+    if (res.ok) {
+      const buffer = await res.arrayBuffer()
+      // bookSheets: true 옵션으로 셀 파싱을 건너뛰고 탭 이름만 수 ms 내 초고속 추출
+      const wb = XLSX.read(buffer, { type: 'buffer', bookSheets: true })
+      if (wb && Array.isArray(wb.SheetNames) && wb.SheetNames.length > 0) {
+        cachedActualTabs = wb.SheetNames
+        cachedActualTabsTime = now
+        saveStoredTabs(cleanId, wb.SheetNames)
+        return cachedActualTabs
+      }
+    }
+  } catch (err) {
+    console.warn('[statApi] Failed to fetch actual sheet tabs via xlsx (using cached/fallback):', err.message || err)
+  }
+
+  // 네트워크 실패 시 기존 캐시 또는 저장소 또는 기본 탭으로 안전하게 복구 (절대 빈 배열 반환으로 화면을 깨뜨리지 않음)
+  const safeFallback = cachedActualTabs || stored || [...DEFAULT_KNOWN_TABS]
+  cachedActualTabs = safeFallback
+  cachedActualTabsTime = now
+  return safeFallback
 }
 
 /**
@@ -342,7 +401,7 @@ export async function fetchKcueSheetTabCsv(sheetId, tabName) {
 export async function testKcueSheetTabConnection(sheetId, tabName) {
   try {
     // 1. 구글 시트에 실제 탭이 존재하는지 먼저 확인
-    const actualTabs = await getActualGoogleSheetTabs(sheetId, true)
+    const actualTabs = await getActualGoogleSheetTabs(sheetId, false)
     if (!actualTabs.includes(tabName)) {
       return { 
         success: false, 

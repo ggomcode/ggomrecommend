@@ -679,7 +679,7 @@ const targetUnivComparison = multiYearStats.targetUnivComparison
 // 탭 진입 시 구글 시트에 존재하는 모든 학년도(2027수시, 2026수시, 2025수시 등)를 실시간 자동 감지하여 5개년 통계 자동 갱신
 onMounted(async () => {
   try {
-    await syncAllAvailableSheetYears()
+    await syncAllAvailableSheetYears(false)
   } catch (err) {
     console.warn('[MultiYearTab] Real-time sheet sync on mount:', err.message)
   }
