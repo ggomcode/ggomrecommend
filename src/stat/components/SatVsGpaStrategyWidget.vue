@@ -2533,6 +2533,16 @@ const availableExamMonthOptions = computed(() => {
   records.forEach(r => {
     const m = extractExamMonth(r)
     if (!m) return
+    // 실제 성적(등급)이 존재하는 실응시자만 카운트
+    const hasScore = (
+      r.korGrade != null || 
+      r.mathGrade != null || 
+      r.engGrade != null || 
+      r.inq1Grade != null || 
+      r.inq2Grade != null || 
+      r.histGrade != null
+    )
+    if (!hasScore) return
     if (!countByMonth[m]) countByMonth[m] = new Set()
     const key = r.studentKey || r.name
     if (key) countByMonth[m].add(key)
@@ -2686,7 +2696,9 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
       subjectsDetail: {
         kor: { totalCount: 0, totalAvg: '-', unmaeCount: 0, unmaeAvg: '-', hwajakCount: 0, hwajakAvg: '-' },
         math: { totalCount: 0, totalAvg: '-', mijukCount: 0, mijukAvg: '-', hwaktongCount: 0, hwaktongAvg: '-' },
-        eng: { totalCount: 0, totalAvg: '-' }
+        eng: { totalCount: 0, totalAvg: '-' },
+        soc: { totalCount: 0, totalAvg: '-' },
+        sci: { totalCount: 0, totalAvg: '-' }
       }
     }
   }
@@ -2809,12 +2821,19 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
   const mathMijukStudentAvgs = []
   const mathHwaktongStudentAvgs = []
 
+  let actualExamineeCount = 0
+
   byStudent.forEach(s => {
     const k = calcAvg(s.kor); if (k !== null) { totalKor += k; cntKor++ }
     const m = calcAvg(s.math); if (m !== null) { totalMath += m; cntMath++ }
     const e = calcAvg(s.eng); if (e !== null) { totalEng += e; cntEng++ }
     const so = calcAvg(s.soc); if (so !== null) { totalSoc += so; cntSoc++ }
     const sc = calcAvg(s.sci); if (sc !== null) { totalSci += sc; cntSci++ }
+
+    // 국, 수, 영, 사, 과 중 적어도 1개 영역 이상 실제 응시한 경우 실응시자로 인정
+    if (k !== null || m !== null || e !== null || so !== null || sc !== null) {
+      actualExamineeCount++
+    }
 
     if (s.kor.length > 0) {
       const uCnt = s.korUnmaeGrades.length
@@ -2847,10 +2866,13 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
     return Number(n.toFixed(2))
   }
 
-  const studentCount = byStudent.size
-  const effectiveKorCount = cntKor > 0 ? cntKor : studentCount
-  const effectiveMathCount = cntMath > 0 ? cntMath : Math.round(studentCount * 0.97)
-  const effectiveEngCount = cntEng > 0 ? cntEng : studentCount
+  // 실제 시험에 응시한 실응시자 수 기준 (미응시 결시자/빈 명렬 행 제외)
+  const studentCount = actualExamineeCount > 0 ? actualExamineeCount : (cntKor || cntMath || cntEng || byStudent.size)
+  const effectiveKorCount = cntKor
+  const effectiveMathCount = cntMath
+  const effectiveEngCount = cntEng
+  const effectiveSocCount = cntSoc
+  const effectiveSciCount = cntSci
 
   const finalKor = clampGrade(cntKor ? totalKor / cntKor : null, 6.04)
   const finalMath = clampGrade(cntMath ? totalMath / cntMath : null, 6.03)
@@ -2903,7 +2925,7 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
     subjectsDetail: {
       kor: {
         totalCount: effectiveKorCount,
-        totalAvg: finalKor.toFixed(2),
+        totalAvg: cntKor > 0 ? finalKor.toFixed(2) : '-',
         unmaeCount: korUnmaeCnt,
         unmaeAvg: korUnmaeAvg,
         hwajakCount: korHwajakCnt,
@@ -2911,7 +2933,7 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
       },
       math: {
         totalCount: effectiveMathCount,
-        totalAvg: finalMath.toFixed(2),
+        totalAvg: cntMath > 0 ? finalMath.toFixed(2) : '-',
         mijukCount: mathMijukCnt,
         mijukAvg: mathMijukAvg,
         hwaktongCount: mathHwaktongCnt,
@@ -2919,7 +2941,15 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
       },
       eng: {
         totalCount: effectiveEngCount,
-        totalAvg: finalEng.toFixed(2)
+        totalAvg: cntEng > 0 ? finalEng.toFixed(2) : '-'
+      },
+      soc: {
+        totalCount: effectiveSocCount,
+        totalAvg: cntSoc > 0 ? finalSoc.toFixed(2) : '-'
+      },
+      sci: {
+        totalCount: effectiveSciCount,
+        totalAvg: cntSci > 0 ? finalSci.toFixed(2) : '-'
       }
     }
   }
@@ -2988,6 +3018,8 @@ const mockExamTrendSeries = computed(() => {
     const mathDet = analysis.subjectsDetail?.math || {}
     const korDet = analysis.subjectsDetail?.kor || {}
     const engDet = analysis.subjectsDetail?.eng || {}
+    const socDet = analysis.subjectsDetail?.soc || {}
+    const sciDet = analysis.subjectsDetail?.sci || {}
 
     const hasData = analysis.hasRealData && analysis.studentCount > 0
     const countLabel = hasData ? ` (${analysis.studentCount}명)` : ''
@@ -3003,19 +3035,24 @@ const mockExamTrendSeries = computed(() => {
       korAvg: hasData ? (Number(korDet.totalAvg) || analysis.grades[0]) : null,
       unmaeAvg: hasData ? (Number(korDet.unmaeAvg) || null) : null,
       hwajakAvg: hasData ? (Number(korDet.hwajakAvg) || null) : null,
+      korCount: hasData ? (korDet.totalCount || 0) : 0,
       unmaeCount: hasData ? (korDet.unmaeCount || 0) : 0,
       hwajakCount: hasData ? (korDet.hwajakCount || 0) : 0,
       // 수학 (선택과목 분리)
       mathAvg: hasData ? (Number(mathDet.totalAvg) || analysis.grades[1]) : null,
       mijukAvg: hasData ? (Number(mathDet.mijukAvg) || null) : null,
       hwaktongAvg: hasData ? (Number(mathDet.hwaktongAvg) || null) : null,
+      mathCount: hasData ? (mathDet.totalCount || 0) : 0,
       mijukCount: hasData ? (mathDet.mijukCount || 0) : 0,
       hwaktongCount: hasData ? (mathDet.hwaktongCount || 0) : 0,
       // 영어
       engAvg: hasData ? (Number(engDet.totalAvg) || analysis.grades[2]) : null,
+      engCount: hasData ? (engDet.totalCount || 0) : 0,
       // 탐구
       socAvg: hasData ? analysis.grades[3] : null,
+      socCount: hasData ? (socDet.totalCount || 0) : 0,
       sciAvg: hasData ? analysis.grades[4] : null,
+      sciCount: hasData ? (sciDet.totalCount || 0) : 0,
       // 내신 평균 기준선 (일관된 비교 기준: 4.44등급)
       gpaBenchmark: 4.44
     }
@@ -3333,7 +3370,7 @@ const mockTrendChartOptions = computed(() => {
             const s = mockExamTrendSeries.value[idx]
             if (!s) return items[0].label
             return s.hasRealData
-              ? `${s.fullName} (전체 응시: ${s.studentCount}명)`
+              ? `${s.fullName} (전체 실응시: ${s.studentCount}명)`
               : `${s.fullName} (성적 데이터 미등록)`
           },
           label: (ctx) => {
@@ -3345,12 +3382,31 @@ const mockTrendChartOptions = computed(() => {
             const idx = ctx.dataIndex
             const s = mockExamTrendSeries.value[idx]
             let extra = ''
-            if (ctx.dataset.label.includes('미적분') && s?.mijukCount > 0) {
-              extra = ` (${s.mijukCount}명)`
-            } else if (ctx.dataset.label.includes('확률과 통계') && s?.hwaktongCount > 0) {
-              extra = ` (${s.hwaktongCount}명)`
+            const dLabel = ctx.dataset.label || ''
+
+            if (dLabel.includes('미적분')) {
+              if (s?.mijukCount > 0) extra = ` (${s.mijukCount}명 응시)`
+            } else if (dLabel.includes('확률과 통계')) {
+              if (s?.hwaktongCount > 0) extra = ` (${s.hwaktongCount}명 응시)`
+            } else if (dLabel === '수학') {
+              if (s?.mathCount > 0) extra = ` (${s.mathCount}명 응시)`
+            } else if (dLabel.includes('국어')) {
+              if (s?.korCount > 0) {
+                if (s.unmaeCount > 0 && s.hwajakCount > 0) {
+                  extra = ` (${s.korCount}명 응시: 언매 ${s.unmaeCount} / 화작 ${s.hwajakCount})`
+                } else {
+                  extra = ` (${s.korCount}명 응시)`
+                }
+              }
+            } else if (dLabel.includes('영어')) {
+              if (s?.engCount > 0) extra = ` (${s.engCount}명 응시)`
+            } else if (dLabel.includes('사회탐구')) {
+              if (s?.socCount > 0) extra = ` (${s.socCount}명 응시)`
+            } else if (dLabel.includes('과학탐구')) {
+              if (s?.sciCount > 0) extra = ` (${s.sciCount}명 응시)`
             }
-            return ` ${ctx.dataset.label}${extra}: ${Number(ctx.raw).toFixed(2)}등급`
+
+            return ` ${dLabel}${extra}: ${Number(ctx.raw).toFixed(2)}등급`
           }
         }
       }

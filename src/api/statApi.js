@@ -1106,13 +1106,22 @@ export function smartMergeMockExamRecords(resultRecords = [], tentativeRecords =
     const hasMonthInResult = resultExamMonths.has(monthKey)
 
     if (!hasMonthInResult) {
-      // 결과 시트에 전혀 없는 회차(월)는 가채점 전원 채택
+      // 결과 시트에 전혀 없는 회차(월)는 가채점 채택
       fallbackRecords.push(tr)
     } else {
-      // 결과 시트가 있는 회차이지만, 결과 시트에서 누락된 학생만 fallback
+      // 결과 시트가 이미 있는 회차이지만, 가채점에 실제 성적이 존재하는 누락 학생만 fallback
       const studentMonthKey = `${monthKey}_${tr.studentKey}`
       if (!resultSet.has(studentMonthKey)) {
-        fallbackRecords.push({ ...tr, isFallbackFromTentative: true })
+        const hasScore = (
+          (tr.korGrade !== null && tr.korGrade !== undefined) ||
+          (tr.mathGrade !== null && tr.mathGrade !== undefined) ||
+          (tr.engGrade !== null && tr.engGrade !== undefined) ||
+          (tr.inq1Grade !== null && tr.inq1Grade !== undefined) ||
+          (tr.inq2Grade !== null && tr.inq2Grade !== undefined)
+        )
+        if (hasScore) {
+          fallbackRecords.push({ ...tr, isFallbackFromTentative: true })
+        }
       }
     }
   })
