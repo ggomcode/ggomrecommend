@@ -216,30 +216,103 @@
         </div>
       </div>
 
+      <!-- 2022 개정 교육과정 탐구 선택과목 쏠림 & 회피 정밀 분석 (현 고2 2028 대입 전용) -->
+      <div class="p-5 sm:p-6 rounded-2xl bg-slate-900 text-white space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-[10px]">2022 개정 교육과정 편제</span>
+              <h4 class="text-sm sm:text-base font-black text-amber-300 m-0 flex items-center gap-1.5">
+                <span>⚠️</span>
+                <span>내신 탐구 선택과목 쏠림(물·화 회피, 생·지 및 윤리·사문 집중) 경계령</span>
+              </h4>
+            </div>
+            <p class="text-[11px] text-slate-400 m-0 mt-1">
+              현 고2부터는 '물리학Ⅰ, 사회문화'가 아닌 <strong>2022 개정 과목명(물리학, 화학, 현대사회와 윤리, 사회와 문화 등)</strong>이 적용되며, 등급 유불리에 따른 극단적 수강 쏠림이 예상됩니다.
+            </p>
+          </div>
+          <span class="text-[11px] text-indigo-300 font-mono">서울대·연고대 학종 평가 핵심 기준</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <!-- 과학 교과 쏠림 vs 회피 -->
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="font-black text-emerald-300 flex items-center gap-1.5">
+                <span>🔬</span>
+                <span>과학 교과: [물리·화학 회피 ➔ 생명·지구 쏠림]</span>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold">공대 결격 위험</span>
+            </div>
+            <div class="space-y-1.5 text-[11px] leading-relaxed">
+              <div class="p-2 rounded-lg bg-rose-950/40 border border-rose-500/30 text-rose-200">
+                <strong>❌ 학생들의 회피 과목 (수식·역학 부담):</strong><br>
+                일반선택: <code>물리학</code>, <code>화학</code><br>
+                진로선택: <code>역학과 에너지</code>, <code>전자기와 양자</code>, <code>물질과 에너지</code>, <code>화학 반응의 세계</code>
+              </div>
+              <div class="p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-emerald-200">
+                <strong>⚠️ 학생들의 쏠림 과목 (개념·암기 위주):</strong><br>
+                일반선택: <code>생명과학</code>, <code>지구과학</code><br>
+                진로선택: <code>세포와 물질대사</code>, <code>생물의 유전</code>, <code>지구시스템과학</code>, <code>행성우주과학</code>
+              </div>
+              <div class="text-slate-300 text-[10px] bg-slate-800/80 p-2 rounded-lg border border-slate-700">
+                💡 <strong>진학 상담 팩트:</strong> 컴퓨터, 반도체, 전기전자, 기계공학 등 상위권 공대는 <code>물리학</code>, <code>화학</code>, <code>역학과 에너지</code> 미이수 시 내신이 1.0이어도 서류평가에서 치명적 감점을 부여합니다.
+              </div>
+            </div>
+          </div>
+
+          <!-- 사회 교과 쏠림 vs 회피 -->
+          <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="font-black text-amber-300 flex items-center gap-1.5">
+                <span>⚖️</span>
+                <span>사회 교과: [윤리·사문 집중 ➔ 경제·정치·역사 회피]</span>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">상경계열 차별화</span>
+            </div>
+            <div class="space-y-1.5 text-[11px] leading-relaxed">
+              <div class="p-2 rounded-lg bg-amber-950/40 border border-amber-500/30 text-amber-200">
+                <strong>⚠️ 학생들의 쏠림 과목 (과거 생윤·사문 유사군):</strong><br>
+                일반선택: <code>현대사회와 윤리</code>, <code>사회와 문화</code><br>
+                진로/융합: <code>윤리문제 탐구</code>, <code>사회문제 탐구</code>
+              </div>
+              <div class="p-2 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-indigo-200">
+                <strong>💎 대학이 높게 평가하는 도전 과목:</strong><br>
+                일반선택: <code>경제</code>, <code>정치</code>, <code>법과 사회</code>, <code>세계사</code><br>
+                진로선택: <code>금융과 경제생활</code>, <code>국제관계의 이해</code>, <code>역사로 탐구하는 현대 세계</code>
+              </div>
+              <div class="text-slate-300 text-[10px] bg-slate-800/80 p-2 rounded-lg border border-slate-700">
+                💡 <strong>진학 상담 팩트:</strong> 경영·경제·통계·사회과학 최상위권은 남들 다 듣는 윤리 과목만으로는 서류 차별화가 불가합니다. 수강자 수가 적더라도 <code>경제</code>, <code>정치</code>를 이수한 학생이 학종 가산점을 독식합니다.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 추천 과목 이수 매트릭스 (2028 체제 전용 안내) -->
       <div class="p-4 sm:p-5 rounded-2xl bg-slate-900 text-white space-y-3">
         <div class="flex items-center justify-between">
           <h4 class="text-xs sm:text-sm font-black text-amber-300 m-0 flex items-center gap-2">
             <span>🛡️</span>
-            <span>2028 개편 체제 핵심 전공별 필수 권장 이수 과목 가이드</span>
+            <span>2028 개편 체제 핵심 전공별 필수 권장 이수 과목 가이드 (2022 개정 과목명)</span>
           </h4>
           <span class="text-[11px] text-slate-400">서울대·주요 15개대 발표안 기준</span>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
           <div class="p-3 rounded-xl bg-white/10 space-y-1">
             <div class="font-bold text-emerald-300">컴퓨터·전기전자·기계공학</div>
-            <div class="text-[11px] text-slate-300">미적분Ⅱ, 기하, 물리학, 화학 필수</div>
-            <div class="text-[10px] text-slate-400">※ 물리학 미이수 시 서류 평가 치명적 감점</div>
+            <div class="text-[11px] text-slate-300">미적분Ⅱ, 기하, 물리학, 화학, 역학과 에너지 필수</div>
+            <div class="text-[10px] text-slate-400">※ 물리학·역학과 에너지 미이수 시 서류 치명적 감점</div>
           </div>
           <div class="p-3 rounded-xl bg-white/10 space-y-1">
             <div class="font-bold text-sky-300">의약학·생명공학·화학계열</div>
-            <div class="text-[11px] text-slate-300">미적분Ⅱ, 화학, 생명과학 필수</div>
-            <div class="text-[10px] text-slate-400">※ 실험·탐구 연계 심화과목 적극 이수</div>
+            <div class="text-[11px] text-slate-300">미적분Ⅱ, 화학, 생명과학, 세포와 물질대사 필수</div>
+            <div class="text-[10px] text-slate-400">※ 화학 반응의 세계 등 심화 실험과목 적극 이수</div>
           </div>
           <div class="p-3 rounded-xl bg-white/10 space-y-1">
             <div class="font-bold text-rose-300">경영·경제·사회과학계열</div>
-            <div class="text-[11px] text-slate-300">대수, 미적분Ⅰ, 확률과 통계, 경제</div>
-            <div class="text-[10px] text-slate-400">※ 수리적 분석력 및 데이터 활용 세특 필수</div>
+            <div class="text-[11px] text-slate-300">대수, 미적분Ⅰ, 확률과 통계, 경제, 금융과 경제생활</div>
+            <div class="text-[10px] text-slate-400">※ 수리적 정량 분석력 및 경제 데이터 세특 필수</div>
           </div>
         </div>
       </div>
@@ -492,12 +565,12 @@ const faqList = [
   {
     question: '2028 수능은 탐구 선택과목이 없는데, 과학이나 사회 학원 선행을 어떻게 시켜야 하나요?',
     summary: '고1 통합과학·통합사회가 곧 수능 과목이므로 1학년 내신 집중이 곧 수능 대비입니다.',
-    answer: `2028 수능부터는 물리학Ⅰ, 생명과학Ⅰ 같은 개별 선택과목이 수능 시험지에서 완전히 사라집니다. 수능 탐구 영역은 오직 고등학교 1학년 공통과목인 '통합사회'와 '통합과학'에서만 출제됩니다.\n\n따라서 굳이 중3~고1 시기에 무리해서 고2 선택과목(물리/화학 수능 인강 등)을 미리 선행할 필요가 전혀 없습니다. 대신 고1 과정의 통합과학(특히 학생들이 어려워하는 역학 시스템과 화학 변화)과 통합사회를 완벽하게 마스터하는 것이 곧 1학년 내신 1등급과 고3 수능 만점을 동시에 잡는 가장 확실한 길입니다.`
+    answer: `2028 수능부터는 물리학, 생명과학 같은 2~3학년 개별 선택과목이 수능 시험지에서 완전히 사라집니다. 수능 탐구 영역은 오직 고등학교 1학년 공통과목인 '통합사회'와 '통합과학'에서만 출제됩니다.\n\n따라서 굳이 중3~고1 시기에 무리해서 고2 선택과목(물리학/화학 수능 인강 등)을 미리 선행할 필요가 전혀 없습니다. 대신 고1 과정의 통합과학(특히 학생들이 어려워하는 역학과 에너지, 화학 결합과 물질 변화)과 통합사회를 완벽하게 마스터하는 것이 곧 1학년 내신 1등급과 고3 수능 만점을 동시에 잡는 가장 확실한 길입니다.`
   },
   {
     question: '내신 5등급제에서는 등급 잘 나오는 과목만 골라 들으면 안 되나요? 물리학 안 들었다고 대학이 떨어뜨리나요?',
     summary: '네, 상위권 이공계열은 물리학/화학 미이수 시 서류평가에서 치명적인 불이익을 받습니다.',
-    answer: `절대 안 됩니다. 서울대, 연세대, 고려대, 성균관대 등 주요 대학은 이미 2028 대입 전형 예고를 통해 '전공 연계 핵심 권장 과목'을 강력히 반영하겠다고 공표했습니다.\n\n수능에서 학생의 과탐 실력을 측정할 수 없기 때문에, 대학 입학사정관들은 학생부의 2~3학년 과목 이수 이력을 돋보기로 들여다봅니다. 공대 지망생이 점수 따기 쉬운 과목만 찾아 듣고 '물리학'이나 '미적분Ⅱ'를 이수하지 않았다면, 내신 평점이 아무리 높아도 전공적합성 및 학업역량 평가에서 최하 등급을 받고 불합격할 확률이 매우 높습니다.`
+    answer: `절대 안 됩니다. 서울대, 연세대, 고려대, 성균관대 등 주요 대학은 이미 2028 대입 전형 예고를 통해 '전공 연계 핵심 권장 과목'을 강력히 반영하겠다고 공표했습니다.\n\n수능에서 학생의 과탐 실력을 측정할 수 없기 때문에, 대학 입학사정관들은 학생부의 2~3학년 과목 이수 이력을 돋보기로 들여다봅니다. 공대 지망생이 점수 따기 쉬운 생명과학·지구과학 계열만 골라 듣고 2022 개정 핵심 과목인 '물리학'이나 '역학과 에너지', '미적분Ⅱ'를 이수하지 않았다면, 내신 평점이 아무리 높아도 전공적합성 및 학업역량 평가에서 최하 등급을 받고 불합격할 확률이 매우 높습니다.`
   },
   {
     question: '수학에서 심화수학(미적분Ⅱ + 기하)이 수능에서 빠졌는데, 학교 수업에서도 안 들어도 되나요?',
