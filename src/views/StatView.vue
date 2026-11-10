@@ -200,13 +200,13 @@
       <StatHeader :currentTabItem="currentTabItem" class="no-print" />
 
       <!-- 필터 바 (상단 고정, 고입 설명회, 학생별 6장 카드 및 수능최저 시뮬레이터 탭은 자체 컨트롤 사용으로 제외) -->
-      <StatFilterBar v-if="currentTab !== 'admission' && currentTab !== 'student' && currentTab !== 'csatTarget' && currentTab !== 'grade2Analysis' && currentTab !== 'grade1Analysis'" class="no-print" />
+      <StatFilterBar v-if="currentTab !== 'admission' && currentTab !== 'student' && currentTab !== 'csatTarget' && currentTab !== 'grade2Analysis' && currentTab !== 'grade1Analysis' && currentTab !== 'preExamineeStrategy'" class="no-print" />
 
       <!-- 스크롤 가능한 본문 영역 -->
       <div class="flex-1 min-h-0 flex flex-col overflow-y-auto" style="scrollbar-gutter: stable;">
         <div class="max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
           <!-- 1. 구글 시트 탭 데이터 실시간 로딩 중 -->
-          <div v-if="isLoadingYearData && currentTab !== 'csatTarget' && currentTab !== 'grade2Analysis' && currentTab !== 'grade1Analysis'" class="flex flex-col items-center justify-center py-24 text-center">
+          <div v-if="isLoadingYearData && currentTab !== 'csatTarget' && currentTab !== 'grade2Analysis' && currentTab !== 'grade1Analysis' && currentTab !== 'preExamineeStrategy'" class="flex flex-col items-center justify-center py-24 text-center">
             <div class="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-200/60 flex items-center justify-center mb-4 text-indigo-600 shadow-sm">
               <svg class="animate-spin w-7 h-7" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -301,6 +301,7 @@ import ParentCounselTab from '../stat/components/tabs/ParentCounselTab.vue'
 import HighSchoolAdmissionTab from '../stat/components/tabs/HighSchoolAdmissionTab.vue'
 import CsatTargetSimulatorTab from '../stat/components/tabs/CsatTargetSimulatorTab.vue'
 import LowerGradeMockAnalysisTab from '../stat/components/tabs/LowerGradeMockAnalysisTab.vue'
+import PreExamineeStrategyTab from '../stat/components/tabs/PreExamineeStrategyTab.vue'
 import { useStatData } from '../stat/composables/useStatData'
 import { schoolName } from '../utils/schoolConfig'
 import {
@@ -384,7 +385,14 @@ const menuGroups = computed(() => [
     items: [
       { id: 'student', name: '학생별 6장 카드', iconComponent: Users },
       { id: 'csatTarget', name: '수능최저 & 목표진단', iconComponent: Compass },
-      { id: 'counsel', name: '학부모 맞춤 상담', iconComponent: Sparkles, badge: 'HOT' },
+      { id: 'counsel', name: '학부모 맞춤 상담', iconComponent: Sparkles, badge: 'HOT' }
+    ]
+  },
+  {
+    emoji: '🌱',
+    title: '예비 수험생',
+    items: [
+      { id: 'preExamineeStrategy', name: '예비 수험생 전략', iconComponent: Compass, badge: '2028특화' },
       { id: 'grade2Analysis', name: '고2 성적분석', iconComponent: Award, badge: '고2' },
       { id: 'grade1Analysis', name: '고1 성적분석', iconComponent: BookOpen, badge: '고1' },
       { id: 'admission', name: '고입 설명회 특화', iconComponent: GraduationCap, badge: '중3' }
@@ -426,6 +434,7 @@ const activeTabComponent = computed(() => {
     case 'grade': return GradeTab
     case 'calendar': return CalendarTab
     case 'student': return StudentTab
+    case 'preExamineeStrategy': return PreExamineeStrategyTab
     case 'grade2Analysis':
     case 'grade1Analysis': return LowerGradeMockAnalysisTab
     case 'data': return DataExplorerTab
