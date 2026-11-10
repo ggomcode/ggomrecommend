@@ -5,17 +5,16 @@
  * '사탐런'(과탐 -> 사탐 전향) 비율 및 세부 현황을 자동 판별·산출하는 통계 엔진
  * 
  * [판정 규칙]
- * 1. 자연계열(이과) 모수:
- *    - 3월부터 10월 모의고사 기간 중 과학탐구 8과목(물Ⅰ/Ⅱ, 화Ⅰ/Ⅱ, 생Ⅰ/Ⅱ, 지Ⅰ/Ⅱ)을
- *      단 1과목이라도 응시한 이력이 있는 학생 (미적분/기하를 응시했더라도 탐구를 사탐으로만 응시한 인문계열 학생은 모수에서 제외)
- * 2. 사탐런 판별 (초기 모의고사 대비 최종 모의고사 탐구 선택과목 변화 분석):
- *    - 초기에 과탐 2과목 응시:
- *      - 최종에서 사회탐구 1과목 선택 (과탐1 + 사탐1): '1과목 사탐런'
- *      - 최종에서 사회탐구 2과목 선택 (사탐2): '2과목 사탐런'
- *      - 최종에서 과학탐구 2과목 유지 (과탐2): '과탐 유지'
- *    - 초기에 과탐 1과목 + 사탐 1과목 응시:
- *      - 최종에서 사회탐구 2과목 선택 (사탐2): '1과목 사탐런' (남은 과탐 1과목 추가 전향)
- *      - 최종에서 과학탐구 1과목 유지: '과탐 유지'
+ * 1. 자연계열(이과) 모수 (전체 모의고사 대상):
+ *    - 3월부터 10월 모의고사 및 수능 기간 중 단 1회라도
+ *      1) 수학 선택이 미적분 또는 기하이거나 (과탐 선택 포함 여부와 관계없이 자연계열 분류)
+ *      2) 탐구 선택 중 과학탐구(8개 과목)가 1개라도 포함되어 있는 학생
+ * 2. 사탐런 판별:
+ *    - 위 자연계열 모수 학생 중 가장 최근의 모의고사 결과(수능 > 10월 등 최신순, 동일 회차 시 실채점 우선, 없으면 가채점)를 기준으로 판정
+ *    - 가장 최근 시험에서 사회탐구가 1개라도 포함되어 있으면 사탐런으로 분류:
+ *      - 사회탐구 1과목 (과탐1 + 사탐1): '1과목 사탐런'
+ *      - 사회탐구 2과목 (사탐2): '2과목 사탐런'
+ *      - 사회탐구 0과목 (과탐2 등): '과탐 유지'
  * 
  * [표기 유의사항 완벽 대응]
  * - 과학 선택과목의 로마자(I, II), 로마자 특수문자(Ⅰ, Ⅱ), 숫자(1, 2) 및 공백, 약칭 모두 정규화 지원
@@ -158,6 +157,26 @@ export function extractExamMonthOrder(examName = '') {
 }
 
 /**
+ * 시험 회차 우선순위(최신성 및 실채점/가채점) 점수 계산 헬퍼
+ * - 회차 순서: 수능(11월) > 10월 > 9월 > 7월 > 6월 > 5월 > 4월 > 3월
+ * - 실채점 vs 가채점: 동일 회차에 가채점과 실채점이 둘 다 있다면 실채점 우선(+1점), 가채점만 있다면 가채점 사용
+ */
+export function getExamPriorityScore(exam) {
+  if (!exam) return 0
+  const name = String(exam.examName || '').trim()
+  const month = exam.monthOrder || extractExamMonthOrder(name)
+
+  let baseScore = month * 10
+  if (name.includes('수능') || name.includes('11월')) {
+    baseScore = 110
+  }
+
+  // 실채점 우선 (+1점 가산), 가채점은 기본점수
+  const isEstimated = /가채점/i.test(name) || /tentative/i.test(name)
+  return baseScore + (isEstimated ? 0 : 1)
+}
+
+/**
  * 학생별 모의고사 응시 배열로부터 사탐런 종합 통계 산출
  * 
  * @param {Array} rawStudentExams
@@ -204,112 +223,65 @@ export function calculateSatamRunStats(rawStudentExams = []) {
     })
   })
 
-  // 2. 각 학생별 자연계열 모수 여부 및 최종 시험 사탐런 여부 판별
+  // 2. 각 학생별 자연계열 모수 여부 및 최신 시험 사탐런 여부 판별
   const allStudents = Array.from(studentMap.values())
   const naturalCohort = []
   const nonNaturalCohort = []
 
   allStudents.forEach(stu => {
-    // 응시 회차 시간순(3월 -> 10월) 정렬
-    stu.exams.sort((a, b) => a.monthOrder - b.monthOrder)
+    // [규칙 1] 자연계열(이과) 모수 선별 (전체 모의고사 대상)
+    // 3~10월 및 수능 모의고사 중 단 1회라도:
+    // 1) 수학 선택이 '미적분' 또는 '기하' (과탐 선택 여부와 관계없이 자연계열 분류)
+    // 2) 탐구 선택 중 '과학탐구(8개 과목)'가 1개라도 포함되어 있는 경우
+    let isNaturalCohort = false
+    stu.exams.forEach(ex => {
+      if (ex.normMath?.type === 'MATH_NATURAL') {
+        isNaturalCohort = true
+      }
+      if (ex.normInq1?.type === 'SCIENCE' || ex.normInq2?.type === 'SCIENCE') {
+        isNaturalCohort = true
+      }
+    })
 
-    // 유효한 탐구 응시 시험 필터링 (결시 또는 미기재 제외)
+    if (!isNaturalCohort) {
+      nonNaturalCohort.push(stu)
+      return
+    }
+
+    // [규칙 2] 가장 최근의 모의고사 결과(수능 > 최신 회차, 실채점 우선, 없으면 가채점) 추출
+    // 시험 우선순위 점수 순으로 정렬
+    stu.exams.sort((a, b) => getExamPriorityScore(a) - getExamPriorityScore(b))
+
+    // 탐구 데이터(normInq1 또는 normInq2)가 유효한 시험들 필터링
     const validInqExams = stu.exams.filter(ex => 
       (ex.normInq1 && ex.normInq1.type !== 'UNKNOWN') || 
       (ex.normInq2 && ex.normInq2.type !== 'UNKNOWN')
     )
 
-    if (validInqExams.length === 0) {
-      nonNaturalCohort.push(stu)
-      return
-    }
+    const candidateExams = validInqExams.length > 0 ? validInqExams : stu.exams
+    const initialExam = candidateExams[0]
+    const latestExam = candidateExams[candidateExams.length - 1]
 
-    // [규칙 1] 3월~10월 모의고사 중 과학탐구(8개 과목)를 1과목 이상 응시한 이력이 있는지 확인
-    // (미적분/기하를 응시했더라도 탐구를 사회탐구로만 응시한 순수 인문계열 학생은 자연계열 사탐런 모수에서 제외)
-    const hasScienceHistory = stu.exams.some(ex => 
-      ex.normInq1?.type === 'SCIENCE' || ex.normInq2?.type === 'SCIENCE'
-    )
-
-    if (!hasScienceHistory) {
-      nonNaturalCohort.push(stu)
-      return
-    }
-
-    // [규칙 2] 초기 시험(과탐 출발 기준 회차) 및 최종 시험 추출
-    // 가장 이른 회차 중 과탐을 응시한 시험을 초기 기준 시험으로 설정 (보통 3월 학평)
-    const initialExam = validInqExams.find(ex => 
-      ex.normInq1?.type === 'SCIENCE' || ex.normInq2?.type === 'SCIENCE'
-    ) || validInqExams[0]
-
-    // 가장 마지막 모의고사(현시점 10월 학평 등) 추출
-    const latestExam = validInqExams[validInqExams.length - 1]
-
-    // 초기 시험의 탐구 과목 구성
-    const initInquiries = [initialExam.normInq1, initialExam.normInq2].filter(Boolean)
-    const initSciCount = initInquiries.filter(i => i.type === 'SCIENCE').length
-    const initSocCount = initInquiries.filter(i => i.type === 'SOCIAL').length
-
-    // 최종 시험의 탐구 과목 구성
+    // [규칙 3] 사탐런 판별 (가장 최근 시험 결과 기준)
+    // 자연계열 모수 학생 중 최신 시험에서 사회탐구가 1개라도 포함되어 있으면 사탐런으로 분류
     const latestInquiries = [latestExam.normInq1, latestExam.normInq2].filter(Boolean)
-    const latestSciCount = latestInquiries.filter(i => i.type === 'SCIENCE').length
-    const latestSocCount = latestInquiries.filter(i => i.type === 'SOCIAL').length
+    const socialSubjects = latestInquiries.filter(i => i.type === 'SOCIAL')
+    const scienceSubjects = latestInquiries.filter(i => i.type === 'SCIENCE')
 
-    // 최종 시험에서 선택된 과목 목록
-    const latestSocialSubjects = latestInquiries.filter(i => i.type === 'SOCIAL')
-    const latestScienceSubjects = latestInquiries.filter(i => i.type === 'SCIENCE')
+    const socialCount = socialSubjects.length
 
-    // [규칙 3] 초기 대비 최종의 탐구 선택 변화 분석하여 사탐런 전향 유형 판정
     let status = 'KEPT_SCIENCE' // 과탐 유지 (기본)
     let statusLabel = '과탐 유지'
-    let socialCount = 0
 
-    if (initSciCount >= 2) {
-      // 1) 초기에 과탐 2과목이었던 정통 자연계열 학생
-      if (latestSciCount >= 2) {
-        status = 'KEPT_SCIENCE'
-        statusLabel = '과탐 유지'
-        socialCount = 0
-      } else if (latestSciCount === 1 && latestSocCount >= 1) {
-        status = 'RUN_1'
-        statusLabel = '1과목 사탐런'
-        socialCount = 1
-      } else if (latestSocCount >= 2) {
-        status = 'RUN_2'
-        statusLabel = '2과목 사탐런'
-        socialCount = 2
-      } else if (latestSocCount === 1 && latestSciCount === 0) {
-        // 1개 과목만 유효 응시(사탐 1개)
-        status = 'RUN_1'
-        statusLabel = '1과목 사탐런'
-        socialCount = 1
-      }
-    } else if (initSciCount === 1) {
-      // 2) 초기에 과탐 1과목 + 사탐 1과목 혼합이었던 학생
-      if (latestSciCount === 0 && latestSocCount >= 2) {
-        // 남은 과탐 1과목마저 사탐으로 전향
-        status = 'RUN_1'
-        statusLabel = '1과목 사탐런'
-        socialCount = 1
-      } else {
-        status = 'KEPT_SCIENCE'
-        statusLabel = '과탐 유지'
-        socialCount = 0
-      }
+    if (socialCount >= 2) {
+      status = 'RUN_2' // 2과목 사탐런
+      statusLabel = '2과목 사탐런'
+    } else if (socialCount === 1) {
+      status = 'RUN_1' // 1과목 사탐런
+      statusLabel = '1과목 사탐런'
     } else {
-      // 3) 초기에 과탐이 없었으나 이후 과탐을 응시한 이력이 있는 특이 케이스
-      if (latestSciCount >= 2) {
-        status = 'KEPT_SCIENCE'
-        statusLabel = '과탐 유지'
-        socialCount = 0
-      } else if (latestSocCount >= 2) {
-        status = 'RUN_2'
-        statusLabel = '2과목 사탐런'
-        socialCount = 2
-      } else if (latestSocCount === 1) {
-        status = 'RUN_1'
-        statusLabel = '1과목 사탐런'
-        socialCount = 1
-      }
+      status = 'KEPT_SCIENCE'
+      statusLabel = '과탐 유지'
     }
 
     naturalCohort.push({
@@ -319,10 +291,8 @@ export function calculateSatamRunStats(rawStudentExams = []) {
       status,
       statusLabel,
       socialCount,
-      socialSubjectsList: (status === 'RUN_1' || status === 'RUN_2')
-        ? latestSocialSubjects.map(s => s.standardName)
-        : [],
-      scienceSubjectsList: latestScienceSubjects.map(s => s.standardName)
+      socialSubjectsList: socialSubjects.map(s => s.standardName),
+      scienceSubjectsList: scienceSubjects.map(s => s.standardName)
     })
   })
 
