@@ -177,39 +177,93 @@ export function getExamPriorityScore(exam) {
 }
 
 /**
- * 지원 단위(수시 6장 카드 또는 희망 대학/학과)가 이공계열(자연계열)에 해당하는지 판별
+ * 지원 단위(수시 6장 카드 또는 희망 대학/학과)가 실질적인 '자연계열(이공계열)'에 해당하는지 판별
  * 
- * 1. 대교협 공식 계열(field) 분류 우선 확인:
- *    - '자연', '공학', '의학' 또는 이를 포함하는 경우 -> 이공계열 (true)
- *    - '인문', '예체능'인 경우 -> 비이공계열 (false)
- * 2. 계열이 '공통'이거나 미입력('')인 경우 학과명(dept) 키워드 세부 분석:
- *    - 의약/간호/바이오/컴퓨터/전자/기계/수학/물리/화학/통계 등 이공계열 키워드 검사
- *    - '전공', '문화', '항공서비스' 등 한국어 부분문자열 오탐 방지 필터링 적용
+ * 1. 기본 원칙:
+ *    - 원본 '2027수시' 시트 L컬럼('계열', field)이 '자연', '공학', '의학'인 경우 기본 검토 대상
+ * 
+ * 2. [오분류 예외 필터링] L컬럼이 '자연'으로 등록되어 있더라도 실제 학과 성격상 인문계 또는 예체능인 학과 제외:
+ *    - [인문 / 상경계열 오분류 학과]:
+ *      * 경영학부, 경영학과 (단, 경영공학/산업경영공학 등 공학 학위 과정은 공학 유지)
+ *      * 글로벌미디어학부, 신문방송, 언론정보
+ *      * 보건의료행정, 보건행정, 병원경영
+ *    - [예체능 / 체육 / 디자인 / 조리 / 뷰티 계열 오분류 학과]:
+ *      * 체육/스포츠: 스포츠과학, 스포츠의학, 스포츠경영, 스포츠재활, 스포츠지도, 체육학과 등
+ *      * 디자인/미디어디자인: 디지털콘텐츠디자인, 디지털미디어디자인, 시각디자인, 공간디자인 등 (단, 기계시스템디자인공학 등 공학은 유지)
+ *      * 조리/제과제빵: 제과제빵과, 호텔제과제빵, 외식조리, 조리학과 등 (단, 바이오신약규제과학 등 '제과' 오탐 방지 및 식품영양 보존)
+ *      * 뷰티/미용/패션: 뷰티케어, 뷰티보건, 뷰티화장품, 의료미용, 패션의류 등
+ * 
+ * 3. L컬럼이 '공통'이거나 미입력('')인 경우:
+ *    - 학과명에 순수 공학, 소프트웨어, 컴퓨터, 바이오, 의약 등 자연계열 키워드가 있는 경우만 보조 판정
  */
 export function isStemApplication(app) {
   if (!app) return false
   const f = String(app.field || '').trim()
+  const d = String(app.dept || '').trim().toLowerCase()
 
-  // 1. 대교협 공식 계열(field) 분류 우선 확인
-  if (f === '자연' || f === '공학' || f === '의학') return true
-  if (f.includes('자연') || f.includes('공학') || f.includes('이과')) return true
-
-  // 명시적 인문/예체능 계열은 비이공계 처리
+  // 명시적 인문/예체능 계열은 즉시 제외
   if (f === '인문' || f === '예체능') return false
 
-  // 2. 계열이 '공통'이거나 공란('')인 경우 학과명 세부 분석
-  let d = String(app.dept || '').trim().toLowerCase()
+  const isLabeledNatural = f === '자연' || f === '공학' || f === '의학' || f.includes('자연') || f.includes('공학')
 
-  // 한국어 부분문자열 오탐 방지: '전공', '문화', '항공서비스/관광/경영' 등 치환
-  d = d.replace(/전공/g, '').replace(/문화/g, '').replace(/항공서비스|항공관광|항공경영/g, '')
+  if (isLabeledNatural) {
+    // ----------------------------------------------------
+    // [예외 1] 인문 / 상경 계열 오분류 학과 필터링
+    // ----------------------------------------------------
+    // 1) 경영학부 / 경영학과 (단, '경영공학', '산업경영공학'은 공학 유지)
+    if (d.includes('경영학부') || d === '경영학과' || (d.includes('경영') && !d.includes('공학') && !d.includes('정보') && !d.includes('소프트웨어'))) {
+      return false
+    }
+    // 2) 글로벌미디어학부 / 신문방송 / 언론
+    if (d.includes('글로벌미디어') || d.includes('신문방송') || d.includes('언론정보')) {
+      return false
+    }
+    // 3) 보건의료행정 / 보건행정 / 병원경영 (사무/행정직)
+    if (d.includes('보건의료행정') || d.includes('보건행정') || d.includes('병원경영')) {
+      return false
+    }
 
+    // ----------------------------------------------------
+    // [예외 2] 예체능 / 체육 / 디자인 / 조리 / 뷰티 계열 필터링
+    // ----------------------------------------------------
+    // 1) 체육 / 스포츠 관련: 스포츠과학, 스포츠의학, 스포츠경영, 스포츠재활, 스포츠지도, 체육
+    if (d.includes('스포츠') || d.includes('체육') || d.includes('운동재활') || d.includes('스포츠지도')) {
+      return false
+    }
+
+    // 2) 디자인 / 콘텐츠 관련: 디지털콘텐츠디자인, 디지털미디어디자인, 시각디자인, 공간디자인 등
+    // (단, '기계ㆍ시스템디자인공학', '융합기술' 등 순수 공학은 공학 유지)
+    if (
+      d.includes('디지털콘텐츠디자인') || 
+      d.includes('디지털미디어디자인') || 
+      (d.includes('디자인') && !d.includes('공학') && !d.includes('융합기술'))
+    ) {
+      return false
+    }
+
+    // 3) 조리 / 제과 / 제빵 관련: 제과제빵, 외식조리, 조리학과
+    // (단, '바이오신약규제과학'의 '제과' 오탐 방지 및 '식품영양' 영양학 보존)
+    if (d.includes('제과제빵') || d.includes('외식조리') || (d.includes('조리') && !d.includes('영양'))) {
+      return false
+    }
+
+    // 4) 뷰티 / 미용 / 패션의류 관련
+    if (d.includes('뷰티') || d.includes('미용') || d.includes('메이크업') || d.includes('패션의류')) {
+      return false
+    }
+
+    return true
+  }
+
+  // L열이 '공통'이거나 미입력('')인 경우: 순수 이공계열 학과명만 보조 인정
+  let cleanDept = d.replace(/전공/g, '').replace(/문화/g, '').replace(/항공서비스|항공관광|항공경영/g, '')
   const stemKeywords = [
     '공학', '소프트웨어', '컴퓨터', '인공지능', '데이터', '전자', '전기', '기계', '화학', '생명', '물리', '수학',
     '바이오', '나노', '반도체', '의예', '의학', '치의', '한의', '수의', '약학', '간호', '임상', '방사선', '치위생', '물리치료',
-    '보건', '식품영양', '산림', '원예', '조경', '건축', '도시', '토목', '항공', '우주', '해양', '신소재', '환경',
-    '통계', '시스템', '정보통신', '소방', '사이버', '로봇', '메카트로닉스'
+    '보건', '식품영양', '산림', '원예', '조경', '건축공학', '토목', '항공우주', '신소재', '환경공학',
+    '통계', '정보통신', '사이버', '로봇', '메카트로닉스'
   ]
-  return stemKeywords.some(kw => d.includes(kw))
+  return stemKeywords.some(kw => cleanDept.includes(kw))
 }
 
 /**
@@ -352,14 +406,18 @@ export function calculateSatamRunStats(rawStudentExams = [], studentApplications
 
     if (hasAppsData) {
       // [우선순위 1] 수시 6장 카드(또는 희망 대학/학과) 기반 판별
-      // 6장 카드 중 1장이라도 이공계열이 포함되어 있다면 자연계열로 분류.
-      // 반대로 6장의 카드 모두 비이공계열(인문/사회/예체능 등)인 경우 자연계열 모수에서 제외!
+      // 실제 작성한 카드 총수 중 원본 '2027수시' 시트 L컬럼('계열')이 '자연'인 비율이 33%를 초과하는 경우에만 자연계열 모수로 분류.
+      // (예: 6개 카드를 모두 썼을 때 2장만 자연이면 33.3%이므로 제외, 3장(50.0%) 이상이어야 33% 초과로 인정)
+      const totalWritten = stuApps.length
       stemApplications = stuApps.filter(isStemApplication)
+      const naturalCount = stemApplications.length
+      const naturalRate = totalWritten > 0 ? (naturalCount / totalWritten) * 100 : 0
 
-      if (stemApplications.length >= 1) {
+      // 33% 초과 판정 (2/6 = 33.333%는 33% 이하로 제외, 3/6 = 50.0% 또는 2/5 = 40.0% 등 33.334% 초과 시 선정)
+      if (naturalRate > 33.334) {
         isNaturalCohort = true
         cohortSource = 'APPLICATIONS'
-        cohortBadgeText = `수시 이공 ${stemApplications.length}건`
+        cohortBadgeText = `수시 자연 ${naturalCount}/${totalWritten} (${naturalRate.toFixed(0)}%)`
         cohortBadgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200'
 
         const first = stemApplications[0]
@@ -368,12 +426,12 @@ export function calculateSatamRunStats(rawStudentExams = [], studentApplications
 
         // 모의고사에서도 과탐 응시 이력이 있다면 함께 표기
         if (sciExams.length > 0) {
-          cohortDetail = `수시 6장 중 이공계열 ${stemApplications.length}건 지원 (${appDesc}) / 모의고사: ${sciExamMonthNames.join(', ')} 과탐(${sciSubjectNames.join(', ')}) 응시`
+          cohortDetail = `수시 지원 ${totalWritten}건 중 자연계열 ${naturalCount}건 (${naturalRate.toFixed(1)}% > 33%) - ${appDesc} / 모의고사: ${sciExamMonthNames.join(', ')} 과탐(${sciSubjectNames.join(', ')}) 응시`
         } else {
-          cohortDetail = `수시 6장 중 이공계열 ${stemApplications.length}건 지원 (${appDesc})`
+          cohortDetail = `수시 지원 ${totalWritten}건 중 자연계열 ${naturalCount}건 (${naturalRate.toFixed(1)}% > 33%) - ${appDesc}`
         }
       } else {
-        // 6장 카드 데이터가 있으나 이공계열 카드가 0장인 경우 -> 자연계열 모수 제외
+        // 자연계열 카드가 33% 이하인 경우 -> 자연계열 모수 제외
         isNaturalCohort = false
         nonNaturalCohort.push(stu)
         return
