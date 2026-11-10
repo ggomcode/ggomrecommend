@@ -807,7 +807,8 @@ import {
   getKcueGasUrl,
   saveKcueGasUrl,
   maskGasUrl,
-  fetchAndParseKcueMockData
+  fetchAndParseKcueMockData,
+  hasAnyMockScore
 } from '../../api/statApi'
 import { dialog } from '../common/dialog'
 
@@ -1029,8 +1030,9 @@ const existingExamMonthOptions = computed(() => {
     }
     if (!m) return
 
-    // 학생 이름이 있는 유효한 응시 데이터인지 확인
+    // 학생 이름 및 실제 모의고사 응시 성적이 존재하는 실응시자(결시 제외)인지 확인
     if (!r.name) return
+    if (!hasAnyMockScore(r)) return
 
     if (!monthMap.has(m)) {
       monthMap.set(m, {

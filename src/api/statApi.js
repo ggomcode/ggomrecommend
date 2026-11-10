@@ -1071,20 +1071,42 @@ export async function saveKcueYearSheets(sheetsMap) {
  */
 
 /**
+ * 모의고사 레코드에 실제 성적(원점수, 표준점수, 백분위, 등급 중 하나라도)이 존재하는지 판별하는 헬퍼
+ * @param {Object} r 모의고사 레코드 객체
+ * @returns {boolean}
+ */
+export function hasAnyMockScore(r) {
+  if (!r) return false
+  const isValid = (v) => v !== null && v !== undefined && String(v).trim() !== '' && String(v).trim() !== '-'
+  return (
+    isValid(r.korGrade) || isValid(r.korRawScore) || isValid(r.korStandardScore) || isValid(r.korPercentile) ||
+    isValid(r.mathGrade) || isValid(r.mathRawScore) || isValid(r.mathStandardScore) || isValid(r.mathPercentile) ||
+    isValid(r.engGrade) || isValid(r.engRawScore) || isValid(r.engStandardScore) || isValid(r.engPercentile) ||
+    isValid(r.inq1Grade) || isValid(r.inq1RawScore) || isValid(r.inq1StandardScore) || isValid(r.inq1Percentile) ||
+    isValid(r.inq2Grade) || isValid(r.inq2RawScore) || isValid(r.inq2StandardScore) || isValid(r.inq2Percentile) ||
+    isValid(r.histGrade) || isValid(r.histRawScore) || isValid(r.histStandardScore) || isValid(r.histPercentile) ||
+    isValid(r.secondLangGrade) || isValid(r.secondLangRawScore) || isValid(r.secondLangStandardScore) || isValid(r.secondLangPercentile)
+  )
+}
+
+/**
  * 모의고사 결과(확정)와 가채점 데이터 스마트 병합
  * 규칙:
  * 1. 결과 시트에 해당 월(회차) 데이터가 있으면, 그 월은 가채점을 따르지 않고 결과 시트를 우선 근거로 분석.
  * 2. 단, 해당 월 모의고사에서 가채점에는 있는데 결과 시트에는 누락된 학생이 있다면,
  *    그 학생만 가채점 결과를 유지(Fallback).
- * 3. 결과 시트에 없는 월(회차)은 가채점 데이터를 100% 사용.
+ * 3. 결과 시트에 없는 월(회차)은 가채점 데이터를 사용하되 실제 성적이 있는 실응시자만 채택(결시 행 제외).
  */
 export function smartMergeMockExamRecords(resultRecords = [], tentativeRecords = []) {
-  if (!resultRecords || resultRecords.length === 0) return tentativeRecords || []
-  if (!tentativeRecords || tentativeRecords.length === 0) return resultRecords || []
+  const validResultRecords = (resultRecords || []).filter(hasAnyMockScore)
+  const validTentativeRecords = (tentativeRecords || []).filter(hasAnyMockScore)
+
+  if (!validResultRecords || validResultRecords.length === 0) return validTentativeRecords || []
+  if (!validTentativeRecords || validTentativeRecords.length === 0) return validResultRecords || []
 
   // 1. 결과 시트에 존재하는 월(회차) 집합 (예: '6월', '10월' 등)
   const resultExamMonths = new Set()
-  resultRecords.forEach(r => {
+  validResultRecords.forEach(r => {
     const m = String(r.examName || '').match(/([0-9]{1,2})\s*월/)
     if (m) resultExamMonths.add(m[1])
     else if (r.examName) resultExamMonths.add(r.examName)
@@ -1092,41 +1114,32 @@ export function smartMergeMockExamRecords(resultRecords = [], tentativeRecords =
 
   // 2. 결과 시트에 존재하는 (월_학생키) 집합
   const resultSet = new Set()
-  resultRecords.forEach(r => {
+  validResultRecords.forEach(r => {
     const m = String(r.examName || '').match(/([0-9]{1,2})\s*월/)
     const monthKey = m ? m[1] : r.examName
     resultSet.add(`${monthKey}_${r.studentKey}`)
   })
 
-  // 3. 가채점 데이터에서 보완할 레코드 추출
+  // 3. 가채점 데이터에서 보완할 레코드 추출 (실응시자만)
   const fallbackRecords = []
-  tentativeRecords.forEach(tr => {
+  validTentativeRecords.forEach(tr => {
     const m = String(tr.examName || '').match(/([0-9]{1,2})\s*월/)
     const monthKey = m ? m[1] : tr.examName
     const hasMonthInResult = resultExamMonths.has(monthKey)
 
     if (!hasMonthInResult) {
-      // 결과 시트에 전혀 없는 회차(월)는 가채점 채택
+      // 결과 시트에 전혀 없는 회차(월)는 가채점에서 실응시자 채택
       fallbackRecords.push(tr)
     } else {
       // 결과 시트가 이미 있는 회차이지만, 가채점에 실제 성적이 존재하는 누락 학생만 fallback
       const studentMonthKey = `${monthKey}_${tr.studentKey}`
       if (!resultSet.has(studentMonthKey)) {
-        const hasScore = (
-          (tr.korGrade !== null && tr.korGrade !== undefined) ||
-          (tr.mathGrade !== null && tr.mathGrade !== undefined) ||
-          (tr.engGrade !== null && tr.engGrade !== undefined) ||
-          (tr.inq1Grade !== null && tr.inq1Grade !== undefined) ||
-          (tr.inq2Grade !== null && tr.inq2Grade !== undefined)
-        )
-        if (hasScore) {
-          fallbackRecords.push({ ...tr, isFallbackFromTentative: true })
-        }
+        fallbackRecords.push({ ...tr, isFallbackFromTentative: true })
       }
     }
   })
 
-  return [...resultRecords, ...fallbackRecords]
+  return [...validResultRecords, ...fallbackRecords]
 }
 
 
@@ -1650,7 +1663,7 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       grade = Number(getVal('학년', '학년구분')) || (r && r[0] != null && [1, 2, 3].includes(Number(r[0])) ? Number(r[0]) : 3)
     }
 
-    records.push({
+    const rec = {
       grade,
       monthOrder: monthOrder || (parseInt(String(examName).replace(/[^0-9]/g, ''), 10) || null),
       examName,
@@ -1694,7 +1707,11 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       secondLangPercentile,
       secondLangGrade,
       rawRow: rowData || {}
-    })
+    }
+
+    if (hasAnyMockScore(rec)) {
+      records.push(rec)
+    }
   }
 
   return records
