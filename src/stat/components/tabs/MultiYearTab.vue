@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6 pb-12 animate-in fade-in duration-200">
     <!-- 1. Top Presentation Banner & Quick Actions -->
-    <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+    <div class="bg-linear-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
       <!-- Decorative background glow -->
       <div class="absolute -top-24 -right-24 w-72 h-72 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
       <div class="absolute -bottom-24 -left-24 w-72 h-72 bg-sky-500/15 rounded-full blur-3xl pointer-events-none"></div>
@@ -36,7 +36,7 @@
           <button
             type="button"
             @click="window.print()"
-            class="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 transition-all flex items-center gap-1.5 cursor-pointer border-none shadow-sm font-black"
+            class="px-3.5 py-2 rounded-xl text-xs font-black text-slate-950 bg-amber-400 hover:bg-amber-300 transition-all flex items-center gap-1.5 cursor-pointer border-none shadow-sm"
           >
             <span>🖨️</span>
             <span>비교 보고서 인쇄</span>
@@ -147,7 +147,7 @@
     <!-- 2-1. 특화 전형(학교장추천 & 농어촌 & 수능최저 & 논술전형) 4대 핵심 지표 카드 -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <!-- Special KPI 1: 학교장추천 전형 지원 -->
-      <div class="bg-gradient-to-br from-violet-50/70 via-white to-purple-50/30 rounded-2xl p-5 border border-violet-100 shadow-xs flex flex-col justify-between">
+      <div class="bg-linear-to-br from-violet-50/70 via-white to-purple-50/30 rounded-2xl p-5 border border-violet-100 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between text-violet-800 mb-2">
           <div class="flex items-center gap-2">
             <span class="p-1.5 rounded-lg bg-violet-100 text-violet-700 text-sm">🤝</span>
@@ -176,7 +176,7 @@
       </div>
 
       <!-- Special KPI 2: 농어촌 학생 특별전형 지원 -->
-      <div class="bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/30 rounded-2xl p-5 border border-emerald-100 shadow-xs flex flex-col justify-between">
+      <div class="bg-linear-to-br from-emerald-50/70 via-white to-teal-50/30 rounded-2xl p-5 border border-emerald-100 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between text-emerald-800 mb-2">
           <div class="flex items-center gap-2">
             <span class="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 text-sm">🌾</span>
@@ -205,7 +205,7 @@
       </div>
 
       <!-- Special KPI 3: 수능 최저학력기준 충족 현황 -->
-      <div class="bg-gradient-to-br from-blue-50/70 via-white to-indigo-50/30 rounded-2xl p-5 border border-blue-100 shadow-xs flex flex-col justify-between">
+      <div class="bg-linear-to-br from-blue-50/70 via-white to-indigo-50/30 rounded-2xl p-5 border border-blue-100 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between text-blue-800 mb-2">
           <div class="flex items-center gap-2">
             <span class="p-1.5 rounded-lg bg-blue-100 text-blue-700 text-sm">🎯</span>
@@ -234,7 +234,7 @@
       </div>
 
       <!-- Special KPI 4: 논술위주 전형 지원 및 합격률 현황 -->
-      <div class="bg-gradient-to-br from-pink-50/70 via-white to-rose-50/30 rounded-2xl p-5 border border-pink-100 shadow-xs flex flex-col justify-between">
+      <div class="bg-linear-to-br from-pink-50/70 via-white to-rose-50/30 rounded-2xl p-5 border border-pink-100 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between text-pink-800 mb-2">
           <div class="flex items-center gap-2">
             <span class="p-1.5 rounded-lg bg-pink-100 text-pink-700 text-sm">✍️</span>

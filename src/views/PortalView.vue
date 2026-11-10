@@ -91,7 +91,7 @@
           :class="[
             'group relative bg-white rounded-3xl p-6 sm:p-7 border shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden',
             isStudentPrincipalLocked
-              ? 'border-slate-300/80 bg-slate-50/90 opacity-60 grayscale-[35%] cursor-not-allowed hover:shadow-sm'
+              ? 'border-slate-300/80 bg-slate-50/90 opacity-60 grayscale-35 cursor-not-allowed hover:shadow-sm'
               : 'border-slate-200/80 hover:shadow-xl hover:border-blue-500 cursor-pointer'
           ]"
         >
