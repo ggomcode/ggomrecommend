@@ -813,26 +813,44 @@ export async function fetchAndParseKcueYearData(sheetId, year, type = '수시', 
  * @returns {Promise<{ success: boolean, isEncrypted: boolean, message?: string }>}
  */
 const STAT_SAMPLE_CIPHER_KEY = 'pcm_stat_sample_cipher'
+const STAT_NOT_ENCRYPTED_FLAG = '__NOT_ENCRYPTED__'
 let memorySampleCipher = ''
 
 /**
- * 구글 시트의 DA열 암호문 샘플 1개를 초고속으로 획득 (캐시 우선 & gviz limit 3 초경량 쿼리)
+ * 구글 시트의 암호문 샘플 1개를 초고속으로 획득 (캐시 우선 & gviz limit 3 초경량 쿼리)
+ * - 암호화된 시트: 암호문 샘플 문자열(U2FsdGVkX1...) 반환
+ * - 암호화되지 않은 시트: 빈 문자열('') 반환
  */
 export async function getStatSampleCipher(sheetId, forceReload = false) {
+  const cleanId = extractSheetId(sheetId) || DEFAULT_KCUE_SHEET_ID
+  if (!cleanId) return ''
+
   if (!forceReload) {
-    if (memorySampleCipher) return memorySampleCipher
-    const sess = sessionStorage.getItem(STAT_SAMPLE_CIPHER_KEY) || localStorage.getItem(STAT_SAMPLE_CIPHER_KEY)
+    if (memorySampleCipher) {
+      return memorySampleCipher === STAT_NOT_ENCRYPTED_FLAG ? '' : memorySampleCipher
+    }
+    const sess = sessionStorage.getItem(`${STAT_SAMPLE_CIPHER_KEY}_${cleanId}`) || 
+                 localStorage.getItem(`${STAT_SAMPLE_CIPHER_KEY}_${cleanId}`) ||
+                 sessionStorage.getItem(STAT_SAMPLE_CIPHER_KEY) || 
+                 localStorage.getItem(STAT_SAMPLE_CIPHER_KEY)
     if (sess) {
-      memorySampleCipher = sess
-      return sess
+      if (sess === STAT_NOT_ENCRYPTED_FLAG) {
+        memorySampleCipher = STAT_NOT_ENCRYPTED_FLAG
+        return ''
+      }
+      if (typeof sess === 'string' && sess.startsWith('U2FsdGVkX1')) {
+        memorySampleCipher = sess
+        return sess
+      }
+      // 손상되거나 비정상적인 캐시([object Object] 등)는 자동 제거
+      try {
+        sessionStorage.removeItem(`${STAT_SAMPLE_CIPHER_KEY}_${cleanId}`)
+        localStorage.removeItem(`${STAT_SAMPLE_CIPHER_KEY}_${cleanId}`)
+        sessionStorage.removeItem(STAT_SAMPLE_CIPHER_KEY)
+        localStorage.removeItem(STAT_SAMPLE_CIPHER_KEY)
+      } catch (_) {}
     }
   }
-
-  const cleanId = extractSheetId(sheetId)
-  if (!cleanId || cleanId === DEFAULT_KCUE_SHEET_ID) {
-    return cachedBasicStats || {}
-  }
-  if (!cleanId) return ''
 
   // 초고속 GViz 쿼리 (단 3개 행만 요청: 5KB 미만, 0.2~0.5초 완료)
   const candidateTabs = ['2027수시', '2026수시', '']
@@ -861,23 +879,55 @@ export async function getStatSampleCipher(sheetId, forceReload = false) {
         }
       }
 
+      let foundCipher = ''
       if (encColIdx !== -1) {
         for (let i = 1; i < rows.length; i++) {
           const val = String(rows[i]?.[encColIdx] || '').trim()
           if (val.startsWith('U2FsdGVkX1')) {
-            memorySampleCipher = val
-            sessionStorage.setItem(STAT_SAMPLE_CIPHER_KEY, val)
-            localStorage.setItem(STAT_SAMPLE_CIPHER_KEY, val)
-            return val
+            foundCipher = val
+            break
           }
         }
+      }
+
+      // 지정 열에 없을 경우 데이터 행 전체 열 fallback 탐색
+      if (!foundCipher) {
+        for (let i = 1; i < rows.length; i++) {
+          const r = rows[i] || []
+          for (let c = 0; c < r.length; c++) {
+            const val = String(r[c] || '').trim()
+            if (val.startsWith('U2FsdGVkX1')) {
+              foundCipher = val
+              break
+            }
+          }
+          if (foundCipher) break
+        }
+      }
+
+      if (foundCipher) {
+        memorySampleCipher = foundCipher
+        try {
+          sessionStorage.setItem(`${STAT_SAMPLE_CIPHER_KEY}_${cleanId}`, foundCipher)
+          localStorage.setItem(`${STAT_SAMPLE_CIPHER_KEY}_${cleanId}`, foundCipher)
+          sessionStorage.setItem(STAT_SAMPLE_CIPHER_KEY, foundCipher)
+          localStorage.setItem(STAT_SAMPLE_CIPHER_KEY, foundCipher)
+        } catch (_) {}
+        return foundCipher
       }
     } catch (e) {
       // 다음 후보 탭 시도
     }
   }
 
-  return memorySampleCipher || ''
+  // 암호화된 셀이 전혀 없는 시트인 경우 플래그 저장 후 빈 문자열 반환
+  memorySampleCipher = STAT_NOT_ENCRYPTED_FLAG
+  try {
+    sessionStorage.setItem(`${STAT_SAMPLE_CIPHER_KEY}_${cleanId}`, STAT_NOT_ENCRYPTED_FLAG)
+    localStorage.setItem(`${STAT_SAMPLE_CIPHER_KEY}_${cleanId}`, STAT_NOT_ENCRYPTED_FLAG)
+  } catch (_) {}
+
+  return ''
 }
 
 /**
@@ -901,13 +951,13 @@ export async function verifyStatSheetPassword(sheetId, password) {
     // 캐시 우선으로 0ms 만에 암호문 샘플 획득
     const sampleCipher = await getStatSampleCipher(cleanId)
 
-    // 시트에 암호화된 내용이 전혀 없는 경우 (기존 일반 시트)
-    if (!sampleCipher) {
+    // 시트에 암호화된 내용이 전혀 없는 경우 (기존 일반 평문 시트)
+    if (!sampleCipher || typeof sampleCipher !== 'string' || !sampleCipher.trim() || !sampleCipher.startsWith('U2FsdGVkX1')) {
       return { success: true, isEncrypted: false, message: '암호화되지 않은 시트입니다.' }
     }
 
     // 암호문이 있는 경우: 비밀번호 검증
-    if (!password) {
+    if (!password || !password.trim()) {
       return { success: false, isEncrypted: true, message: '비밀번호를 입력해야 합니다.' }
     }
 
