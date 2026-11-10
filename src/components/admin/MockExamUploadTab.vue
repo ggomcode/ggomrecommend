@@ -690,16 +690,6 @@
             구글 시트 <code class="text-indigo-600 font-mono font-bold">{{ targetSheetName }}</code> 탭 규격에 100% 매핑된 명단입니다.
           </p>
         </div>
-
-        <button
-          type="button"
-          @click="downloadSenExcel"
-          class="shrink-0 px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-300 cursor-pointer transition-colors flex items-center gap-2 shadow-2xs"
-          title="서울시교육청 SEN진학 29개 컬럼 규격으로 엑셀 다운로드"
-        >
-          <FileSpreadsheet :size="15" class="text-emerald-600" />
-          <span>SEN진학용 엑셀 다운로드</span>
-        </button>
       </div>
 
       <!-- 미리보기 테이블 -->
@@ -1338,21 +1328,6 @@ function generateAndDownloadSenExcel(students = [], grade = 3, monthNum = null) 
   const fileName = `SEN진학_${gradeStr}_${monthStr}.xlsx`
 
   XLSX.writeFile(wb, fileName)
-}
-
-/**
- * 방금 업로드하여 파싱 완료된 학생 성적을 SEN진학용 엑셀로 다운로드
- */
-function downloadSenExcel() {
-  if (allParsedStudents.value.length === 0) {
-    dialog.alert('내보낼 학생 데이터가 없습니다.')
-    return
-  }
-  generateAndDownloadSenExcel(
-    allParsedStudents.value,
-    selectedGrade.value,
-    extractMonthNum(selectedExam.value)
-  )
 }
 
 /**
