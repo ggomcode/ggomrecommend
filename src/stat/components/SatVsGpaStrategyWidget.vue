@@ -3097,6 +3097,41 @@ const mockExamTrendChartData = computed(() => {
           pointStyle: 'circle'
         },
         {
+          label: '수학 (확률과 통계)',
+          data: series.map(s => s.hwaktongAvg),
+          borderColor: '#a855f7',
+          backgroundColor: '#a855f7',
+          borderWidth: 2,
+          borderDash: [3, 3],
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointStyle: 'circle'
+        },
+        {
+          label: '국어 (언어와 매체)',
+          data: series.map(s => s.unmaeAvg),
+          borderColor: '#1d4ed8',
+          backgroundColor: '#1d4ed8',
+          borderWidth: 2.5,
+          tension: 0.3,
+          pointRadius: 4.5,
+          pointHoverRadius: 6.5,
+          pointStyle: 'rect'
+        },
+        {
+          label: '국어 (화법과 작문)',
+          data: series.map(s => s.hwajakAvg),
+          borderColor: '#3b82f6',
+          backgroundColor: '#3b82f6',
+          borderWidth: 2,
+          borderDash: [3, 3],
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointStyle: 'rect'
+        },
+        {
           label: '영어 (절대평가)',
           data: series.map(s => s.engAvg),
           borderColor: '#059669',
@@ -3120,17 +3155,6 @@ const mockExamTrendChartData = computed(() => {
           pointStyle: 'triangle'
         },
         {
-          label: '국어',
-          data: series.map(s => s.korAvg),
-          borderColor: '#2563eb',
-          backgroundColor: '#2563eb',
-          borderWidth: 2,
-          tension: 0.3,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointStyle: 'rect'
-        },
-        {
           label: '과학탐구',
           data: series.map(s => s.sciAvg),
           borderColor: '#0891b2',
@@ -3141,18 +3165,6 @@ const mockExamTrendChartData = computed(() => {
           pointRadius: 4,
           pointHoverRadius: 6,
           pointStyle: 'diamond'
-        },
-        {
-          label: '수학 (확률과 통계)',
-          data: series.map(s => s.hwaktongAvg),
-          borderColor: '#a855f7',
-          backgroundColor: '#a855f7',
-          borderWidth: 2,
-          borderDash: [3, 3],
-          tension: 0.3,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointStyle: 'circle'
         },
         {
           label: '📌 내신 평균 기준선 (4.44등급)',
@@ -3251,6 +3263,8 @@ const trendDynamicYRange = computed(() => {
     if (!s.hasRealData) return
     const values = [
       s.korAvg,
+      s.unmaeAvg,
+      s.hwajakAvg,
       s.mathAvg,
       s.mijukAvg,
       s.hwaktongAvg,
@@ -3390,6 +3404,10 @@ const mockTrendChartOptions = computed(() => {
               if (s?.hwaktongCount > 0) extra = ` (${s.hwaktongCount}명 응시)`
             } else if (dLabel === '수학') {
               if (s?.mathCount > 0) extra = ` (${s.mathCount}명 응시)`
+            } else if (dLabel.includes('언어와 매체') || dLabel.includes('언매')) {
+              if (s?.unmaeCount > 0) extra = ` (${s.unmaeCount}명 응시)`
+            } else if (dLabel.includes('화법과 작문') || dLabel.includes('화작')) {
+              if (s?.hwajakCount > 0) extra = ` (${s.hwajakCount}명 응시)`
             } else if (dLabel.includes('국어')) {
               if (s?.korCount > 0) {
                 if (s.unmaeCount > 0 && s.hwajakCount > 0) {
