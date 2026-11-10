@@ -538,30 +538,32 @@
         <table class="w-full text-left text-xs border-collapse">
           <thead>
             <tr class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-              <th class="py-3 px-4 align-middle whitespace-nowrap">학년도</th>
-              <th class="py-3 px-3 text-center align-middle whitespace-nowrap">전체 재학생</th>
-              <th class="py-3 px-3 text-center align-middle whitespace-nowrap leading-tight">
+              <th class="py-2.5 px-3 align-middle whitespace-nowrap">학년도</th>
+              <th class="py-2.5 px-2 text-center align-middle whitespace-nowrap">전체 재학생</th>
+              <th class="py-2.5 px-2 text-center align-middle whitespace-nowrap leading-tight">
                 수시 지원자<br><span class="text-[11px] font-normal text-slate-500">(비율)</span>
               </th>
-              <th class="py-3 px-3 text-center align-middle whitespace-nowrap">총 지원 건수</th>
-              <th class="py-3 px-3 text-center align-middle whitespace-nowrap">1인당 지원 건</th>
-              <th class="py-3 px-3 text-center align-middle whitespace-nowrap">지원자 평균 내신</th>
-              <th class="py-3 px-3 text-center align-middle whitespace-nowrap">수도권 비율</th>
-              <th class="py-3 px-3 text-center align-middle whitespace-nowrap">주요대 지원</th>
-              <th class="py-3 px-3 text-center text-violet-800 bg-violet-50/50 align-middle whitespace-nowrap leading-tight">
+              <th class="py-2.5 px-2 text-center align-middle whitespace-nowrap">총 지원 건수</th>
+              <th class="py-2.5 px-2 text-center align-middle whitespace-nowrap">1인당 지원 건</th>
+              <th class="py-2.5 px-2 text-center align-middle whitespace-nowrap">지원자 평균 내신</th>
+              <th class="py-2.5 px-2 text-center align-middle whitespace-nowrap">수도권 비율</th>
+              <th class="py-2.5 px-2 text-center align-middle whitespace-nowrap">주요대 지원</th>
+              <th class="py-2.5 px-2 text-center text-violet-800 bg-violet-50/50 align-middle whitespace-nowrap leading-tight">
                 학교장추천<br><span class="text-[11px] font-normal text-violet-600">(비율)</span>
               </th>
-              <th class="py-3 px-3 text-center text-emerald-800 bg-emerald-50/50 align-middle whitespace-nowrap leading-tight">
+              <th class="py-2.5 px-2 text-center text-emerald-800 bg-emerald-50/50 align-middle whitespace-nowrap leading-tight">
                 농어촌전형<br><span class="text-[11px] font-normal text-emerald-600">(비율)</span>
               </th>
-              <th class="py-3 px-3 text-center text-blue-800 bg-blue-50/50 align-middle whitespace-nowrap leading-tight">
+              <th class="py-2.5 px-2 text-center text-blue-800 bg-blue-50/50 align-middle whitespace-nowrap leading-tight">
                 수능최저 충족<br><span class="text-[11px] font-normal text-blue-600">(비율)</span>
               </th>
-              <th class="py-3 px-3 text-center text-pink-800 bg-pink-50/50 align-middle whitespace-nowrap leading-tight">
+              <th class="py-2.5 px-2 text-center text-pink-800 bg-pink-50/50 align-middle whitespace-nowrap leading-tight">
                 논술전형 지원<br><span class="text-[11px] font-normal text-pink-600">(비율)</span>
               </th>
-              <th class="py-3 px-3 text-center text-rose-800 bg-rose-50/50 align-middle whitespace-nowrap">논술 합격률</th>
-              <th class="py-3 px-4 text-center align-middle whitespace-nowrap">최종 합격률</th>
+              <th class="py-2.5 px-2 text-center text-rose-800 bg-rose-50/50 align-middle whitespace-nowrap leading-tight">
+                논술 합격률
+              </th>
+              <th class="py-2.5 px-3 text-center align-middle whitespace-nowrap">최종 합격률</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -573,82 +575,83 @@
                 y === '2027' ? 'bg-amber-50/40 font-bold text-slate-900' : 'hover:bg-slate-50/70 text-slate-700'
               ]"
             >
-              <td class="py-3.5 px-4 font-extrabold text-slate-900 whitespace-nowrap">
+              <td class="py-2.5 px-3 font-extrabold text-slate-900 whitespace-nowrap">
                 {{ y }}학년도
               </td>
-              <td class="py-3.5 px-3 text-center whitespace-nowrap">
+              <td class="py-2.5 px-2 text-center whitespace-nowrap">
                 {{ byYear[y]?.totalStudents != null ? `${byYear[y].totalStudents}명` : '-' }}
               </td>
-              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-indigo-600">
+              <td class="py-2.5 px-2 text-center whitespace-nowrap font-bold text-indigo-600 leading-tight">
                 <template v-if="byYear[y]?.applicantStudents != null">
-                  {{ byYear[y].applicantStudents }}명 ({{ byYear[y].applicantRate }}%)
+                  <div>{{ byYear[y].applicantStudents }}명</div>
+                  <div class="text-[10.5px] text-indigo-500 font-normal">({{ byYear[y].applicantRate }}%)</div>
                 </template>
                 <template v-else>-</template>
               </td>
-              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold">
+              <td class="py-2.5 px-2 text-center whitespace-nowrap font-bold">
                 {{ byYear[y]?.totalApplications != null ? `${byYear[y].totalApplications.toLocaleString()}건` : '-' }}
               </td>
-              <td class="py-3.5 px-3 text-center whitespace-nowrap">
+              <td class="py-2.5 px-2 text-center whitespace-nowrap">
                 {{ byYear[y]?.avgAppsPerStudent != null ? `${byYear[y].avgAppsPerStudent.toFixed(2)}장` : '-' }}
               </td>
-              <td class="py-3.5 px-3 text-center whitespace-nowrap">
+              <td class="py-2.5 px-2 text-center whitespace-nowrap">
                 <span v-if="byYear[y]?.avgGrade != null" class="px-2 py-0.5 rounded font-bold bg-indigo-50 text-indigo-700">
                   {{ byYear[y].avgGrade.toFixed(2) }}
                 </span>
                 <span v-else class="text-slate-300 font-bold">-</span>
               </td>
-              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-sky-700">
+              <td class="py-2.5 px-2 text-center whitespace-nowrap font-bold text-sky-700">
                 {{ byYear[y]?.metroRate != null ? `${byYear[y].metroRate}%` : '-' }}
               </td>
-              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-amber-700">
+              <td class="py-2.5 px-2 text-center whitespace-nowrap font-bold text-amber-700">
                 {{ byYear[y]?.topTierApps != null ? `${byYear[y].topTierApps}건` : '-' }}
               </td>
-              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-violet-700">
+              <td class="py-2.5 px-2 text-center whitespace-nowrap font-bold text-violet-700 leading-tight">
                 <template v-if="byYear[y]?.recommendationApps != null">
-                  <span>{{ byYear[y].recommendationApps }}건</span>
-                  <span v-if="byYear[y]?.totalApplications" class="text-[10px] text-violet-500 font-normal ml-0.5">
+                  <div>{{ byYear[y].recommendationApps }}건</div>
+                  <div v-if="byYear[y]?.totalApplications" class="text-[10.5px] text-violet-500 font-normal">
                     ({{ ((byYear[y].recommendationApps / byYear[y].totalApplications) * 100).toFixed(1) }}%)
-                  </span>
+                  </div>
                 </template>
                 <template v-else class="text-slate-300 font-bold">-</template>
               </td>
-              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-emerald-700">
+              <td class="py-2.5 px-2 text-center whitespace-nowrap font-bold text-emerald-700 leading-tight">
                 <template v-if="byYear[y]?.ruralApps != null">
-                  <span>{{ byYear[y].ruralApps }}건</span>
-                  <span v-if="byYear[y]?.totalApplications" class="text-[10px] text-emerald-500 font-normal ml-0.5">
+                  <div>{{ byYear[y].ruralApps }}건</div>
+                  <div v-if="byYear[y]?.totalApplications" class="text-[10.5px] text-emerald-500 font-normal">
                     ({{ ((byYear[y].ruralApps / byYear[y].totalApplications) * 100).toFixed(1) }}%)
-                  </span>
+                  </div>
                 </template>
                 <template v-else class="text-slate-300 font-bold">-</template>
               </td>
-              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-blue-700">
+              <td class="py-2.5 px-2 text-center whitespace-nowrap font-bold text-blue-700 leading-tight">
                 <template v-if="byYear[y]?.csatMinPassRate != null">
-                  <span>{{ byYear[y].csatMinPassRate }}%</span>
-                  <span v-if="byYear[y]?.csatMinPassApps != null" class="text-[10px] text-blue-500 font-normal ml-0.5">
+                  <div>{{ byYear[y].csatMinPassRate }}%</div>
+                  <div v-if="byYear[y]?.csatMinPassApps != null" class="text-[10.5px] text-blue-500 font-normal">
                     ({{ byYear[y].csatMinPassApps }}/{{ byYear[y].csatMinApps }}건)
-                  </span>
+                  </div>
                 </template>
                 <template v-else class="text-slate-300 font-bold">-</template>
               </td>
-              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-pink-700">
+              <td class="py-2.5 px-2 text-center whitespace-nowrap font-bold text-pink-700 leading-tight">
                 <template v-if="byYear[y]?.essayApps != null">
-                  <span>{{ byYear[y].essayApps }}건</span>
-                  <span v-if="byYear[y]?.totalApplications" class="text-[10px] text-pink-500 font-normal ml-0.5">
+                  <div>{{ byYear[y].essayApps }}건</div>
+                  <div v-if="byYear[y]?.totalApplications" class="text-[10.5px] text-pink-500 font-normal">
                     ({{ ((byYear[y].essayApps / byYear[y].totalApplications) * 100).toFixed(1) }}%)
-                  </span>
+                  </div>
                 </template>
                 <template v-else class="text-slate-300 font-bold">-</template>
               </td>
-              <td class="py-3.5 px-3 text-center whitespace-nowrap font-bold text-rose-700">
+              <td class="py-2.5 px-2 text-center whitespace-nowrap font-bold text-rose-700 leading-tight">
                 <template v-if="byYear[y]?.essayPassRate != null">
-                  <span>{{ byYear[y].essayPassRate }}%</span>
-                  <span v-if="byYear[y]?.essayPassApps != null" class="text-[10px] text-rose-500 font-normal ml-0.5">
+                  <div>{{ byYear[y].essayPassRate }}%</div>
+                  <div v-if="byYear[y]?.essayPassApps != null" class="text-[10.5px] text-rose-500 font-normal">
                     ({{ byYear[y].essayPassApps }}/{{ byYear[y].essayApps }}건)
-                  </span>
+                  </div>
                 </template>
                 <template v-else class="text-slate-300 font-bold">-</template>
               </td>
-              <td class="py-3.5 px-4 text-center whitespace-nowrap font-bold text-emerald-700">
+              <td class="py-2.5 px-3 text-center whitespace-nowrap font-bold text-emerald-700">
                 {{ byYear[y]?.finalPassRate != null ? `${byYear[y].finalPassRate}%` : '-' }}
               </td>
             </tr>
