@@ -468,7 +468,7 @@ const { officialStats, applications, selectedAcademicYear, schoolMinScoreStats, 
 const reportSatamStats = computed(() => {
   if (mockExamRecords.value && mockExamRecords.value.length > 0) {
     try {
-      const stats = calculateSatamRunStats(mockExamRecords.value)
+      const stats = calculateSatamRunStats(mockExamRecords.value, applications.value)
       if (stats && stats.naturalCohortCount > 0) {
         return {
           totalCount: stats.totalRunCount,

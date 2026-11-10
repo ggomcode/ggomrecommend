@@ -177,6 +177,42 @@ export function getExamPriorityScore(exam) {
 }
 
 /**
+ * 지원 단위(수시 6장 카드 또는 희망 대학/학과)가 이공계열(자연계열)에 해당하는지 판별
+ * 
+ * 1. 대교협 공식 계열(field) 분류 우선 확인:
+ *    - '자연', '공학', '의학' 또는 이를 포함하는 경우 -> 이공계열 (true)
+ *    - '인문', '예체능'인 경우 -> 비이공계열 (false)
+ * 2. 계열이 '공통'이거나 미입력('')인 경우 학과명(dept) 키워드 세부 분석:
+ *    - 의약/간호/바이오/컴퓨터/전자/기계/수학/물리/화학/통계 등 이공계열 키워드 검사
+ *    - '전공', '문화', '항공서비스' 등 한국어 부분문자열 오탐 방지 필터링 적용
+ */
+export function isStemApplication(app) {
+  if (!app) return false
+  const f = String(app.field || '').trim()
+
+  // 1. 대교협 공식 계열(field) 분류 우선 확인
+  if (f === '자연' || f === '공학' || f === '의학') return true
+  if (f.includes('자연') || f.includes('공학') || f.includes('이과')) return true
+
+  // 명시적 인문/예체능 계열은 비이공계 처리
+  if (f === '인문' || f === '예체능') return false
+
+  // 2. 계열이 '공통'이거나 공란('')인 경우 학과명 세부 분석
+  let d = String(app.dept || '').trim().toLowerCase()
+
+  // 한국어 부분문자열 오탐 방지: '전공', '문화', '항공서비스/관광/경영' 등 치환
+  d = d.replace(/전공/g, '').replace(/문화/g, '').replace(/항공서비스|항공관광|항공경영/g, '')
+
+  const stemKeywords = [
+    '공학', '소프트웨어', '컴퓨터', '인공지능', '데이터', '전자', '전기', '기계', '화학', '생명', '물리', '수학',
+    '바이오', '나노', '반도체', '의예', '의학', '치의', '한의', '수의', '약학', '간호', '임상', '방사선', '치위생', '물리치료',
+    '보건', '식품영양', '산림', '원예', '조경', '건축', '도시', '토목', '항공', '우주', '해양', '신소재', '환경',
+    '통계', '시스템', '정보통신', '소방', '사이버', '로봇', '메카트로닉스'
+  ]
+  return stemKeywords.some(kw => d.includes(kw))
+}
+
+/**
  * 학생별 모의고사 응시 배열로부터 사탐런 종합 통계 산출
  * 
  * @param {Array} rawStudentExams
@@ -185,11 +221,47 @@ export function getExamPriorityScore(exam) {
  *      examName, monthOrder,
  *      mathSubject, inquiry1, inquiry2
  *    }
+ * @param {Array|Object} studentApplicationsOrOptions
+ *  - 수시 6장 지원 목록 (또는 희망 대학·학과 목록)
  * @returns {Object} satamRunStats
  */
-export function calculateSatamRunStats(rawStudentExams = []) {
+export function calculateSatamRunStats(rawStudentExams = [], studentApplicationsOrOptions = []) {
   if (!Array.isArray(rawStudentExams) || rawStudentExams.length === 0) {
     return getEmptyStats()
+  }
+
+  let studentApplications = []
+  if (Array.isArray(studentApplicationsOrOptions)) {
+    studentApplications = studentApplicationsOrOptions
+  } else if (studentApplicationsOrOptions && typeof studentApplicationsOrOptions === 'object') {
+    studentApplications = studentApplicationsOrOptions.applications || studentApplicationsOrOptions.studentApplications || []
+  }
+
+  // 수시 지원 카드(또는 희망 대학·학과) 학생별 맵 구축
+  const appMap = new Map()
+  if (Array.isArray(studentApplications) && studentApplications.length > 0) {
+    studentApplications.forEach(app => {
+      if (!app) return
+      const k1 = app.studentKey
+      const k2 = `${app.classNum || ''}-${app.studentNum || ''}_${app.name || ''}`
+      const k3 = `${app.name || ''}_${app.classNum || ''}`
+
+      const keys = Array.from(new Set([k1, k2, k3].filter(Boolean)))
+      keys.forEach(k => {
+        if (!appMap.has(k)) appMap.set(k, [])
+        appMap.get(k).push(app)
+      })
+    })
+  }
+
+  function getStudentApps(stu) {
+    if (appMap.size === 0) return []
+    if (stu.key && appMap.has(stu.key)) return appMap.get(stu.key)
+    const k2 = `${stu.classNum}-${stu.studentNum}_${stu.name}`
+    if (appMap.has(k2)) return appMap.get(k2)
+    const k3 = `${stu.name}_${stu.classNum}`
+    if (appMap.has(k3)) return appMap.get(k3)
+    return []
   }
 
   // 1. 학생별로 응시 기록 그룹화
@@ -229,26 +301,109 @@ export function calculateSatamRunStats(rawStudentExams = []) {
   const nonNaturalCohort = []
 
   allStudents.forEach(stu => {
-    // [규칙 1] 자연계열(이과) 모수 선별 (전체 모의고사 대상)
-    // 3~10월 및 수능 모의고사 중 단 1회라도:
-    // 1) 수학 선택이 '미적분' 또는 '기하' (과탐 선택 여부와 관계없이 자연계열 분류)
-    // 2) 탐구 선택 중 '과학탐구(8개 과목)'가 1개라도 포함되어 있는 경우
-    let isNaturalCohort = false
-    stu.exams.forEach(ex => {
-      if (ex.normMath?.type === 'MATH_NATURAL') {
-        isNaturalCohort = true
-      }
-      if (ex.normInq1?.type === 'SCIENCE' || ex.normInq2?.type === 'SCIENCE') {
-        isNaturalCohort = true
+    // 1. 전체 시험 회차 시간순(3월 -> 10월/수능) 정렬 및 응시 타임라인 구성
+    const sortedTimelineExams = [...stu.exams].sort((a, b) => {
+      const mA = a.monthOrder || extractExamMonthOrder(a.examName)
+      const mB = b.monthOrder || extractExamMonthOrder(b.examName)
+      return mA - mB
+    })
+
+    const examTimeline = sortedTimelineExams.map(ex => {
+      const mathName = ex.rawMath || ex.normMath?.standardName || '-'
+      const inq1Name = ex.rawInq1 || ex.normInq1?.standardName || '-'
+      const inq2Name = ex.rawInq2 || ex.normInq2?.standardName || '-'
+      const isScience = ex.normInq1?.type === 'SCIENCE' || ex.normInq2?.type === 'SCIENCE'
+      const isSocial = ex.normInq1?.type === 'SOCIAL' || ex.normInq2?.type === 'SOCIAL'
+      return {
+        examName: ex.examName || `${ex.monthOrder}월`,
+        monthOrder: ex.monthOrder,
+        math: mathName,
+        inq1: inq1Name,
+        inq2: inq2Name,
+        isScience,
+        isSocial,
+        summary: `[${mathName}] ${inq1Name}, ${inq2Name}`
       }
     })
 
-    if (!isNaturalCohort) {
-      nonNaturalCohort.push(stu)
-      return
+    const timelineText = examTimeline.map(t => `${t.examName}: ${t.summary}`).join(' ➔ ')
+
+    // 모의고사 기간 중 과탐 및 수학 미적/기하 응시 이력 수집
+    const sciExams = stu.exams.filter(ex => ex.normInq1?.type === 'SCIENCE' || ex.normInq2?.type === 'SCIENCE')
+    const mathNatExams = stu.exams.filter(ex => ex.normMath?.type === 'MATH_NATURAL')
+    const sciSubjectNames = Array.from(new Set(
+      sciExams.flatMap(ex => [
+        ex.normInq1?.type === 'SCIENCE' ? ex.normInq1.standardName : null,
+        ex.normInq2?.type === 'SCIENCE' ? ex.normInq2.standardName : null
+      ]).filter(Boolean)
+    ))
+    const sciExamMonthNames = Array.from(new Set(sciExams.map(ex => ex.examName || `${ex.monthOrder}월`)))
+
+    // 2. 자연계열(이과) 모수 판정 (2단계 우선순위 적용)
+    const stuApps = getStudentApps(stu)
+    const hasAppsData = stuApps.length > 0
+
+    let isNaturalCohort = false
+    let cohortSource = 'MOCK_EXAM' // 'APPLICATIONS' | 'MOCK_EXAM'
+    let cohortBadgeText = ''
+    let cohortBadgeClass = ''
+    let cohortDetail = ''
+    let stemApplications = []
+
+    if (hasAppsData) {
+      // [우선순위 1] 수시 6장 카드(또는 희망 대학/학과) 기반 판별
+      // 6장 카드 중 1장이라도 이공계열이 포함되어 있다면 자연계열로 분류.
+      // 반대로 6장의 카드 모두 비이공계열(인문/사회/예체능 등)인 경우 자연계열 모수에서 제외!
+      stemApplications = stuApps.filter(isStemApplication)
+
+      if (stemApplications.length >= 1) {
+        isNaturalCohort = true
+        cohortSource = 'APPLICATIONS'
+        cohortBadgeText = `수시 이공 ${stemApplications.length}건`
+        cohortBadgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200'
+
+        const first = stemApplications[0]
+        const remaining = stemApplications.length - 1
+        const appDesc = `${first.univName || ''} ${first.dept || ''}${remaining > 0 ? ` 외 ${remaining}건` : ''}`
+
+        // 모의고사에서도 과탐 응시 이력이 있다면 함께 표기
+        if (sciExams.length > 0) {
+          cohortDetail = `수시 6장 중 이공계열 ${stemApplications.length}건 지원 (${appDesc}) / 모의고사: ${sciExamMonthNames.join(', ')} 과탐(${sciSubjectNames.join(', ')}) 응시`
+        } else {
+          cohortDetail = `수시 6장 중 이공계열 ${stemApplications.length}건 지원 (${appDesc})`
+        }
+      } else {
+        // 6장 카드 데이터가 있으나 이공계열 카드가 0장인 경우 -> 자연계열 모수 제외
+        isNaturalCohort = false
+        nonNaturalCohort.push(stu)
+        return
+      }
+    } else {
+      // [우선순위 2] 6장 카드(또는 희망 대학 및 학과)가 전혀 없는 상태
+      // 기존 모수 판별 방식 유지:
+      // 3~10월 모의고사 중 단 1회라도 1) 수학 미적분/기하 또는 2) 과학탐구가 1개라도 포함된 경우
+      if (sciExams.length > 0 || mathNatExams.length > 0) {
+        isNaturalCohort = true
+        cohortSource = 'MOCK_EXAM'
+
+        if (sciExams.length > 0) {
+          cohortBadgeText = '모의 과탐 이력'
+          cohortBadgeClass = 'bg-indigo-50 text-indigo-800 border-indigo-200'
+          cohortDetail = `모의고사 이력: ${sciExamMonthNames.join(', ')} [${sciSubjectNames.join(', ')}] 응시`
+        } else if (mathNatExams.length > 0) {
+          const mathSub = mathNatExams[0].normMath?.standardName || '미적분'
+          cohortBadgeText = `수학 ${mathSub}`
+          cohortBadgeClass = 'bg-blue-50 text-blue-800 border-blue-200'
+          cohortDetail = `모의고사 이력: 수학 [${mathSub}] 선택`
+        }
+      } else {
+        isNaturalCohort = false
+        nonNaturalCohort.push(stu)
+        return
+      }
     }
 
-    // [규칙 2] 가장 최근의 모의고사 결과(수능 > 최신 회차, 실채점 우선, 없으면 가채점) 추출
+    // 3. 가장 최근의 모의고사 결과(수능 > 최신 회차, 실채점 우선, 없으면 가채점) 추출
     // 시험 우선순위 점수 순으로 정렬
     stu.exams.sort((a, b) => getExamPriorityScore(a) - getExamPriorityScore(b))
 
@@ -262,7 +417,7 @@ export function calculateSatamRunStats(rawStudentExams = []) {
     const initialExam = candidateExams[0]
     const latestExam = candidateExams[candidateExams.length - 1]
 
-    // [규칙 3] 사탐런 판별 (가장 최근 시험 결과 기준)
+    // 4. 사탐런 판별 (가장 최근 시험 결과 기준)
     // 자연계열 모수 학생 중 최신 시험에서 사회탐구가 1개라도 포함되어 있으면 사탐런으로 분류
     const latestInquiries = [latestExam.normInq1, latestExam.normInq2].filter(Boolean)
     const socialSubjects = latestInquiries.filter(i => i.type === 'SOCIAL')
@@ -292,7 +447,14 @@ export function calculateSatamRunStats(rawStudentExams = []) {
       statusLabel,
       socialCount,
       socialSubjectsList: socialSubjects.map(s => s.standardName),
-      scienceSubjectsList: scienceSubjects.map(s => s.standardName)
+      scienceSubjectsList: scienceSubjects.map(s => s.standardName),
+      cohortSource,
+      cohortBadgeText,
+      cohortBadgeClass,
+      cohortDetail,
+      stemApplications,
+      examTimeline,
+      timelineText
     })
   })
 
@@ -301,6 +463,9 @@ export function calculateSatamRunStats(rawStudentExams = []) {
   const run1List = naturalCohort.filter(s => s.status === 'RUN_1')
   const run2List = naturalCohort.filter(s => s.status === 'RUN_2')
   const keptList = naturalCohort.filter(s => s.status === 'KEPT_SCIENCE')
+
+  const appsBasedCohortCount = naturalCohort.filter(s => s.cohortSource === 'APPLICATIONS').length
+  const mockBasedCohortCount = naturalCohort.filter(s => s.cohortSource === 'MOCK_EXAM').length
 
   const totalRunCount = run1List.length + run2List.length
   const totalRunRate = totalNatural > 0 ? ((totalRunCount / totalNatural) * 100).toFixed(1) : '0.0'
@@ -328,6 +493,9 @@ export function calculateSatamRunStats(rawStudentExams = []) {
     totalStudents: allStudents.length,
     naturalCohortCount: totalNatural,
     nonNaturalCount: nonNaturalCohort.length,
+
+    appsBasedCohortCount,
+    mockBasedCohortCount,
     
     totalRunCount,
     totalRunRate,
@@ -352,6 +520,8 @@ function getEmptyStats() {
     totalStudents: 0,
     naturalCohortCount: 0,
     nonNaturalCount: 0,
+    appsBasedCohortCount: 0,
+    mockBasedCohortCount: 0,
     totalRunCount: 0,
     totalRunRate: '0.0',
     run1Count: 0,

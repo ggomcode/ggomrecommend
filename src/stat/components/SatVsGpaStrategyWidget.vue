@@ -575,12 +575,20 @@
             <span>🔍</span>
             <span>사탐런 자동 판별 규칙 및 표기 호환 가이드</span>
           </div>
-          <ul class="list-disc list-inside space-y-1 text-slate-700 pl-1">
+          <ul class="list-disc list-inside space-y-1.5 text-slate-700 pl-1">
             <li>
-              <strong>자연계열(이과) 모수 선별:</strong> 전체 모의고사(3~10월 및 수능) 기간 중 <code>수학 미적분/기하</code>를 선택했거나 <code>과학탐구(8개 과목)</code>를 1개라도 응시한 이력이 있는 학생 전원을 자연계열 모수로 추출합니다.
+              <strong>자연계열(이과) 모수 선별 2단계 우선순위 원칙:</strong>
+              <div class="mt-1 ml-4 space-y-1 text-slate-600">
+                <div>• <strong>1순위 (수시 6장 카드/희망대학 우선):</strong> 수시 지원 카드(또는 사전 조사 희망학과) 중 단 1장이라도 이공계열(자연/공학/의약 등)이 포함되어 있다면 자연계열 모수로 분류합니다. (단, 6장 모두 인문/사회/예체능 계열로 지원한 학생은 모수에서 제외)</div>
+                <div>• <strong>2순위 (수시 데이터 미보유 학생 대상):</strong> 수시 카드 데이터가 없는 경우, 3~10월 모의고사 중 단 1회라도 <code>수학 미적분/기하</code> 또는 <code>과학탐구(8개 과목)</code>를 1개라도 응시한 이력이 있는 학생을 자연계열 모수로 분류합니다.</div>
+              </div>
             </li>
             <li>
               <strong>사탐런 판정 기준:</strong> 위 자연계열 모수 학생 중 <strong>가장 최근 모의고사 결과(수능 > 10월 등 최신순, 실채점 우선, 없으면 가채점)</strong>에서 사회탐구가 1개라도 포함된 경우(1과목 또는 2과목) 사탐런으로 집계합니다.
+            </li>
+            <li>
+              <strong>모수 분류 근거 & 응시 추이 확인 기능:</strong>
+              학생 목록 테이블에서 각 학생이 자연계열로 편입된 <strong>분류 근거 배지</strong>(예: <code>수시 이공 6건</code>, <code>모의 과탐 이력</code>)와 마우스 호버 시 <strong>전체 회차(3~10월) 응시 과목 변동 타임라인</strong>을 즉시 확인하실 수 있습니다.
             </li>
             <li>
               <strong>선택과목 표기 유연성 지원:</strong>
@@ -605,9 +613,14 @@
               <span v-if="satamMode === 'OFFICIAL'">2026학년도 대입 최대 이슈: 사탐런 (과탐 ➔ 사탐 전향)</span>
               <span v-else>실시간 모의고사 원자료 분석: {{ mockFileName || '분석 대기 중' }}</span>
             </div>
-            <span v-if="satamMode === 'MOCK_ANALYSIS' && mockStats" class="text-xs font-bold bg-white/30 px-2.5 py-0.5 rounded-full backdrop-blur-xs">
-              자연계열 모수: {{ mockStats.naturalCohortCount }}명
-            </span>
+            <div v-if="satamMode === 'MOCK_ANALYSIS' && mockStats" class="flex flex-wrap items-center gap-2">
+              <span class="text-xs font-bold bg-white/30 px-2.5 py-0.5 rounded-full backdrop-blur-xs flex items-center gap-1.5">
+                <span>자연계열 모수: {{ mockStats.naturalCohortCount }}명</span>
+                <span v-if="mockStats.appsBasedCohortCount > 0" class="text-[11px] opacity-90 font-normal">
+                  (수시 기반 {{ mockStats.appsBasedCohortCount }}명 / 모의 기반 {{ mockStats.mockBasedCohortCount }}명)
+                </span>
+              </span>
+            </div>
           </div>
 
           <!-- 타이틀 -->
@@ -769,17 +782,19 @@
         </div>
 
         <!-- 학생 목록 테이블 -->
-        <div class="border border-slate-200 rounded-2xl overflow-hidden">
-          <div class="overflow-x-auto max-h-80">
+        <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+          <div class="overflow-x-auto max-h-84">
             <table class="w-full text-left text-xs border-collapse">
               <thead class="bg-slate-50 text-slate-600 sticky top-0 z-10 border-b border-slate-200 font-bold">
                 <tr>
                   <th class="p-3 w-16 text-center">반-번호</th>
                   <th class="p-3 w-24">이름</th>
+                  <th class="p-3 w-36">모수 분류 근거</th>
                   <th class="p-3">초기(3월) 응시 과목</th>
                   <th class="p-3">최종(10월) 응시 과목</th>
-                  <th class="p-3 w-32 text-center">전향 유형</th>
-                  <th class="p-3 w-40">선택한 사탐 과목</th>
+                  <th class="p-3 w-28 text-center">응시 추이</th>
+                  <th class="p-3 w-28 text-center">전향 유형</th>
+                  <th class="p-3 w-36">선택한 사탐 과목</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100 font-sans">
@@ -794,6 +809,19 @@
                   <td class="p-3 font-bold text-slate-900">
                     {{ maskName(s.name) }}
                   </td>
+                  <td class="p-3">
+                    <span
+                      :class="[
+                        'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border cursor-help shadow-2xs',
+                        s.cohortBadgeClass || 'bg-slate-50 text-slate-700 border-slate-200'
+                      ]"
+                      :title="s.cohortDetail"
+                    >
+                      <span v-if="s.cohortSource === 'APPLICATIONS'">🎓</span>
+                      <span v-else>🧪</span>
+                      <span>{{ s.cohortBadgeText || '자연계열' }}</span>
+                    </span>
+                  </td>
                   <td class="p-3 text-slate-600 text-[11px]">
                     <span class="font-medium text-slate-800">[{{ s.initialExam?.rawMath || '미적분' }}]</span>
                     <span class="text-slate-500 ml-1">{{ s.initialExam?.rawInq1 || '-' }}, {{ s.initialExam?.rawInq2 || '-' }}</span>
@@ -803,6 +831,17 @@
                     <span class="ml-1 font-semibold" :class="s.status !== 'KEPT_SCIENCE' ? 'text-orange-700' : 'text-slate-700'">
                       {{ s.latestExam?.rawInq1 || '-' }}, {{ s.latestExam?.rawInq2 || '-' }}
                     </span>
+                  </td>
+                  <!-- 회차별 응시 추이 툴팁 (1번 개선안 적용) -->
+                  <td class="p-3 text-center">
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-help border border-slate-200"
+                      :title="s.timelineText || '응시 이력'"
+                    >
+                      <span>⏱️</span>
+                      <span>{{ s.examTimeline?.length || 1 }}개 시험</span>
+                    </button>
                   </td>
                   <td class="p-3 text-center">
                     <span
@@ -840,7 +879,7 @@
                   </td>
                 </tr>
                 <tr v-if="filteredCohortStudents.length === 0">
-                  <td colspan="6" class="p-6 text-center text-slate-400 text-xs">
+                  <td colspan="8" class="p-6 text-center text-slate-400 text-xs">
                     조건에 해당하는 학생이 없습니다.
                   </td>
                 </tr>
@@ -2392,7 +2431,7 @@ watch(selectedAcademicYear, (newYear) => {
 watch(mockExamRecords, (records) => {
   if (records && records.length > 0) {
     try {
-      const stats = calculateSatamRunStats(records)
+      const stats = calculateSatamRunStats(records, applications.value)
       if (stats && stats.naturalCohortCount > 0) {
         mockStats.value = stats
         if (Number(selectedAcademicYear.value) >= 2027) {
@@ -3837,9 +3876,9 @@ async function handleMockFileUpload(e) {
     }
     localCustomMockRecords.value = records
     mockExamRecords.value = records
-    const result = calculateSatamRunStats(records)
+    const result = calculateSatamRunStats(records, applications.value)
     if (!result.hasData) {
-      throw new Error('3월~10월 중 미적분, 기하 또는 과학탐구(8개 과목)를 응시한 자연계열 이과 학생이 발견되지 않았습니다.')
+      throw new Error('수시 이공계 지원 또는 모의고사 미적분/기하/과탐 이력이 있는 자연계열 이과 학생이 발견되지 않았습니다.')
     }
     mockStats.value = result
     mockFileName.value = file.name
@@ -3861,7 +3900,7 @@ function loadSampleMockData() {
       const records = generateRealisticMockSample()
       localCustomMockRecords.value = records
       mockExamRecords.value = records
-      mockStats.value = calculateSatamRunStats(records)
+      mockStats.value = calculateSatamRunStats(records, applications.value)
       mockFileName.value = '2026학년도 3~10월 모의고사 실증 데이터 (자연계 115명)'
       satamMode.value = 'MOCK_ANALYSIS'
     } catch (err) {
@@ -3882,9 +3921,9 @@ async function syncFromGoogleSheetMockData() {
     }
     localCustomMockRecords.value = records
     mockExamRecords.value = records
-    const result = calculateSatamRunStats(records)
+    const result = calculateSatamRunStats(records, applications.value)
     if (!result.hasData) {
-      throw new Error("자연계열(미적/기하/과탐) 응시 학생이 발견되지 않았습니다. 시트의 컬럼명을 확인해 주세요.")
+      throw new Error("자연계열(수시 이공 지원 또는 모의 미적/기하/과탐) 학생이 발견되지 않았습니다. 시트의 컬럼명을 확인해 주세요.")
     }
     mockStats.value = result
     mockFileName.value = "구글 시트 '2027모의가채점' 탭 (실시간 연동)"
@@ -3924,6 +3963,8 @@ const filteredCohortStudents = computed(() => {
     list = list.filter(s =>
       s.name.toLowerCase().includes(q) ||
       String(s.classNum).includes(q) ||
+      (s.cohortBadgeText && s.cohortBadgeText.toLowerCase().includes(q)) ||
+      (s.cohortDetail && s.cohortDetail.toLowerCase().includes(q)) ||
       s.socialSubjectsList.some(sub => sub.toLowerCase().includes(q)) ||
       s.scienceSubjectsList.some(sub => sub.toLowerCase().includes(q))
     )
