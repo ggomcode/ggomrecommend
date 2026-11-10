@@ -6,13 +6,16 @@
  * 
  * [판정 규칙]
  * 1. 자연계열(이과) 모수:
- *    - 3월부터 10월 모의고사 기간 중 미적분, 기하, 과학탐구 8과목(물Ⅰ/Ⅱ, 화Ⅰ/Ⅱ, 생Ⅰ/Ⅱ, 지Ⅰ/Ⅱ) 중
- *      단 1과목이라도 응시한 이력이 있는 학생
- * 2. 사탐런 판별:
- *    - 자연계열 모수 학생 중 가장 마지막 모의고사(현시점 10월 학평 또는 최종 시험)에서
- *      - 사회탐구 1과목 선택 (과탐1 + 사탐1): '1과목 사탐런'
- *      - 사회탐구 2과목 선택 (사탐2): '2과목 사탐런'
- *      - 사회탐구 0과목 선택 (과탐2): '과탐 유지'
+ *    - 3월부터 10월 모의고사 기간 중 과학탐구 8과목(물Ⅰ/Ⅱ, 화Ⅰ/Ⅱ, 생Ⅰ/Ⅱ, 지Ⅰ/Ⅱ)을
+ *      단 1과목이라도 응시한 이력이 있는 학생 (미적분/기하를 응시했더라도 탐구를 사탐으로만 응시한 인문계열 학생은 모수에서 제외)
+ * 2. 사탐런 판별 (초기 모의고사 대비 최종 모의고사 탐구 선택과목 변화 분석):
+ *    - 초기에 과탐 2과목 응시:
+ *      - 최종에서 사회탐구 1과목 선택 (과탐1 + 사탐1): '1과목 사탐런'
+ *      - 최종에서 사회탐구 2과목 선택 (사탐2): '2과목 사탐런'
+ *      - 최종에서 과학탐구 2과목 유지 (과탐2): '과탐 유지'
+ *    - 초기에 과탐 1과목 + 사탐 1과목 응시:
+ *      - 최종에서 사회탐구 2과목 선택 (사탐2): '1과목 사탐런' (남은 과탐 1과목 추가 전향)
+ *      - 최종에서 과학탐구 1과목 유지: '과탐 유지'
  * 
  * [표기 유의사항 완벽 대응]
  * - 과학 선택과목의 로마자(I, II), 로마자 특수문자(Ⅰ, Ⅱ), 숫자(1, 2) 및 공백, 약칭 모두 정규화 지원
@@ -210,40 +213,103 @@ export function calculateSatamRunStats(rawStudentExams = []) {
     // 응시 회차 시간순(3월 -> 10월) 정렬
     stu.exams.sort((a, b) => a.monthOrder - b.monthOrder)
 
-    // [규칙 1] 3월~10월 중 단 1회라도 미적분, 기하, 과탐 8과목 응시 이력 확인
-    let hasNaturalHistory = false
-    stu.exams.forEach(ex => {
-      if (ex.normMath?.type === 'MATH_NATURAL') hasNaturalHistory = true
-      if (ex.normInq1?.type === 'SCIENCE') hasNaturalHistory = true
-      if (ex.normInq2?.type === 'SCIENCE') hasNaturalHistory = true
-    })
+    // 유효한 탐구 응시 시험 필터링 (결시 또는 미기재 제외)
+    const validInqExams = stu.exams.filter(ex => 
+      (ex.normInq1 && ex.normInq1.type !== 'UNKNOWN') || 
+      (ex.normInq2 && ex.normInq2.type !== 'UNKNOWN')
+    )
 
-    if (!hasNaturalHistory) {
+    if (validInqExams.length === 0) {
       nonNaturalCohort.push(stu)
       return
     }
 
-    // [규칙 2] 가장 마지막 모의고사(현시점 10월 등) 추출
-    const latestExam = stu.exams[stu.exams.length - 1]
-    const initialExam = stu.exams[0]
+    // [규칙 1] 3월~10월 모의고사 중 과학탐구(8개 과목)를 1과목 이상 응시한 이력이 있는지 확인
+    // (미적분/기하를 응시했더라도 탐구를 사회탐구로만 응시한 순수 인문계열 학생은 자연계열 사탐런 모수에서 제외)
+    const hasScienceHistory = stu.exams.some(ex => 
+      ex.normInq1?.type === 'SCIENCE' || ex.normInq2?.type === 'SCIENCE'
+    )
 
-    // 최종 시험의 탐구 과목 정규화 리스트
-    const finalInquiries = [latestExam.normInq1, latestExam.normInq2].filter(Boolean)
-    
-    // 사탐 및 과탐 개수 카운트
-    const socialSubjects = finalInquiries.filter(i => i.type === 'SOCIAL')
-    const scienceSubjects = finalInquiries.filter(i => i.type === 'SCIENCE')
+    if (!hasScienceHistory) {
+      nonNaturalCohort.push(stu)
+      return
+    }
 
-    let status = 'KEPT_SCIENCE' // 과탐 유지
+    // [규칙 2] 초기 시험(과탐 출발 기준 회차) 및 최종 시험 추출
+    // 가장 이른 회차 중 과탐을 응시한 시험을 초기 기준 시험으로 설정 (보통 3월 학평)
+    const initialExam = validInqExams.find(ex => 
+      ex.normInq1?.type === 'SCIENCE' || ex.normInq2?.type === 'SCIENCE'
+    ) || validInqExams[0]
+
+    // 가장 마지막 모의고사(현시점 10월 학평 등) 추출
+    const latestExam = validInqExams[validInqExams.length - 1]
+
+    // 초기 시험의 탐구 과목 구성
+    const initInquiries = [initialExam.normInq1, initialExam.normInq2].filter(Boolean)
+    const initSciCount = initInquiries.filter(i => i.type === 'SCIENCE').length
+    const initSocCount = initInquiries.filter(i => i.type === 'SOCIAL').length
+
+    // 최종 시험의 탐구 과목 구성
+    const latestInquiries = [latestExam.normInq1, latestExam.normInq2].filter(Boolean)
+    const latestSciCount = latestInquiries.filter(i => i.type === 'SCIENCE').length
+    const latestSocCount = latestInquiries.filter(i => i.type === 'SOCIAL').length
+
+    // 최종 시험에서 선택된 과목 목록
+    const latestSocialSubjects = latestInquiries.filter(i => i.type === 'SOCIAL')
+    const latestScienceSubjects = latestInquiries.filter(i => i.type === 'SCIENCE')
+
+    // [규칙 3] 초기 대비 최종의 탐구 선택 변화 분석하여 사탐런 전향 유형 판정
+    let status = 'KEPT_SCIENCE' // 과탐 유지 (기본)
     let statusLabel = '과탐 유지'
-    let socialCount = socialSubjects.length
+    let socialCount = 0
 
-    if (socialCount >= 2) {
-      status = 'RUN_2' // 2과목 전향
-      statusLabel = '2과목 사탐런'
-    } else if (socialCount === 1) {
-      status = 'RUN_1' // 1과목 전향
-      statusLabel = '1과목 사탐런'
+    if (initSciCount >= 2) {
+      // 1) 초기에 과탐 2과목이었던 정통 자연계열 학생
+      if (latestSciCount >= 2) {
+        status = 'KEPT_SCIENCE'
+        statusLabel = '과탐 유지'
+        socialCount = 0
+      } else if (latestSciCount === 1 && latestSocCount >= 1) {
+        status = 'RUN_1'
+        statusLabel = '1과목 사탐런'
+        socialCount = 1
+      } else if (latestSocCount >= 2) {
+        status = 'RUN_2'
+        statusLabel = '2과목 사탐런'
+        socialCount = 2
+      } else if (latestSocCount === 1 && latestSciCount === 0) {
+        // 1개 과목만 유효 응시(사탐 1개)
+        status = 'RUN_1'
+        statusLabel = '1과목 사탐런'
+        socialCount = 1
+      }
+    } else if (initSciCount === 1) {
+      // 2) 초기에 과탐 1과목 + 사탐 1과목 혼합이었던 학생
+      if (latestSciCount === 0 && latestSocCount >= 2) {
+        // 남은 과탐 1과목마저 사탐으로 전향
+        status = 'RUN_1'
+        statusLabel = '1과목 사탐런'
+        socialCount = 1
+      } else {
+        status = 'KEPT_SCIENCE'
+        statusLabel = '과탐 유지'
+        socialCount = 0
+      }
+    } else {
+      // 3) 초기에 과탐이 없었으나 이후 과탐을 응시한 이력이 있는 특이 케이스
+      if (latestSciCount >= 2) {
+        status = 'KEPT_SCIENCE'
+        statusLabel = '과탐 유지'
+        socialCount = 0
+      } else if (latestSocCount >= 2) {
+        status = 'RUN_2'
+        statusLabel = '2과목 사탐런'
+        socialCount = 2
+      } else if (latestSocCount === 1) {
+        status = 'RUN_1'
+        statusLabel = '1과목 사탐런'
+        socialCount = 1
+      }
     }
 
     naturalCohort.push({
@@ -253,8 +319,10 @@ export function calculateSatamRunStats(rawStudentExams = []) {
       status,
       statusLabel,
       socialCount,
-      socialSubjectsList: socialSubjects.map(s => s.standardName),
-      scienceSubjectsList: scienceSubjects.map(s => s.standardName)
+      socialSubjectsList: (status === 'RUN_1' || status === 'RUN_2')
+        ? latestSocialSubjects.map(s => s.standardName)
+        : [],
+      scienceSubjectsList: latestScienceSubjects.map(s => s.standardName)
     })
   })
 

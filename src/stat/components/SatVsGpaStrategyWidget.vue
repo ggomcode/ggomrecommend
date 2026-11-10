@@ -577,10 +577,10 @@
           </div>
           <ul class="list-disc list-inside space-y-1 text-slate-700 pl-1">
             <li>
-              <strong>자연계열(이과) 모수 선별:</strong> 3월부터 10월 모의고사 기간 중 <code>미적분</code>, <code>기하</code>, <code>과탐 8개 과목</code> 중 <strong>단 1개라도 응시한 이력</strong>이 있는 학생을 자동 추출합니다.
+              <strong>자연계열(이과) 모수 선별:</strong> 3월부터 10월 모의고사 기간 중 <code>과학탐구 8개 과목</code>을 <strong>단 1과목이라도 응시한 이력</strong>이 있는 자연계열 학생을 자동 추출합니다. (미적분을 응시했더라도 탐구를 사회탐구로만 응시한 인문계열 학생은 모수에서 자동 제외)
             </li>
             <li>
-              <strong>사탐런 판정 기준:</strong> 위 모수 학생 중 <strong>가장 마지막 모의고사(10월 학평 등)</strong>에서 사회탐구를 <strong>1과목(과탐1+사탐1)</strong> 또는 <strong>2과목(사탐2)</strong> 선택한 경우를 사탐런으로 집계합니다.
+              <strong>사탐런 판정 기준:</strong> 초기 모의고사(3월 등) 대비 <strong>가장 마지막 모의고사(10월 학평 등)</strong>에서 과탐을 사탐으로 <strong>1과목 전향(과탐1+사탐1)</strong> 또는 <strong>2과목 전향(사탐2)</strong>한 학생을 사탐런으로 집계합니다.
             </li>
             <li>
               <strong>선택과목 표기 유연성 지원:</strong>
@@ -626,7 +626,7 @@
               이는 수능 최저학력기준 충족 확률을 비약적으로 끌어올리는 주효한 전략으로 작용했습니다.
             </template>
             <template v-else>
-              3월~10월 모의고사 중 미적/기하/과탐 이력이 있는 자연계열 학생 <strong>{{ mockStats.naturalCohortCount }}명</strong> 중 <strong>{{ mockStats.totalRunCount }}명({{ mockStats.totalRunRate }}%)</strong>이 최종 모의고사에서 사탐 과목을 선택했습니다.
+              3월~10월 모의고사 중 과탐 응시 이력이 있는 자연계열 학생 <strong>{{ mockStats.naturalCohortCount }}명</strong> 중 <strong>{{ mockStats.totalRunCount }}명({{ mockStats.totalRunRate }}%)</strong>이 최종 모의고사에서 사탐 과목으로 전향했습니다.
             </template>
           </p>
 
@@ -684,7 +684,7 @@
               <span>자연계열 학생별 3월 ➔ 최종(10월) 모의고사 응시 변화 내역</span>
             </h4>
             <p class="text-[11px] text-slate-500 m-0 mt-0.5">
-              미적분/기하/과탐 이력 학생 {{ mockStats.naturalCohortCount }}명 전원의 탐구 과목 이동을 전수 추적한 결과입니다.
+              과탐 응시 이력 자연계열 학생 {{ mockStats.naturalCohortCount }}명 전원의 탐구 과목 이동을 전수 추적한 결과입니다.
             </p>
           </div>
 
@@ -792,7 +792,7 @@
                     {{ s.classNum ? `${s.classNum}반` : '' }} {{ s.studentNum ? `${s.studentNum}번` : '' }}
                   </td>
                   <td class="p-3 font-bold text-slate-900">
-                    {{ s.name }}
+                    {{ maskName(s.name) }}
                   </td>
                   <td class="p-3 text-slate-600 text-[11px]">
                     <span class="font-medium text-slate-800">[{{ s.initialExam?.rawMath || '미적분' }}]</span>
@@ -2228,7 +2228,7 @@ import {
 } from '../utils/satamRunCalculator.js'
 import { fetchAndParseKcueMockData, DEFAULT_CSAT_PASS_RATE_BENCHMARK, OFFICIAL_CSAT_PASS_RATE_SUMMARY } from '../../api/statApi.js'
 import { schoolName } from '../../utils/schoolConfig'
-import { useStatData } from '../composables/useStatData.js'
+import { useStatData, maskName } from '../composables/useStatData.js'
 
 ChartJS.register(
   RadialLinearScale,
@@ -3839,7 +3839,7 @@ async function handleMockFileUpload(e) {
     mockExamRecords.value = records
     const result = calculateSatamRunStats(records)
     if (!result.hasData) {
-      throw new Error('3월~10월 중 미적분, 기하 또는 과학탐구(8개 과목)를 응시한 자연계열 이과 학생이 발견되지 않았습니다.')
+      throw new Error('3월~10월 중 과학탐구(8개 과목)를 응시한 자연계열 이과 학생이 발견되지 않았습니다.')
     }
     mockStats.value = result
     mockFileName.value = file.name
@@ -3884,7 +3884,7 @@ async function syncFromGoogleSheetMockData() {
     mockExamRecords.value = records
     const result = calculateSatamRunStats(records)
     if (!result.hasData) {
-      throw new Error("자연계열(미적/기하/과탐) 응시 학생이 발견되지 않았습니다. 시트의 컬럼명을 확인해 주세요.")
+      throw new Error("자연계열(과탐 응시) 학생이 발견되지 않았습니다. 시트의 컬럼명을 확인해 주세요.")
     }
     mockStats.value = result
     mockFileName.value = "구글 시트 '2027모의가채점' 탭 (실시간 연동)"
