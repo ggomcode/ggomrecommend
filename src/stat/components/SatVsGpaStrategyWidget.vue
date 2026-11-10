@@ -5,15 +5,15 @@
       <div>
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200/80 mb-2">
           <span>🎯</span>
-          <span>내신 vs 수능 성적 비교 & 2027 대입 전략</span>
+          <span>내신 vs {{ examTerm }} 성적 비교 & {{ academicYearLabel }} 대입 전략</span>
           <span class="text-indigo-300">|</span>
           <span class="text-slate-500 font-semibold">성적 분석 & 대입 전략</span>
         </div>
         <h3 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight m-0">
-          내신 vs 수능 성적 비교 분석 & 2027학년도 5대 대입 핵심 전략
+          내신 vs {{ examTerm }} 성적 비교 분석 & {{ academicYearLabel }}학년도 5대 대입 핵심 전략
         </h3>
         <p class="text-xs text-slate-500 m-0 mt-1 leading-relaxed">
-          내신 대비 수능 과목별 등급 격차(5개 영역 방사형), 사탐런 현황, 수능최저 충족 실질경쟁률 및 2027학년도 5대 대입 전략을 종합 분석합니다.
+          내신 대비 {{ examTerm }} 과목별 등급 격차(5개 영역 방사형), 사탐런 현황, 수능최저 충족 실질경쟁률 및 {{ academicYearLabel }}학년도 5대 대입 전략을 종합 분석합니다.
         </p>
       </div>
 
@@ -69,7 +69,7 @@
       <div class="flex items-center justify-between pb-1">
         <div class="flex items-center gap-2">
           <span class="flex items-center justify-center w-7 h-7 rounded-xl bg-blue-50 text-blue-700 text-sm font-black border border-blue-200">1</span>
-          <h3 class="text-base sm:text-lg font-black text-slate-900 m-0">과목별 내신 vs 수능 등급 비교</h3>
+          <h3 class="text-base sm:text-lg font-black text-slate-900 m-0">과목별 내신 vs {{ examTerm }} 등급 비교</h3>
         </div>
         <span class="text-xs text-slate-400 font-medium hidden sm:inline">5개 영역 방사형 등급 격차 및 수시 4대 기본 지표</span>
       </div>
@@ -81,7 +81,7 @@
             <div>
               <div class="text-sm font-black text-slate-900 flex items-center gap-1.5">
                 <span>📊</span>
-                <span>과목별 내신 vs 수능 등급 비교</span>
+                <span>과목별 내신 vs {{ examTerm }} 등급 비교</span>
               </div>
               <p class="text-[11px] text-slate-500 m-0 mt-0.5">
                 바깥쪽일수록 상위 등급(1등급)이며, 안쪽일수록 하위 등급(9등급)입니다.
@@ -131,7 +131,7 @@
                     v-model="selectedMockExamMonth"
                     class="appearance-none bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-3 py-1.5 pr-8 text-xs font-bold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer min-w-60"
                   >
-                    <option value="ALL">🌟 전체 (3~10월 통합){{ currentSatAnalysis.studentCount > 0 ? ` - ${currentSatAnalysis.studentCount}명` : ' (데이터 미등록)' }}</option>
+                    <option value="ALL">🌟 {{ hasCsatData ? '전체 (수능 실채점)' : '전체 (3~10월 통합)' }}{{ currentSatAnalysis.studentCount > 0 ? ` - ${currentSatAnalysis.studentCount}명` : ' (데이터 미등록)' }}</option>
                     <option
                       v-for="opt in availableExamMonthOptions"
                       :key="opt.key"
@@ -369,10 +369,10 @@
           <div>
             <div class="flex items-center gap-2">
               <span class="flex items-center justify-center w-6 h-6 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-black border border-indigo-200">📈</span>
-              <h4 class="text-base font-black text-slate-900 m-0">2027 모의고사 회차별 성적 추이 (3월 ➔ 10월)</h4>
+              <h4 class="text-base font-black text-slate-900 m-0">{{ academicYearLabel }} 모의고사 회차별 성적 추이 (3월 ➔ 10월)</h4>
             </div>
             <p class="text-xs text-slate-500 m-0 mt-1">
-              3월·5월·6월·7월·9월·10월 모의고사 및 수능 회차에 따른 영역별 평균 등급과 응시 인원수 변화 추이를 종합 분석합니다.
+              {{ hasCsatData ? '3월~10월 모의고사 및 수능 실채점에 따른' : '3월·5월·6월·7월·9월·10월 모의고사 회차에 따른' }} 영역별 평균 등급과 응시 인원수 변화 추이를 종합 분석합니다.
             </p>
           </div>
 
@@ -626,7 +626,7 @@
           <!-- 타이틀 -->
           <h3 class="text-xl sm:text-2xl font-black tracking-tight m-0">
             <template v-if="satamMode === 'OFFICIAL' || !mockStats">
-              이과 수능 응시자 중 절반(48.7%)이 사탐으로 전향했습니다
+              이과 {{ examTerm }} 응시자 중 절반(48.7%)이 사탐으로 전향했습니다
             </template>
             <template v-else>
               자연계열 학생 중 {{ mockStats.totalRunRate }}% ({{ mockStats.totalRunCount }}명)가 사탐으로 전향했습니다
@@ -635,7 +635,7 @@
 
           <p class="text-xs text-white/90 mt-1.5 max-w-2xl leading-relaxed">
             <template v-if="satamMode === 'OFFICIAL' || !mockStats">
-              자연계열 지망 학생(115명 추정) 중 무려 <strong>56명(48.7%)</strong>이 과탐의 극심한 내신/수능 등급 방어 부담을 덜기 위해 사회탐구로 과목을 전환했습니다.
+              자연계열 지망 학생(115명 추정) 중 무려 <strong>56명(48.7%)</strong>이 과탐의 극심한 내신/{{ examTerm }} 등급 방어 부담을 덜기 위해 사회탐구로 과목을 전환했습니다.
               이는 수능 최저학력기준 충족 확률을 비약적으로 끌어올리는 주효한 전략으로 작용했습니다.
             </template>
             <template v-else>
@@ -2281,14 +2281,6 @@ ChartJS.register(
   Legend
 )
 
-// Sub Tabs (숫자 기반 명확한 점프 탭)
-const subTabs = [
-  { id: 'radar', num: '1', label: '과목별 내신 vs 수능 등급 비교' },
-  { id: 'satamRun', num: '2', label: '사탐런 & 탐구 응시 분석' },
-  { id: 'minScoreMagic', num: '3', label: '수능최저 충족 실질 경쟁률' },
-  { id: 'strategyCards', num: '4', label: '2027 대입 5대 핵심 전략' }
-]
-
 const activeSubTab = ref('radar')
 let isClickScrolling = false
 let clickScrollTimeout = null
@@ -2505,10 +2497,14 @@ const currentGpaRaw = computed(() => {
 function isCsatRecord(r) {
   if (!r) return false
   const name = String(r.examName || '').trim()
+  const rawMonth = String(r.rawMonth || '').trim()
   if (name.includes('수능') || name.includes('대학수학능력시험') || name === 'CSAT') return true
+  if (rawMonth.includes('수능') || rawMonth.includes('대학수학능력시험') || rawMonth === 'CSAT') return true
   if (r.rawRow) {
+    if (Array.isArray(r.rawRow) && String(r.rawRow[0] || '').includes('수능')) return true
     const firstVal = String(Object.values(r.rawRow)[0] || '').trim()
     if (firstVal.includes('수능')) return true
+    if (r.rawRow['월'] && String(r.rawRow['월']).includes('수능')) return true
   }
   return false
 }
@@ -2564,6 +2560,28 @@ const highSchoolMockRecords = computed(() => {
     : (localCustomMockRecords.value || [])
   return all.filter(r => Number(r.grade) === 3 || !r.grade)
 })
+
+// 해당 대입학년도 수능 결과 존재 여부 판정:
+// 2026학년도 이하 과거 연도는 수능 결과가 이미 확정되어 있으므로 true
+// 2027학년도 이상은 '2027모의가채점' 또는 '2027모의결과'의 A컬럼(rawMonth/examName)에 '수능'이 있는 경우에만 true
+const hasCsatData = computed(() => {
+  if (Number(selectedAcademicYear.value) < 2027) return true
+  const records = highSchoolMockRecords.value || []
+  return records.some(isCsatRecord)
+})
+
+// 대시보드 용어 통일: 수능 데이터 미등록 시 '모의고사', 수능 데이터 등록(또는 과거 수능) 시 '수능'
+const examTerm = computed(() => hasCsatData.value ? '수능' : '모의고사')
+
+const academicYearLabel = computed(() => selectedAcademicYear.value || '2027')
+
+// Sub Tabs (숫자 기반 명확한 점프 탭)
+const subTabs = computed(() => [
+  { id: 'radar', num: '1', label: `과목별 내신 vs ${examTerm.value} 등급 비교` },
+  { id: 'satamRun', num: '2', label: '사탐런 & 탐구 응시 분석' },
+  { id: 'minScoreMagic', num: '3', label: '수능최저 충족 실질 경쟁률' },
+  { id: 'strategyCards', num: '4', label: `${academicYearLabel.value} 대입 5대 핵심 전략` }
+])
 
 const availableExamMonthOptions = computed(() => {
   const records = highSchoolMockRecords.value
@@ -2920,10 +2938,10 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
   const finalSci = clampGrade(cntSci ? totalSci / cntSci : null, 6.20)
 
   const subText = isCsat
-    ? `2027 수능 응시 ${studentCount}명 기준`
+    ? `${academicYearLabel.value} 수능 응시 ${studentCount}명 기준`
     : (filterKey === 'ALL'
-        ? `2027 모의고사(3·5·6·7·9·10월) 응시 ${studentCount}명 기준`
-        : `2027 ${meta.shortLabel} 응시 ${studentCount}명 기준`)
+        ? `${academicYearLabel.value} 모의고사(3·5·6·7·9·10월) 응시 ${studentCount}명 기준`
+        : `${academicYearLabel.value} ${meta.shortLabel} 응시 ${studentCount}명 기준`)
 
   const avgArray = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2) : '-'
 
@@ -3542,10 +3560,10 @@ const radarInsightsHtml = computed(() => {
   const maxInq = Math.max(Number(diffSoc), Number(diffSci)).toFixed(2)
 
   if (isCsat) {
-    return `2027학년도 수능 실채점 결과, 국어(<strong>${diffKor}등급↓</strong>), 수학(<strong>${diffMath}등급↓</strong>), 영어(<strong>${diffEng}등급↓</strong>), 탐구(<strong>${minInq}~${maxInq}등급↓</strong>) 등 모든 과목에서 <strong>수능 등급이 내신 대비 낮게 형성</strong>되었습니다. 따라서 정시보다는 <strong>우수한 내신을 기반으로 한 수시 전략</strong>의 타당성이 실증적으로 확인되었습니다.`
+    return `${academicYearLabel.value}학년도 수능 실채점 결과, 국어(<strong>${diffKor}등급↓</strong>), 수학(<strong>${diffMath}등급↓</strong>), 영어(<strong>${diffEng}등급↓</strong>), 탐구(<strong>${minInq}~${maxInq}등급↓</strong>) 등 모든 과목에서 <strong>수능 등급이 내신 대비 낮게 형성</strong>되었습니다. 따라서 정시보다는 <strong>우수한 내신을 기반으로 한 수시 전략</strong>의 타당성이 실증적으로 확인되었습니다.`
   }
 
-  return `2027학년도 3·5·6·7·9·10월 모의고사 누적 분석 결과, 국어(<strong>${diffKor}등급↓</strong>), 수학(<strong>${diffMath}등급↓</strong>), 탐구(<strong>${minInq}~${maxInq}등급↓</strong>) 등 <strong>모의고사 등급이 내신 대비 낮게 형성</strong>되는 경향을 보입니다. 수능 실전 난도와 N수생 유입을 감안할 때, <strong>우수한 내신을 바탕으로 수능 최저를 충족하는 수시 전략</strong>이 절대적으로 안전하고 유리합니다.`
+  return `${academicYearLabel.value}학년도 3·5·6·7·9·10월 모의고사 누적 분석 결과, 국어(<strong>${diffKor}등급↓</strong>), 수학(<strong>${diffMath}등급↓</strong>), 탐구(<strong>${minInq}~${maxInq}등급↓</strong>) 등 <strong>모의고사 등급이 내신 대비 낮게 형성</strong>되는 경향을 보입니다. 수능 실전 난도와 N수생 유입을 감안할 때, <strong>우수한 내신을 바탕으로 수능 최저를 충족하는 수시 전략</strong>이 절대적으로 안전하고 유리합니다.`
 })
 
 const radarChartOptions = {
@@ -4280,7 +4298,7 @@ const STRATEGY_CARDS = computed(() => {
       title: '수능은 정시 파이터를 위한 것이 아니라, 수시 최저를 위한 전략 무기',
       summary: '고3 재학생의 정시 성공 확률은 매우 낮습니다. 수능 공부는 정시가 아니라 수시 최저 충족이 목표여야 합니다.',
       details: [
-        `${currentSchool} 재학생 수능 평균 등급 분포상 정시 지원 시 수도권 4년제 합격권 진입이 제한적`,
+        `${currentSchool} 재학생 ${examTerm.value} 평균 등급 분포상 정시 지원 시 수도권 4년제 합격권 진입이 제한적`,
         '수능 공부의 목표를 4과목 정시 대비가 아닌 영어(절대평가) 및 사탐 1과목 등 2개 합 충족으로 압축할 것',
         satamSummary
       ]

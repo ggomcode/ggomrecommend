@@ -1272,6 +1272,7 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
     let grade = 3
     let monthOrder = null
     let examName = ''
+    let rawMonth = ''
     let seriesNum = 1
     let korSubject = ''
     let korRawScore = ''
@@ -1436,7 +1437,7 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       studentNum = r[4] != null ? String(r[4]).trim() : ''
       grade = Number(r[2]) || 3
 
-      const rawMonth = r[0] != null ? String(r[0]).trim() : ''
+      rawMonth = r[0] != null ? String(r[0]).trim() : ''
       const mNum = parseInt(rawMonth.replace(/[^0-9]/g, ''), 10)
       if (!isNaN(mNum) && mNum >= 3 && mNum <= 11) {
         monthOrder = mNum
@@ -1569,6 +1570,7 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
 
       classNum = getVal('반', '학급') || ''
       studentNum = getVal('번호', '출석번호') || ''
+      rawMonth = getVal('월', '시행월', '회차') || (r && r[0] != null ? String(r[0]).trim() : '')
       examName = getVal('시험명', '회차', '모의고사', '월', '구분', '시험구분', '시험', '학평', '모의평가')
       if (!examName && r && r[0] != null && String(r[0]).trim()) {
         examName = String(r[0]).trim()
@@ -1670,6 +1672,7 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       grade,
       monthOrder: monthOrder || (parseInt(String(examName).replace(/[^0-9]/g, ''), 10) || null),
       examName,
+      rawMonth: rawMonth || String(examName || ''),
       name,
       classNum,
       studentNum,
