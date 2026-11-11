@@ -8,6 +8,7 @@
  */
 
 const TARGET_SPREADSHEET_ID = '1U5Vnx2x8gnXQlI3N4deyaurKxj-naZP0cRBb3lQnT4o'; // 배포용 시트 ID
+const CUTOFF_SHEET_NAME = '2027모의등급컷'; // 기본 가채점 환산 기준표 (동적 감지 실패 시 사용)
 const TARGET_ENC_COL_NAME = 'encrypted_data'; // 암호문 헤더명 (A열 통일)
 
 // ==========================================================
@@ -97,7 +98,7 @@ function convertMockGradesToEbs() {
 
   let cutoffSheet = ss.getSheetByName(`${targetYear}모의등급컷`);
   if (!cutoffSheet) {
-    cutoffSheet = ss.getSheetByName('2027모의등급컷');
+    cutoffSheet = ss.getSheetByName(CUTOFF_SHEET_NAME);
   }
   if (!cutoffSheet) {
     const sheets = ss.getSheets();
