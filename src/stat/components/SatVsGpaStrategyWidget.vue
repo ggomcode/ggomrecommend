@@ -21,7 +21,17 @@
       <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
         <div class="bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl text-right">
           <span class="text-[10px] text-amber-800 block font-semibold">사탐런 전향율</span>
-          <span class="text-sm font-black text-amber-700 font-mono">{{ effectiveSatamStats.totalRunRate }}% <span class="text-[11px] font-medium text-amber-600">({{ effectiveSatamStats.totalRunCount }}명)</span></span>
+          <span class="text-sm font-black text-amber-700 font-mono">
+            <template v-if="isLoadingMockExams && (!mockStats || effectiveSatamStats.naturalCohortCount === 0)">
+              <span class="text-xs text-amber-600 font-medium">분석 중...</span>
+            </template>
+            <template v-else-if="effectiveSatamStats.naturalCohortCount > 0">
+              {{ effectiveSatamStats.totalRunRate }}% <span class="text-[11px] font-medium text-amber-600">({{ effectiveSatamStats.totalRunCount }}명)</span>
+            </template>
+            <template v-else>
+              -
+            </template>
+          </span>
         </div>
         <div class="bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl text-right" :title="`우리학교 수능최저 지원 ${schoolMinScoreStats.totalMinApps}건 실측 통계\n• 전체 (논술포함): 최초 ${schoolMinScoreStats.avgInitialRate}:1 ➔ 실질 ${schoolMinScoreStats.avgRealRate}:1 (체감 ${schoolMinScoreStats.avgEffectiveRate}:1)\n• 학생부교과 (${schoolMinScoreStats.gpaCount}건): 최초 ${schoolMinScoreStats.gpaInitialRate}:1 ➔ 실질 ${schoolMinScoreStats.gpaRealRate}:1 (체감 ${schoolMinScoreStats.gpaEffectiveRate}:1)`">
           <span class="text-[10px] text-blue-800 block font-semibold">최저 실질경쟁률</span>
@@ -681,7 +691,15 @@
 
           <!-- 타이틀 -->
           <h3 class="text-xl sm:text-2xl font-black tracking-tight m-0">
-            자연계열 학생 중 {{ effectiveSatamStats.totalRunRate }}% ({{ effectiveSatamStats.totalRunCount }}명)가 사탐으로 전향했습니다
+            <template v-if="isLoadingMockExams && (!mockStats || effectiveSatamStats.naturalCohortCount === 0)">
+              자연계열 학생의 사탐 전향 현황을 분석 중입니다...
+            </template>
+            <template v-else-if="effectiveSatamStats.naturalCohortCount > 0">
+              자연계열 학생 중 {{ effectiveSatamStats.totalRunRate }}% ({{ effectiveSatamStats.totalRunCount }}명)가 사탐으로 전향했습니다
+            </template>
+            <template v-else>
+              모의고사 성적 데이터 확인 대기 중
+            </template>
           </h3>
 
           <p class="text-xs text-white/90 mt-1.5 max-w-2xl leading-relaxed">
@@ -2507,11 +2525,11 @@ watch(selectedAcademicYear, (newYear) => {
   }
 })
 
-// 모의고사 성적 레코드 로드 시 사탐런 통계 자동 산출
-watch(mockExamRecords, (records) => {
+// 모의고사 성적 레코드 및 수시 지원 데이터 로드 시 사탐런 통계 자동 산출
+watch([mockExamRecords, applications], ([records, apps]) => {
   if (records && records.length > 0) {
     try {
-      const stats = calculateSatamRunStats(records, applications.value)
+      const stats = calculateSatamRunStats(records, apps || [])
       if (stats && stats.naturalCohortCount > 0) {
         mockStats.value = stats
       }
@@ -3963,22 +3981,18 @@ const effectiveSatamStats = computed(() => {
     return mockStats.value
   }
   return {
-    naturalCohortCount: 115,
-    appsBasedCohortCount: 102,
-    mockBasedCohortCount: 13,
-    totalRunCount: 56,
-    totalRunRate: '48.7',
-    run1Count: 30,
-    run1Rate: '26.1',
-    run2Count: 26,
-    run2Rate: '22.6',
-    keptCount: 59,
-    keptRate: '51.3',
-    popularSocialSubjects: [
-      { name: '사회·문화', count: 32 },
-      { name: '생활과 윤리', count: 28 },
-      { name: '윤리와 사상', count: 8 }
-    ],
+    naturalCohortCount: 0,
+    appsBasedCohortCount: 0,
+    mockBasedCohortCount: 0,
+    totalRunCount: 0,
+    totalRunRate: '0.0',
+    run1Count: 0,
+    run1Rate: '0.0',
+    run2Count: 0,
+    run2Rate: '0.0',
+    keptCount: 0,
+    keptRate: '0.0',
+    popularSocialSubjects: [],
     naturalCohort: []
   }
 })
