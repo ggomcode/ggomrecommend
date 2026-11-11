@@ -74,19 +74,22 @@
       <!-- KPI 2: 수시 지원율 추이 -->
       <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between text-slate-500 mb-2">
-          <span class="text-xs font-bold">재학생 수시 지원율</span>
+          <span class="text-xs font-bold">재학생 수시 지원율 (5개년 평균)</span>
           <span class="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 text-sm">🎯</span>
         </div>
         <div>
           <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            {{ latestYearData?.applicantRate != null ? latestYearData.applicantRate : '-' }}<span v-if="latestYearData?.applicantRate != null" class="text-xs font-semibold text-slate-400 ml-1">%</span>
+            {{ avg5YearApplicantRate != null ? avg5YearApplicantRate : (latestYearData?.applicantRate != null ? latestYearData.applicantRate : '-') }}<span v-if="avg5YearApplicantRate != null || latestYearData?.applicantRate != null" class="text-xs font-semibold text-slate-400 ml-1">%</span>
           </div>
           <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-            <template v-if="hasMultiYearComparison && previousYearData?.applicantRate != null">
+            <template v-if="hasMultiYearComparison && previousYearData?.applicantRate != null && latestYearData?.applicantRate != null">
               <span :class="rateGrowth >= 0 ? 'text-emerald-600 font-bold flex items-center' : 'text-rose-600 font-bold flex items-center'">
                 <span>{{ rateGrowth >= 0 ? '▲ +' : '▼ ' }}</span>{{ rateGrowth }}%p
               </span>
               <span>({{ previousYearData.year }}년 {{ previousYearData.applicantRate }}% → {{ latestYearData.year }}년 {{ latestYearData.applicantRate }}%)</span>
+            </template>
+            <template v-else-if="latestYearData?.applicantRate != null">
+              <span class="text-slate-500 text-[11px]">최신({{ latestYearData.year }}년): {{ latestYearData.applicantRate }}%</span>
             </template>
             <template v-else>
               <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
@@ -98,19 +101,22 @@
       <!-- KPI 3: 평균 내신 성적 변화 -->
       <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between text-slate-500 mb-2">
-          <span class="text-xs font-bold">지원자 평균 내신 추이</span>
+          <span class="text-xs font-bold">지원자 평균 내신 추이 (5개년 평균)</span>
           <span class="p-1.5 rounded-lg bg-sky-50 text-sky-600 text-sm">📈</span>
         </div>
         <div>
           <div class="text-2xl sm:text-3xl font-black text-indigo-600 tracking-tight">
-            {{ latestYearData?.avgGrade != null ? latestYearData.avgGrade.toFixed(2) : '-' }}<span v-if="latestYearData?.avgGrade != null" class="text-xs font-semibold text-slate-400 ml-1">등급</span>
+            {{ avg5YearGrade != null ? avg5YearGrade.toFixed(2) : (latestYearData?.avgGrade != null ? latestYearData.avgGrade.toFixed(2) : '-') }}<span v-if="avg5YearGrade != null || latestYearData?.avgGrade != null" class="text-xs font-semibold text-slate-400 ml-1">등급</span>
           </div>
           <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-            <template v-if="hasMultiYearComparison && previousYearData?.avgGrade != null">
+            <template v-if="hasMultiYearComparison && previousYearData?.avgGrade != null && latestYearData?.avgGrade != null">
               <span :class="gradeDiff <= 0 ? 'text-indigo-600 font-bold flex items-center' : 'text-slate-600 font-bold flex items-center'">
                 <span>{{ gradeDiff <= 0 ? '▲ +' : '▼ -' }}</span>{{ Math.abs(gradeDiff).toFixed(2) }}등급
               </span>
               <span>전년({{ previousYearData.year }}년 {{ previousYearData.avgGrade }}) 대비 {{ gradeDiff <= 0 ? '상승' : '하락' }}</span>
+            </template>
+            <template v-else-if="latestYearData?.avgGrade != null">
+              <span class="text-slate-500 text-[11px]">최신({{ latestYearData.year }}년): {{ latestYearData.avgGrade.toFixed(2) }}등급</span>
             </template>
             <template v-else>
               <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
@@ -582,6 +588,42 @@ const gradeDiff = computed(() => {
 
 const total5YearApps = computed(() => {
   return years.reduce((acc, y) => acc + (byYear[y]?.totalApplications || 0), 0)
+})
+
+// 5개년 전체 평균 재학생 수시 지원율 (가중 평균: 총 수시 지원자 수 / 총 재학생 수)
+const avg5YearApplicantRate = computed(() => {
+  const validYears = years.filter(y => byYear[y]?.hasData && byYear[y]?.applicantRate != null)
+  if (validYears.length === 0) return null
+
+  const totalAppStu = validYears.reduce((sum, y) => sum + (byYear[y]?.applicantStudents || 0), 0)
+  const totalStu = validYears.reduce((sum, y) => sum + (byYear[y]?.totalStudents || 0), 0)
+  if (totalStu > 0 && totalAppStu > 0) {
+    return Number(((totalAppStu / totalStu) * 100).toFixed(1))
+  }
+  const sumRate = validYears.reduce((sum, y) => sum + byYear[y].applicantRate, 0)
+  return Number((sumRate / validYears.length).toFixed(1))
+})
+
+// 5개년 전체 평균 지원자 내신 (가중 평균: 연도별 지원 건수 가중 평균)
+const avg5YearGrade = computed(() => {
+  const validYears = years.filter(y => byYear[y]?.hasData && byYear[y]?.avgGrade != null)
+  if (validYears.length === 0) return null
+
+  let totalApps = 0
+  let weightedSum = 0
+  validYears.forEach(y => {
+    const apps = byYear[y]?.totalApplications || 0
+    const grade = byYear[y]?.avgGrade
+    if (apps > 0 && grade != null) {
+      totalApps += apps
+      weightedSum += (grade * apps)
+    }
+  })
+  if (totalApps > 0 && weightedSum > 0) {
+    return Number((weightedSum / totalApps).toFixed(2))
+  }
+  const sumGrade = validYears.reduce((sum, y) => sum + byYear[y].avgGrade, 0)
+  return Number((sumGrade / validYears.length).toFixed(2))
 })
 
 // Chart 1: Volume Chart (Total Applications Bar + Applicants Line)
