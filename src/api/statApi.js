@@ -442,10 +442,10 @@ export function parseKcueRows(csvText, customPassword = null) {
   const password = customPassword || getStatSessionPassword()
   const rawHeaders = rows[0] || []
   
-  // 1. FA열(157번째, 0-index: 156), DA열(105번째, 0-index: 104), CA열(79번째, 0-index: 78) 또는 'encrypted_data' 헤더 열 확인
+  // 1. A열(0-index: 0), FA열(157번째, 0-index: 156), DA열(105번째, 0-index: 104), CA열(79번째, 0-index: 78) 또는 'encrypted_data' 헤더 열 확인
   let encColIdx = rawHeaders.findIndex(h => String(h || '').trim() === 'encrypted_data')
   if (encColIdx === -1) {
-    for (const cIdx of [156, 104, 78]) {
+    for (const cIdx of [0, 156, 104, 78]) {
       if (rawHeaders.length > cIdx && String(rows[1]?.[cIdx] || '').trim().startsWith('U2FsdGVkX1')) {
         encColIdx = cIdx
         break
@@ -882,10 +882,18 @@ export async function getStatSampleCipher(sheetId, forceReload = false) {
       const rawHeaders = rows[0] || []
       let encColIdx = rawHeaders.findIndex(h => String(h || '').trim() === 'encrypted_data')
       if (encColIdx === -1) {
-        if (rawHeaders.length >= 157) {
-          encColIdx = 156
-        } else if (rawHeaders.length >= 105) {
-          encColIdx = 104
+        for (const cIdx of [0, 156, 104, 78]) {
+          if (rawHeaders.length > cIdx && String(rows[1]?.[cIdx] || '').trim().startsWith('U2FsdGVkX1')) {
+            encColIdx = cIdx
+            break
+          }
+        }
+        if (encColIdx === -1) {
+          if (rawHeaders.length >= 157) {
+            encColIdx = 156
+          } else if (rawHeaders.length >= 105) {
+            encColIdx = 104
+          }
         }
       }
 
@@ -1230,10 +1238,10 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
 
   const rawHeaders = rows[0] || []
   
-  // CA열(79번째, 0-index: 78), encrypted_data 열 또는 U2FsdGVkX1 암호문 열 탐색
+  // A열(0-index: 0), CA열(79번째, 0-index: 78), encrypted_data 열 또는 U2FsdGVkX1 암호문 열 탐색
   let encColIdx = rawHeaders.findIndex(h => String(h || '').trim() === 'encrypted_data')
   if (encColIdx === -1) {
-    for (const cIdx of [78, 156, 104]) {
+    for (const cIdx of [0, 78, 156, 104]) {
       if (rawHeaders.length > cIdx && String(rows[1]?.[cIdx] || '').trim().startsWith('U2FsdGVkX1')) {
         encColIdx = cIdx
         break
@@ -2573,11 +2581,19 @@ export async function fetchAndParsePromotionData(sheetId = null, customPassword 
 
   const rawHeaders = rows[0] || []
   let encColIdx = rawHeaders.findIndex(h => String(h || '').trim() === 'encrypted_data')
-  if (encColIdx === -1 && rows[1]) {
-    for (let c = 0; c < rows[1].length; c++) {
-      if (String(rows[1][c] || '').trim().startsWith('U2FsdGVkX1')) {
-        encColIdx = c
+  if (encColIdx === -1) {
+    for (const cIdx of [0, 156, 104, 78]) {
+      if (rawHeaders.length > cIdx && String(rows[1]?.[cIdx] || '').trim().startsWith('U2FsdGVkX1')) {
+        encColIdx = cIdx
         break
+      }
+    }
+    if (encColIdx === -1 && rows[1]) {
+      for (let c = 0; c < rows[1].length; c++) {
+        if (String(rows[1][c] || '').trim().startsWith('U2FsdGVkX1')) {
+          encColIdx = c
+          break
+        }
       }
     }
   }

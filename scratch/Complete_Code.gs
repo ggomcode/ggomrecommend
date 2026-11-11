@@ -2,22 +2,21 @@
  * ==========================================================
  * 포곡고 대입 데이터 통합 관리 & 자동 라우팅 배포 시스템 (Apps Script)
  * ----------------------------------------------------------
- * 1. [상단 설정] 암호화 시트 목록과 평문 시트 목록 관리
- * 2. [가채점] 2027모의등급컷 기준 등급 자동 변환 (AS:BB)
- * 3. [배포] 현재 탭 자동 배포 / 등록된 모든 시트 일괄 배포
- * 4. [⭐2027수시] CE:DR 40개 매칭 컬럼 자동 동기화 & 원클릭 암호화 배포
+ * 1. [가채점] 연도 자동 감지 모의등급컷 기준 등급 자동 변환 (AS:BB)
+ * 2. [원클릭 일괄 배포] 수시 40개 컬럼 자동 매칭 + A열 단일 암호화 배포 + 평문 배포
  * ==========================================================
  */
 
 const TARGET_SPREADSHEET_ID = '1U5Vnx2x8gnXQlI3N4deyaurKxj-naZP0cRBb3lQnT4o'; // 배포용 시트 ID
-const CUTOFF_SHEET_NAME = '2027모의등급컷'; // 가채점 환산 기준표
-const TARGET_ENC_COL_NAME = 'encrypted_data';
+const TARGET_ENC_COL_NAME = 'encrypted_data'; // 암호문 헤더명 (A열 통일)
 
 // ==========================================================
 // ⭐ [관리자 설정] 시트 분류 목록
 // ==========================================================
 
 // [1] 암호화하여 배포할 시트 목록 (학생 개인정보, 수시지원, 모의고사 성적)
+//     * 모든 암호화 시트는 배포 시트의 'A열'에 단일화되어 초경량 배포됩니다.
+//     * 수시 시트는 배포 직전 CE:DR 40개 컬럼 자동 매칭이 선행 실행됩니다.
 const ENCRYPTED_SHEETS = [
   '2027수시',
   '2026수시',
@@ -33,66 +32,178 @@ const PLAIN_SHEETS = [
 ];
 
 // ==========================================================
-// 상단 커스텀 메뉴 등록
+// 🔍 최신 가채점 연도 자동 감지 헬퍼
+// ==========================================================
+function detectLatestMockYear() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = ss.getSheets();
+  let maxYear = 2027; // 기본값
+
+  for (const sheet of sheets) {
+    const name = sheet.getName();
+    const match = name.match(/(\d{4})모의/);
+    if (match) {
+      const year = parseInt(match[1], 10);
+      if (year > maxYear) {
+        maxYear = year;
+      }
+    }
+  }
+  return maxYear;
+}
+
+// ==========================================================
+// 🚀 상단 커스텀 메뉴 등록 (심플 2단 구조)
 // ==========================================================
 function onOpen() {
+  const latestYear = detectLatestMockYear();
   SpreadsheetApp.getUi()
     .createMenu('🚀 대입 데이터 관리')
-    .addItem('1. [가채점] 2027모의등급컷 기준 등급 자동 변환 (AS:BB)', 'convertMockGradesToEbs')
+    .addItem(`1. [가채점] ${latestYear}모의등급컷 기준 등급 자동 변환 (AS:BB)`, 'convertMockGradesToEbs')
     .addSeparator()
-    .addItem('2. [배포] 현재 탭 자동 배포 (암호화/평문 자동 판별)', 'syncCurrentSheetUpsert')
-    .addItem('3. [배포] 등록된 모든 시트 일괄 배포 (원클릭 동기화)', 'deployAllRegisteredSheets')
-    .addSeparator()
-    .addItem("4. ['2027수시'] CE:DR 자동 매칭 & 암호화 배포 (원스톱)", 'matchAndDeploy2027Susi')
-    .addItem("5. ['2027수시'] CE:DR 자동 매칭만 실행 (시트 확인용)", 'rematch2027SusiColumns')
+    .addItem('2. [배포] 등록된 모든 시트 일괄 배포 (수시 자동 매칭 포함)', 'deployAllRegisteredSheets')
     .addToUi();
 }
 
 /**
  * ==========================================================
- * [기능 4] '2027수시' CE:DR 자동 매칭 & 암호화 배포 원스톱 파이프라인
+ * [기능 1] 모의등급컷 기준 가채점 EBS 등급 환산 (AS:BB열)
  * ----------------------------------------------------------
- * 1. 2027수시 시트의 CE:DR(40개 열)을 내장 사전 기반으로 100% 자동 매칭
- * 2. 매칭 직후, 배포 시트로 즉시 AES 암호화 배포까지 논스톱 수행
+ * - 현재 작업 중인 시트 또는 등록된 최신 연도 탭을 자동 감지하여 등급 산출
  * ==========================================================
  */
-function matchAndDeploy2027Susi() {
+function convertMockGradesToEbs() {
   const ui = SpreadsheetApp.getUi();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const susiSheet = ss.getSheetByName('2027수시');
+  let currentSheet = ss.getActiveSheet();
+  let currentName = currentSheet.getName();
 
-  if (!susiSheet) {
-    ui.alert("❌ '2027수시' 시트를 찾을 수 없습니다.");
+  // 현재 시트가 가채점/모의 시트가 아니면 최신 가채점 시트로 자동 탐색
+  if (!currentName.includes('가채점') && !currentName.includes('모의')) {
+    const latestYear = detectLatestMockYear();
+    const fallbackSheet = ss.getSheetByName(`${latestYear}모의가채점`) || ss.getSheetByName('2027모의가채점');
+    if (fallbackSheet) {
+      currentSheet = fallbackSheet;
+      currentName = fallbackSheet.getName();
+    } else {
+      const confirm = ui.alert('확인', `'${currentName}' 탭이 가채점 시트가 맞습니까?\n계속 진행하시겠습니까?`, ui.ButtonSet.YES_NO);
+      if (confirm !== ui.Button.YES) return;
+    }
+  }
+
+  // 연도 추출 및 대응 등급컷 시트 탐색
+  const yearMatch = currentName.match(/(\d{4})/);
+  const targetYear = yearMatch ? parseInt(yearMatch[1], 10) : detectLatestMockYear();
+
+  let cutoffSheet = ss.getSheetByName(`${targetYear}모의등급컷`);
+  if (!cutoffSheet) {
+    cutoffSheet = ss.getSheetByName('2027모의등급컷');
+  }
+  if (!cutoffSheet) {
+    const sheets = ss.getSheets();
+    cutoffSheet = sheets.find(s => s.getName().includes('모의등급컷') || s.getName().includes('등급컷'));
+  }
+
+  if (!cutoffSheet) {
+    ui.alert(`❌ 등급컷 기준 시트('${targetYear}모의등급컷')를 찾을 수 없습니다.`);
     return;
   }
 
-  const lastRow = susiSheet.getLastRow();
-  if (lastRow < 2) {
-    ui.alert("⚠️ '2027수시' 시트에 데이터가 없습니다.");
+  const cutoffSheetName = cutoffSheet.getName();
+  const cutoffRows = cutoffSheet.getDataRange().getValues();
+  const monthCutoffs = parseAllMonthCutoffs(cutoffRows);
+
+  const lastRow = currentSheet.getLastRow();
+  if (lastRow < 3) {
+    ui.alert(`⚠️ '${currentName}' 시트에 변환할 학생 데이터(3행 이후)가 없습니다.`);
     return;
   }
 
-  const confirm = ui.alert(
-    "['2027수시'] 매칭 & 암호화 배포 확인",
-    `현재 '2027수시' 시트의 ${lastRow - 1}개 행에 대해:\n\n` +
-    `1. CE:DR 40개 매칭 컬럼을 자동 동기화하고\n` +
-    `2. 배포 시트(${TARGET_SPREADSHEET_ID.slice(0, 8)}...)로 즉시 암호화 배포하시겠습니까?`,
+  const dataRange = currentSheet.getRange(3, 1, lastRow - 2, 54);
+  const rows = dataRange.getValues();
+  const convertedResults = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const name = String(row[5] || '').trim();
+
+    if (!name) {
+      convertedResults.push(new Array(10).fill(''));
+      continue;
+    }
+
+    const monthNum = parseInt(row[0]) || 3;
+    const mCuts = monthCutoffs[monthNum] || monthCutoffs[3] || {};
+
+    const korSubj = String(row[6] || '').trim();
+    const korScore = row[9];
+    const korGrade = calcCutoffGrade(korScore, mCuts[cleanSubjName(korSubj)]);
+
+    const mathSubj = String(row[13] || '').trim();
+    const mathScore = row[16];
+    const mathGrade = calcCutoffGrade(mathScore, mCuts[cleanSubjName(mathSubj)]);
+
+    const engScore = row[20];
+    const engGrade = calcAbsoluteEnglish(engScore);
+
+    const histScore = row[35];
+    const histGrade = calcAbsoluteHistory(histScore);
+
+    const inq1Subj = String(row[25] || '').trim();
+    const inq1Score = row[26];
+    const inq1Grade = calcCutoffGrade(inq1Score, mCuts[cleanSubjName(inq1Subj)]);
+
+    const inq2Subj = String(row[30] || '').trim();
+    const inq2Score = row[31];
+    const inq2Grade = calcCutoffGrade(inq2Score, mCuts[cleanSubjName(inq2Subj)]);
+
+    convertedResults.push([
+      korSubj, korGrade,
+      mathSubj, mathGrade,
+      engGrade, histGrade,
+      inq1Subj, inq1Grade,
+      inq2Subj, inq2Grade
+    ]);
+  }
+
+  currentSheet.getRange(3, 45, convertedResults.length, 10).setValues(convertedResults);
+
+  ui.alert(`🎉 [등급 환산 완료]\n\n` +
+           `• 대상 탭: ${currentName}\n` +
+           `• 기준 등급컷: ${cutoffSheetName}\n` +
+           `• 환산 학생 수: ${convertedResults.length}명\n` +
+           `• 반영 영역: AS3:BB${lastRow}\n\n` +
+           `가채점 등급 환산이 정상적으로 적용되었습니다.`);
+}
+
+/**
+ * ==========================================================
+ * [기능 2] 등록된 모든 시트 일괄 배포 (원클릭 동기화 & 수시 매칭 통합)
+ * ----------------------------------------------------------
+ * 1. 수시 시트(예: 2027수시)는 배포 직전 CE:DR 40개 컬럼 최신 매칭 자동 선행
+ * 2. 모든 암호화 시트는 배포 시트 'A열'로 단일화되어 초경량 저장
+ * 3. 평문 시트는 원본 열 그대로 온전하게 동기화
+ * ==========================================================
+ */
+function deployAllRegisteredSheets() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  const confirm = ui.alert('일괄 배포 확인', 
+    `등록된 모든 시트를 배포 시트로 일괄 동기화하시겠습니까?\n\n` +
+    `• 암호화 대상 (A열 단일화): ${ENCRYPTED_SHEETS.join(', ')}\n` +
+    `• 평문 대상 (통계/기준표): ${PLAIN_SHEETS.join(', ')}\n\n` +
+    `※ 수시 시트는 배포 전 CE:DR 40개 매칭 컬럼이 자동으로 최신 반영됩니다.`, 
     ui.ButtonSet.YES_NO
   );
   if (confirm !== ui.Button.YES) return;
 
-  // 1. 배포 비밀번호를 먼저 입력받음
-  const password = promptPassword(ui);
-  if (!password) return;
-
-  // 2. 1단계: CE:DR 40개 매칭 컬럼 자동 실행
-  const matchResult = executeMatchingLogic(susiSheet);
-  if (!matchResult.success) {
-    ui.alert("❌ 매칭 실패: " + matchResult.error);
-    return;
+  let password = null;
+  if (ENCRYPTED_SHEETS.length > 0) {
+    password = promptPassword(ui);
+    if (!password) return;
   }
 
-  // 3. 2단계: 배포 시트로 AES 암호화 배포 실행
   let targetSs = null;
   try {
     targetSs = SpreadsheetApp.openById(TARGET_SPREADSHEET_ID);
@@ -101,74 +212,225 @@ function matchAndDeploy2027Susi() {
     return;
   }
 
-  // 2027수시 암호화 배포 (완전 동기화 모드)
-  const deployResult = executeEncryptedDeploy(susiSheet, targetSs, password, true);
+  const results = [];
 
-  if (deployResult.success) {
-    ui.alert(
-      "🎉 ['2027수시' 매칭 & 암호화 배포 완료]\n\n" +
-      `[1단계 CE:DR 매칭 결과]\n` +
-      `• 전체 대상 행: ${matchResult.totalRows}건\n` +
-      `• 40개 매칭 컬럼 정상 반영: ${matchResult.matchedCount}건\n` +
-      (matchResult.collegeCount > 0 ? `• 전문대 수시 자동 보강: ${matchResult.collegeCount}건\n` : '') +
-      `\n[2단계 암호화 배포 결과]\n` +
-      `• 배포 시트 갱신: ${deployResult.totalRows || deployResult.updateCount + deployResult.insertCount}건 (${deployResult.targetEncColLetter}열)\n\n` +
-      `선배 도플갱어 추천 및 상담 시스템에 최신 데이터가 즉시 반영되었습니다!`
-    );
-  } else {
-    ui.alert(`⚠️ CE:DR 매칭은 완료되었으나, 암호화 배포 중 오류가 발생했습니다:\n${deployResult.error}`);
+  // 1) 평문 시트 배포
+  for (const sheetName of PLAIN_SHEETS) {
+    const s = ss.getSheetByName(sheetName);
+    if (!s) {
+      results.push(`• [평문 스킵] '${sheetName}' (원본에 없음)`);
+      continue;
+    }
+    const res = executePlainDeploy(s, targetSs);
+    if (res.success) {
+      results.push(`• [평문 배포] '${sheetName}': ${res.rows}행 동기화 완료`);
+    } else {
+      results.push(`• [평문 실패] '${sheetName}': ${res.error}`);
+    }
   }
+
+  // 2) 암호화 시트 배포 (수시 시트는 매칭 로직 자동 통합)
+  for (const sheetName of ENCRYPTED_SHEETS) {
+    const s = ss.getSheetByName(sheetName);
+    if (!s) {
+      results.push(`• [암호화 스킵] '${sheetName}' (원본에 없음)`);
+      continue;
+    }
+
+    let matchSummary = '';
+    // 수시 시트인 경우 CE:DR 40개 컬럼 선행 매칭
+    if (sheetName.includes('수시')) {
+      const matchRes = executeMatchingLogic(s);
+      if (matchRes.success) {
+        matchSummary = ` (CE:DR ${matchRes.matchedCount}건 매칭완료)`;
+      } else {
+        matchSummary = ` (⚠️ 매칭 경고: ${matchRes.error})`;
+      }
+    }
+
+    // A열 단일화 암호화 배포 실행
+    const res = executeEncryptedDeploy(s, targetSs, password, true);
+    if (res.success) {
+      results.push(`• [암호화 배포] '${sheetName}': ${res.totalRows}건 반영 (A열 단일화)${matchSummary}`);
+    } else {
+      results.push(`• [암호화 실패] '${sheetName}': ${res.error}`);
+    }
+  }
+
+  ui.alert(`🎉 [일괄 배포 완료]\n\n` + results.join('\n'));
 }
 
 /**
  * ==========================================================
- * [기능 5] '2027수시' CE:DR 자동 매칭만 실행 (배포 전 확인용)
+ * [코어 파이프라인 1] 평문(비암호화) 배포 실행 엔진
  * ==========================================================
  */
-function rematch2027SusiColumns() {
-  const ui = SpreadsheetApp.getUi();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const susiSheet = ss.getSheetByName('2027수시');
+function executePlainDeploy(sourceSheet, targetSs) {
+  try {
+    const sheetName = sourceSheet.getName();
+    let targetSheet = targetSs.getSheetByName(sheetName);
+    if (!targetSheet) {
+      targetSheet = targetSs.insertSheet(sheetName);
+    }
 
-  if (!susiSheet) {
-    ui.alert("❌ '2027수시' 시트를 찾을 수 없습니다.");
-    return;
-  }
+    const srcLastRow = sourceSheet.getLastRow();
+    const srcLastCol = sourceSheet.getLastColumn();
 
-  const lastRow = susiSheet.getLastRow();
-  if (lastRow < 2) {
-    ui.alert("⚠️ '2027수시' 시트에 데이터가 없습니다.");
-    return;
-  }
+    if (srcLastRow < 1 || srcLastCol < 1) {
+      targetSheet.clearContents();
+      return { success: true, rows: 0, cols: 0 };
+    }
 
-  const confirm = ui.alert(
-    "CE:DR 매칭 자동 동기화 확인",
-    `현재 '2027수시' 시트의 ${lastRow - 1}개 행에 대해 CE:DR 컬럼(40개 열)을 자동 매칭하시겠습니까?\n\n` +
-    `• 기존 CE:DR 범위를 깨끗이 초기화하고\n` +
-    `• MatchingData.gs의 내장 사전을 대조하여 각 행에 정확한 40개 컬럼을 채웁니다.\n` +
-    `• 새로 추가된 전문대 수시 행도 표준 전문대 서식으로 자동 보강됩니다.`,
-    ui.ButtonSet.YES_NO
-  );
-  if (confirm !== ui.Button.YES) return;
+    const srcData = sourceSheet.getRange(1, 1, srcLastRow, srcLastCol).getValues();
 
-  const res = executeMatchingLogic(susiSheet);
-  if (res.success) {
-    ui.alert(
-      "🎉 [2027수시 CE:DR 매칭 완료]\n\n" +
-      `• 전체 대상 행: 총 ${res.totalRows}건\n` +
-      `• 40개 매칭 컬럼 정상 반영: ${res.matchedCount}건\n` +
-      (res.collegeCount > 0 ? `• 전문대 수시 자동 보강: ${res.collegeCount}건\n` : '') +
-      (res.fallbackCount > 0 ? `• 기타 신규 추가건: ${res.fallbackCount}건\n\n` : '\n') +
-      `시트의 CE2:DR${lastRow} 영역이 최신 데이터로 완벽하게 채워졌습니다!`
-    );
-  } else {
-    ui.alert("❌ 매칭 실패: " + res.error);
+    const targetMaxRows = targetSheet.getMaxRows();
+    if (targetMaxRows < srcLastRow) {
+      targetSheet.insertRowsAfter(targetMaxRows, srcLastRow - targetMaxRows);
+    }
+    const targetMaxCols = targetSheet.getMaxColumns();
+    if (targetMaxCols < srcLastCol) {
+      targetSheet.insertColumnsAfter(targetMaxCols, srcLastCol - targetMaxCols);
+    }
+
+    targetSheet.clearContents();
+    targetSheet.getRange(1, 1, srcLastRow, srcLastCol).setValues(srcData);
+
+    return { success: true, rows: srcLastRow, cols: srcLastCol };
+  } catch (e) {
+    return { success: false, error: e.message };
   }
 }
 
 /**
  * ==========================================================
- * [코어 매칭 엔진] 2027수시 CE:DR 매칭 로직
+ * [코어 파이프라인 2] AES 암호화 배포 실행 엔진 (A열 단일화 초경량)
+ * ----------------------------------------------------------
+ * - 모든 암호화 탭의 암호문을 배포 시트의 'A열(1열)' 1개 열로 완전히 통일
+ * - 기존 FA(157), DA(105), CA(79) 등의 유령 열 데이터를 완전히 제거하여 용량 극소화
+ * - 배포 전 기존 데이터 암호문과 비밀번호 일치 여부를 사전 검증하여 데이터 파손 방지
+ * ==========================================================
+ */
+function executeEncryptedDeploy(sourceSheet, targetSs, password, isFullSync) {
+  try {
+    const sheetName = sourceSheet.getName();
+    const targetEncColIndex = 1; // ⭐ 무조건 A열(1번째 열)로 단일화
+    const targetEncColLetter = 'A';
+
+    let targetSheet = targetSs.getSheetByName(sheetName);
+    if (!targetSheet) {
+      targetSheet = targetSs.insertSheet(sheetName);
+    }
+
+    const srcLastRow = sourceSheet.getLastRow();
+    const srcLastCol = sourceSheet.getLastColumn();
+    if (srcLastRow < 2) {
+      return { success: false, error: '동기화할 데이터가 없습니다.' };
+    }
+
+    const srcData = sourceSheet.getRange(1, 1, srcLastRow, srcLastCol).getValues();
+    const srcHeaders = srcData[0];
+
+    // [보안 안전장치] 기존 배포 시트에 암호화 데이터가 있을 경우 비밀번호 일치 여부 사전 검증
+    const targetLastRow = targetSheet.getLastRow();
+    const targetMaxCols = targetSheet.getMaxColumns();
+    if (targetLastRow > 1) {
+      let sampleCipher = '';
+
+      // 1순위: A열 샘플 탐색
+      const aColSamples = targetSheet.getRange(2, 1, Math.min(10, targetLastRow - 1), 1).getValues();
+      for (const row of aColSamples) {
+        const val = String(row[0] || '').trim();
+        if (val.startsWith('U2FsdGVkX1')) {
+          sampleCipher = val;
+          break;
+        }
+      }
+
+      // 2순위: 과거 레거시 열(157, 105, 79열) 샘플 탐색
+      if (!sampleCipher) {
+        for (const legacyCol of [157, 105, 79]) {
+          if (targetMaxCols >= legacyCol) {
+            const legSamples = targetSheet.getRange(2, legacyCol, Math.min(10, targetLastRow - 1), 1).getValues();
+            for (const row of legSamples) {
+              const val = String(row[0] || '').trim();
+              if (val.startsWith('U2FsdGVkX1')) {
+                sampleCipher = val;
+                break;
+              }
+            }
+          }
+          if (sampleCipher) break;
+        }
+      }
+
+      // 기존 암호문이 존재하는 경우 복호화 테스트
+      if (sampleCipher) {
+        if (!decryptAES(sampleCipher, password)) {
+          throw new Error(`비밀번호가 기존 배포 시트('${sheetName}')의 암호화 데이터와 일치하지 않습니다.`);
+        }
+      }
+    }
+
+    // 1행 데이터 암호화 생성
+    const cipherRows = [];
+    for (let i = 1; i < srcData.length; i++) {
+      const row = srcData[i];
+      const rowObj = {};
+      let hasData = false;
+      for (let j = 0; j < srcHeaders.length; j++) {
+        const val = row[j];
+        if (val !== '' && val !== null && val !== undefined) {
+          hasData = true;
+          rowObj[srcHeaders[j]] = (val instanceof Date) ? Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM-dd') : val;
+        }
+      }
+      if (hasData) {
+        cipherRows.push([encryptAES(JSON.stringify(rowObj), password)]);
+      } else {
+        cipherRows.push(['']);
+      }
+    }
+
+    // 배포 시트의 과거 잔여 열 및 찌꺼기 데이터 전체 소거 (완전 무결성 보장)
+    targetSheet.clearContents();
+
+    // 불필요하게 늘어난 잉여 열 정리 (A열만 남기거나 2열 이후 축소하여 시트 초경량화)
+    if (targetSheet.getMaxColumns() > 2) {
+      try {
+        targetSheet.deleteColumns(2, targetSheet.getMaxColumns() - 1);
+      } catch (colErr) {
+        // 열 삭제 제한 환경일 경우 패스
+      }
+    }
+
+    // 행 크기 확보
+    const targetCurrentMaxRows = targetSheet.getMaxRows();
+    if (targetCurrentMaxRows < srcLastRow) {
+      targetSheet.insertRowsAfter(targetCurrentMaxRows, srcLastRow - targetCurrentMaxRows);
+    }
+
+    // A1 헤더 설정
+    targetSheet.getRange(1, 1).setValue(TARGET_ENC_COL_NAME);
+
+    // A열에 2행부터 암호문 일괄 덮어쓰기
+    targetSheet.getRange(2, 1, cipherRows.length, 1).setValues(cipherRows);
+
+    return {
+      success: true,
+      totalRows: cipherRows.length,
+      targetEncColLetter,
+      targetEncColIndex
+    };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+/**
+ * ==========================================================
+ * [코어 매칭 엔진] 수시 시트 CE:DR (40개 열) 자동 매칭 로직
+ * ----------------------------------------------------------
+ * MatchingData.gs 사전 데이터를 기반으로 대학구분, 전년도 입결 등 40개 열을 100% 자동 산출
  * ==========================================================
  */
 function executeMatchingLogic(susiSheet) {
@@ -272,451 +534,8 @@ function executeMatchingLogic(susiSheet) {
   }
 }
 
-/**
- * ==========================================================
- * [기능 A] 현재 활성화된 탭 자동 판별 배포
- * ==========================================================
- */
-function syncCurrentSheetUpsert() {
-  const ui = SpreadsheetApp.getUi();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const currentSheet = ss.getActiveSheet();
-  const sheetName = currentSheet.getName();
-
-  let targetSs = null;
-  try {
-    targetSs = SpreadsheetApp.openById(TARGET_SPREADSHEET_ID);
-  } catch (e) {
-    ui.alert(`배포 시트 접근 실패: ${e.message}`);
-    return;
-  }
-
-  // 1. 암호화 대상 시트인 경우
-  if (ENCRYPTED_SHEETS.includes(sheetName)) {
-    const password = promptPassword(ui);
-    if (!password) return;
-
-    const res = executeEncryptedDeploy(currentSheet, targetSs, password, false);
-    if (res.success) {
-      ui.alert(`🎉 [암호화 배포 완료]\n\n` +
-               `• 대상 탭: ${sheetName} (암호화 시트)\n` +
-               `• 반영 데이터: ${res.totalRows || (res.updateCount + res.insertCount)}건\n` +
-               `• 암호문 저장 열: ${res.targetEncColLetter}열 (${res.targetEncColIndex}번째 열)\n\n` +
-               `배포 시트로 안전하게 암호화 배포되었습니다.`);
-    } else {
-      ui.alert(`❌ 암호화 배포 실패: ${res.error}`);
-    }
-    return;
-  }
-
-  // 2. 평문(비암호화) 대상 시트인 경우
-  if (PLAIN_SHEETS.includes(sheetName)) {
-    const confirm = ui.alert('확인', `'${sheetName}' 탭은 비암호화(평문) 대상 시트입니다.\n비밀번호 없이 배포 시트로 동기화하시겠습니까?`, ui.ButtonSet.YES_NO);
-    if (confirm !== ui.Button.YES) return;
-
-    const res = executePlainDeploy(currentSheet, targetSs);
-    if (res.success) {
-      ui.alert(`🎉 [평문 배포 완료]\n\n` +
-               `• 대상 탭: ${sheetName} (평문 통계 시트)\n` +
-               `• 반영 데이터: ${res.rows}행 × ${res.cols}열\n\n` +
-               `암호화하지 않고 원본 그대로 배포 시트에 동기화되었습니다.`);
-    } else {
-      ui.alert(`❌ 평문 배포 실패: ${res.error}`);
-    }
-    return;
-  }
-
-  ui.alert(`⚠️ [배포 대상 아님]\n\n` +
-           `현재 탭 '${sheetName}'은(는) 배포 목록에 등록되어 있지 않습니다.\n\n` +
-           `• 암호화 필요 시: Code.gs 상단의 ENCRYPTED_SHEETS에 추가\n` +
-           `• 평문 통계 시: Code.gs 상단의 PLAIN_SHEETS에 추가`);
-}
-
-function deployCurrentSheet() {
-  syncCurrentSheetUpsert();
-}
-
-/**
- * ==========================================================
- * [기능 B] 등록된 모든 시트 일괄 배포 (원클릭 동기화)
- * ==========================================================
- */
-function deployAllRegisteredSheets() {
-  const ui = SpreadsheetApp.getUi();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-
-  const confirm = ui.alert('일괄 배포 확인', 
-    `등록된 모든 시트를 배포 시트로 일괄 동기화하시겠습니까?\n\n` +
-    `• 암호화 시트: ${ENCRYPTED_SHEETS.join(', ')}\n` +
-    `• 평문 시트: ${PLAIN_SHEETS.join(', ')}`, 
-    ui.ButtonSet.YES_NO
-  );
-  if (confirm !== ui.Button.YES) return;
-
-  let password = null;
-  if (ENCRYPTED_SHEETS.length > 0) {
-    password = promptPassword(ui);
-    if (!password) return;
-  }
-
-  let targetSs = null;
-  try {
-    targetSs = SpreadsheetApp.openById(TARGET_SPREADSHEET_ID);
-  } catch (e) {
-    ui.alert(`배포 시트 접근 실패: ${e.message}`);
-    return;
-  }
-
-  const results = [];
-
-  // 1) 평문 시트 배포
-  for (const sheetName of PLAIN_SHEETS) {
-    const s = ss.getSheetByName(sheetName);
-    if (!s) {
-      results.push(`• [평문 스킵] '${sheetName}' (원본에 없음)`);
-      continue;
-    }
-    const res = executePlainDeploy(s, targetSs);
-    if (res.success) {
-      results.push(`• [평문 배포] '${sheetName}': ${res.rows}행 동기화 완료`);
-    } else {
-      results.push(`• [평문 실패] '${sheetName}': ${res.error}`);
-    }
-  }
-
-  // 2) 암호화 시트 배포
-  for (const sheetName of ENCRYPTED_SHEETS) {
-    const s = ss.getSheetByName(sheetName);
-    if (!s) {
-      results.push(`• [암호화 스킵] '${sheetName}' (원본에 없음)`);
-      continue;
-    }
-    const res = executeEncryptedDeploy(s, targetSs, password, sheetName === '2027수시');
-    if (res.success) {
-      results.push(`• [암호화 배포] '${sheetName}': ${res.totalRows || (res.updateCount + res.insertCount)}건 완료 (${res.targetEncColLetter}열)`);
-    } else {
-      results.push(`• [암호화 실패] '${sheetName}': ${res.error}`);
-    }
-  }
-
-  ui.alert(`🎉 [일괄 배포 완료]\n\n` + results.join('\n'));
-}
-
-/**
- * ==========================================================
- * [코어 파이프라인 1] 평문(비암호화) 배포 실행 엔진
- * ==========================================================
- */
-function executePlainDeploy(sourceSheet, targetSs) {
-  try {
-    const sheetName = sourceSheet.getName();
-    let targetSheet = targetSs.getSheetByName(sheetName);
-    if (!targetSheet) {
-      targetSheet = targetSs.insertSheet(sheetName);
-    }
-
-    const srcLastRow = sourceSheet.getLastRow();
-    const srcLastCol = sourceSheet.getLastColumn();
-
-    if (srcLastRow < 1 || srcLastCol < 1) {
-      targetSheet.clearContents();
-      return { success: true, rows: 0, cols: 0 };
-    }
-
-    const srcData = sourceSheet.getRange(1, 1, srcLastRow, srcLastCol).getValues();
-
-    const targetMaxRows = targetSheet.getMaxRows();
-    if (targetMaxRows < srcLastRow) {
-      targetSheet.insertRowsAfter(targetMaxRows, srcLastRow - targetMaxRows);
-    }
-    const targetMaxCols = targetSheet.getMaxColumns();
-    if (targetMaxCols < srcLastCol) {
-      targetSheet.insertColumnsAfter(targetMaxCols, srcLastCol - targetMaxCols);
-    }
-
-    targetSheet.clearContents();
-    targetSheet.getRange(1, 1, srcLastRow, srcLastCol).setValues(srcData);
-
-    return { success: true, rows: srcLastRow, cols: srcLastCol };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
-}
-
-/**
- * ==========================================================
- * [코어 파이프라인 2] AES 암호화 배포 실행 엔진
- * ----------------------------------------------------------
- * isFullSync가 true이거나 2027수시인 경우:
- * 중간행 추가/삭제에 의한 순서 뒤틀림 및 유령 데이터를 방지하기 위해
- * 원본 시트의 행 순서 그대로 1:1 완벽 동기화(Full Sync)를 수행합니다.
- * ==========================================================
- */
-function executeEncryptedDeploy(sourceSheet, targetSs, password, isFullSync) {
-  try {
-    const sheetName = sourceSheet.getName();
-    const isMockExam = sheetName.includes('가채점') || sheetName.includes('모의');
-    const targetEncColIndex = isMockExam ? 79 : 157; // CA열(79) vs FA열(157)
-    const targetEncColLetter = isMockExam ? 'CA' : 'FA';
-
-    let targetSheet = targetSs.getSheetByName(sheetName);
-    if (!targetSheet) {
-      targetSheet = targetSs.insertSheet(sheetName);
-    }
-
-    const srcLastRow = sourceSheet.getLastRow();
-    const srcLastCol = sourceSheet.getLastColumn();
-    if (srcLastRow < 2) {
-      return { success: false, error: '동기화할 데이터가 없습니다.' };
-    }
-
-    const srcData = sourceSheet.getRange(1, 1, srcLastRow, srcLastCol).getValues();
-    const srcHeaders = srcData[0];
-    const totalDataRows = srcLastRow - 1;
-
-    // 열 크기 확보 및 헤더 설정
-    const targetMaxCols = targetSheet.getMaxColumns();
-    if (targetMaxCols < targetEncColIndex) {
-      targetSheet.insertColumnsAfter(targetMaxCols, targetEncColIndex - targetMaxCols);
-    }
-    targetSheet.getRange(1, targetEncColIndex).setValue(TARGET_ENC_COL_NAME);
-
-    // 기존 비밀번호 검증 (배포 시트에 이미 암호화 데이터가 있는 경우 비밀번호 불일치 방지)
-    const targetLastRow = targetSheet.getLastRow();
-    if (targetLastRow > 1) {
-      const sampleCheckRows = targetSheet.getRange(2, targetEncColIndex, Math.min(10, targetLastRow - 1), 1).getValues();
-      for (let r = 0; r < sampleCheckRows.length; r++) {
-        const c = String(sampleCheckRows[r][0] || '').trim();
-        if (c.startsWith('U2FsdGVkX1')) {
-          if (!decryptAES(c, password)) {
-            throw new Error('비밀번호가 기존 배포 시트의 암호화 데이터와 일치하지 않습니다.');
-          }
-          break;
-        }
-      }
-    }
-
-    // Full Sync 모드 (2027수시 및 모의고사 시트 적용: 행 순서 1:1 보장, 다회차 누락 방지, 잔여 유령 행 자동 삭제)
-    if (isFullSync || sheetName === '2027수시' || sheetName.includes('모의') || sheetName.includes('가채점')) {
-      const cipherRows = [];
-      for (let i = 1; i < srcData.length; i++) {
-        const row = srcData[i];
-        const rowObj = {};
-        let hasData = false;
-        for (let j = 0; j < srcHeaders.length; j++) {
-          const val = row[j];
-          if (val !== '' && val !== null && val !== undefined) {
-            hasData = true;
-            rowObj[srcHeaders[j]] = (val instanceof Date) ? Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM-dd') : val;
-          }
-        }
-        if (hasData) {
-          cipherRows.push([encryptAES(JSON.stringify(rowObj), password)]);
-        } else {
-          cipherRows.push(['']);
-        }
-      }
-
-      // 행 크기 확보
-      const targetMaxRows = targetSheet.getMaxRows();
-      if (targetMaxRows < srcLastRow) {
-        targetSheet.insertRowsAfter(targetMaxRows, srcLastRow - targetMaxRows);
-      }
-
-      // 암호문 일괄 덮어쓰기 (2초 완료)
-      targetSheet.getRange(2, targetEncColIndex, cipherRows.length, 1).setValues(cipherRows);
-
-      // 원본보다 배포 시트에 남은 잉여 행이 있다면 깨끗하게 제거
-      if (targetLastRow > srcLastRow) {
-        const extraRows = targetLastRow - srcLastRow;
-        targetSheet.getRange(srcLastRow + 1, targetEncColIndex, extraRows, 1).clearContent();
-      }
-
-      return {
-        success: true,
-        totalRows: cipherRows.length,
-        targetEncColLetter,
-        targetEncColIndex
-      };
-    }
-
-    // Upsert 모드 (기타 개별 갱신 시트용)
-    const existingKeyMap = new Map();
-    let targetRows = targetSheet.getRange(1, 1, targetLastRow, targetEncColIndex).getValues();
-    let targetHeaders = targetRows[0];
-
-    for (let r = 1; r < targetLastRow; r++) {
-      const row = targetRows[r];
-      let key = extractCompositeKey(row, targetHeaders, isMockExam);
-      if (!key) {
-        const cipher = String(row[targetEncColIndex - 1] || '').trim();
-        if (cipher) {
-          const dec = decryptAES(cipher, password);
-          if (dec) {
-            try {
-              const obj = JSON.parse(dec);
-              const b = obj['반'] || obj['학급'] || '';
-              const n = obj['번호'] || obj['출석번호'] || '';
-              const nm = obj['이름'] || obj['성명'] || obj['학생명'] || '';
-              if (isMockExam) {
-                if (nm) key = `${b}_${n}_${nm}`;
-              } else {
-                const u = obj['대학명'] || '';
-                const d = obj['모집단위'] || '';
-                if (nm && u) key = `${b}_${n}_${nm}_${u}_${d}`;
-              }
-            } catch(e) {}
-          }
-        }
-      }
-      if (key) existingKeyMap.set(key, r);
-    }
-
-    let updateCount = 0;
-    let insertCount = 0;
-    const newRowEntries = [];
-    const encColUpdates = targetLastRow > 1 ? targetRows.slice(1).map(r => [r[targetEncColIndex - 1]]) : [];
-
-    for (let i = 1; i < srcData.length; i++) {
-      const row = srcData[i];
-      const key = extractCompositeKey(row, srcHeaders, isMockExam);
-      if (!key) continue;
-
-      const rowObj = {};
-      let hasData = false;
-      for (let j = 0; j < srcHeaders.length; j++) {
-        const val = row[j];
-        if (val !== '' && val !== null && val !== undefined) {
-          hasData = true;
-          rowObj[srcHeaders[j]] = (val instanceof Date) ? Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM-dd') : val;
-        }
-      }
-      if (!hasData) continue;
-
-      const cipherText = encryptAES(JSON.stringify(rowObj), password);
-
-      if (existingKeyMap.has(key)) {
-        const targetRowIdx = existingKeyMap.get(key) - 1;
-        if (targetRowIdx >= 0 && targetRowIdx < encColUpdates.length) {
-          encColUpdates[targetRowIdx][0] = cipherText;
-          updateCount++;
-        }
-      } else {
-        const newRow = new Array(targetEncColIndex).fill('');
-        newRow[targetEncColIndex - 1] = cipherText;
-        newRowEntries.push(newRow);
-        insertCount++;
-      }
-    }
-
-    if (encColUpdates.length > 0 && updateCount > 0) {
-      targetSheet.getRange(2, targetEncColIndex, encColUpdates.length, 1).setValues(encColUpdates);
-    }
-    if (newRowEntries.length > 0) {
-      targetSheet.getRange(targetSheet.getLastRow() + 1, 1, newRowEntries.length, targetEncColIndex).setValues(newRowEntries);
-    }
-
-    return {
-      success: true,
-      updateCount,
-      insertCount,
-      targetEncColLetter,
-      targetEncColIndex
-    };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
-}
-
-/**
- * ==========================================================
- * [기능 1] '2027모의등급컷' 기준 가채점 EBS 등급 환산 (AS:BB열)
- * ==========================================================
- */
-function convertMockGradesToEbs() {
-  const ui = SpreadsheetApp.getUi();
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const currentSheet = ss.getActiveSheet();
-  const currentName = currentSheet.getName();
-
-  if (!currentName.includes('가채점') && !currentName.includes('모의')) {
-    const confirm = ui.alert('확인', `'${currentName}' 탭이 가채점 시트가 맞습니까?\n계속 진행하시겠습니까?`, ui.ButtonSet.YES_NO);
-    if (confirm !== ui.Button.YES) return;
-  }
-
-  const cutoffSheet = ss.getSheetByName(CUTOFF_SHEET_NAME);
-  if (!cutoffSheet) {
-    ui.alert(`'${CUTOFF_SHEET_NAME}' 시트를 찾을 수 없습니다.`);
-    return;
-  }
-
-  const cutoffRows = cutoffSheet.getDataRange().getValues();
-  const monthCutoffs = parseAllMonthCutoffs(cutoffRows);
-
-  const lastRow = currentSheet.getLastRow();
-  if (lastRow < 3) {
-    ui.alert('가채점 시트에 변환할 학생 데이터(3행 이후)가 없습니다.');
-    return;
-  }
-
-  const dataRange = currentSheet.getRange(3, 1, lastRow - 2, 54);
-  const rows = dataRange.getValues();
-  const convertedResults = [];
-
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    const name = String(row[5] || '').trim();
-
-    if (!name) {
-      convertedResults.push(new Array(10).fill(''));
-      continue;
-    }
-
-    const monthNum = parseInt(row[0]) || 3;
-    const mCuts = monthCutoffs[monthNum] || monthCutoffs[3] || {};
-
-    const korSubj = String(row[6] || '').trim();
-    const korScore = row[9];
-    const korGrade = calcCutoffGrade(korScore, mCuts[cleanSubjName(korSubj)]);
-
-    const mathSubj = String(row[13] || '').trim();
-    const mathScore = row[16];
-    const mathGrade = calcCutoffGrade(mathScore, mCuts[cleanSubjName(mathSubj)]);
-
-    const engScore = row[20];
-    const engGrade = calcAbsoluteEnglish(engScore);
-
-    const histScore = row[35];
-    const histGrade = calcAbsoluteHistory(histScore);
-
-    const inq1Subj = String(row[25] || '').trim();
-    const inq1Score = row[26];
-    const inq1Grade = calcCutoffGrade(inq1Score, mCuts[cleanSubjName(inq1Subj)]);
-
-    const inq2Subj = String(row[30] || '').trim();
-    const inq2Score = row[31];
-    const inq2Grade = calcCutoffGrade(inq2Score, mCuts[cleanSubjName(inq2Subj)]);
-
-    convertedResults.push([
-      korSubj, korGrade,
-      mathSubj, mathGrade,
-      engGrade, histGrade,
-      inq1Subj, inq1Grade,
-      inq2Subj, inq2Grade
-    ]);
-  }
-
-  currentSheet.getRange(3, 45, convertedResults.length, 10).setValues(convertedResults);
-
-  ui.alert(`🎉 [등급 환산 완료]\n\n` +
-           `• 대상 탭: ${currentName}\n` +
-           `• 환산 학생 수: ${convertedResults.length}명\n` +
-           `• 반영 영역: AS3:BB${lastRow}\n\n` +
-           `'2027모의등급컷' 기준 환산이 정상적으로 적용되었습니다.`);
-}
-
 // ==========================================================
-// 보조 헬퍼 함수들
+// 🛠️ 보조 헬퍼 및 보안 함수
 // ==========================================================
 function cleanSubjName(name) {
   if (!name) return '';
@@ -737,7 +556,7 @@ function parseAllMonthCutoffs(cRows) {
   for (let r = 0; r < cRows.length; r++) {
     const txt = String(cRows[r]?.[0] || '').trim();
     if (txt.includes('월')) {
-      const mNum = parseInt(txt);
+      const mNum = parseInt(txt, 10);
       if (isNaN(mNum)) continue;
       monthCutoffs[mNum] = {};
       const subjRow = cRows[r + 1] || [];
@@ -804,29 +623,8 @@ function calcAbsoluteHistory(score) {
   return 9;
 }
 
-function extractCompositeKey(row, headers, isMockExam) {
-  const findVal = (colName) => {
-    const cleanTarget = colName.replace(/[\r\n\s]+/g, '');
-    const idx = headers.findIndex(h => String(h || '').replace(/[\r\n\s]+/g, '') === cleanTarget);
-    return idx !== -1 ? String(row[idx] || '').trim() : '';
-  };
-  const ban = findVal('반') || findVal('학급');
-  const num = findVal('번호') || findVal('출석번호');
-  const name = findVal('이름') || findVal('성명') || findVal('학생명');
-
-  if (isMockExam) {
-    if (!name) return '';
-    return `${ban}_${num}_${name}`;
-  } else {
-    const univ = findVal('대학명') || findVal('대학');
-    const dept = findVal('모집단위') || findVal('학과');
-    if (!name || !univ) return '';
-    return `${ban}_${num}_${name}_${univ}_${dept}`;
-  }
-}
-
 function promptPassword(ui) {
-  const res1 = ui.prompt('🔐 관리자 보안 인증 (1/2)', '비밀번호를 입력하세요:', ui.ButtonSet.OK_CANCEL);
+  const res1 = ui.prompt('🔐 관리자 보안 인증 (1/2)', '배포 비밀번호를 입력하세요:', ui.ButtonSet.OK_CANCEL);
   if (res1.getSelectedButton() !== ui.Button.OK) return null;
   const pw1 = res1.getResponseText().trim();
   if (!pw1) return null;
@@ -872,4 +670,3 @@ function decryptAES(cipherText, password) {
     return null;
   }
 }
-
