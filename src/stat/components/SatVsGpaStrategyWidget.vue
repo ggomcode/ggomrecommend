@@ -197,28 +197,32 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <!-- 언어와 매체 -->
                       <div class="bg-white/95 px-2.5 py-1.5 rounded-xl border border-blue-200/80 shadow-2xs flex flex-col justify-between">
-                        <div class="flex items-center gap-1.5 text-xs font-bold text-blue-950 truncate">
+                        <div class="flex items-center gap-1.5 text-xs font-bold text-blue-950 truncate pb-1 border-b border-blue-100/60">
                           <span class="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0"></span>
                           <span class="truncate">언어와 매체</span>
                         </div>
-                        <div class="flex items-center justify-between mt-1 pt-1 border-t border-blue-100/60">
-                          <span class="text-[10.5px] font-medium text-slate-500 shrink-0">({{ currentSatAnalysis.subjectsDetail.kor.unmaeCount }}명)</span>
-                          <span class="font-mono text-xs font-black text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 whitespace-nowrap">
+                        <div class="pt-1.5 text-center">
+                          <span class="font-mono text-sm font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 whitespace-nowrap inline-block">
                             {{ currentSatAnalysis.subjectsDetail.kor.unmaeAvg }}등급
                           </span>
+                        </div>
+                        <div class="text-center pt-0.5">
+                          <span class="text-[11px] font-medium text-slate-500 whitespace-nowrap">({{ currentSatAnalysis.subjectsDetail.kor.unmaeCount }}명)</span>
                         </div>
                       </div>
                       <!-- 화법과 작문 -->
                       <div class="bg-white/95 px-2.5 py-1.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
-                        <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800 truncate">
+                        <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800 truncate pb-1 border-b border-slate-100">
                           <span class="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>
                           <span class="truncate">화법과 작문</span>
                         </div>
-                        <div class="flex items-center justify-between mt-1 pt-1 border-t border-slate-100">
-                          <span class="text-[10.5px] font-medium text-slate-500 shrink-0">({{ currentSatAnalysis.subjectsDetail.kor.hwajakCount }}명)</span>
-                          <span class="font-mono text-xs font-black text-slate-700 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 whitespace-nowrap">
+                        <div class="pt-1.5 text-center">
+                          <span class="font-mono text-sm font-black text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap inline-block">
                             {{ currentSatAnalysis.subjectsDetail.kor.hwajakAvg }}등급
                           </span>
+                        </div>
+                        <div class="text-center pt-0.5">
+                          <span class="text-[11px] font-medium text-slate-500 whitespace-nowrap">({{ currentSatAnalysis.subjectsDetail.kor.hwajakCount }}명)</span>
                         </div>
                       </div>
                     </div>
@@ -273,29 +277,33 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <!-- 1. 미적분/기하 독립 카드 -->
                       <div class="bg-white/95 px-2.5 py-1.5 rounded-xl border border-indigo-200 shadow-2xs flex flex-col justify-between">
-                        <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-950 truncate">
+                        <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-950 truncate pb-1 border-b border-indigo-100/60">
                           <span class="w-1.5 h-1.5 rounded-full bg-indigo-600 shrink-0"></span>
                           <span class="truncate">미적분/기하</span>
                         </div>
-                        <div class="flex items-center justify-between mt-1 pt-1 border-t border-indigo-100/60">
-                          <span class="text-[10.5px] font-medium text-slate-500 shrink-0">({{ currentSatAnalysis.subjectsDetail.math.mijukCount }}명)</span>
-                          <span class="font-mono text-xs font-black text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 whitespace-nowrap">
+                        <div class="pt-1.5 text-center">
+                          <span class="font-mono text-sm font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 whitespace-nowrap inline-block">
                             {{ currentSatAnalysis.subjectsDetail.math.mijukAvg }}등급
                           </span>
+                        </div>
+                        <div class="text-center pt-0.5">
+                          <span class="text-[11px] font-medium text-slate-500 whitespace-nowrap">({{ currentSatAnalysis.subjectsDetail.math.mijukCount }}명)</span>
                         </div>
                       </div>
 
                       <!-- 2. 확률과 통계 독립 카드 -->
                       <div class="bg-white/95 px-2.5 py-1.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
-                        <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800 truncate">
+                        <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800 truncate pb-1 border-b border-slate-100">
                           <span class="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>
                           <span class="truncate">확률과 통계</span>
                         </div>
-                        <div class="flex items-center justify-between mt-1 pt-1 border-t border-slate-100">
-                          <span class="text-[10.5px] font-medium text-slate-500 shrink-0">({{ currentSatAnalysis.subjectsDetail.math.hwaktongCount }}명)</span>
-                          <span class="font-mono text-xs font-black text-slate-700 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 whitespace-nowrap">
+                        <div class="pt-1.5 text-center">
+                          <span class="font-mono text-sm font-black text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap inline-block">
                             {{ currentSatAnalysis.subjectsDetail.math.hwaktongAvg }}등급
                           </span>
+                        </div>
+                        <div class="text-center pt-0.5">
+                          <span class="text-[11px] font-medium text-slate-500 whitespace-nowrap">({{ currentSatAnalysis.subjectsDetail.math.hwaktongCount }}명)</span>
                         </div>
                       </div>
                     </div>
@@ -423,16 +431,19 @@
                           class="bg-white/95 px-2.5 py-1.5 rounded-xl border border-amber-200/80 shadow-2xs flex flex-col justify-between"
                         >
                           <!-- 1줄: 과목명 (여유롭게 전체 표시) -->
-                          <div class="flex items-center gap-1.5 text-xs font-bold text-amber-950 truncate">
+                          <div class="flex items-center gap-1.5 text-xs font-bold text-amber-950 truncate pb-1 border-b border-amber-100/60">
                             <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="sIdx === 0 ? 'bg-amber-600' : 'bg-slate-400'"></span>
                             <span class="truncate">{{ sub.name }}</span>
                           </div>
-                          <!-- 2줄: 줄바꿈하여 인원수와 등급 분리 표시 (절대 겹치지 않음) -->
-                          <div class="flex items-center justify-between mt-1 pt-1 border-t border-amber-100/60">
-                            <span class="text-[10.5px] font-medium text-slate-500">({{ sub.count }}명)</span>
-                            <span class="font-mono text-xs font-black text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                          <!-- 2줄: 평균 등급 (윗줄) -->
+                          <div class="pt-1.5 text-center">
+                            <span class="font-mono text-sm font-black text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 whitespace-nowrap inline-block">
                               {{ sub.avg }}등급
                             </span>
+                          </div>
+                          <!-- 3줄: 인원수 (아래줄) -->
+                          <div class="text-center pt-0.5">
+                            <span class="text-[11px] font-medium text-slate-500 whitespace-nowrap">({{ sub.count }}명)</span>
                           </div>
                         </div>
                       </template>
@@ -500,16 +511,19 @@
                           class="bg-white/95 px-2.5 py-1.5 rounded-xl border border-purple-200/80 shadow-2xs flex flex-col justify-between"
                         >
                           <!-- 1줄: 과목명 (여유롭게 전체 표시) -->
-                          <div class="flex items-center gap-1.5 text-xs font-bold text-purple-950 truncate">
+                          <div class="flex items-center gap-1.5 text-xs font-bold text-purple-950 truncate pb-1 border-b border-purple-100/60">
                             <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="sIdx === 0 ? 'bg-purple-600' : 'bg-slate-400'"></span>
                             <span class="truncate">{{ sub.name }}</span>
                           </div>
-                          <!-- 2줄: 줄바꿈하여 인원수와 등급 분리 표시 (절대 겹치지 않음) -->
-                          <div class="flex items-center justify-between mt-1 pt-1 border-t border-purple-100/60">
-                            <span class="text-[10.5px] font-medium text-slate-500">({{ sub.count }}명)</span>
-                            <span class="font-mono text-xs font-black text-purple-800 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100">
+                          <!-- 2줄: 평균 등급 (윗줄) -->
+                          <div class="pt-1.5 text-center">
+                            <span class="font-mono text-sm font-black text-purple-800 bg-purple-50 px-2 py-0.5 rounded border border-purple-100 whitespace-nowrap inline-block">
                               {{ sub.avg }}등급
                             </span>
+                          </div>
+                          <!-- 3줄: 인원수 (아래줄) -->
+                          <div class="text-center pt-0.5">
+                            <span class="text-[11px] font-medium text-slate-500 whitespace-nowrap">({{ sub.count }}명)</span>
                           </div>
                         </div>
                       </template>
