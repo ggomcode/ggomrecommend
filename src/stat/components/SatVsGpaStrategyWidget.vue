@@ -202,8 +202,8 @@
                           <span class="truncate">언어와 매체</span>
                         </div>
                         <div class="flex items-center justify-between mt-1 pt-1 border-t border-blue-100/60">
-                          <span class="text-[10.5px] font-medium text-slate-500">({{ currentSatAnalysis.subjectsDetail.kor.unmaeCount }}명)</span>
-                          <span class="font-mono text-xs font-black text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                          <span class="text-[10.5px] font-medium text-slate-500 shrink-0">({{ currentSatAnalysis.subjectsDetail.kor.unmaeCount }}명)</span>
+                          <span class="font-mono text-xs font-black text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 whitespace-nowrap">
                             {{ currentSatAnalysis.subjectsDetail.kor.unmaeAvg }}등급
                           </span>
                         </div>
@@ -215,8 +215,8 @@
                           <span class="truncate">화법과 작문</span>
                         </div>
                         <div class="flex items-center justify-between mt-1 pt-1 border-t border-slate-100">
-                          <span class="text-[10.5px] font-medium text-slate-500">({{ currentSatAnalysis.subjectsDetail.kor.hwajakCount }}명)</span>
-                          <span class="font-mono text-xs font-black text-slate-700 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                          <span class="text-[10.5px] font-medium text-slate-500 shrink-0">({{ currentSatAnalysis.subjectsDetail.kor.hwajakCount }}명)</span>
+                          <span class="font-mono text-xs font-black text-slate-700 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 whitespace-nowrap">
                             {{ currentSatAnalysis.subjectsDetail.kor.hwajakAvg }}등급
                           </span>
                         </div>
@@ -278,8 +278,8 @@
                           <span class="truncate">미적분/기하</span>
                         </div>
                         <div class="flex items-center justify-between mt-1 pt-1 border-t border-indigo-100/60">
-                          <span class="text-[10.5px] font-medium text-slate-500">({{ currentSatAnalysis.subjectsDetail.math.mijukCount }}명)</span>
-                          <span class="font-mono text-xs font-black text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                          <span class="text-[10.5px] font-medium text-slate-500 shrink-0">({{ currentSatAnalysis.subjectsDetail.math.mijukCount }}명)</span>
+                          <span class="font-mono text-xs font-black text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 whitespace-nowrap">
                             {{ currentSatAnalysis.subjectsDetail.math.mijukAvg }}등급
                           </span>
                         </div>
@@ -292,8 +292,8 @@
                           <span class="truncate">확률과 통계</span>
                         </div>
                         <div class="flex items-center justify-between mt-1 pt-1 border-t border-slate-100">
-                          <span class="text-[10.5px] font-medium text-slate-500">({{ currentSatAnalysis.subjectsDetail.math.hwaktongCount }}명)</span>
-                          <span class="font-mono text-xs font-black text-slate-700 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                          <span class="text-[10.5px] font-medium text-slate-500 shrink-0">({{ currentSatAnalysis.subjectsDetail.math.hwaktongCount }}명)</span>
+                          <span class="font-mono text-xs font-black text-slate-700 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 whitespace-nowrap">
                             {{ currentSatAnalysis.subjectsDetail.math.hwaktongAvg }}등급
                           </span>
                         </div>
@@ -308,51 +308,66 @@
                 </div>
               </div>
 
-              <!-- 2열: 영어 영역 (단독 슬림 배너 박스 - 얇고 세련된 풀 너비 배치) -->
-              <div class="bg-linear-to-r from-emerald-50/80 via-white to-teal-50/60 px-4 py-2.5 rounded-2xl border border-emerald-200/80 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <!-- Left: 제목 & 응시 인원 & 등급 & 내신 비교 -->
-                <div class="flex items-center flex-wrap gap-2.5 shrink-0">
-                  <div class="flex items-center gap-1.5">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
-                    <span class="text-xs font-black text-emerald-950">영어 영역</span>
-                    <span class="text-[10px] font-mono text-emerald-800 font-extrabold bg-emerald-100/90 px-1.5 py-0.5 rounded-full border border-emerald-200/60">절대평가</span>
-                  </div>
-                  <div class="flex items-baseline gap-1.5">
-                    <span class="text-xl font-black text-slate-900 font-mono tracking-tight">{{ currentSatAnalysis.subjectsDetail.eng.totalAvg }}<span class="text-xs font-normal text-slate-500 ml-0.5">등급</span></span>
-                    <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.eng.totalCount > 0" class="text-[10.5px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
-                      {{ currentSatAnalysis.subjectsDetail.eng.totalCount }}명 응시
-                    </span>
-                    <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.eng.totalAvg !== '-' && currentGpaRaw[2]" class="text-[10.5px] font-semibold text-rose-600">
-                      내신({{ currentGpaRaw[2] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.eng.totalAvg) - currentGpaRaw[2]).toFixed(2) }}↓
-                    </span>
-                    <span v-else class="text-[10.5px] text-slate-400 font-medium">데이터 미등록</span>
-                  </div>
-                </div>
+              <!-- 2열: 영어 영역 (국어/수학 전체 가로폭 활용, 2분할 밸런스 배치로 박스 이탈 방지) -->
+              <div class="bg-linear-to-br from-emerald-50/70 to-slate-50 p-4 rounded-2xl border border-emerald-100 shadow-2xs">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                  <!-- 좌측: 국어와 완전히 동일한 형태의 등급 & 슬라이더 표시 -->
+                  <div class="space-y-1.5">
+                    <div class="flex items-center justify-between mb-1">
+                      <span class="text-xs font-black text-emerald-950 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+                        <span>영어 영역</span>
+                        <span class="text-[10px] font-mono text-emerald-800 font-extrabold bg-emerald-100/90 px-1.5 py-0.2 rounded-full border border-emerald-200/60">절대평가</span>
+                      </span>
+                      <span class="text-[11px] font-mono text-slate-500">{{ currentSatAnalysis.subjectsDetail.eng.totalCount }}명 응시</span>
+                    </div>
 
-                <!-- Center: 1~9 등급 수직 슬라이더 바 -->
-                <div class="flex-1 max-w-xs md:max-w-sm relative py-0.5 px-2">
-                  <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
-                  <div class="flex justify-between text-[9.5px] text-slate-400 font-bold mt-1">
-                    <span>1등급(우수)</span>
-                    <span>5등급</span>
-                    <span>9등급</span>
-                  </div>
-                  <!-- 현재 등급 위치 핀 -->
-                  <div
-                    v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.eng.totalAvg !== '-'"
-                    class="absolute top-0.5 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
-                    :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.eng.totalAvg) }"
-                  >
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 border-2 border-white shadow-xs"></span>
-                  </div>
-                </div>
+                    <div class="flex items-baseline gap-2">
+                      <span class="text-2xl font-black text-slate-900 font-mono tracking-tight">{{ currentSatAnalysis.subjectsDetail.eng.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
+                      <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.eng.totalAvg !== '-' && currentGpaRaw[2]" class="text-[11px] font-semibold text-rose-600 whitespace-nowrap">
+                        내신({{ currentGpaRaw[2] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.eng.totalAvg) - currentGpaRaw[2]).toFixed(2) }}↓
+                      </span>
+                      <span v-else class="text-[11px] text-slate-400 font-medium">데이터 미등록</span>
+                    </div>
 
-                <!-- Right: 최저 전략 팁 텍스트 -->
-                <div class="shrink-0 flex items-center gap-1.5 bg-emerald-100/60 border border-emerald-200/70 px-2.5 py-1 rounded-xl text-emerald-950">
-                  <span class="text-xs">🎯</span>
-                  <div class="text-[10.5px] leading-tight">
-                    <span class="font-bold text-emerald-950">수능 최저 핵심:</span>
-                    <span class="text-emerald-800 ml-1">상대평가 부담 없이 2~3등급 안정 확보 시 실질 충족률 급상승</span>
+                    <!-- 1~9 등급 수직선 위치 마커 (국어와 동일한 넉넉한 너비로 글자 겹침 완전 방지) -->
+                    <div class="relative pt-1 pb-1">
+                      <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
+                      <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
+                        <span class="whitespace-nowrap">1등급(우수)</span>
+                        <span class="whitespace-nowrap">5등급</span>
+                        <span class="whitespace-nowrap">9등급</span>
+                      </div>
+                      <!-- 현재 등급 위치 핀 -->
+                      <div
+                        v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.eng.totalAvg !== '-'"
+                        class="absolute top-0 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
+                        :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.eng.totalAvg) }"
+                      >
+                        <span class="w-3 h-3 rounded-full bg-emerald-600 border-2 border-white shadow-xs"></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 우측: 수학 아래 영역에 꼭 맞춘 수능 최저 핵심 전략 & 등급컷 안내 카드 -->
+                  <div class="bg-white/95 p-3 rounded-xl border border-emerald-200/80 shadow-2xs flex flex-col justify-between space-y-1.5">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                        <span class="text-sm">🎯</span>
+                        <span>수능 최저의 핵심 전략 영역</span>
+                      </span>
+                      <span class="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">절대평가 활용</span>
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed font-medium m-0">
+                      상대평가(6등급대) 부담 없이 <span class="font-bold text-emerald-700">2~3등급 안정 확보</span> 시 수시 최저 충족 성공률이 급상승합니다.
+                    </p>
+                    <div class="text-[10.5px] text-slate-400 font-mono pt-1.5 border-t border-slate-100 flex items-center justify-between">
+                      <span>90점↑ 1등급</span>
+                      <span class="text-slate-300">·</span>
+                      <span>80점↑ 2등급</span>
+                      <span class="text-slate-300">·</span>
+                      <span>70점↑ 3등급</span>
+                    </div>
                   </div>
                 </div>
               </div>
