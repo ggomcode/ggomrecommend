@@ -641,6 +641,20 @@
         <!-- 라인 차트 컨테이너 -->
         <div class="h-64 sm:h-72 w-full relative">
           <Line :data="mockExamTrendChartData" :options="mockTrendChartOptions" />
+          <div
+            v-if="!hasMockData"
+            class="absolute inset-0 flex flex-col items-center justify-center bg-white/70 backdrop-blur-[1px] rounded-2xl pointer-events-none"
+          >
+            <div class="p-4 bg-white/95 rounded-2xl border border-slate-200/90 shadow-md text-center max-w-md mx-4">
+              <span class="text-2xl mb-1.5 block">📊</span>
+              <p class="text-sm font-extrabold text-slate-800 m-0">
+                {{ academicYearLabel }}학년도 모의고사 성적 데이터 미등록
+              </p>
+              <p class="text-xs text-slate-500 mt-1 mb-0 leading-relaxed">
+                {{ academicYearLabel }}학년도는 회차별 모의고사(3·5·6·7·9·10월) 성적 데이터가 시트에 등록되어 있지 않아 빈 그래프로 표시됩니다.
+              </p>
+            </div>
+          </div>
         </div>
 
         <!-- 추이 분석 핵심 인사이트 브리핑 바 -->
@@ -648,16 +662,19 @@
           <div class="flex items-start sm:items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0 mt-1 sm:mt-0"></span>
             <div>
-              <span class="font-extrabold text-slate-900">💡 모의고사 회차별 핵심 분석:</span>
-              <span class="text-slate-600 ml-1">
-                <strong>수학 미적분/기하(4.3등급선)</strong>는 내신 평균(4.44등급선) 수준을 유지하는 반면, <strong>확률과통계(6.5등급선)</strong> 및 국어/탐구는 내신 대비 1.5등급 이상 하락합니다. 절대평가인 <strong>영어(5.4등급선)</strong>와 전략적 탐구 과목으로 수능 최저를 방어하는 전략이 필수적입니다.
+              <span class="font-extrabold text-slate-900">💡 {{ hasMockData ? '모의고사 회차별 핵심 분석:' : `${academicYearLabel}학년도 성적 데이터 안내:` }}</span>
+              <span v-if="hasMockData" class="text-slate-600 ml-1">
+                <strong>수학 미적분/기하(4.3등급선)</strong>는 내신 평균({{ avgSchoolGpa }}등급선) 수준을 유지하는 반면, <strong>확률과통계(6.5등급선)</strong> 및 국어/탐구는 내신 대비 1.5등급 이상 하락합니다. 절대평가인 <strong>영어(5.4등급선)</strong>와 전략적 탐구 과목으로 수능 최저를 방어하는 전략이 필수적입니다.
+              </span>
+              <span v-else class="text-slate-600 ml-1">
+                {{ academicYearLabel }}학년도는 회차별 모의고사 성적 데이터가 등록되어 있지 않아 수시 지원 원자료({{ applications.length }}건)를 바탕으로 분석합니다.
               </span>
             </div>
           </div>
           <div class="flex items-center gap-2 text-[11px] font-mono text-slate-500 shrink-0 self-end md:self-auto">
             <span class="inline-flex items-center gap-1 text-pink-600 font-bold">
               <span class="w-3 border-t-2 border-pink-500 border-dashed inline-block"></span>
-              내신 평균 기준선(4.44)
+              내신 평균 기준선({{ avgSchoolGpa }})
             </span>
             <span class="text-slate-300">|</span>
             <span>Y축 반전: 위쪽이 상위 등급</span>
@@ -676,7 +693,7 @@
           <span class="flex items-center justify-center w-7 h-7 rounded-xl bg-pink-50 text-pink-700 text-sm font-black border border-pink-200">2</span>
           <h3 class="text-base sm:text-lg font-black text-slate-900 m-0">사탐런 & 탐구 응시 분석</h3>
         </div>
-        <span class="text-xs text-slate-400 font-medium hidden sm:inline">2027 모의고사 및 수시 가채점 연계 분석</span>
+        <span class="text-xs text-slate-400 font-medium hidden sm:inline">{{ satamAnalysisBadgeTitle }}</span>
       </div>
       <!-- 사탐런 인포그래픽 상단 배너 (단일 통합 분석) -->
       <div class="bg-linear-to-r from-amber-500 via-orange-500 to-rose-500 rounded-3xl p-6 text-white shadow-md relative overflow-hidden">
@@ -701,19 +718,24 @@
 
           <!-- 타이틀 -->
           <h3 class="text-xl sm:text-2xl font-black tracking-tight m-0">
-            <template v-if="isLoadingMockExams && (!mockStats || effectiveSatamStats.naturalCohortCount === 0)">
+            <template v-if="(isLoadingMockExams || isLoadingYearData) && (!mockStats || effectiveSatamStats.naturalCohortCount === 0)">
               자연계열 학생의 사탐 전향 현황을 분석 중입니다...
             </template>
             <template v-else-if="effectiveSatamStats.naturalCohortCount > 0">
               자연계열 학생 중 {{ effectiveSatamStats.totalRunRate }}% ({{ effectiveSatamStats.totalRunCount }}명)가 사탐으로 전향했습니다
             </template>
             <template v-else>
-              모의고사 성적 데이터 확인 대기 중
+              {{ academicYearLabel }}학년도 수시 지원 원자료 기준 탐구 응시 현황
             </template>
           </h3>
 
           <p class="text-xs text-white/90 mt-1.5 max-w-2xl leading-relaxed">
-            전체 모의고사 중 미적/기하 또는 과탐 이력이 있는 자연계열 학생 <strong>{{ effectiveSatamStats.naturalCohortCount }}명</strong> 중 <strong>{{ effectiveSatamStats.totalRunCount }}명({{ effectiveSatamStats.totalRunRate }}%)</strong>이 가장 최근 {{ examTerm }}에서 과탐의 극심한 등급 방어 부담을 덜고 수능 최저를 안정적으로 확보하기 위해 사탐 과목을 선택(사탐런)했습니다.
+            <template v-if="effectiveSatamStats.naturalCohortCount > 0">
+              {{ hasMockData ? '전체 모의고사 중 미적/기하 또는 과탐 이력이 있는' : '수시 지원 카드 중 자연계열 학과를 지원한' }} 자연계열 학생 <strong>{{ effectiveSatamStats.naturalCohortCount }}명</strong> 중 <strong>{{ effectiveSatamStats.totalRunCount }}명({{ effectiveSatamStats.totalRunRate }}%)</strong>이 {{ examTerm }}에서 과탐의 극심한 등급 방어 부담을 덜고 수능 최저를 안정적으로 확보하기 위해 사탐 과목을 선택(사탐런)했습니다.
+            </template>
+            <template v-else>
+              {{ academicYearLabel }}학년도는 회차별 모의고사 데이터 대신 수시 지원 결과({{ applications.length }}건) 및 과목별 탐구 응시 현황을 기준으로 분석합니다.
+            </template>
           </p>
 
           <!-- 4개 통계 카드 그리드 -->
@@ -1542,10 +1564,10 @@
           </p>
         </div>
 
-        <!-- Metric 3: 2027 우리 학생 수혜 현황 -->
+        <!-- Metric 3: 해당 학년도 우리 학생 수혜 현황 -->
         <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs">
           <div class="flex items-center justify-between text-xs font-bold text-slate-600 mb-2">
-            <span>🚀 2027 우리 학생 최저 도전 현황</span>
+            <span>🚀 {{ academicYearLabel }} 우리 학생 최저 도전 현황</span>
             <span class="text-emerald-700 font-mono font-black text-xs">4등급 이하 대상</span>
           </div>
           <div class="flex items-baseline gap-2">
@@ -2243,14 +2265,14 @@
       <div class="flex items-center justify-between pb-1">
         <div class="flex items-center gap-2">
           <span class="flex items-center justify-center w-7 h-7 rounded-xl bg-amber-50 text-amber-700 text-sm font-black border border-amber-200">4</span>
-          <h3 class="text-base sm:text-lg font-black text-slate-900 m-0">2027 대입 5대 핵심 전략</h3>
+          <h3 class="text-base sm:text-lg font-black text-slate-900 m-0">{{ academicYearLabel }} 대입 5대 핵심 전략</h3>
         </div>
         <span class="text-xs text-slate-400 font-medium hidden sm:inline">수시·정시 대비 5대 핵심 가이드</span>
       </div>
       <div class="flex items-center justify-between mb-2">
         <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
           <span>💡</span>
-          <span>2027학년도 수시·정시 대비 5대 핵심 지침</span>
+          <span>{{ academicYearLabel }}학년도 수시·정시 대비 5대 핵심 지침</span>
         </span>
       </div>
 
@@ -2531,42 +2553,87 @@ onUnmounted(() => {
 
 watch(selectedAcademicYear, (newYear) => {
   if (Number(newYear) >= 2027 && (!mockExamRecords.value || mockExamRecords.value.length === 0)) {
-    loadMockExamData().catch(() => {})
+    loadMockExamData(false, newYear).catch(() => {})
   }
 })
 
 // 모의고사 성적 레코드 및 수시 지원 데이터 로드 시 사탐런 통계 자동 산출
-watch([mockExamRecords, applications], ([records, apps]) => {
+watch([mockExamRecords, applications, selectedAcademicYear], ([records, apps, yr]) => {
+  mockStats.value = null
+
+  // 1. 모의고사 성적 데이터가 있는 경우 (예: 2027학년도 등)
   if (records && records.length > 0) {
     try {
       const stats = calculateSatamRunStats(records, apps || [])
       if (stats && stats.naturalCohortCount > 0) {
         mockStats.value = stats
+        return
       }
     } catch (e) {
       console.warn('Failed to calculate satam run stats automatically:', e)
+    }
+  }
+
+  // 2. 모의고사 성적표가 없는 연도(2026, 2025 등): 수시 지원 원자료(applications)의 수능 과목/등급 열에서 수능 응시 기록 추출
+  if (apps && apps.length > 0) {
+    try {
+      const studentExamsMap = new Map()
+      apps.forEach(app => {
+        const k = app.studentKey || `${app.classNum || ''}-${app.studentNum || ''}_${app.name || ''}`
+        if (!studentExamsMap.has(k)) {
+          const math = app.csatMathSubject || app.rawRow?.['수학 (과목)'] || app.rawRow?.['수학(과목)'] || app.rawRow?.['수학'] || ''
+          const inq1 = app.csatInq1Subject || app.rawRow?.['탐구1 (과목)'] || app.rawRow?.['탐구1(과목)'] || app.rawRow?.['탐구1'] || ''
+          const inq2 = app.csatInq2Subject || app.rawRow?.['탐구2 (과목)'] || app.rawRow?.['탐구2(과목)'] || app.rawRow?.['탐구2'] || ''
+          const inq1G = app.csatInq1Grade || app.rawRow?.['탐구1 (등급)'] || app.rawRow?.['탐구1(등급)'] || null
+          const inq2G = app.csatInq2Grade || app.rawRow?.['탐구2 (등급)'] || app.rawRow?.['탐구2(등급)'] || null
+          const mathG = app.csatMathGrade || app.rawRow?.['수학 (등급)'] || app.rawRow?.['수학(등급)'] || null
+          const korG = app.csatKorGrade || app.rawRow?.['국어 (등급)'] || app.rawRow?.['국어(등급)'] || null
+          const engG = app.csatEngGrade || app.rawRow?.['영어 (등급)'] || app.rawRow?.['영어(등급)'] || null
+
+          if (math || inq1 || inq2) {
+            studentExamsMap.set(k, {
+              studentKey: k,
+              name: app.name || '학생',
+              classNum: app.classNum || '',
+              studentNum: app.studentNum || '',
+              grade: 3,
+              examName: `${yr} 수능`,
+              monthOrder: 11,
+              mathSubject: math,
+              inquiry1: inq1,
+              inquiry2: inq2,
+              mathGrade: mathG,
+              inq1Grade: inq1G,
+              inq2Grade: inq2G,
+              korGrade: korG,
+              engGrade: engG
+            })
+          }
+        }
+      })
+
+      const synthExams = Array.from(studentExamsMap.values())
+      if (synthExams.length > 0) {
+        const stats = calculateSatamRunStats(synthExams, apps)
+        if (stats && stats.naturalCohortCount > 0) {
+          mockStats.value = stats
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to calculate satam run stats from applications:', e)
     }
   }
 }, { immediate: true })
 
 // -------------------------------------------------------------
 // 1. Radar Chart Data (내신 vs 수능 5개 영역 방사형)
-// - 2026학년도: 보고서 1페이지 2026 수능 vs 내신 고정 데이터
-// - 2027학년도: 3·5·6·7·9·10월 모의고사 누적 성적 기반 자동 계산
-//   (단, '2027모의가채점' A열에 '수능' 입력 시 모의고사 무시 및 수능 성적으로만 전환)
 // -------------------------------------------------------------
 
-// 내신 5과목(국어, 수학, 영어, 사탐, 과탐) 평균 등급
+// 내신 5과목(국어, 수학, 영어, 사탐, 과탐) 평균 등급 (전체 학년도 applications 원자료 기반 동적 산출)
 const currentGpaRaw = computed(() => {
-  if (Number(selectedAcademicYear.value) < 2027) {
-    // 2026학년도 이하 과거 연도 기준
-    return [4.20, 4.50, 4.80, 4.60, 4.40]
-  }
-
-  // 2027학년도: applications에서 유니크 학생들의 교과 성적 평균 산출
   const appList = applications.value || []
   if (appList.length === 0) {
-    return [4.39, 4.48, 4.42, 4.19, 4.66] // 2027 확정 전수 평균
+    return [4.39, 4.48, 4.42, 4.19, 4.66]
   }
 
   const studentMap = new Map()
@@ -2696,6 +2763,16 @@ const hasCsatData = computed(() => {
 const examTerm = computed(() => hasCsatData.value ? '수능' : '모의고사')
 
 const academicYearLabel = computed(() => selectedAcademicYear.value || '2027')
+
+// 해당 학년도 모의고사 성적 데이터 존재 여부
+const hasMockData = computed(() => highSchoolMockRecords.value && highSchoolMockRecords.value.length > 0)
+
+// 사탐런 섹션 뱃지 타이틀
+const satamAnalysisBadgeTitle = computed(() => {
+  return hasMockData.value
+    ? `${academicYearLabel.value} 모의고사 및 수시 가채점 연계 분석`
+    : `${academicYearLabel.value}수시 지원 원자료 연계 탐구 분석`
+})
 
 // Sub Tabs (숫자 기반 명확한 점프 탭)
 const subTabs = computed(() => [
@@ -3256,14 +3333,14 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
 // 반응형 currentSatAnalysis (회차 선택 selectedMockExamMonth 연동)
 // -------------------------------------------------------------
 const currentSatAnalysis = computed(() => {
-  if (selectedAcademicYear.value !== '2027') {
-    // 2026학년도 대입 (고정 데이터)
+  if (selectedAcademicYear.value === '2026') {
+    // 2026학년도 대입 (공식 수능 실채점 데이터)
     return {
       mode: '2026_CSAT',
       isCsat: true,
       hasRealData: true,
       studentCount: 227,
-      label: '수능 평균 등급',
+      label: '2026 수능 평균 등급',
       subText: '2026 수능 응시 227명 기준',
       grades: [6.10, 5.80, 4.94, 6.00, 6.30],
       subjectsDetail: {
@@ -3288,6 +3365,26 @@ const currentSatAnalysis = computed(() => {
           ],
           allSubjects: gwatamList
         }
+      }
+    }
+  }
+
+  if (selectedAcademicYear.value !== '2027') {
+    // 2025학년도 등 모의고사 미보유 과거 연도 (수시 지원 원자료 기준 안내 상태)
+    return {
+      mode: `${selectedAcademicYear.value}_SUSI`,
+      isCsat: true,
+      hasRealData: false,
+      studentCount: 0,
+      label: `${selectedAcademicYear.value}학년도 수능 데이터 미등록`,
+      subText: `${selectedAcademicYear.value} 수시 지원 원자료(${applications.value?.length || 0}건) 기준`,
+      grades: [null, null, null, null, null],
+      subjectsDetail: {
+        kor: { totalCount: 0, totalAvg: '-' },
+        math: { totalCount: 0, totalAvg: '-' },
+        eng: { totalCount: 0, totalAvg: '-' },
+        soc: { totalCount: 0, totalAvg: '-', topSubjects: [], allSubjects: [] },
+        sci: { totalCount: 0, totalAvg: '-', topSubjects: [], allSubjects: [] }
       }
     }
   }
@@ -3798,14 +3895,14 @@ const radarInsightsHtml = computed(() => {
   const gpa = currentGpaRaw.value
   const sat = currentSatAnalysis.value.grades
   const isCsat = currentSatAnalysis.value.isCsat
-  const is2027 = Number(selectedAcademicYear.value) >= 2027
+  const is2026 = selectedAcademicYear.value === '2026'
 
-  if (!is2027) {
-    return '국어(1.90등급↓), 수학(1.30등급↓), 탐구(1.4~1.9등급↓) 등 모든 과목에서 <strong>수능 등급이 내신 대비 1.3~1.9등급 낮게 형성</strong>되는 명확한 격차를 보입니다. 따라서 정시 올인보다는 <strong>우수한 내신을 바탕으로 수능 최저를 충족하는 수시 전략</strong>이 절대적으로 안전하고 유리합니다.'
+  if (is2026) {
+    return '2026학년도 수능 실채점 결과, 국어(1.90등급↓), 수학(1.30등급↓), 탐구(1.4~1.9등급↓) 등 모든 과목에서 <strong>수능 등급이 내신 대비 1.3~1.9등급 낮게 형성</strong>되는 명확한 격차를 보입니다. 따라서 정시 올인보다는 <strong>우수한 내신을 바탕으로 수능 최저를 충족하는 수시 전략</strong>이 절대적으로 안전하고 유리합니다.'
   }
 
   if (!currentSatAnalysis.value.hasRealData || sat[0] == null) {
-    return `<strong>${currentSatAnalysis.value.label}</strong> 성적 데이터가 아직 등록되지 않았습니다. 대교협 모의고사 엑셀을 업로드하시면 전 과목 내신-모평 격차 및 맞춤형 분석 리포트가 자동으로 생성됩니다.`
+    return `<strong>${academicYearLabel.value}학년도 수시 지원 원자료(${applications.value?.length || 0}건)</strong>를 바탕으로 분석된 결과입니다. 수능 성적 데이터는 시트에 등록되어 있지 않아 학생별 내신 평균 등급(전체 평균 ${avgSchoolGpa.value}등급)을 중심으로 분석합니다.`
   }
 
   const diffKor = (sat[0] - gpa[0]).toFixed(2)
@@ -3888,7 +3985,7 @@ const activeSatamList = computed(() => {
   if (dynamic && dynamic.length > 0) {
     return dynamic
   }
-  return satamList
+  return selectedAcademicYear.value === '2027' ? satamList : []
 })
 
 const activeGwatamList = computed(() => {
@@ -3897,7 +3994,7 @@ const activeGwatamList = computed(() => {
   if (dynamic && dynamic.length > 0) {
     return dynamic
   }
-  return gwatamList
+  return selectedAcademicYear.value === '2027' ? gwatamList : []
 })
 
 const totalSatamCount = computed(() => activeSatamList.value.reduce((acc, c) => acc + c.count, 0))

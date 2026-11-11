@@ -278,7 +278,7 @@
 
             <div class="mt-4 p-3 bg-amber-50/60 rounded-xl border border-amber-200/60 text-[11px] text-amber-800">
               <div class="font-semibold flex items-center">
-                <span class="mr-1">💡</span> 2027학년도 대입 포인트
+                <span class="mr-1">💡</span> {{ academicYearLabel }}학년도 대입 포인트
               </div>
               <div class="mt-1 text-amber-700 leading-relaxed">
                 <span v-if="selectedClass !== 'ALL' && selectedClass !== 'ENROLLED'">
@@ -322,8 +322,11 @@ const {
   enrolledLabel,
   enrolledSubText,
   applicantLabel,
-  currentApplicantRate
+  currentApplicantRate,
+  selectedAcademicYear
 } = useData()
+
+const academicYearLabel = computed(() => selectedAcademicYear?.value || '2027')
 
 const getPercentage = (count) => {
   const total = currentStats.value.totalApps

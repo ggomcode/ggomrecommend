@@ -773,7 +773,17 @@ export function parseKcueRows(csvText, customPassword = null) {
       isRural,
       isOpportunity,
       isMetro,
-      competitionRates
+      competitionRates,
+      csatKorSubject: String(getVal('국어(과목)', '국어 (과목)')).trim(),
+      csatKorGrade: getNum('국어(등급)', '국어 (등급)'),
+      csatMathSubject: String(getVal('수학(과목)', '수학 (과목)')).trim(),
+      csatMathGrade: getNum('수학(등급)', '수학 (등급)'),
+      csatEngGrade: getNum('영어(등급)', '영어 (등급)', '수능영어', '수능 영어'),
+      csatInq1Subject: String(getVal('탐구1(과목)', '탐구1 (과목)')).trim(),
+      csatInq1Grade: getNum('탐구1(등급)', '탐구1 (등급)'),
+      csatInq2Subject: String(getVal('탐구2(과목)', '탐구2 (과목)')).trim(),
+      csatInq2Grade: getNum('탐구2(등급)', '탐구2 (등급)'),
+      rawRow: rowData || {}
     })
   }
 
@@ -1148,11 +1158,12 @@ export function smartMergeMockExamRecords(resultRecords = [], tentativeRecords =
 
 const mockDataMemoryCache = new Map()
 
-export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, customPassword = null, forceReload = false) {
+export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, customPassword = null, forceReload = false, targetYear = null) {
   const cleanId = sheetId ? extractSheetId(sheetId) : await getKcueSheetId()
   if (!cleanId) throw new Error('구글 시트 ID가 설정되지 않았습니다.')
 
-  const cacheKey = `${cleanId}_${tabName || 'all'}`
+  const yearTag = targetYear ? String(targetYear) : 'all'
+  const cacheKey = `${cleanId}_${tabName || yearTag}`
   if (!forceReload && mockDataMemoryCache.has(cacheKey)) {
     return mockDataMemoryCache.get(cacheKey)
   }
@@ -1164,10 +1175,14 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
 
   const actualTabs = await getActualGoogleSheetTabs(cleanId)
 
+  // 학년도가 지정된 경우 해당 연도 모의 탭 탐색, 미지정 시 전체 중 탐색
+  const yr = targetYear ? String(targetYear) : ''
+  const isMatchYear = (t) => !yr || t.includes(yr)
+
   // 1. 결과 탭(확정) 탐색: 예) '2027모의결과', '모의결과'
-  const resultTab = actualTabs.find(t => t.includes('모의결과') || t.includes('결과'))
+  const resultTab = actualTabs.find(t => isMatchYear(t) && (t.includes('모의결과') || (t.includes('모의') && t.includes('결과'))))
   // 2. 가채점 탭 탐색: 예) '2027모의가채점', '2027가채점', '모의가채점'
-  const tentativeTab = actualTabs.find(t => t.includes('가채점') || (t.includes('모의') && !t.includes('결과')))
+  const tentativeTab = actualTabs.find(t => isMatchYear(t) && (t.includes('가채점') || (t.includes('모의') && !t.includes('결과'))))
 
   let resultRecords = []
   if (resultTab) {
@@ -1188,7 +1203,9 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
   }
 
   if (resultRecords.length > 0 && tentativeRecords.length > 0) {
-    return smartMergeMockExamRecords(resultRecords, tentativeRecords)
+    const merged = smartMergeMockExamRecords(resultRecords, tentativeRecords)
+    mockDataMemoryCache.set(cacheKey, merged)
+    return merged
   }
 
   const finalRecords = resultRecords.length > 0 ? resultRecords : tentativeRecords

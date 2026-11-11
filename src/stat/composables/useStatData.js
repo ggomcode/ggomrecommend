@@ -70,6 +70,7 @@ const officialStats = ref(officialStatsData)
 export const mockExamRecords = ref([])
 export const studentMockExamsMap = ref(new Map())
 export const isLoadingMockExams = ref(false)
+export const currentMockLoadedYear = ref(null)
 
 // 수능최저 시트(2027수능최저, 2028수능최저) 전역 상태
 export const csatMinScoreTable = ref([])
@@ -132,24 +133,33 @@ export async function loadCsatMinScoreData(year = '2027', forceReload = false) {
 }
 
 /**
- * 구글 시트 '2027모의가채점' 탭의 모의고사 성적 데이터를 비동기 로드 및 복호화
+ * 구글 시트 모의고사 탭의 성적 데이터를 비동기 로드 및 복호화
+ * @param {boolean} forceReload 강제 재로드 여부
+ * @param {string|null} targetYear 대상 대입학년도 (미지정 시 selectedAcademicYear 사용)
  */
-export async function loadMockExamData(forceReload = false) {
-  if (!forceReload && mockExamRecords.value.length > 0) {
+export async function loadMockExamData(forceReload = false, targetYear = null) {
+  const yr = targetYear ? String(targetYear) : (selectedAcademicYear?.value || '2027')
+  if (!forceReload && mockExamRecords.value.length > 0 && String(currentMockLoadedYear.value) === yr) {
     return mockExamRecords.value
   }
   isLoadingMockExams.value = true
   try {
     const sheetId = await getKcueSheetId()
-    const records = await fetchAndParseKcueMockData(sheetId)
+    const records = await fetchAndParseKcueMockData(sheetId, null, null, forceReload, yr)
+    currentMockLoadedYear.value = yr
     if (records && records.length > 0) {
       mockExamRecords.value = records
       studentMockExamsMap.value = groupMockRecordsByStudent(records)
-      console.log(`[useStatData] 모의고사 성적 ${records.length}건 로드 완료 (학생수: ${studentMockExamsMap.value.size}명)`)
+      console.log(`[useStatData] ${yr}학년도 모의고사 성적 ${records.length}건 로드 완료 (학생수: ${studentMockExamsMap.value.size}명)`)
+    } else {
+      mockExamRecords.value = []
+      studentMockExamsMap.value = new Map()
     }
-    return records
+    return records || []
   } catch (err) {
-    console.warn('[useStatData] 모의고사 성적 로드 실패:', err)
+    console.warn(`[useStatData] ${yr}학년도 모의고사 성적 로드 실패:`, err)
+    mockExamRecords.value = []
+    studentMockExamsMap.value = new Map()
     return []
   } finally {
     isLoadingMockExams.value = false
@@ -452,10 +462,8 @@ async function applyYearAndScope(year, scope, forceReload = false) {
 
     applications.value = combined
     updateOfficialStats(strYear, combined)
-    // 연도 변경 시 모의고사 성적 승격 매핑 동기화
-    if (mockExamRecords.value.length > 0) {
-      loadMockExamData(true).catch(e => console.warn(e))
-    }
+    // 연도 변경 시 해당 학년도의 모의고사 성적 동기화 (2026/2025 등 모의 탭 미존재 시 빈 배열로 안전 초기화)
+    loadMockExamData(forceReload, strYear).catch(e => console.warn(e))
 
     if (combined.length === 0) {
       const periodLabel = scope.startsWith('JUNGSI') ? '정시' : '수시'
