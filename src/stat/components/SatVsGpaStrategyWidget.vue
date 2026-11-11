@@ -336,11 +336,11 @@
                 </div>
               </div>
 
-              <!-- 2열: 영어 영역 (국어/수학 전체 가로폭 활용, 2분할 밸런스 배치로 박스 이탈 방지) -->
-              <div class="bg-linear-to-br from-emerald-50/70 to-slate-50 p-4 rounded-2xl border border-emerald-100 shadow-2xs">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                  <!-- 좌측: 국어와 완전히 동일한 형태의 등급 & 슬라이더 표시 -->
-                  <div class="space-y-1.5">
+              <!-- 2열: 영어 영역 (좌측 등급/슬라이더 5 : 우측 전략 카드 7 비율 배치로 1줄 정렬 완벽 보장) -->
+              <div class="bg-linear-to-br from-emerald-50/70 to-slate-50 p-3.5 sm:p-4 rounded-2xl border border-emerald-100 shadow-2xs">
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-center">
+                  <!-- 좌측: 등급 & 슬라이더 표시 (좌측 폭 최적화: 5/12) -->
+                  <div class="sm:col-span-5 space-y-1.5">
                     <div class="flex items-center justify-between mb-1">
                       <span class="text-xs font-black text-emerald-950 flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
@@ -358,7 +358,7 @@
                       <span v-else class="text-[11px] text-slate-400 font-medium">데이터 미등록</span>
                     </div>
 
-                    <!-- 1~9 등급 수직선 위치 마커 (국어와 동일한 넉넉한 너비로 글자 겹침 완전 방지) -->
+                    <!-- 1~9 등급 수직선 위치 마커 -->
                     <div class="relative pt-1 pb-1">
                       <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
                       <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
@@ -377,14 +377,14 @@
                     </div>
                   </div>
 
-                  <!-- 우측: 수학 아래 영역에 꼭 맞춘 수능 최저 핵심 전략 & 등급컷 안내 카드 -->
-                  <div class="bg-white/95 p-3 rounded-xl border border-emerald-200/80 shadow-2xs flex flex-col justify-between space-y-1.5">
-                    <div class="flex items-center justify-between">
-                      <span class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
-                        <span class="text-sm">🎯</span>
-                        <span>수능 최저의 핵심 전략 영역</span>
+                  <!-- 우측: 수능 최저 핵심 전략 & 등급컷 안내 카드 (우측 폭 확대: 7/12, 1줄 레이아웃 보장) -->
+                  <div class="sm:col-span-7 bg-white/95 p-3 rounded-xl border border-emerald-200/80 shadow-2xs flex flex-col justify-between space-y-1.5">
+                    <div class="flex items-center justify-between gap-1.5">
+                      <span class="text-xs font-bold text-emerald-950 flex items-center gap-1.5 min-w-0">
+                        <span class="text-sm shrink-0">🎯</span>
+                        <span class="whitespace-nowrap font-extrabold">수능 최저의 핵심 전략 영역</span>
                       </span>
-                      <span class="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">절대평가 활용</span>
+                      <span class="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 whitespace-nowrap shrink-0">절대평가 활용</span>
                     </div>
                     <p class="text-xs text-slate-600 leading-relaxed font-medium m-0">
                       상대평가(6등급대) 부담 없이 <span class="font-bold text-emerald-700">2~3등급 안정 확보</span> 시 수시 최저 충족 성공률이 급상승합니다.
