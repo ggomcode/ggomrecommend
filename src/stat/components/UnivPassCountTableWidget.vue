@@ -1,36 +1,36 @@
 <template>
-  <div class="univ-pass-count-widget bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs transition-all duration-300 print:p-0 print:border-none print:shadow-none">
-    <!-- Header & Print Controls -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100 print:border-b-2 print:border-black print:pb-2 print:mb-3">
+  <div class="univ-pass-count-widget bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs transition-all duration-300 print:p-0 print:border-none print:shadow-none print:m-0">
+    <!-- 화면 전용 상단 헤더 & 인쇄 버튼 (인쇄 시 완전 숨김) -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100 print:hidden">
       <div>
-        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200/80 mb-1 print:hidden">
+        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200/80 mb-1">
           <span>🏛️</span>
           <span>주요 대학 합격 실적 현황</span>
           <span class="text-indigo-300">|</span>
           <span class="text-slate-500 font-semibold">{{ selectedAcademicYear }}학년도 집계</span>
         </div>
-        <h3 class="text-base sm:text-lg font-black text-slate-900 tracking-tight m-0 print:text-xl print:text-black">
+        <h3 class="text-base sm:text-lg font-black text-slate-900 tracking-tight m-0">
           주요 대학 및 권역별 합격 인원 현황표
         </h3>
-        <p class="text-xs text-slate-500 m-0 mt-0.5 print:text-[11px] print:text-slate-600">
+        <p class="text-xs text-slate-500 m-0 mt-0.5">
           단일 학생 기준 실제 최종 합격 인원(명) 집계표입니다. (중복 합격 포함 시 지원 건수 병기)
         </p>
       </div>
 
       <!-- Quick Metrics & Print Button -->
       <div class="flex items-center gap-2 self-start sm:self-center shrink-0">
-        <div class="bg-indigo-50/70 border border-indigo-200/80 px-3 py-1.5 rounded-xl text-right print:border-black print:bg-transparent">
-          <span class="text-[10px] text-slate-500 font-medium block print:text-black">총 합격 인원 (순수)</span>
-          <span class="text-xs sm:text-sm font-black text-indigo-700 font-mono print:text-black">
+        <div class="bg-indigo-50/70 border border-indigo-200/80 px-3 py-1.5 rounded-xl text-right">
+          <span class="text-[10px] text-slate-500 font-medium block">총 합격 인원 (순수)</span>
+          <span class="text-xs sm:text-sm font-black text-indigo-700 font-mono">
             {{ totalUniquePassedStudents }}명
-            <span class="text-[10px] font-semibold text-slate-400 print:text-black">({{ totalPassedAppsCount }}건)</span>
+            <span class="text-[10px] font-semibold text-slate-400">({{ totalPassedAppsCount }}건)</span>
           </span>
         </div>
 
         <button
           type="button"
           @click="handlePrint"
-          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 hover:border-slate-300 transition-all cursor-pointer shadow-2xs print:hidden"
+          class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 hover:border-slate-300 transition-all cursor-pointer shadow-2xs"
           title="현황표 A4 인쇄 / PDF 저장"
         >
           <Printer class="w-3.5 h-3.5 text-slate-600" />
@@ -39,11 +39,19 @@
       </div>
     </div>
 
-    <!-- Printable Header Banner (Only visible during @media print) -->
-    <div class="hidden print:block print:mb-3">
-      <div class="flex items-center justify-between text-xs border-b border-black pb-1 mb-2 font-mono">
-        <span class="font-bold">포곡고등학교 대입 통계 분석 시스템</span>
-        <span>기준: {{ selectedAcademicYear }}학년도 대입 전형 최종 결과</span>
+    <!-- 🖨️ 인쇄 전용 공식 헤더 (화면에서는 숨김, 인쇄 시에만 제목 + 기본 정보 깔끔하게 출력) -->
+    <div class="hidden print:block mb-3 border-b-2 border-black pb-2">
+      <div class="flex items-center justify-between text-[11px] font-mono text-slate-700 mb-1">
+        <span class="font-bold text-black">포곡고등학교 대입 진학 지도 시스템</span>
+        <span>기준: {{ selectedAcademicYear }}학년도 대입 최종 합격 실적</span>
+      </div>
+      <div class="flex items-baseline justify-between mt-1">
+        <h1 class="text-xl font-black text-black tracking-tight m-0">
+          주요 대학 및 권역별 합격 인원 현황표
+        </h1>
+        <span class="text-xs font-mono font-bold text-black">
+          총 합격 인원: {{ totalUniquePassedStudents }}명 (총 {{ totalPassedAppsCount }}건)
+        </span>
       </div>
     </div>
 
@@ -79,7 +87,7 @@
           <div
             :class="[
               'px-2 py-1.5 text-center text-[11px] font-bold truncate border-b transition-colors',
-              'print:bg-slate-100 print:text-black print:border-black print:py-1 print:text-[10px]',
+              'print:bg-slate-100 print:text-black print:border-black print:py-1 print:text-[9.5px] print:whitespace-normal print:overflow-visible print:break-words print:leading-tight',
               target.id === 'MED'
                 ? 'bg-rose-50 text-rose-800 border-rose-200 font-black'
                 : statsMap[target.id]?.studentCount > 0
@@ -157,7 +165,7 @@
           <div
             :class="[
               'px-2 py-1.5 text-center text-[11px] font-bold truncate border-b transition-colors',
-              'print:bg-slate-100 print:text-black print:border-black print:py-1 print:text-[10px]',
+              'print:bg-slate-100 print:text-black print:border-black print:py-1 print:text-[9.5px] print:whitespace-normal print:overflow-visible print:break-words print:leading-tight',
               statsMap[target.id]?.studentCount > 0
                 ? 'bg-emerald-50/60 text-slate-800 border-emerald-100 group-hover:bg-emerald-100/70'
                 : 'bg-slate-100/80 text-slate-600 border-slate-200'
@@ -788,6 +796,10 @@ function handlePrint() {
 
 <style scoped>
 @media print {
+  @page {
+    size: A4 portrait !important;
+    margin: 8mm 10mm !important;
+  }
   /* Hide interactive web chrome during print */
   :global(body) {
     background: #fff !important;
@@ -801,6 +813,12 @@ function handlePrint() {
     display: none !important;
   }
   .univ-pass-count-widget {
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    width: 100% !important;
+    max-width: 100% !important;
     break-inside: avoid;
     page-break-inside: avoid;
   }
