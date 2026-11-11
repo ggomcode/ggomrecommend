@@ -35,7 +35,17 @@
         </div>
         <div class="bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl text-right" :title="`우리학교 수능최저 지원 ${schoolMinScoreStats.totalMinApps}건 실측 통계\n• 전체 (논술포함): 최초 ${schoolMinScoreStats.avgInitialRate}:1 ➔ 실질 ${schoolMinScoreStats.avgRealRate}:1 (체감 ${schoolMinScoreStats.avgEffectiveRate}:1)\n• 학생부교과 (${schoolMinScoreStats.gpaCount}건): 최초 ${schoolMinScoreStats.gpaInitialRate}:1 ➔ 실질 ${schoolMinScoreStats.gpaRealRate}:1 (체감 ${schoolMinScoreStats.gpaEffectiveRate}:1)`">
           <span class="text-[10px] text-blue-800 block font-semibold">최저 실질경쟁률</span>
-          <span class="text-sm font-black text-blue-700 font-mono">{{ schoolMinScoreStats.avgInitialRate }}:1 ➔ {{ schoolMinScoreStats.avgRealRate }}:1</span>
+          <span class="text-sm font-black text-blue-700 font-mono">
+            <template v-if="isLoadingYearData && (!schoolMinScoreStats.totalMinApps || schoolMinScoreStats.totalMinApps === 0)">
+              <span class="text-xs text-blue-600 font-medium">분석 중...</span>
+            </template>
+            <template v-else-if="schoolMinScoreStats.totalMinApps > 0 && schoolMinScoreStats.avgInitialRate !== '-'">
+              {{ schoolMinScoreStats.avgInitialRate }}:1 ➔ {{ schoolMinScoreStats.avgRealRate }}:1
+            </template>
+            <template v-else>
+              -
+            </template>
+          </span>
         </div>
       </div>
     </div>
@@ -1021,29 +1031,29 @@
                   <span>📊</span>
                   <span>과목별 점유율 띠 그래프</span>
                 </span>
-                <span class="text-slate-400 font-normal">
-                  상위 2개(사문·생윤): <strong class="text-emerald-700 font-black">76.3%</strong>
+                <span v-if="processedSatamList.length >= 2" class="text-slate-400 font-normal">
+                  상위 2개({{ processedSatamList[0].name }}·{{ processedSatamList[1].name }}): <strong class="text-emerald-700 font-black">{{ (parseFloat(processedSatamList[0].pct) + parseFloat(processedSatamList[1].pct)).toFixed(1) }}%</strong>
                 </span>
               </div>
               <!-- 100% Stacked Segmented Bar -->
               <div class="w-full h-3.5 rounded-full flex overflow-hidden bg-slate-100 border border-slate-200/60 p-0.5 gap-0.5">
                 <div
-                  v-for="s in satamList"
+                  v-for="s in processedSatamList"
                   :key="s.name"
-                  :style="{ width: ((s.count / totalSatamCount) * 100) + '%', backgroundColor: s.color }"
+                  :style="{ width: s.pct + '%', backgroundColor: s.color || '#15803d' }"
                   class="h-full rounded-full transition-all hover:brightness-110 cursor-pointer"
-                  :title="`${s.name}: ${s.count}명 (${((s.count / totalSatamCount) * 100).toFixed(1)}%)`"
+                  :title="`${s.name}: ${s.count}명 (${s.pct}%)`"
                 ></div>
               </div>
               <!-- 하위 레전드 요약 -->
               <div class="flex flex-wrap items-center justify-between pt-0.5 text-[10px] text-slate-500 font-medium">
                 <div class="flex flex-wrap items-center gap-2">
-                  <span v-for="s in satamList.slice(0, 4)" :key="s.name" class="inline-flex items-center gap-1">
-                    <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: s.color }"></span>
+                  <span v-for="s in processedSatamList.slice(0, 4)" :key="s.name" class="inline-flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: s.color || '#15803d' }"></span>
                     <span class="text-slate-700 font-bold">{{ s.name }}</span>
-                    <span class="text-slate-400 font-mono">{{ ((s.count / totalSatamCount) * 100).toFixed(0) }}%</span>
+                    <span class="text-slate-400 font-mono">{{ s.pct }}%</span>
                   </span>
-                  <span class="text-slate-400">외 {{ satamList.length - 4 }}과목</span>
+                  <span v-if="processedSatamList.length > 4" class="text-slate-400">외 {{ processedSatamList.length - 4 }}과목</span>
                 </div>
                 <span class="text-slate-400 font-mono text-[9px]">* 마우스 오버 시 과목별 인원 표출</span>
               </div>
@@ -1178,29 +1188,29 @@
                   <span>📊</span>
                   <span>과목별 점유율 띠 그래프</span>
                 </span>
-                <span class="text-slate-400 font-normal">
-                  상위 2개(생명Ⅰ·지구Ⅰ): <strong class="text-indigo-700 font-black">53.1%</strong>
+                <span v-if="processedGwatamList.length >= 2" class="text-slate-400 font-normal">
+                  상위 2개({{ processedGwatamList[0].name }}·{{ processedGwatamList[1].name }}): <strong class="text-indigo-700 font-black">{{ (parseFloat(processedGwatamList[0].pct) + parseFloat(processedGwatamList[1].pct)).toFixed(1) }}%</strong>
                 </span>
               </div>
               <!-- 100% Stacked Segmented Bar -->
               <div class="w-full h-3.5 rounded-full flex overflow-hidden bg-slate-100 border border-slate-200/60 p-0.5 gap-0.5">
                 <div
-                  v-for="q in gwatamList"
+                  v-for="q in processedGwatamList"
                   :key="q.name"
-                  :style="{ width: ((q.count / totalGwatamCount) * 100) + '%', backgroundColor: q.color }"
+                  :style="{ width: q.pct + '%', backgroundColor: q.color || '#9333ea' }"
                   class="h-full rounded-full transition-all hover:brightness-110 cursor-pointer"
-                  :title="`${q.name}: ${q.count}명 (${((q.count / totalGwatamCount) * 100).toFixed(1)}%)`"
+                  :title="`${q.name}: ${q.count}명 (${q.pct}%)`"
                 ></div>
               </div>
               <!-- 하위 레전드 요약 -->
               <div class="flex flex-wrap items-center justify-between pt-0.5 text-[10px] text-slate-500 font-medium">
                 <div class="flex flex-wrap items-center gap-2">
-                  <span v-for="q in gwatamList.slice(0, 4)" :key="q.name" class="inline-flex items-center gap-1">
-                    <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: q.color }"></span>
+                  <span v-for="q in processedGwatamList.slice(0, 4)" :key="q.name" class="inline-flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: q.color || '#9333ea' }"></span>
                     <span class="text-slate-700 font-bold">{{ q.name }}</span>
-                    <span class="text-slate-400 font-mono">{{ ((q.count / totalGwatamCount) * 100).toFixed(0) }}%</span>
+                    <span class="text-slate-400 font-mono">{{ q.pct }}%</span>
                   </span>
-                  <span class="text-slate-400">외 {{ gwatamList.length - 4 }}과목</span>
+                  <span v-if="processedGwatamList.length > 4" class="text-slate-400">외 {{ processedGwatamList.length - 4 }}과목</span>
                 </div>
                 <span class="text-slate-400 font-mono text-[9px]">* 마우스 오버 시 과목별 인원 표출</span>
               </div>
@@ -2319,7 +2329,6 @@ import * as XLSX from 'xlsx'
 import {
   calculateSatamRunStats,
   parseMockExamWorkbook,
-  generateRealisticMockSample,
   STANDARD_SCIENCE_SUBJECTS,
   STANDARD_SOCIAL_SUBJECTS,
   normalizeSubject
@@ -2437,6 +2446,7 @@ const {
   mockExamRecords,
   loadMockExamData,
   isLoadingMockExams,
+  isLoadingYearData,
   csatPassRateTable,
   loadCsatPassRateData,
   isLoadingCsatPassRate,
@@ -2556,7 +2566,7 @@ const currentGpaRaw = computed(() => {
   // 2027학년도: applications에서 유니크 학생들의 교과 성적 평균 산출
   const appList = applications.value || []
   if (appList.length === 0) {
-    return [4.38, 4.48, 4.42, 4.18, 4.65] // 2027 기준치
+    return [4.39, 4.48, 4.42, 4.19, 4.66] // 2027 확정 전수 평균
   }
 
   const studentMap = new Map()
@@ -2594,6 +2604,15 @@ const currentGpaRaw = computed(() => {
     socN ? Number((socSum / socN).toFixed(2)) : 4.18,
     sciN ? Number((sciSum / sciN).toFixed(2)) : 4.65
   ]
+})
+
+// 내신 5과목 전체 평균 (모의고사 추이 선그래프의 기준선 연동)
+const avgSchoolGpa = computed(() => {
+  const g = currentGpaRaw.value
+  if (!g || g.length === 0) return 4.44
+  const valid = g.filter(v => v !== null && !isNaN(v) && Number(v) > 0)
+  if (valid.length === 0) return 4.44
+  return Number((valid.reduce((a, b) => a + b, 0) / valid.length).toFixed(2))
 })
 
 // 수능 시험 레코드 판정 (A열 또는 examName에 '수능' 표기)
@@ -2837,7 +2856,38 @@ const normalizeInqGradeVal = (val) => {
 }
 
 // -------------------------------------------------------------
-// 탐구 기준 과목 리스트 (사탐 9과목, 과탐 8과목)
+// 탐구 과목별 표준 색상 매핑
+// -------------------------------------------------------------
+const INQUIRY_COLOR_MAP = {
+  '사회·문화': '#15803d',
+  '생활과 윤리': '#0284c7',
+  '한국지리': '#0f766e',
+  '윤리와 사상': '#0369a1',
+  '정치와 법': '#b45309',
+  '세계 지리': '#c026d3',
+  '세계사': '#65a30d',
+  '경제': '#0284c7',
+  '동아시아사': '#ea580c',
+  '생명 과학 Ⅰ': '#166534',
+  '생명과학Ⅰ': '#166534',
+  '생명 과학 Ⅱ': '#0284c7',
+  '생명과학Ⅱ': '#0284c7',
+  '지구 과학 Ⅰ': '#9333ea',
+  '지구과학Ⅰ': '#9333ea',
+  '지구 과학 Ⅱ': '#65a30d',
+  '지구과학Ⅱ': '#65a30d',
+  '물리학 Ⅰ': '#0369a1',
+  '물리학Ⅰ': '#0369a1',
+  '물리학 Ⅱ': '#ea580c',
+  '물리학Ⅱ': '#ea580c',
+  '화학 Ⅰ': '#0f172a',
+  '화학Ⅰ': '#0f172a',
+  '화학 Ⅱ': '#9a3412',
+  '화학Ⅱ': '#9a3412'
+}
+
+// -------------------------------------------------------------
+// 2026학년도 공식 수능 기준 탐구 과목 리스트 (사탐 9과목, 과탐 8과목)
 // -------------------------------------------------------------
 const satamList = [
   { name: '사회·문화', count: 127, grade: '5.94', color: '#15803d' },
@@ -2883,8 +2933,8 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
         kor: { totalCount: 0, totalAvg: '-', unmaeCount: 0, unmaeAvg: '-', hwajakCount: 0, hwajakAvg: '-' },
         math: { totalCount: 0, totalAvg: '-', mijukCount: 0, mijukAvg: '-', hwaktongCount: 0, hwaktongAvg: '-' },
         eng: { totalCount: 0, totalAvg: '-' },
-        soc: { totalCount: 0, totalAvg: '-', topSubjects: [] },
-        sci: { totalCount: 0, totalAvg: '-', topSubjects: [] }
+        soc: { totalCount: 0, totalAvg: '-', topSubjects: [], allSubjects: [] },
+        sci: { totalCount: 0, totalAvg: '-', topSubjects: [], allSubjects: [] }
       }
     }
   }
@@ -3136,6 +3186,25 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
     }))
   }
 
+  const getAllInquirySubjects = (gradeMap, fallbackList) => {
+    if (gradeMap && gradeMap.size > 0) {
+      return Array.from(gradeMap.entries())
+        .map(([name, grades]) => ({
+          name,
+          count: grades.length,
+          grade: (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2),
+          avg: (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2),
+          color: INQUIRY_COLOR_MAP[name] || '#64748b'
+        }))
+        .sort((a, b) => b.count - a.count)
+    }
+    return (fallbackList || []).map(s => ({
+      ...s,
+      avg: s.grade || s.avg || '-',
+      color: s.color || INQUIRY_COLOR_MAP[s.name] || '#64748b'
+    }))
+  }
+
   return {
     mode: isCsat ? '2027_CSAT' : '2027_MOCK',
     isCsat,
@@ -3170,12 +3239,14 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
       soc: {
         totalCount: effectiveSocCount,
         totalAvg: cntSoc > 0 ? finalSoc.toFixed(2) : '-',
-        topSubjects: getTopInquirySubjects(socSubjectGrades, satamList)
+        topSubjects: getTopInquirySubjects(socSubjectGrades, satamList),
+        allSubjects: getAllInquirySubjects(socSubjectGrades, satamList)
       },
       sci: {
         totalCount: effectiveSciCount,
         totalAvg: cntSci > 0 ? finalSci.toFixed(2) : '-',
-        topSubjects: getTopInquirySubjects(sciSubjectGrades, gwatamList)
+        topSubjects: getTopInquirySubjects(sciSubjectGrades, gwatamList),
+        allSubjects: getAllInquirySubjects(sciSubjectGrades, gwatamList)
       }
     }
   }
@@ -3205,7 +3276,8 @@ const currentSatAnalysis = computed(() => {
           topSubjects: [
             { name: '사회·문화', count: 127, avg: '5.94' },
             { name: '생활과 윤리', count: 111, avg: '6.00' }
-          ]
+          ],
+          allSubjects: satamList
         },
         sci: {
           totalCount: 42,
@@ -3213,7 +3285,8 @@ const currentSatAnalysis = computed(() => {
           topSubjects: [
             { name: '생명 과학 Ⅰ', count: 35, avg: '6.23' },
             { name: '지구 과학 Ⅰ', count: 17, avg: '6.35' }
-          ]
+          ],
+          allSubjects: gwatamList
         }
       }
     }
@@ -3295,8 +3368,8 @@ const mockExamTrendSeries = computed(() => {
       socCount: hasData ? (socDet.totalCount || 0) : 0,
       sciAvg: hasData ? analysis.grades[4] : null,
       sciCount: hasData ? (sciDet.totalCount || 0) : 0,
-      // 내신 평균 기준선 (일관된 비교 기준: 4.44등급)
-      gpaBenchmark: 4.44
+      // 내신 평균 기준선 (동적 학교 내신 평균 연동)
+      gpaBenchmark: avgSchoolGpa.value
     }
   })
 })
@@ -3809,15 +3882,33 @@ const gwatamSortMode = ref('count') // 'count' | 'grade'
 const satamViewType = ref('bars') // 'bars' | 'chart'
 const gwatamViewType = ref('bars') // 'bars' | 'chart'
 
-const totalSatamCount = computed(() => satamList.reduce((acc, c) => acc + c.count, 0))
-const maxSatamCount = computed(() => Math.max(...satamList.map(s => s.count)))
+const activeSatamList = computed(() => {
+  if (selectedAcademicYear.value === '2026') return satamList
+  const dynamic = currentSatAnalysis.value?.subjectsDetail?.soc?.allSubjects
+  if (dynamic && dynamic.length > 0) {
+    return dynamic
+  }
+  return satamList
+})
+
+const activeGwatamList = computed(() => {
+  if (selectedAcademicYear.value === '2026') return gwatamList
+  const dynamic = currentSatAnalysis.value?.subjectsDetail?.sci?.allSubjects
+  if (dynamic && dynamic.length > 0) {
+    return dynamic
+  }
+  return gwatamList
+})
+
+const totalSatamCount = computed(() => activeSatamList.value.reduce((acc, c) => acc + c.count, 0))
+const maxSatamCount = computed(() => Math.max(...activeSatamList.value.map(s => s.count), 1))
 
 const processedSatamList = computed(() => {
   const tot = totalSatamCount.value || 1
   const max = maxSatamCount.value || 1
   
-  const mapped = satamList.map(s => {
-    const numGrade = parseFloat(s.grade)
+  const mapped = activeSatamList.value.map(s => {
+    const numGrade = parseFloat(s.grade) || 5.0
     const pct = ((s.count / tot) * 100).toFixed(1)
     const barWidth = Math.max(3, Math.round((s.count / max) * 100)) + '%'
     let gradeBadgeClass = 'bg-slate-50 text-slate-700 border-slate-200'
@@ -3844,15 +3935,15 @@ const processedSatamList = computed(() => {
   return [...mapped].sort((a, b) => b.count - a.count)
 })
 
-const totalGwatamCount = computed(() => gwatamList.reduce((acc, c) => acc + c.count, 0))
-const maxGwatamCount = computed(() => Math.max(...gwatamList.map(q => q.count)))
+const totalGwatamCount = computed(() => activeGwatamList.value.reduce((acc, c) => acc + c.count, 0))
+const maxGwatamCount = computed(() => Math.max(...activeGwatamList.value.map(q => q.count), 1))
 
 const processedGwatamList = computed(() => {
   const tot = totalGwatamCount.value || 1
   const max = maxGwatamCount.value || 1
   
-  const mapped = gwatamList.map(q => {
-    const numGrade = parseFloat(q.grade)
+  const mapped = activeGwatamList.value.map(q => {
+    const numGrade = parseFloat(q.grade) || 5.0
     const pct = ((q.count / tot) * 100).toFixed(1)
     const barWidth = Math.max(3, Math.round((q.count / max) * 100)) + '%'
     let gradeBadgeClass = 'bg-slate-50 text-slate-700 border-slate-200'

@@ -1144,21 +1144,21 @@ export function useStatData() {
     const apps = applications.value || []
     const minApps = apps.filter(a => a.hasMinScore || (a.minScoreReq && !a.minScoreReq.includes('없음') && a.minScoreReq.length > 2))
     
-    // Fallback if no applications loaded
+    // 수시 지원 데이터 미등록 또는 수능최저 전형 미존재 시 (더미 데이터 노출 방지)
     if (minApps.length === 0) {
       return {
-        totalMinApps: 225,
-        avgInitialRate: 15.3,
-        avgRealRate: 4.4,
-        avgEffectiveRate: 2.3,
-        gpaCount: 187,
-        gpaInitialRate: 8.6,
-        gpaRealRate: 3.5,
-        gpaEffectiveRate: 1.6,
-        avgPassRate: 41.5,
-        gpaPassRate: 42.0,
-        schoolPassRate: 37.4,
-        easeFactor: 3.5
+        totalMinApps: 0,
+        avgInitialRate: '-',
+        avgRealRate: '-',
+        avgEffectiveRate: '-',
+        gpaCount: 0,
+        gpaInitialRate: '-',
+        gpaRealRate: '-',
+        gpaEffectiveRate: '-',
+        avgPassRate: '-',
+        gpaPassRate: '-',
+        schoolPassRate: '-',
+        easeFactor: '-'
       }
     }
 
@@ -1259,16 +1259,16 @@ export function useStatData() {
       }
     })
 
-    const avgInitialRate = count > 0 ? Number((initialSum / count).toFixed(1)) : 15.3
-    const avgRealRate = count > 0 ? Number((realSum / count).toFixed(1)) : 4.4
-    const avgEffectiveRate = count > 0 ? Number((effectiveSum / count).toFixed(1)) : 2.3
-    const avgPassRate = count > 0 ? Number((passRateSum / count).toFixed(1)) : 41.5
-    const easeFactor = avgRealRate > 0 ? Number((avgInitialRate / avgRealRate).toFixed(1)) : 3.5
+    const avgInitialRate = count > 0 ? Number((initialSum / count).toFixed(1)) : '-'
+    const avgRealRate = count > 0 ? Number((realSum / count).toFixed(1)) : '-'
+    const avgEffectiveRate = count > 0 ? Number((effectiveSum / count).toFixed(1)) : '-'
+    const avgPassRate = count > 0 ? Number((passRateSum / count).toFixed(1)) : '-'
+    const easeFactor = (typeof avgRealRate === 'number' && avgRealRate > 0) ? Number((avgInitialRate / avgRealRate).toFixed(1)) : '-'
 
-    const gpaInitialRate = gpaCount > 0 ? Number((gpaInitialSum / gpaCount).toFixed(1)) : 8.6
-    const gpaRealRate = gpaCount > 0 ? Number((gpaRealSum / gpaCount).toFixed(1)) : 3.5
-    const gpaEffectiveRate = gpaCount > 0 ? Number((gpaEffectiveSum / gpaCount).toFixed(1)) : 1.6
-    const gpaPassRate = gpaCount > 0 ? Number((gpaPassRateSum / gpaCount).toFixed(1)) : 42.0
+    const gpaInitialRate = gpaCount > 0 ? Number((gpaInitialSum / gpaCount).toFixed(1)) : '-'
+    const gpaRealRate = gpaCount > 0 ? Number((gpaRealSum / gpaCount).toFixed(1)) : '-'
+    const gpaEffectiveRate = gpaCount > 0 ? Number((gpaEffectiveSum / gpaCount).toFixed(1)) : '-'
+    const gpaPassRate = gpaCount > 0 ? Number((gpaPassRateSum / gpaCount).toFixed(1)) : '-'
 
     const curYear = String(selectedAcademicYear.value || '2027')
     const yearStats = MULTI_YEAR_STATS.byYear[curYear]
