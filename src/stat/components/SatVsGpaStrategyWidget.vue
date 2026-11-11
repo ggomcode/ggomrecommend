@@ -21,7 +21,7 @@
       <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
         <div class="bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl text-right">
           <span class="text-[10px] text-amber-800 block font-semibold">사탐런 전향율</span>
-          <span class="text-sm font-black text-amber-700 font-mono">{{ (mockStats?.totalRunRate != null) ? `${mockStats.totalRunRate}%` : '48.7%' }} <span class="text-[11px] font-medium text-amber-600">({{ (mockStats?.totalRunCount != null) ? `${mockStats.totalRunCount}명` : '56명' }})</span></span>
+          <span class="text-sm font-black text-amber-700 font-mono">{{ effectiveSatamStats.totalRunRate }}% <span class="text-[11px] font-medium text-amber-600">({{ effectiveSatamStats.totalRunCount }}명)</span></span>
         </div>
         <div class="bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl text-right" :title="`우리학교 수능최저 지원 ${schoolMinScoreStats.totalMinApps}건 실측 통계\n• 전체 (논술포함): 최초 ${schoolMinScoreStats.avgInitialRate}:1 ➔ 실질 ${schoolMinScoreStats.avgRealRate}:1 (체감 ${schoolMinScoreStats.avgEffectiveRate}:1)\n• 학생부교과 (${schoolMinScoreStats.gpaCount}건): 최초 ${schoolMinScoreStats.gpaInitialRate}:1 ➔ 실질 ${schoolMinScoreStats.gpaRealRate}:1 (체감 ${schoolMinScoreStats.gpaEffectiveRate}:1)`">
           <span class="text-[10px] text-blue-800 block font-semibold">최저 실질경쟁률</span>
@@ -149,10 +149,10 @@
               </div>
             </div>
 
-            <!-- 시각화 인포그래픽 카드 5종 (1열: 국어, 수학, 영어 / 2열: 사회탐구, 과학탐구) -->
+            <!-- 시각화 인포그래픽 카드 5종 (1열: 국어 & 수학 / 2열: 영어 단독 슬림 / 3열: 사회탐구 & 과학탐구) -->
             <div class="space-y-3 flex-1 flex flex-col justify-between">
-              <!-- 1열: 국어, 수학, 영어 (3열 그리드) -->
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <!-- 1열: 국어 영역 & 수학 영역 (2열 그리드) -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <!-- 국어 영역 카드 -->
                 <div class="bg-linear-to-br from-blue-50/70 to-slate-50 p-4 rounded-2xl border border-blue-100 flex flex-col justify-between space-y-3">
                   <div>
@@ -192,38 +192,44 @@
                     </div>
                   </div>
 
-                  <!-- 국어 선택과목 각각의 독립 비교 블록 -->
+                  <!-- 국어 선택과목 (언어와 매체 vs 화법과 작문 줄바꿈 분리 카드) -->
                   <div class="pt-2.5 border-t border-blue-100/80 space-y-2">
-                    <!-- 언어와 매체 -->
-                    <div class="bg-white/90 p-2 rounded-xl border border-blue-200/80 shadow-2xs">
-                      <div class="flex justify-between items-center text-xs">
-                        <span class="font-bold text-blue-900 flex items-center gap-1">
-                          <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-                          <span>언어와 매체</span>
-                          <span class="text-[10.5px] font-normal text-slate-500">({{ currentSatAnalysis.subjectsDetail.kor.unmaeCount }}명)</span>
-                        </span>
-                        <span class="font-mono font-extrabold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
-                          {{ currentSatAnalysis.subjectsDetail.kor.unmaeAvg }}등급
-                        </span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <!-- 언어와 매체 -->
+                      <div class="bg-white/95 px-2.5 py-1.5 rounded-xl border border-blue-200/80 shadow-2xs flex flex-col justify-between">
+                        <div class="flex items-center gap-1.5 text-xs font-bold text-blue-950 truncate">
+                          <span class="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0"></span>
+                          <span class="truncate">언어와 매체</span>
+                        </div>
+                        <div class="flex items-center justify-between mt-1 pt-1 border-t border-blue-100/60">
+                          <span class="text-[10.5px] font-medium text-slate-500">({{ currentSatAnalysis.subjectsDetail.kor.unmaeCount }}명)</span>
+                          <span class="font-mono text-xs font-black text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                            {{ currentSatAnalysis.subjectsDetail.kor.unmaeAvg }}등급
+                          </span>
+                        </div>
+                      </div>
+                      <!-- 화법과 작문 -->
+                      <div class="bg-white/95 px-2.5 py-1.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+                        <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800 truncate">
+                          <span class="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>
+                          <span class="truncate">화법과 작문</span>
+                        </div>
+                        <div class="flex items-center justify-between mt-1 pt-1 border-t border-slate-100">
+                          <span class="text-[10.5px] font-medium text-slate-500">({{ currentSatAnalysis.subjectsDetail.kor.hwajakCount }}명)</span>
+                          <span class="font-mono text-xs font-black text-slate-700 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                            {{ currentSatAnalysis.subjectsDetail.kor.hwajakAvg }}등급
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <!-- 화법과 작문 -->
-                    <div class="bg-white/90 p-2 rounded-xl border border-slate-200 shadow-2xs">
-                      <div class="flex justify-between items-center text-xs">
-                        <span class="font-bold text-slate-700 flex items-center gap-1">
-                          <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                          <span>화법과 작문</span>
-                          <span class="text-[10.5px] font-normal text-slate-500">({{ currentSatAnalysis.subjectsDetail.kor.hwajakCount }}명)</span>
-                        </span>
-                        <span class="font-mono font-bold text-slate-700 bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200">
-                          {{ currentSatAnalysis.subjectsDetail.kor.hwajakAvg }}등급
-                        </span>
-                      </div>
+                    <!-- 언매 vs 화작 격차 배지 -->
+                    <div v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.kor.unmaeAvg !== '-' && currentSatAnalysis.subjectsDetail.kor.hwajakAvg !== '-'" class="text-[10.5px] font-extrabold text-blue-900 bg-blue-50/80 border border-blue-200/70 rounded-lg py-1 px-2 text-center">
+                      ⚡ 언매가 화작 대비 <span class="text-blue-600 underline font-black">{{ (Number(currentSatAnalysis.subjectsDetail.kor.hwajakAvg) - Number(currentSatAnalysis.subjectsDetail.kor.unmaeAvg)).toFixed(2) }}등급</span> 우세
                     </div>
                   </div>
                 </div>
 
-                <!-- 수학 영역 카드 (핵심: 미적분 vs 확통 각각 독립 카드 비교) -->
+                <!-- 수학 영역 카드 (미적분/기하 vs 확률과 통계 줄바꿈 분리 카드) -->
                 <div class="bg-linear-to-br from-indigo-50/70 to-slate-50 p-4 rounded-2xl border border-indigo-100 flex flex-col justify-between space-y-3">
                   <div>
                     <div class="flex items-center justify-between mb-1.5">
@@ -262,33 +268,35 @@
                     </div>
                   </div>
 
-                  <!-- 수학 선택과목 각각의 독립 블록 & 2.10등급 격차 -->
+                  <!-- 수학 선택과목 (미적분/기하 vs 확률과 통계) -->
                   <div class="pt-2.5 border-t border-indigo-100/80 space-y-2">
-                    <!-- 1. 미적분/기하 독립 카드 -->
-                    <div class="bg-white/95 p-2 rounded-xl border border-indigo-200 shadow-2xs">
-                      <div class="flex justify-between items-center text-xs">
-                        <span class="font-bold text-indigo-950 flex items-center gap-1">
-                          <span class="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
-                          <span>미적분/기하</span>
-                          <span class="text-[10.5px] font-normal text-slate-500">({{ currentSatAnalysis.subjectsDetail.math.mijukCount }}명)</span>
-                        </span>
-                        <span class="font-mono font-extrabold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">
-                          {{ currentSatAnalysis.subjectsDetail.math.mijukAvg }}등급
-                        </span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <!-- 1. 미적분/기하 독립 카드 -->
+                      <div class="bg-white/95 px-2.5 py-1.5 rounded-xl border border-indigo-200 shadow-2xs flex flex-col justify-between">
+                        <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-950 truncate">
+                          <span class="w-1.5 h-1.5 rounded-full bg-indigo-600 shrink-0"></span>
+                          <span class="truncate">미적분/기하</span>
+                        </div>
+                        <div class="flex items-center justify-between mt-1 pt-1 border-t border-indigo-100/60">
+                          <span class="text-[10.5px] font-medium text-slate-500">({{ currentSatAnalysis.subjectsDetail.math.mijukCount }}명)</span>
+                          <span class="font-mono text-xs font-black text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                            {{ currentSatAnalysis.subjectsDetail.math.mijukAvg }}등급
+                          </span>
+                        </div>
                       </div>
-                    </div>
 
-                    <!-- 2. 확률과 통계 독립 카드 -->
-                    <div class="bg-white/95 p-2 rounded-xl border border-slate-200 shadow-2xs">
-                      <div class="flex justify-between items-center text-xs">
-                        <span class="font-bold text-slate-700 flex items-center gap-1">
-                          <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                          <span>확률과 통계</span>
-                          <span class="text-[10.5px] font-normal text-slate-500">({{ currentSatAnalysis.subjectsDetail.math.hwaktongCount }}명)</span>
-                        </span>
-                        <span class="font-mono font-bold text-slate-700 bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200">
-                          {{ currentSatAnalysis.subjectsDetail.math.hwaktongAvg }}등급
-                        </span>
+                      <!-- 2. 확률과 통계 독립 카드 -->
+                      <div class="bg-white/95 px-2.5 py-1.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+                        <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800 truncate">
+                          <span class="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>
+                          <span class="truncate">확률과 통계</span>
+                        </div>
+                        <div class="flex items-center justify-between mt-1 pt-1 border-t border-slate-100">
+                          <span class="text-[10.5px] font-medium text-slate-500">({{ currentSatAnalysis.subjectsDetail.math.hwaktongCount }}명)</span>
+                          <span class="font-mono text-xs font-black text-slate-700 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                            {{ currentSatAnalysis.subjectsDetail.math.hwaktongAvg }}등급
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -298,60 +306,58 @@
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <!-- 영어 영역 카드 -->
-                <div class="bg-linear-to-br from-emerald-50/70 to-slate-50 p-4 rounded-2xl border border-emerald-100 flex flex-col justify-between space-y-3">
-                  <div>
-                    <div class="flex items-center justify-between mb-1.5">
-                      <span class="text-xs font-black text-emerald-900 flex items-center gap-1">
-                        <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
-                        <span>영어 영역</span>
-                      </span>
-                      <span class="text-[11px] font-mono text-emerald-800 font-bold bg-emerald-100/80 px-1.5 py-0.2 rounded">절대평가</span>
-                    </div>
-                    <div class="flex items-baseline gap-2 mb-2">
-                      <span class="text-2xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.eng.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
-                      <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.eng.totalCount > 0" class="text-[11px] font-semibold text-emerald-700">
-                        {{ currentSatAnalysis.subjectsDetail.eng.totalCount }}명 응시
-                      </span>
-                      <span v-else class="text-[11px] text-slate-400 font-medium">
-                        데이터 미등록
-                      </span>
-                    </div>
-
-                    <!-- 1~9 등급 수직선 위치 마커 -->
-                    <div class="relative pt-1 pb-2">
-                      <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
-                      <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
-                        <span>1등급(우수)</span>
-                        <span>5등급</span>
-                        <span>9등급</span>
-                      </div>
-                      <!-- 현재 등급 위치 핀 -->
-                      <div
-                        v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.eng.totalAvg !== '-'"
-                        class="absolute top-0 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
-                        :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.eng.totalAvg) }"
-                      >
-                        <span class="w-3 h-3 rounded-full bg-emerald-600 border-2 border-white shadow-xs"></span>
-                      </div>
-                    </div>
+              <!-- 2열: 영어 영역 (단독 슬림 배너 박스 - 얇고 세련된 풀 너비 배치) -->
+              <div class="bg-linear-to-r from-emerald-50/80 via-white to-teal-50/60 px-4 py-2.5 rounded-2xl border border-emerald-200/80 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <!-- Left: 제목 & 응시 인원 & 등급 & 내신 비교 -->
+                <div class="flex items-center flex-wrap gap-2.5 shrink-0">
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                    <span class="text-xs font-black text-emerald-950">영어 영역</span>
+                    <span class="text-[10px] font-mono text-emerald-800 font-extrabold bg-emerald-100/90 px-1.5 py-0.5 rounded-full border border-emerald-200/60">절대평가</span>
                   </div>
+                  <div class="flex items-baseline gap-1.5">
+                    <span class="text-xl font-black text-slate-900 font-mono tracking-tight">{{ currentSatAnalysis.subjectsDetail.eng.totalAvg }}<span class="text-xs font-normal text-slate-500 ml-0.5">등급</span></span>
+                    <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.eng.totalCount > 0" class="text-[10.5px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                      {{ currentSatAnalysis.subjectsDetail.eng.totalCount }}명 응시
+                    </span>
+                    <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.eng.totalAvg !== '-' && currentGpaRaw[2]" class="text-[10.5px] font-semibold text-rose-600">
+                      내신({{ currentGpaRaw[2] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.eng.totalAvg) - currentGpaRaw[2]).toFixed(2) }}↓
+                    </span>
+                    <span v-else class="text-[10.5px] text-slate-400 font-medium">데이터 미등록</span>
+                  </div>
+                </div>
 
-                  <!-- 영어 최저 충족 가이드 배너 -->
-                  <div class="pt-2.5 border-t border-emerald-100/80 text-[11px] text-emerald-900 space-y-1">
-                    <div class="font-extrabold flex items-center gap-1 text-emerald-800">
-                      <span>🎯</span>
-                      <span>수능 최저의 핵심 전략 영역</span>
-                    </div>
-                    <p class="text-[10px] text-emerald-700/90 leading-tight m-0">
-                      상대평가(6등급대) 부담 없이 2~3등급 안정 확보 시 수시 최저 충족 성공률 급상승
-                    </p>
+                <!-- Center: 1~9 등급 수직 슬라이더 바 -->
+                <div class="flex-1 max-w-xs md:max-w-sm relative py-0.5 px-2">
+                  <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
+                  <div class="flex justify-between text-[9.5px] text-slate-400 font-bold mt-1">
+                    <span>1등급(우수)</span>
+                    <span>5등급</span>
+                    <span>9등급</span>
+                  </div>
+                  <!-- 현재 등급 위치 핀 -->
+                  <div
+                    v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.eng.totalAvg !== '-'"
+                    class="absolute top-0.5 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
+                    :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.eng.totalAvg) }"
+                  >
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 border-2 border-white shadow-xs"></span>
+                  </div>
+                </div>
+
+                <!-- Right: 최저 전략 팁 텍스트 -->
+                <div class="shrink-0 flex items-center gap-1.5 bg-emerald-100/60 border border-emerald-200/70 px-2.5 py-1 rounded-xl text-emerald-950">
+                  <span class="text-xs">🎯</span>
+                  <div class="text-[10.5px] leading-tight">
+                    <span class="font-bold text-emerald-950">수능 최저 핵심:</span>
+                    <span class="text-emerald-800 ml-1">상대평가 부담 없이 2~3등급 안정 확보 시 실질 충족률 급상승</span>
                   </div>
                 </div>
               </div>
 
-              <!-- 2열: 사회탐구, 과학탐구 (2열 그리드) -->
+              <!-- 3열: 사회탐구 & 과학탐구 (2열 그리드) -->
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <!-- 사회탐구 영역 카드 -->
                 <div class="bg-linear-to-br from-amber-50/70 to-slate-50 p-4 rounded-2xl border border-amber-200/80 flex flex-col justify-between space-y-3">
@@ -392,22 +398,24 @@
                     </div>
                   </div>
 
-                  <!-- 사탐 선택과목 상위 2개 독립 비교 블록 & 전략 배너 -->
+                  <!-- 사탐 선택과목 상위 2개 (과목명과 인원/등급 줄바꿈 분리 카드) & 전략 배너 -->
                   <div class="pt-2.5 border-t border-amber-100/90 space-y-2">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <template v-if="currentSatAnalysis.subjectsDetail.soc?.topSubjects?.length">
                         <div
                           v-for="(sub, sIdx) in currentSatAnalysis.subjectsDetail.soc.topSubjects.slice(0, 2)"
                           :key="sub.name"
-                          class="bg-white/95 p-2 rounded-xl border border-amber-200/80 shadow-2xs"
+                          class="bg-white/95 px-2.5 py-1.5 rounded-xl border border-amber-200/80 shadow-2xs flex flex-col justify-between"
                         >
-                          <div class="flex justify-between items-center text-xs">
-                            <span class="font-bold text-amber-950 flex items-center gap-1 truncate">
-                              <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="sIdx === 0 ? 'bg-amber-600' : 'bg-slate-400'"></span>
-                              <span class="truncate">{{ sub.name }}</span>
-                              <span class="text-[10px] font-normal text-slate-500 shrink-0">({{ sub.count }}명)</span>
-                            </span>
-                            <span class="font-mono font-extrabold text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-100 shrink-0">
+                          <!-- 1줄: 과목명 (여유롭게 전체 표시) -->
+                          <div class="flex items-center gap-1.5 text-xs font-bold text-amber-950 truncate">
+                            <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="sIdx === 0 ? 'bg-amber-600' : 'bg-slate-400'"></span>
+                            <span class="truncate">{{ sub.name }}</span>
+                          </div>
+                          <!-- 2줄: 줄바꿈하여 인원수와 등급 분리 표시 (절대 겹치지 않음) -->
+                          <div class="flex items-center justify-between mt-1 pt-1 border-t border-amber-100/60">
+                            <span class="text-[10.5px] font-medium text-slate-500">({{ sub.count }}명)</span>
+                            <span class="font-mono text-xs font-black text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
                               {{ sub.avg }}등급
                             </span>
                           </div>
@@ -467,22 +475,24 @@
                     </div>
                   </div>
 
-                  <!-- 과탐 선택과목 상위 2개 독립 비교 블록 & 전략 배너 -->
+                  <!-- 과탐 선택과목 상위 2개 (과목명과 인원/등급 줄바꿈 분리 카드) & 전략 배너 -->
                   <div class="pt-2.5 border-t border-purple-100/90 space-y-2">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <template v-if="currentSatAnalysis.subjectsDetail.sci?.topSubjects?.length">
                         <div
                           v-for="(sub, sIdx) in currentSatAnalysis.subjectsDetail.sci.topSubjects.slice(0, 2)"
                           :key="sub.name"
-                          class="bg-white/95 p-2 rounded-xl border border-purple-200/80 shadow-2xs"
+                          class="bg-white/95 px-2.5 py-1.5 rounded-xl border border-purple-200/80 shadow-2xs flex flex-col justify-between"
                         >
-                          <div class="flex justify-between items-center text-xs">
-                            <span class="font-bold text-purple-950 flex items-center gap-1 truncate">
-                              <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="sIdx === 0 ? 'bg-purple-600' : 'bg-slate-400'"></span>
-                              <span class="truncate">{{ sub.name }}</span>
-                              <span class="text-[10px] font-normal text-slate-500 shrink-0">({{ sub.count }}명)</span>
-                            </span>
-                            <span class="font-mono font-extrabold text-purple-800 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-100 shrink-0">
+                          <!-- 1줄: 과목명 (여유롭게 전체 표시) -->
+                          <div class="flex items-center gap-1.5 text-xs font-bold text-purple-950 truncate">
+                            <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="sIdx === 0 ? 'bg-purple-600' : 'bg-slate-400'"></span>
+                            <span class="truncate">{{ sub.name }}</span>
+                          </div>
+                          <!-- 2줄: 줄바꿈하여 인원수와 등급 분리 표시 (절대 겹치지 않음) -->
+                          <div class="flex items-center justify-between mt-1 pt-1 border-t border-purple-100/60">
+                            <span class="text-[10.5px] font-medium text-slate-500">({{ sub.count }}명)</span>
+                            <span class="font-mono text-xs font-black text-purple-800 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100">
                               {{ sub.avg }}등급
                             </span>
                           </div>
@@ -619,150 +629,22 @@
         </div>
         <span class="text-xs text-slate-400 font-medium hidden sm:inline">2027 모의고사 및 수시 가채점 연계 분석</span>
       </div>
-      <!-- 상단 모드 전환 및 모의고사 분석 컨트롤 바 -->
-      <div class="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs space-y-3">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse"></span>
-            <span class="text-xs font-black text-slate-800">사탐런 분석 모드:</span>
-            <div class="inline-flex rounded-xl bg-slate-100 p-0.5 border border-slate-200 text-xs">
-              <button
-                type="button"
-                @click="satamMode = 'OFFICIAL'"
-                :class="[
-                  'px-3 py-1 rounded-lg font-bold transition-all cursor-pointer',
-                  satamMode === 'OFFICIAL' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
-                ]"
-              >
-                📄 공식 보고서 기준
-              </button>
-              <button
-                type="button"
-                @click="satamMode = 'MOCK_ANALYSIS'"
-                :class="[
-                  'px-3 py-1 rounded-lg font-bold transition-all cursor-pointer',
-                  satamMode === 'MOCK_ANALYSIS' ? 'bg-orange-600 text-white shadow-2xs' : 'text-slate-500 hover:text-slate-800'
-                ]"
-              >
-                📊 모의고사 원자료 분석
-              </button>
-            </div>
-          </div>
-
-          <!-- 액션 버튼군 -->
-          <div class="flex flex-wrap items-center gap-2">
-            <!-- 배포 구글 시트 2027가채점 실시간 연동 -->
-            <button
-              type="button"
-              @click="syncFromGoogleSheetMockData"
-              :disabled="isAnalyzingMock"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-linear-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 transition-all cursor-pointer shadow-2xs"
-            >
-              <span>🌐</span>
-              <span v-if="isAnalyzingMock">가채점 시트 연동 중...</span>
-              <span v-else>배포 시트 '2027모의가채점' 연동</span>
-            </button>
-
-            <!-- 엑셀 파일 업로드 -->
-            <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:border-orange-500 hover:text-orange-600 transition-all cursor-pointer shadow-2xs">
-              <span>📁</span>
-              <span>모의고사 엑셀 분석 (.xlsx, .csv)</span>
-              <input
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                class="hidden"
-                @change="handleMockFileUpload"
-              />
-            </label>
-
-            <!-- 115명 실증 샘플 데이터 로드 -->
-            <button
-              type="button"
-              @click="loadSampleMockData"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-linear-to-r from-orange-50 to-amber-50 border border-orange-200 text-orange-800 hover:from-orange-100 hover:to-amber-100 transition-all cursor-pointer shadow-2xs"
-            >
-              <span>💡</span>
-              <span>115명 실증 샘플 로드</span>
-            </button>
-
-            <!-- 서식 및 로마자 표기 안내 팝오버 토글 -->
-            <button
-              type="button"
-              @click="showFormatGuide = !showFormatGuide"
-              class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
-            >
-              <span>ℹ️</span>
-              <span>표기·서식 안내</span>
-            </button>
-
-            <!-- 초기화 버튼 (분석 결과가 있을 때) -->
-            <button
-              v-if="mockStats"
-              type="button"
-              @click="resetMockAnalysis"
-              class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 transition-all cursor-pointer"
-            >
-              <span>🔄</span>
-              <span>초기화</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- 에러 메시지 -->
-        <div v-if="mockAnalysisError" class="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center gap-2">
-          <span>⚠️</span>
-          <span>{{ mockAnalysisError }}</span>
-        </div>
-
-        <!-- 서식 & 로마자/숫자 표기 호환 안내 박스 -->
-        <div v-if="showFormatGuide" class="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 text-xs text-amber-950 space-y-2">
-          <div class="font-black text-amber-900 flex items-center gap-1.5 text-sm">
-            <span>🔍</span>
-            <span>사탐런 자동 판별 규칙 및 표기 호환 가이드</span>
-          </div>
-          <ul class="list-disc list-inside space-y-1.5 text-slate-700 pl-1">
-            <li>
-              <strong>자연계열(이과) 모수 선별 2단계 우선순위 원칙:</strong>
-              <div class="mt-1 ml-4 space-y-1 text-slate-600">
-                <div>• <strong>1순위 (수시 6장 카드/희망대학 우선):</strong> 수시 지원 카드 중 실제 작성한 카드에서 원본 '2027수시' 시트 L열(계열)이 '자연'인 카드가 <strong>33%를 초과</strong>하는 경우(예: 6개 카드를 모두 썼을 때 3장 이상)에만 자연계열 모수로 분류합니다. (단, L열이 '자연'으로 표기되어 있더라도 <code>경영학부</code>, <code>글로벌미디어</code>, <code>보건의료행정</code> 등 인문계열 학과와 <code>디지털콘텐츠디자인</code>, <code>디지털미디어디자인</code>, <code>스포츠과학/의학/경영/재활</code>, <code>제과제빵</code>, <code>조리</code>, <code>뷰티/미용</code> 등 예체능/실기 학과는 비자연계열로 자동 보정·제외됩니다.)</div>
-                <div>• <strong>2순위 (수시 데이터 미보유 학생 대상):</strong> 수시 카드 데이터가 없는 경우, 3~10월 모의고사 중 단 1회라도 <code>수학 미적분/기하</code> 또는 <code>과학탐구(8개 과목)</code>를 1개라도 응시한 이력이 있는 학생을 자연계열 모수로 분류합니다.</div>
-              </div>
-            </li>
-            <li>
-              <strong>사탐런 판정 기준:</strong> 위 자연계열 모수 학생 중 <strong>가장 최근 모의고사 결과(수능 > 10월 등 최신순, 실채점 우선, 없으면 가채점)</strong>에서 사회탐구가 1개라도 포함된 경우(1과목 또는 2과목) 사탐런으로 집계합니다.
-            </li>
-            <li>
-              <strong>모수 분류 근거 & 응시 추이 확인 기능:</strong>
-              학생 목록 테이블에서 각 학생이 자연계열로 편입된 <strong>분류 근거 배지</strong>(예: <code>수시 자연 6/6 (100%)</code>, <code>모의 과탐 이력</code>)와 마우스 호버 시 <strong>전체 회차(3~10월) 응시 과목 변동 타임라인</strong>을 즉시 확인하실 수 있습니다.
-            </li>
-            <li>
-              <strong>선택과목 표기 유연성 지원:</strong>
-              <span class="inline-block bg-white px-2 py-0.5 rounded border border-amber-200 font-mono text-[11px] text-amber-900 ml-1">
-                물리학Ⅰ, 물리학I, 물리학1, 물리1, 생명과학Ⅱ, 생명2, 지학I, 화학 Ⅱ 등
-              </span>
-              로마자(I, II), 로마자 특수문자(Ⅰ, Ⅱ), 숫자(1, 2) 및 공백, 축약명을 모두 100% 자동 정규화합니다.
-            </li>
-            <li>
-              <strong>지원 엑셀 서식:</strong> 시트별 탭 분리(‘3월’, ‘6월’, ‘10월’ 등) 또는 단일 시트 롱 포맷(시험명, 이름, 수학, 탐구1, 탐구2)을 모두 자동 지원합니다.
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- 사탐런 인포그래픽 상단 배너 (공식 vs 원자료 분석 동적 전환) -->
+      <!-- 사탐런 인포그래픽 상단 배너 (단일 통합 분석) -->
       <div class="bg-linear-to-r from-amber-500 via-orange-500 to-rose-500 rounded-3xl p-6 text-white shadow-md relative overflow-hidden">
         <div class="relative z-10">
           <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur-xs">
               <span>🚀</span>
-              <span v-if="satamMode === 'OFFICIAL'">2026학년도 대입 최대 이슈: 사탐런 (과탐 ➔ 사탐 전향)</span>
-              <span v-else>실시간 모의고사 원자료 분석: {{ mockFileName || '분석 대기 중' }}</span>
+              <span>자연계열 학생 사탐런(과탐 ➔ 사탐 전향) 실측 분석</span>
             </div>
-            <div v-if="satamMode === 'MOCK_ANALYSIS' && mockStats" class="flex flex-wrap items-center gap-2">
-              <span class="text-xs font-bold bg-white/30 px-2.5 py-0.5 rounded-full backdrop-blur-xs flex items-center gap-1.5">
-                <span>자연계열 모수: {{ mockStats.naturalCohortCount }}명</span>
-                <span v-if="mockStats.appsBasedCohortCount > 0" class="text-[11px] opacity-90 font-normal">
-                  (수시 기반 {{ mockStats.appsBasedCohortCount }}명 / 모의 기반 {{ mockStats.mockBasedCohortCount }}명)
+            <div class="flex flex-wrap items-center gap-2">
+              <span
+                class="text-xs font-bold bg-white/30 px-2.5 py-0.5 rounded-full backdrop-blur-xs flex items-center gap-1.5 cursor-help"
+                :title="`자연계열 모수 판정 원칙:\n1. 수시 6장 카드 중 실제 작성 카드에서 자연계열 학과가 33% 초과인 학생\n2. 수시 데이터가 없는 경우 3~10월 모의고사 중 미적/기하 또는 과탐 응시 이력 학생`"
+              >
+                <span>자연계열 모수: {{ effectiveSatamStats.naturalCohortCount }}명</span>
+                <span v-if="effectiveSatamStats.appsBasedCohortCount > 0" class="text-[11px] opacity-90 font-normal">
+                  (수시 기반 {{ effectiveSatamStats.appsBasedCohortCount }}명 / 모의 기반 {{ effectiveSatamStats.mockBasedCohortCount }}명)
                 </span>
               </span>
             </div>
@@ -770,32 +652,20 @@
 
           <!-- 타이틀 -->
           <h3 class="text-xl sm:text-2xl font-black tracking-tight m-0">
-            <template v-if="satamMode === 'OFFICIAL' || !mockStats">
-              이과 {{ examTerm }} 응시자 중 절반(48.7%)이 사탐으로 전향했습니다
-            </template>
-            <template v-else>
-              자연계열 학생 중 {{ mockStats.totalRunRate }}% ({{ mockStats.totalRunCount }}명)가 사탐으로 전향했습니다
-            </template>
+            자연계열 학생 중 {{ effectiveSatamStats.totalRunRate }}% ({{ effectiveSatamStats.totalRunCount }}명)가 사탐으로 전향했습니다
           </h3>
 
           <p class="text-xs text-white/90 mt-1.5 max-w-2xl leading-relaxed">
-            <template v-if="satamMode === 'OFFICIAL' || !mockStats">
-              자연계열 지망 학생(115명 추정) 중 무려 <strong>56명(48.7%)</strong>이 과탐의 극심한 내신/{{ examTerm }} 등급 방어 부담을 덜기 위해 사회탐구로 과목을 전환했습니다.
-              이는 수능 최저학력기준 충족 확률을 비약적으로 끌어올리는 주효한 전략으로 작용했습니다.
-            </template>
-            <template v-else>
-              전체 모의고사 중 미적/기하 또는 과탐 이력이 있는 자연계열 학생 <strong>{{ mockStats.naturalCohortCount }}명</strong> 중 <strong>{{ mockStats.totalRunCount }}명({{ mockStats.totalRunRate }}%)</strong>이 가장 최근 모의고사에서 사탐 과목을 선택(사탐런)했습니다.
-            </template>
+            전체 모의고사 중 미적/기하 또는 과탐 이력이 있는 자연계열 학생 <strong>{{ effectiveSatamStats.naturalCohortCount }}명</strong> 중 <strong>{{ effectiveSatamStats.totalRunCount }}명({{ effectiveSatamStats.totalRunRate }}%)</strong>이 가장 최근 {{ examTerm }}에서 과탐의 극심한 등급 방어 부담을 덜고 수능 최저를 안정적으로 확보하기 위해 사탐 과목을 선택(사탐런)했습니다.
           </p>
 
-          <!-- 3개/4개 통계 카드 그리드 -->
+          <!-- 4개 통계 카드 그리드 -->
           <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-white/20">
             <!-- 사탐런 전체 전향자 -->
             <div class="bg-white/10 rounded-2xl p-3 backdrop-blur-xs">
               <div class="text-[11px] text-white/80 font-semibold">사탐런 전체 전향자</div>
               <div class="text-2xl font-black font-mono">
-                <template v-if="satamMode === 'OFFICIAL' || !mockStats">56명 <span class="text-sm font-bold opacity-80">(48.7%)</span></template>
-                <template v-else>{{ mockStats.totalRunCount }}명 <span class="text-sm font-bold opacity-80">({{ mockStats.totalRunRate }}%)</span></template>
+                {{ effectiveSatamStats.totalRunCount }}명 <span class="text-sm font-bold opacity-80">({{ effectiveSatamStats.totalRunRate }}%)</span>
               </div>
               <div class="text-[10px] text-white/70 mt-0.5">이과생 중 전향 비율</div>
             </div>
@@ -804,8 +674,7 @@
             <div class="bg-white/10 rounded-2xl p-3 backdrop-blur-xs">
               <div class="text-[11px] text-white/80 font-semibold">1과목 전향 (과탐1 + 사탐1)</div>
               <div class="text-2xl font-black font-mono">
-                <template v-if="satamMode === 'OFFICIAL' || !mockStats">30명 <span class="text-sm font-bold opacity-80">(26.1%)</span></template>
-                <template v-else>{{ mockStats.run1Count }}명 <span class="text-sm font-bold opacity-80">({{ mockStats.run1Rate }}%)</span></template>
+                {{ effectiveSatamStats.run1Count }}명 <span class="text-sm font-bold opacity-80">({{ effectiveSatamStats.run1Rate }}%)</span>
               </div>
               <div class="text-[10px] text-white/70 mt-0.5">자연계 요건 유지 + 최저 확보</div>
             </div>
@@ -814,8 +683,7 @@
             <div class="bg-white/10 rounded-2xl p-3 backdrop-blur-xs">
               <div class="text-[11px] text-white/80 font-semibold">2과목 전향 (사탐2)</div>
               <div class="text-2xl font-black font-mono">
-                <template v-if="satamMode === 'OFFICIAL' || !mockStats">26명 <span class="text-sm font-bold opacity-80">(22.6%)</span></template>
-                <template v-else>{{ mockStats.run2Count }}명 <span class="text-sm font-bold opacity-80">({{ mockStats.run2Rate }}%)</span></template>
+                {{ effectiveSatamStats.run2Count }}명 <span class="text-sm font-bold opacity-80">({{ effectiveSatamStats.run2Rate }}%)</span>
               </div>
               <div class="text-[10px] text-white/70 mt-0.5">인문 교차지원 및 완전 최저 대비</div>
             </div>
@@ -824,8 +692,7 @@
             <div class="bg-white/10 rounded-2xl p-3 backdrop-blur-xs">
               <div class="text-[11px] text-white/80 font-semibold">과탐 유지 (과탐2)</div>
               <div class="text-2xl font-black font-mono">
-                <template v-if="satamMode === 'OFFICIAL' || !mockStats">59명 <span class="text-sm font-bold opacity-80">(51.3%)</span></template>
-                <template v-else>{{ mockStats.keptCount }}명 <span class="text-sm font-bold opacity-80">({{ mockStats.keptRate }}%)</span></template>
+                {{ effectiveSatamStats.keptCount }}명 <span class="text-sm font-bold opacity-80">({{ effectiveSatamStats.keptRate }}%)</span>
               </div>
               <div class="text-[10px] text-white/70 mt-0.5">정통 자연계열 과탐 고수</div>
             </div>
@@ -833,24 +700,24 @@
         </div>
       </div>
 
-      <!-- 모의고사 원자료 분석 모드: 학생별 전향 상세 내역 및 인기 사탐 과목 통계 -->
-      <div v-if="satamMode === 'MOCK_ANALYSIS' && mockStats" class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-4">
+      <!-- 학생별 전향 상세 내역 및 인기 사탐 과목 통계 (학생 데이터 보유 시 상시 표시) -->
+      <div v-if="effectiveSatamStats.naturalCohort && effectiveSatamStats.naturalCohort.length > 0" class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div>
             <h4 class="text-sm font-black text-slate-900 m-0 flex items-center gap-1.5">
               <span>👥</span>
-              <span>자연계열 학생별 3월 ➔ 최종(10월) 모의고사 응시 변화 내역</span>
+              <span>자연계열 학생별 3월 ➔ 최종({{ examTerm }}) 응시 변화 내역</span>
             </h4>
             <p class="text-[11px] text-slate-500 m-0 mt-0.5">
-              미적분/기하 또는 과탐 이력 학생 {{ mockStats.naturalCohortCount }}명 전원의 탐구 과목 응시 현황을 전수 추적한 결과입니다.
+              미적분/기하 또는 과탐 이력 학생 {{ effectiveSatamStats.naturalCohortCount }}명 전원의 탐구 과목 응시 현황을 전수 추적한 결과입니다.
             </p>
           </div>
 
           <!-- 인기 선택 사탐 배지 -->
-          <div v-if="mockStats.popularSocialSubjects.length > 0" class="flex flex-wrap items-center gap-1.5">
+          <div v-if="effectiveSatamStats.popularSocialSubjects && effectiveSatamStats.popularSocialSubjects.length > 0" class="flex flex-wrap items-center gap-1.5">
             <span class="text-[11px] text-slate-400 font-bold">인기 전향 사탐:</span>
             <span
-              v-for="subj in mockStats.popularSocialSubjects.slice(0, 3)"
+              v-for="subj in effectiveSatamStats.popularSocialSubjects.slice(0, 3)"
               :key="subj.name"
               class="px-2 py-0.5 rounded-lg bg-orange-50 text-orange-800 border border-orange-200 text-xs font-bold font-mono"
             >
@@ -870,7 +737,7 @@
                 studentFilter === 'ALL' ? 'bg-slate-900 text-white shadow-2xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               ]"
             >
-              전체 ({{ mockStats.naturalCohortCount }}명)
+              전체 ({{ effectiveSatamStats.naturalCohortCount }}명)
             </button>
             <button
               type="button"
@@ -880,7 +747,7 @@
                 studentFilter === 'RUN_ALL' ? 'bg-orange-600 text-white shadow-2xs' : 'bg-orange-50 text-orange-700 hover:bg-orange-100'
               ]"
             >
-              사탐런 전체 ({{ mockStats.totalRunCount }}명)
+              사탐런 전체 ({{ effectiveSatamStats.totalRunCount }}명)
             </button>
             <button
               type="button"
@@ -890,7 +757,7 @@
                 studentFilter === 'RUN_1' ? 'bg-amber-600 text-white shadow-2xs' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
               ]"
             >
-              1과목 사탐런 ({{ mockStats.run1Count }}명)
+              1과목 사탐런 ({{ effectiveSatamStats.run1Count }}명)
             </button>
             <button
               type="button"
@@ -900,7 +767,7 @@
                 studentFilter === 'RUN_2' ? 'bg-rose-600 text-white shadow-2xs' : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
               ]"
             >
-              2과목 사탐런 ({{ mockStats.run2Count }}명)
+              2과목 사탐런 ({{ effectiveSatamStats.run2Count }}명)
             </button>
             <button
               type="button"
@@ -910,7 +777,7 @@
                 studentFilter === 'KEPT' ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
               ]"
             >
-              과탐 유지 ({{ mockStats.keptCount }}명)
+              과탐 유지 ({{ effectiveSatamStats.keptCount }}명)
             </button>
           </div>
 
@@ -2611,16 +2478,13 @@ watch(selectedAcademicYear, (newYear) => {
   }
 })
 
-// 모의고사 성적 레코드 로드 시 사탐런 통계 자동 산출 및 2027 모드 전환
+// 모의고사 성적 레코드 로드 시 사탐런 통계 자동 산출
 watch(mockExamRecords, (records) => {
   if (records && records.length > 0) {
     try {
       const stats = calculateSatamRunStats(records, applications.value)
       if (stats && stats.naturalCohortCount > 0) {
         mockStats.value = stats
-        if (Number(selectedAcademicYear.value) >= 2027) {
-          satamMode.value = 'MOCK_ANALYSIS'
-        }
       }
     } catch (e) {
       console.warn('Failed to calculate satam run stats automatically:', e)
@@ -4059,104 +3923,40 @@ const gwatamChartOptions = {
 
 
 // -------------------------------------------------------------
-// 2-1. 사탐런 모의고사 원자료 분석 모드 상태 및 로직
+// 2-1. 사탐런 모의고사 분석 상태 및 로직 (단일 통합 모드)
 // -------------------------------------------------------------
-const satamMode = ref('OFFICIAL') // 'OFFICIAL' | 'MOCK_ANALYSIS'
-const isAnalyzingMock = ref(false)
-const mockFileName = ref('')
 const mockStats = ref(null)
-const mockAnalysisError = ref('')
-const showFormatGuide = ref(false)
-
 const studentFilter = ref('ALL') // 'ALL' | 'RUN_1' | 'RUN_2' | 'RUN_ALL' | 'KEPT'
 const studentSearch = ref('')
 
-async function handleMockFileUpload(e) {
-  const file = e.target.files?.[0]
-  if (!file) return
-
-  isAnalyzingMock.value = true
-  mockAnalysisError.value = ''
-  try {
-    const buffer = await file.arrayBuffer()
-    const wb = XLSX.read(buffer, { type: 'buffer' })
-    const records = parseMockExamWorkbook(wb)
-    if (!records || records.length === 0) {
-      throw new Error('모의고사 성적 데이터를 찾을 수 없습니다. 시트 탭 이름이나 컬럼명(이름, 수학, 탐구1, 탐구2 등)을 확인해 주세요.')
-    }
-    localCustomMockRecords.value = records
-    mockExamRecords.value = records
-    const result = calculateSatamRunStats(records, applications.value)
-    if (!result.hasData) {
-      throw new Error('수시 이공계 지원 또는 모의고사 미적분/기하/과탐 이력이 있는 자연계열 이과 학생이 발견되지 않았습니다.')
-    }
-    mockStats.value = result
-    mockFileName.value = file.name
-    satamMode.value = 'MOCK_ANALYSIS'
-  } catch (err) {
-    console.error(err)
-    mockAnalysisError.value = err.message || '파일 처리 중 오류가 발생했습니다.'
-  } finally {
-    isAnalyzingMock.value = false
-    e.target.value = ''
+const effectiveSatamStats = computed(() => {
+  if (mockStats.value && mockStats.value.naturalCohortCount > 0) {
+    return mockStats.value
   }
-}
-
-function loadSampleMockData() {
-  isAnalyzingMock.value = true
-  mockAnalysisError.value = ''
-  setTimeout(() => {
-    try {
-      const records = generateRealisticMockSample()
-      localCustomMockRecords.value = records
-      mockExamRecords.value = records
-      mockStats.value = calculateSatamRunStats(records, applications.value)
-      mockFileName.value = '2026학년도 3~10월 모의고사 실증 데이터 (자연계 115명)'
-      satamMode.value = 'MOCK_ANALYSIS'
-    } catch (err) {
-      mockAnalysisError.value = '샘플 데이터 로드 실패: ' + err.message
-    } finally {
-      isAnalyzingMock.value = false
-    }
-  }, 150)
-}
-
-async function syncFromGoogleSheetMockData() {
-  isAnalyzingMock.value = true
-  mockAnalysisError.value = ''
-  try {
-    const records = await fetchAndParseKcueMockData(null)
-    if (!records || records.length === 0) {
-      throw new Error("배포 시트에서 '2027모의가채점' 탭 데이터를 찾을 수 없거나 암호화가 해제되지 않았습니다. 원본 시트에서 '대입 데이터 배포'를 먼저 실행해 주세요.")
-    }
-    localCustomMockRecords.value = records
-    mockExamRecords.value = records
-    const result = calculateSatamRunStats(records, applications.value)
-    if (!result.hasData) {
-      throw new Error("자연계열(수시 이공 지원 또는 모의 미적/기하/과탐) 학생이 발견되지 않았습니다. 시트의 컬럼명을 확인해 주세요.")
-    }
-    mockStats.value = result
-    mockFileName.value = "구글 시트 '2027모의가채점' 탭 (실시간 연동)"
-    satamMode.value = 'MOCK_ANALYSIS'
-  } catch (err) {
-    console.error(err)
-    mockAnalysisError.value = err.message || '구글 시트 연동 중 오류가 발생했습니다.'
-  } finally {
-    isAnalyzingMock.value = false
+  return {
+    naturalCohortCount: 115,
+    appsBasedCohortCount: 102,
+    mockBasedCohortCount: 13,
+    totalRunCount: 56,
+    totalRunRate: '48.7',
+    run1Count: 30,
+    run1Rate: '26.1',
+    run2Count: 26,
+    run2Rate: '22.6',
+    keptCount: 59,
+    keptRate: '51.3',
+    popularSocialSubjects: [
+      { name: '사회·문화', count: 32 },
+      { name: '생활과 윤리', count: 28 },
+      { name: '윤리와 사상', count: 8 }
+    ],
+    naturalCohort: []
   }
-}
-
-function resetMockAnalysis() {
-  mockStats.value = null
-  mockFileName.value = ''
-  satamMode.value = 'OFFICIAL'
-  mockAnalysisError.value = ''
-  localCustomMockRecords.value = []
-}
+})
 
 const filteredCohortStudents = computed(() => {
-  if (!mockStats.value || !mockStats.value.naturalCohort) return []
-  let list = mockStats.value.naturalCohort
+  if (!effectiveSatamStats.value?.naturalCohort) return []
+  let list = effectiveSatamStats.value.naturalCohort
 
   if (studentFilter.value === 'RUN_1') {
     list = list.filter(s => s.status === 'RUN_1')
@@ -4444,8 +4244,8 @@ function toggleCard(num) {
 
 const STRATEGY_CARDS = computed(() => {
   const currentSchool = (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리 학교'
-  const satamSummary = mockStats.value?.totalRunRate
-    ? `사탐런(과탐→사탐 ${mockStats.value.totalRunRate}%)을 통해 최저 충족 전략 과목을 조기에 확정하는 것이 성공의 열쇠`
+  const satamSummary = effectiveSatamStats.value?.totalRunRate
+    ? `사탐런(과탐→사탐 ${effectiveSatamStats.value.totalRunRate}%)을 통해 최저 충족 전략 과목을 조기에 확정하는 것이 성공의 열쇠`
     : '사탐런(과탐→사탐)을 통해 최저 충족 전략 과목을 조기에 확정하는 것이 성공의 열쇠'
   return [
     {
