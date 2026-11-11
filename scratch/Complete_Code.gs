@@ -22,6 +22,7 @@ const ENCRYPTED_SHEETS = [
   '2027수시',
   '2026수시',
   '2025수시',
+  '2027모의결과',
   '2027모의가채점'
 ];
 
@@ -495,8 +496,8 @@ function executeEncryptedDeploy(sourceSheet, targetSs, password, isFullSync) {
       }
     }
 
-    // Full Sync 모드 (2027수시 기본 적용: 행 순서 1:1 보장, 잔여 유령 행 자동 삭제)
-    if (isFullSync || sheetName === '2027수시') {
+    // Full Sync 모드 (2027수시 및 모의고사 시트 적용: 행 순서 1:1 보장, 다회차 누락 방지, 잔여 유령 행 자동 삭제)
+    if (isFullSync || sheetName === '2027수시' || sheetName.includes('모의') || sheetName.includes('가채점')) {
       const cipherRows = [];
       for (let i = 1; i < srcData.length; i++) {
         const row = srcData[i];
