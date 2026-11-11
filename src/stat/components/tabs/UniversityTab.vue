@@ -1,5 +1,8 @@
 <template>
   <div class="space-y-6">
+    <!-- 🏛️ 1단계: 주요 대학 및 권역별 합격 인원 단순 표 (실적 집계 & 인쇄 최적화) -->
+    <UnivPassCountTableWidget />
+
     <!-- 🎯 2단계: 대학 그룹별 전형 심층 분석 & 합격률 비교 위젯 (보고서 5~6페이지 통합) -->
     <UnivGroupPassRateWidget />
 
@@ -190,6 +193,7 @@ import { ref, computed } from 'vue'
 import { Bar } from 'vue-chartjs'
 import { useData, formatGrade } from '../../composables/useStatData'
 import UnivDetailModal from '../StatUnivModal.vue'
+import UnivPassCountTableWidget from '../UnivPassCountTableWidget.vue'
 import UnivGroupPassRateWidget from '../UnivGroupPassRateWidget.vue'
 import UnivPassRateRankingWidget from '../UnivPassRateRankingWidget.vue'
 

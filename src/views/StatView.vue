@@ -370,13 +370,13 @@ const menuGroups = computed(() => [
     emoji: '📊',
     title: '대입 현황 & 분석',
     items: [
-      { id: 'overview', name: '종합 대시보드', iconComponent: BarChart3 },
+      { id: 'overview', name: '대입 지원 결과', iconComponent: BarChart3 },
       { id: 'multiYear', name: '5개년 추이 분석', iconComponent: TrendingUp },
+      { id: 'university', name: '대입 결과', iconComponent: Building2 },
       { id: 'scatter', name: '대입 합불 산점도', iconComponent: ChartScatter, badge: 'NEW' },
+      { id: 'grade', name: '성적대별 전형 경향', iconComponent: Target },
       { id: 'schoolRec', name: '학교장추천 전형 분석', iconComponent: Award, badge: '특화' },
-      ...(hasRuralSheet.value ? [{ id: 'ruralStat', name: '농어촌 전형 분석', iconComponent: Trees, badge: '특화' }] : []),
-      { id: 'university', name: '대학 그룹별 분석', iconComponent: Building2 },
-      { id: 'grade', name: '성적대별 전형 경향', iconComponent: Target }
+      ...(hasRuralSheet.value ? [{ id: 'ruralStat', name: '농어촌 전형 분석', iconComponent: Trees, badge: '특화' }] : [])
     ]
   },
     {
