@@ -80,68 +80,129 @@
         </span>
       </div>
 
-      <!-- 4대 시사점 카드 그리드 -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-        <!-- 시사점 1 -->
-        <div class="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/90 hover:border-indigo-300 transition-all space-y-2.5">
-          <div class="flex items-center gap-2">
-            <span class="w-7 h-7 rounded-lg bg-rose-100 text-rose-700 font-black text-xs flex items-center justify-center font-mono">01</span>
-            <h3 class="text-sm font-black text-slate-900 m-0">수능 사탐런 ➔ 고교 내신의 '과탐 기피(내신 사탐런)'로 전이</h3>
+      <!-- 4대 시사점 카드 그리드 (기본 4개 그리드 뷰) -->
+      <div v-if="expandedInsightIndex === null" class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+        <div
+          v-for="(item, idx) in insightsList"
+          :key="item.num"
+          @click="expandedInsightIndex = idx"
+          class="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/90 hover:border-indigo-400 hover:shadow-md hover:bg-white transition-all space-y-2.5 cursor-pointer group relative"
+          title="클릭하여 발표용으로 확대"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg font-black text-xs flex items-center justify-center font-mono" :class="item.badgeBg">{{ item.num }}</span>
+              <h3 class="text-sm font-black text-slate-900 m-0 group-hover:text-indigo-600 transition-colors">{{ item.title }}</h3>
+            </div>
+            <span class="text-[10px] font-bold text-indigo-600 opacity-70 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 shrink-0 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+              <span>🔍</span>
+              <span>확대</span>
+            </span>
           </div>
-          <p class="text-xs text-slate-600 leading-relaxed m-0">
-            학생들이 사탐런을 감행한 본질은 사회가 좋아서가 아니라 <strong>과탐의 극심한 학습량과 의대생·N수생에 의한 등급 분쇄 공포</strong> 때문이었습니다.
-            2028 수능에서는 수능 과목을 피할 수 없게 되자, 역으로 <strong>고2~3 내신에서 성적 따기 쉬운 과목만 찾고 물리·화학 등 핵심 과탐을 기피하는 '내신 사탐런'</strong> 현상이 심화될 위험이 큽니다.
-          </p>
-          <div class="p-2.5 rounded-xl bg-white border border-rose-100 text-[11px] text-rose-900 font-medium">
-            ⚠️ <strong>지도 경계령:</strong> 내신 5등급제 상대평가에서 불리할까 봐 이공계 핵심 과목을 회피하면, 대입 서류평가에서 치명적인 불이익을 받게 됩니다.
+          <p class="text-xs text-slate-600 leading-relaxed m-0" v-html="item.descHtml"></p>
+          <div class="p-2.5 rounded-xl bg-white border text-[11px] font-medium" :class="item.alertBorder">
+            {{ item.alertIcon }} <strong>{{ item.alertTitle }}</strong> {{ item.alertText }}
+          </div>
+        </div>
+      </div>
+
+      <!-- 4대 시사점 프레젠테이션 확대 모드 (단일 카드 전면 확대 뷰) -->
+      <div
+        v-else
+        class="p-6 sm:p-8 rounded-3xl bg-linear-to-br from-slate-50 via-white to-indigo-50/40 border-2 border-indigo-400 shadow-xl space-y-5"
+      >
+        <!-- 프레젠테이션 컨트롤 툴바 -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-indigo-100">
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-xs font-black flex items-center gap-1 shadow-2xs">
+              <span>📺</span>
+              <span>프레젠테이션 발표 모드</span>
+            </span>
+            <span class="text-xs font-bold text-slate-500">
+              시사점 <strong class="text-indigo-600 font-mono">{{ expandedInsightIndex + 1 }}</strong> / 4
+            </span>
+          </div>
+
+          <!-- 번호 직접 이동 탭 & 이전/다음 & 축소 버튼 -->
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <div class="flex items-center gap-1 mr-2">
+              <button
+                v-for="(_, idx) in insightsList"
+                :key="idx"
+                type="button"
+                @click="expandedInsightIndex = idx"
+                :class="[
+                  'w-7 h-7 rounded-lg text-xs font-black transition-all cursor-pointer font-mono',
+                  expandedInsightIndex === idx
+                    ? 'bg-indigo-600 text-white shadow-xs scale-105'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                ]"
+              >
+                0{{ idx + 1 }}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              :disabled="expandedInsightIndex <= 0"
+              @click="expandedInsightIndex--"
+              class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            >
+              ◀ 이전
+            </button>
+            <button
+              type="button"
+              :disabled="expandedInsightIndex >= insightsList.length - 1"
+              @click="expandedInsightIndex++"
+              class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            >
+              다음 ▶
+            </button>
+            <button
+              type="button"
+              @click="expandedInsightIndex = null"
+              class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-slate-900 hover:bg-slate-800 text-white shadow-sm cursor-pointer transition-colors flex items-center gap-1 ml-1"
+            >
+              <span>✕</span>
+              <span>원래 크기로 축소</span>
+            </button>
           </div>
         </div>
 
-        <!-- 시사점 2 -->
-        <div class="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/90 hover:border-indigo-300 transition-all space-y-2.5">
-          <div class="flex items-center gap-2">
-            <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center font-mono">02</span>
-            <h3 class="text-sm font-black text-slate-900 m-0">대학의 필연적 반격: 학생부(과탐 이수·세특) 정밀 평가</h3>
+        <!-- 본문 내용 (프레젠테이션용 대형 타이포그래피) -->
+        <div class="space-y-4 py-2">
+          <div class="flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl font-black text-base flex items-center justify-center font-mono shadow-xs" :class="insightsList[expandedInsightIndex].badgeBg">
+              {{ insightsList[expandedInsightIndex].num }}
+            </span>
+            <h3 class="text-xl sm:text-2xl font-black text-slate-950 m-0 tracking-tight">
+              {{ insightsList[expandedInsightIndex].title }}
+            </h3>
           </div>
-          <p class="text-xs text-slate-600 leading-relaxed m-0">
-            2028 수능 탐구가 1학년 수준의 공통과목(통합과학·통합사회)으로 축소되면, <strong>상위권 이공계 대학(서울대, 연고대, 카이스트 등)은 수능 성적표만으로 이과 역량을 검증할 수 없습니다.</strong>
-            따라서 <strong>정시에서도 학생부 교과평가(정성평가)를 전면 도입</strong>하고, 수시 학종에서 <strong>고2~3 물리/화학/미적분II/기하 이수 여부</strong>를 절대적 당락 요소로 반영합니다.
-          </p>
-          <div class="p-2.5 rounded-xl bg-white border border-indigo-100 text-[11px] text-indigo-900 font-medium">
-            🎯 <strong>진학 팩트:</strong> "수능 탐구가 쉬워진 만큼, 대학은 고교 3년간 학생이 어떤 과목에 과감히 도전했는지를 매섭게 검증합니다."
+
+          <p class="text-base sm:text-lg text-slate-700 leading-relaxed font-normal m-0" v-html="insightsList[expandedInsightIndex].descHtml"></p>
+
+          <div class="p-4 sm:p-5 rounded-2xl bg-white border-2 text-sm sm:text-base font-medium shadow-xs" :class="insightsList[expandedInsightIndex].alertBorder">
+            <div class="flex items-start gap-2.5">
+              <span class="text-xl sm:text-2xl shrink-0 mt-0.5">{{ insightsList[expandedInsightIndex].alertIcon }}</span>
+              <div>
+                <strong class="font-black text-slate-950 mr-1.5 text-base sm:text-lg">{{ insightsList[expandedInsightIndex].alertTitle }}</strong>
+                <span class="text-slate-800 leading-relaxed">{{ insightsList[expandedInsightIndex].alertText }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- 시사점 3 -->
-        <div class="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/90 hover:border-indigo-300 transition-all space-y-2.5">
-          <div class="flex items-center gap-2">
-            <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 font-black text-xs flex items-center justify-center font-mono">03</span>
-            <h3 class="text-sm font-black text-slate-900 m-0">수시 수능 최저학력기준의 '체감 난이도 급상승'</h3>
-          </div>
-          <p class="text-xs text-slate-600 leading-relaxed m-0">
-            기존 일반고의 주효한 전략은 "과탐은 놔두고 사문·생윤 1과목을 집중 공략해 2등급을 따서 수시 최저(2합5, 3합7)를 맞추는 것"이었습니다.
-            그러나 2028에는 <strong>[통합사회 1과목 + 통합과학 1과목]</strong>이 고정되어 우회로가 차단됩니다.
-            문과생에게는 <code>통합과학</code>이, 이과생에게는 1문항 실수로 등급이 추락하는 <code>통합사회</code>가 최저 미충족의 거대한 덫이 됩니다.
-          </p>
-          <div class="p-2.5 rounded-xl bg-white border border-amber-100 text-[11px] text-amber-950 font-medium">
-            📊 <strong>충격 예측:</strong> 편법성 1과목 몰입이 불가능해져, 일반고 학생들의 실질 수능 최저 충족률이 전반적으로 하락할 전망입니다.
-          </div>
-        </div>
-
-        <!-- 시사점 4 -->
-        <div class="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/90 hover:border-indigo-300 transition-all space-y-2.5">
-          <div class="flex items-center gap-2">
-            <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 font-black text-xs flex items-center justify-center font-mono">04</span>
-            <h3 class="text-sm font-black text-slate-900 m-0">고1 통합사회·통합과학의 위상 '수능 코어 과목' 격상</h3>
-          </div>
-          <p class="text-xs text-slate-600 leading-relaxed m-0">
-            과거 통합사회·통합과학은 1학년 때 지나가는 교양·내신 과목으로 여겨졌습니다.
-            그러나 2028 체제에서는 <strong>고3 수능 당일까지 수능 성적표의 절반을 차지하는 메인 수능 과목</strong>으로 격상됩니다.
-            1학년 1학기 첫 시험부터 수능 실전 연계형 사고력을 길러두지 않으면 고3 때 다시 1학년 교과서를 뒤적여야 하는 촌극이 빚어집니다.
-          </p>
-          <div class="p-2.5 rounded-xl bg-white border border-emerald-100 text-[11px] text-emerald-950 font-medium">
-            🚀 <strong>현장 대응:</strong> 고1 단계의 통사·통과를 "고3 수능 직결 과목"으로 프레이밍하여 조기 학습 몰입도를 높여야 합니다.
-          </div>
+        <!-- 하단 안내 바 -->
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+          <span>💡 발표 팁: [ESC] 키를 누르거나 [원래 크기로 축소]를 누르면 4개 카드 그리드로 돌아갑니다.</span>
+          <button
+            type="button"
+            @click="expandedInsightIndex = null"
+            class="text-indigo-600 font-bold hover:underline cursor-pointer"
+          >
+            전체 카드 한눈에 보기
+          </button>
         </div>
       </div>
     </div>
@@ -174,45 +235,149 @@
         </div>
       </div>
 
-      <!-- 선택된 학년의 3단 상세 전략 카드 -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <!-- 카드 1: 수능 전략 -->
-        <div class="p-5 rounded-2xl border border-indigo-100 bg-indigo-50/40 space-y-3">
-          <div class="flex items-center gap-2">
-            <span class="p-2 rounded-xl bg-indigo-600 text-white text-xs">📝</span>
-            <h4 class="text-sm font-black text-indigo-950 m-0">수능(CSAT) 대비 전략</h4>
+      <!-- 선택된 학년의 3단 상세 전략 카드 (기본 3개 그리드 뷰) -->
+      <div v-if="expandedGradeCardIndex === null" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div
+          v-for="(card, cIdx) in gradeStrategyCards"
+          :key="card.type"
+          @click="expandedGradeCardIndex = cIdx"
+          :class="[
+            'p-5 rounded-2xl border transition-all space-y-3 cursor-pointer group hover:shadow-md hover:border-indigo-400',
+            card.borderClass,
+            card.bgClass
+          ]"
+          title="클릭하여 발표용으로 확대"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="p-2 rounded-xl text-xs font-black" :class="card.badgeClass">{{ card.icon }}</span>
+              <h4 class="text-sm font-black m-0" :class="card.titleClass">{{ card.title }}</h4>
+            </div>
+            <span class="text-[10px] font-bold text-indigo-600 opacity-70 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 shrink-0 bg-white/80 px-2 py-0.5 rounded-full border border-indigo-200">
+              <span>🔍</span>
+              <span>확대</span>
+            </span>
           </div>
           <ul class="text-xs text-slate-700 space-y-2 list-disc list-inside pl-1 leading-relaxed">
-            <li v-for="(item, idx) in currentTargetData.csatStrategy" :key="idx">
+            <li v-for="(item, idx) in card.items" :key="idx">
               <span class="font-bold text-slate-900">{{ item.title }}:</span> {{ item.desc }}
             </li>
           </ul>
         </div>
+      </div>
 
-        <!-- 카드 2: 내신 & 학생부 전략 -->
-        <div class="p-5 rounded-2xl border border-amber-100 bg-amber-50/40 space-y-3">
+      <!-- 학년별 3단 전략 프레젠테이션 확대 모드 (단일 카드 전면 확대 뷰) -->
+      <div
+        v-else
+        class="p-6 sm:p-8 rounded-3xl bg-linear-to-br from-slate-50 via-white to-amber-50/30 border-2 border-indigo-400 shadow-xl space-y-5"
+      >
+        <!-- 프레젠테이션 컨트롤 툴바 -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-indigo-100">
           <div class="flex items-center gap-2">
-            <span class="p-2 rounded-xl bg-amber-600 text-white text-xs">📚</span>
-            <h4 class="text-sm font-black text-amber-950 m-0">내신 & 학생부 설계 전략</h4>
+            <span class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-xs font-black flex items-center gap-1 shadow-2xs">
+              <span>📺</span>
+              <span>학년별 맞춤 전략 발표 모드</span>
+            </span>
+            <span class="text-xs font-bold text-slate-600">
+              {{ currentTargetData.gradeTitle }}
+            </span>
           </div>
-          <ul class="text-xs text-slate-700 space-y-2 list-disc list-inside pl-1 leading-relaxed">
-            <li v-for="(item, idx) in currentTargetData.gpaStrategy" :key="idx">
-              <span class="font-bold text-slate-900">{{ item.title }}:</span> {{ item.desc }}
-            </li>
-          </ul>
+
+          <!-- 전략별 탭 버튼 & 이전/다음 & 축소 버튼 -->
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <div class="flex items-center gap-1 mr-2">
+              <button
+                v-for="(c, cIdx) in gradeStrategyCards"
+                :key="c.type"
+                type="button"
+                @click="expandedGradeCardIndex = cIdx"
+                :class="[
+                  'px-2.5 py-1 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1',
+                  expandedGradeCardIndex === cIdx
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                ]"
+              >
+                <span>{{ c.icon }}</span>
+                <span>{{ c.title.split(' ')[0] }}</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              :disabled="expandedGradeCardIndex <= 0"
+              @click="expandedGradeCardIndex--"
+              class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            >
+              ◀ 이전
+            </button>
+            <button
+              type="button"
+              :disabled="expandedGradeCardIndex >= gradeStrategyCards.length - 1"
+              @click="expandedGradeCardIndex++"
+              class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            >
+              다음 ▶
+            </button>
+            <button
+              type="button"
+              @click="expandedGradeCardIndex = null"
+              class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-slate-900 hover:bg-slate-800 text-white shadow-sm cursor-pointer transition-colors flex items-center gap-1 ml-1"
+            >
+              <span>✕</span>
+              <span>원래 크기로 축소</span>
+            </button>
+          </div>
         </div>
 
-        <!-- 카드 3: 진학 상담 지도 팁 -->
-        <div class="p-5 rounded-2xl border border-emerald-100 bg-emerald-50/40 space-y-3">
-          <div class="flex items-center gap-2">
-            <span class="p-2 rounded-xl bg-emerald-600 text-white text-xs">💬</span>
-            <h4 class="text-sm font-black text-emerald-950 m-0">교사 상담 코칭 가이드</h4>
+        <!-- 본문 내용 (프레젠테이션용 대형 텍스트) -->
+        <div class="space-y-4 py-2">
+          <div class="flex items-center gap-3">
+            <span class="w-10 h-10 rounded-xl text-lg font-black flex items-center justify-center shadow-xs" :class="gradeStrategyCards[expandedGradeCardIndex].badgeClass">
+              {{ gradeStrategyCards[expandedGradeCardIndex].icon }}
+            </span>
+            <div>
+              <h3 class="text-xl sm:text-2xl font-black text-slate-950 m-0 tracking-tight">
+                {{ gradeStrategyCards[expandedGradeCardIndex].title }}
+              </h3>
+              <div class="text-xs text-slate-500 font-medium mt-0.5">
+                대상: {{ currentTargetData.gradeTitle }} ({{ currentTargetData.systemLabel }})
+              </div>
+            </div>
           </div>
-          <ul class="text-xs text-slate-700 space-y-2 list-disc list-inside pl-1 leading-relaxed">
-            <li v-for="(item, idx) in currentTargetData.counselStrategy" :key="idx">
-              <span class="font-bold text-slate-900">{{ item.title }}:</span> {{ item.desc }}
-            </li>
-          </ul>
+
+          <!-- 세부 전략 항목 (대형 독립 카드 리스트) -->
+          <div class="grid grid-cols-1 gap-3.5 pt-2">
+            <div
+              v-for="(item, idx) in gradeStrategyCards[expandedGradeCardIndex].items"
+              :key="idx"
+              class="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-1.5"
+            >
+              <div class="flex items-center gap-2.5">
+                <span class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center font-mono shrink-0">
+                  {{ idx + 1 }}
+                </span>
+                <h5 class="text-base sm:text-lg font-black text-slate-900 m-0">
+                  {{ item.title }}
+                </h5>
+              </div>
+              <p class="text-sm sm:text-base text-slate-700 leading-relaxed m-0 pl-8.5 font-normal">
+                {{ item.desc }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 하단 안내 바 -->
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+          <span>💡 발표 팁: [ESC] 키를 누르거나 [원래 크기로 축소]를 누르면 3개 카드 그리드로 돌아갑니다.</span>
+          <button
+            type="button"
+            @click="expandedGradeCardIndex = null"
+            class="text-indigo-600 font-bold hover:underline cursor-pointer"
+          >
+            전체 3개 전략 한눈에 보기
+          </button>
         </div>
       </div>
 
@@ -234,15 +399,26 @@
           <span class="text-[11px] text-indigo-300 font-mono">서울대·연고대 학종 평가 핵심 기준</span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <!-- 2개 교과 쏠림 vs 회피 카드 (기본 2개 그리드 뷰) -->
+        <div v-if="expandedSubjectSkewIndex === null" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           <!-- 과학 교과 쏠림 vs 회피 -->
-          <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2.5">
+          <div
+            @click="expandedSubjectSkewIndex = 0"
+            class="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-emerald-400 hover:bg-white/10 transition-all space-y-2.5 cursor-pointer group relative"
+            title="클릭하여 발표용으로 확대"
+          >
             <div class="flex items-center justify-between">
-              <span class="font-black text-emerald-300 flex items-center gap-1.5">
+              <span class="font-black text-emerald-300 flex items-center gap-1.5 group-hover:text-emerald-200 transition-colors">
                 <span>🔬</span>
                 <span>과학 교과: [물리·화학 회피 ➔ 생명·지구 쏠림]</span>
               </span>
-              <span class="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold">공대 결격 위험</span>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold">공대 결격 위험</span>
+                <span class="text-[10px] font-bold text-emerald-300 opacity-70 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-500/40">
+                  <span>🔍</span>
+                  <span>확대</span>
+                </span>
+              </div>
             </div>
             <div class="space-y-1.5 text-[11px] leading-relaxed">
               <div class="p-2 rounded-lg bg-rose-950/40 border border-rose-500/30 text-rose-200">
@@ -262,13 +438,23 @@
           </div>
 
           <!-- 사회 교과 쏠림 vs 회피 -->
-          <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2.5">
+          <div
+            @click="expandedSubjectSkewIndex = 1"
+            class="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-amber-400 hover:bg-white/10 transition-all space-y-2.5 cursor-pointer group relative"
+            title="클릭하여 발표용으로 확대"
+          >
             <div class="flex items-center justify-between">
-              <span class="font-black text-amber-300 flex items-center gap-1.5">
+              <span class="font-black text-amber-300 flex items-center gap-1.5 group-hover:text-amber-200 transition-colors">
                 <span>⚖️</span>
                 <span>사회 교과: [윤리·사문 집중 ➔ 경제·정치·역사 회피]</span>
               </span>
-              <span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">상경계열 차별화</span>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">상경계열 차별화</span>
+                <span class="text-[10px] font-bold text-amber-300 opacity-70 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/40">
+                  <span>🔍</span>
+                  <span>확대</span>
+                </span>
+              </div>
             </div>
             <div class="space-y-1.5 text-[11px] leading-relaxed">
               <div class="p-2 rounded-lg bg-amber-950/40 border border-amber-500/30 text-amber-200">
@@ -285,6 +471,160 @@
                 💡 <strong>진학 상담 팩트:</strong> 경영·경제·통계·사회과학 최상위권은 남들 다 듣는 윤리 과목만으로는 서류 차별화가 불가합니다. 수강자 수가 적더라도 <code>경제</code>, <code>정치</code>를 이수한 학생이 학종 가산점을 독식합니다.
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- 탐구 쏠림 경계령 프레젠테이션 확대 모드 (단일 카드 전면 확대 뷰) -->
+        <div
+          v-else
+          class="p-5 sm:p-7 rounded-2xl bg-linear-to-br from-slate-900 via-slate-950 to-slate-900 border-2 border-amber-400/90 shadow-2xl space-y-5"
+        >
+          <!-- 상단 컨트롤 툴바 -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/15">
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 text-xs font-black flex items-center gap-1">
+                <span>📺</span>
+                <span>탐구 쏠림 경계령 발표 모드</span>
+              </span>
+              <span class="text-xs font-bold text-slate-300">
+                {{ expandedSubjectSkewIndex === 0 ? '과학 교과 쏠림 심층 분석' : '사회 교과 쏠림 심층 분석' }}
+              </span>
+            </div>
+
+            <!-- 교과 선택 탭 & 축소 버튼 -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="flex items-center gap-1 bg-white/10 p-1 rounded-xl">
+                <button
+                  type="button"
+                  @click="expandedSubjectSkewIndex = 0"
+                  :class="[
+                    'px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1',
+                    expandedSubjectSkewIndex === 0
+                      ? 'bg-emerald-500 text-slate-950 shadow-xs'
+                      : 'text-slate-300 hover:text-white'
+                  ]"
+                >
+                  <span>🔬</span>
+                  <span>과학 교과</span>
+                </button>
+                <button
+                  type="button"
+                  @click="expandedSubjectSkewIndex = 1"
+                  :class="[
+                    'px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1',
+                    expandedSubjectSkewIndex === 1
+                      ? 'bg-amber-400 text-slate-950 shadow-xs'
+                      : 'text-slate-300 hover:text-white'
+                  ]"
+                >
+                  <span>⚖️</span>
+                  <span>사회 교과</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                @click="expandedSubjectSkewIndex = null"
+                class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-white/20 hover:bg-white/30 text-white shadow-sm cursor-pointer transition-colors flex items-center gap-1"
+              >
+                <span>✕</span>
+                <span>원래 크기로 축소</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 과학 교과 쏠림 확대 내용 -->
+          <div v-if="expandedSubjectSkewIndex === 0" class="space-y-4 py-1">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h3 class="text-xl sm:text-2xl font-black text-emerald-300 m-0 flex items-center gap-2">
+                <span>🔬</span>
+                <span>과학 교과: [물리·화학 회피 ➔ 생명·지구 쏠림]</span>
+              </h3>
+              <span class="text-xs px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 font-bold border border-rose-500/40 shrink-0 self-start sm:self-auto">
+                공대 결격 위험 경계령
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="p-4 sm:p-5 rounded-2xl bg-rose-950/50 border border-rose-500/40 text-rose-200 space-y-2.5">
+                <div class="text-sm sm:text-base font-black text-rose-300 flex items-center gap-1.5">
+                  <span>❌</span>
+                  <span>학생들의 회피 과목 (수식·역학 부담)</span>
+                </div>
+                <div class="text-xs sm:text-sm leading-relaxed space-y-1.5 font-sans">
+                  <div><strong class="text-rose-100">일반선택:</strong> <code class="bg-rose-900/70 px-2 py-0.5 rounded text-rose-100 font-mono text-xs">물리학</code>, <code class="bg-rose-900/70 px-2 py-0.5 rounded text-rose-100 font-mono text-xs">화학</code></div>
+                  <div><strong class="text-rose-100">진로선택:</strong> <code class="bg-rose-900/70 px-2 py-0.5 rounded text-rose-100 font-mono text-xs">역학과 에너지</code>, <code class="bg-rose-900/70 px-2 py-0.5 rounded text-rose-100 font-mono text-xs">전자기와 양자</code>, <code class="bg-rose-900/70 px-2 py-0.5 rounded text-rose-100 font-mono text-xs">물질과 에너지</code>, <code class="bg-rose-900/70 px-2 py-0.5 rounded text-rose-100 font-mono text-xs">화학 반응의 세계</code></div>
+                </div>
+              </div>
+
+              <div class="p-4 sm:p-5 rounded-2xl bg-emerald-950/50 border border-emerald-500/40 text-emerald-200 space-y-2.5">
+                <div class="text-sm sm:text-base font-black text-emerald-300 flex items-center gap-1.5">
+                  <span>⚠️</span>
+                  <span>학생들의 쏠림 과목 (개념·암기 위주)</span>
+                </div>
+                <div class="text-xs sm:text-sm leading-relaxed space-y-1.5 font-sans">
+                  <div><strong class="text-emerald-100">일반선택:</strong> <code class="bg-emerald-900/70 px-2 py-0.5 rounded text-emerald-100 font-mono text-xs">생명과학</code>, <code class="bg-emerald-900/70 px-2 py-0.5 rounded text-emerald-100 font-mono text-xs">지구과학</code></div>
+                  <div><strong class="text-emerald-100">진로선택:</strong> <code class="bg-emerald-900/70 px-2 py-0.5 rounded text-emerald-100 font-mono text-xs">세포와 물질대사</code>, <code class="bg-emerald-900/70 px-2 py-0.5 rounded text-emerald-100 font-mono text-xs">생물의 유전</code>, <code class="bg-emerald-900/70 px-2 py-0.5 rounded text-emerald-100 font-mono text-xs">지구시스템과학</code>, <code class="bg-emerald-900/70 px-2 py-0.5 rounded text-emerald-100 font-mono text-xs">행성우주과학</code></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-slate-100 text-sm sm:text-base bg-slate-800/90 p-4 sm:p-5 rounded-2xl border border-slate-700 leading-relaxed shadow-sm">
+              💡 <strong class="text-amber-300 font-black">진학 상담 팩트:</strong> 컴퓨터, 반도체, 전기전자, 기계공학 등 상위권 공대는 <code class="text-amber-300 font-black bg-slate-900 px-1.5 py-0.5 rounded">물리학</code>, <code class="text-amber-300 font-black bg-slate-900 px-1.5 py-0.5 rounded">화학</code>, <code class="text-amber-300 font-black bg-slate-900 px-1.5 py-0.5 rounded">역학과 에너지</code> 미이수 시 내신이 1.0이어도 서류평가에서 치명적 감점을 부여합니다.
+            </div>
+          </div>
+
+          <!-- 사회 교과 쏠림 확대 내용 -->
+          <div v-else-if="expandedSubjectSkewIndex === 1" class="space-y-4 py-1">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h3 class="text-xl sm:text-2xl font-black text-amber-300 m-0 flex items-center gap-2">
+                <span>⚖️</span>
+                <span>사회 교과: [윤리·사문 집중 ➔ 경제·정치·역사 회피]</span>
+              </h3>
+              <span class="text-xs px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 shrink-0 self-start sm:self-auto">
+                상경계열 차별화 포인트
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="p-4 sm:p-5 rounded-2xl bg-amber-950/50 border border-amber-500/40 text-amber-200 space-y-2.5">
+                <div class="text-sm sm:text-base font-black text-amber-300 flex items-center gap-1.5">
+                  <span>⚠️</span>
+                  <span>학생들의 쏠림 과목 (과거 생윤·사문 유사군)</span>
+                </div>
+                <div class="text-xs sm:text-sm leading-relaxed space-y-1.5 font-sans">
+                  <div><strong class="text-amber-100">일반선택:</strong> <code class="bg-amber-900/70 px-2 py-0.5 rounded text-amber-100 font-mono text-xs">현대사회와 윤리</code>, <code class="bg-amber-900/70 px-2 py-0.5 rounded text-amber-100 font-mono text-xs">사회와 문화</code></div>
+                  <div><strong class="text-amber-100">진로/융합:</strong> <code class="bg-amber-900/70 px-2 py-0.5 rounded text-amber-100 font-mono text-xs">윤리문제 탐구</code>, <code class="bg-amber-900/70 px-2 py-0.5 rounded text-amber-100 font-mono text-xs">사회문제 탐구</code></div>
+                </div>
+              </div>
+
+              <div class="p-4 sm:p-5 rounded-2xl bg-indigo-950/50 border border-indigo-500/40 text-indigo-200 space-y-2.5">
+                <div class="text-sm sm:text-base font-black text-indigo-300 flex items-center gap-1.5">
+                  <span>💎</span>
+                  <span>대학이 높게 평가하는 도전 과목</span>
+                </div>
+                <div class="text-xs sm:text-sm leading-relaxed space-y-1.5 font-sans">
+                  <div><strong class="text-indigo-100">일반선택:</strong> <code class="bg-indigo-900/70 px-2 py-0.5 rounded text-indigo-100 font-mono text-xs">경제</code>, <code class="bg-indigo-900/70 px-2 py-0.5 rounded text-indigo-100 font-mono text-xs">정치</code>, <code class="bg-indigo-900/70 px-2 py-0.5 rounded text-indigo-100 font-mono text-xs">법과 사회</code>, <code class="bg-indigo-900/70 px-2 py-0.5 rounded text-indigo-100 font-mono text-xs">세계사</code></div>
+                  <div><strong class="text-indigo-100">진로선택:</strong> <code class="bg-indigo-900/70 px-2 py-0.5 rounded text-indigo-100 font-mono text-xs">금융과 경제생활</code>, <code class="bg-indigo-900/70 px-2 py-0.5 rounded text-indigo-100 font-mono text-xs">국제관계의 이해</code>, <code class="bg-indigo-900/70 px-2 py-0.5 rounded text-indigo-100 font-mono text-xs">역사로 탐구하는 현대 세계</code></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-slate-100 text-sm sm:text-base bg-slate-800/90 p-4 sm:p-5 rounded-2xl border border-slate-700 leading-relaxed shadow-sm">
+              💡 <strong class="text-amber-300 font-black">진학 상담 팩트:</strong> 경영·경제·통계·사회과학 최상위권은 남들 다 듣는 윤리 과목만으로는 서류 차별화가 불가합니다. 수강자 수가 적더라도 <code class="text-amber-300 font-black bg-slate-900 px-1.5 py-0.5 rounded">경제</code>, <code class="text-amber-300 font-black bg-slate-900 px-1.5 py-0.5 rounded">정치</code>를 이수한 학생이 학종 가산점을 독식합니다.
+            </div>
+          </div>
+
+          <!-- 하단 안내 바 -->
+          <div class="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
+            <span>💡 발표 팁: [ESC] 키를 누르거나 [원래 크기로 축소]를 누르면 2개 카드 그리드로 돌아갑니다.</span>
+            <button
+              type="button"
+              @click="expandedSubjectSkewIndex = null"
+              class="text-amber-300 font-bold hover:underline cursor-pointer"
+            >
+              전체 2개 교과 한눈에 보기
+            </button>
           </div>
         </div>
       </div>
@@ -333,50 +673,142 @@
         <span class="text-xs font-bold text-slate-400 font-mono">Q&A 총 5문항</span>
       </div>
 
-      <div class="space-y-2.5">
+      <!-- 질문 목록 뷰 (기본 리스트 뷰) -->
+      <div v-if="expandedFaqIndex === null" class="space-y-2.5">
         <div
           v-for="(qa, idx) in faqList"
           :key="idx"
-          class="border border-slate-200 rounded-2xl overflow-hidden transition-all"
+          @click="expandedFaqIndex = idx"
+          class="border border-slate-200 hover:border-indigo-400 hover:shadow-md rounded-2xl overflow-hidden transition-all bg-slate-50/70 hover:bg-white cursor-pointer group"
+          title="클릭하여 발표용으로 크게 확대"
         >
-          <button
-            type="button"
-            @click="toggleFaq(idx)"
-            class="w-full p-4 text-left flex items-center justify-between gap-3 bg-slate-50/70 hover:bg-slate-100/80 transition-colors cursor-pointer border-none"
-          >
+          <div class="w-full p-4 text-left flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-              <span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center shrink-0 font-mono">
+              <span class="w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center shrink-0 font-mono group-hover:scale-105 transition-transform">
                 Q{{ idx + 1 }}
               </span>
-              <span class="text-xs sm:text-sm font-black text-slate-900">
+              <span class="text-xs sm:text-sm font-black text-slate-900 group-hover:text-indigo-600 transition-colors">
                 {{ qa.question }}
               </span>
             </div>
-            <span class="text-slate-400 text-xs shrink-0">
-              {{ openedFaqIndex === idx ? '▲ 접기' : '▼ 답변 보기' }}
-            </span>
-          </button>
-
-          <div
-            v-if="openedFaqIndex === idx"
-            class="p-4 sm:p-5 bg-white border-t border-slate-200 text-xs text-slate-700 leading-relaxed space-y-3"
-          >
-            <div class="p-3 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-950 font-bold">
-              💬 <strong>상담 핵심 한 줄 요약:</strong> {{ qa.summary }}
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-[11px] font-bold text-indigo-600 opacity-70 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-indigo-50 px-2.5 py-1 rounded-xl border border-indigo-200">
+                <span>🔍</span>
+                <span>발표용 확대</span>
+              </span>
             </div>
-            <p class="m-0 text-slate-600 leading-relaxed whitespace-pre-line">
-              {{ qa.answer }}
-            </p>
-            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          </div>
+        </div>
+      </div>
+
+      <!-- 핵심 Q&A 프레젠테이션 확대 모드 (질문 + 답변 전면 대형 뷰) -->
+      <div
+        v-else
+        class="p-6 sm:p-8 rounded-3xl bg-linear-to-br from-slate-50 via-white to-indigo-50/30 border-2 border-indigo-400 shadow-xl space-y-5"
+      >
+        <!-- 프레젠테이션 컨트롤 툴바 -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-indigo-100">
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-xs font-black flex items-center gap-1 shadow-2xs">
+              <span>📺</span>
+              <span>핵심 Q&A 프레젠테이션 모드</span>
+            </span>
+            <span class="text-xs font-bold text-slate-500">
+              질문 <strong class="text-indigo-600 font-mono">{{ expandedFaqIndex + 1 }}</strong> / {{ faqList.length }}
+            </span>
+          </div>
+
+          <!-- Q1~Q5 직접 이동 탭 & 이전/다음 & 축소 버튼 -->
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <div class="flex items-center gap-1 mr-2">
               <button
+                v-for="(_, idx) in faqList"
+                :key="idx"
                 type="button"
-                @click="copyFaqScript(qa)"
-                class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors"
+                @click="expandedFaqIndex = idx"
+                :class="[
+                  'w-7 h-7 rounded-lg text-xs font-black transition-all cursor-pointer font-mono',
+                  expandedFaqIndex === idx
+                    ? 'bg-indigo-600 text-white shadow-xs scale-105'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                ]"
               >
-                <span>📋</span>
-                <span>답변 스크립트 복사</span>
+                Q{{ idx + 1 }}
               </button>
             </div>
+
+            <button
+              type="button"
+              :disabled="expandedFaqIndex <= 0"
+              @click="expandedFaqIndex--"
+              class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            >
+              ◀ 이전 질문
+            </button>
+            <button
+              type="button"
+              :disabled="expandedFaqIndex >= faqList.length - 1"
+              @click="expandedFaqIndex++"
+              class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            >
+              다음 질문 ▶
+            </button>
+            <button
+              type="button"
+              @click="expandedFaqIndex = null"
+              class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-slate-900 hover:bg-slate-800 text-white shadow-sm cursor-pointer transition-colors flex items-center gap-1 ml-1"
+            >
+              <span>✕</span>
+              <span>목록으로 축소</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 본문 내용: 질문 + 핵심 요약 + 상세 답변 (프레젠테이션용 대형 텍스트) -->
+        <div class="space-y-4 py-2">
+          <!-- 대형 질문 헤더 -->
+          <div class="flex items-start gap-3">
+            <span class="w-10 h-10 rounded-xl bg-indigo-600 text-white text-base font-black flex items-center justify-center shrink-0 font-mono shadow-xs mt-0.5">
+              Q{{ expandedFaqIndex + 1 }}
+            </span>
+            <h3 class="text-xl sm:text-2xl font-black text-slate-950 m-0 tracking-tight leading-snug">
+              {{ faqList[expandedFaqIndex].question }}
+            </h3>
+          </div>
+
+          <!-- 대형 핵심 요약 박스 -->
+          <div class="p-4 sm:p-5 rounded-2xl bg-amber-50/90 border-2 border-amber-300 text-amber-950 font-bold text-base sm:text-lg shadow-xs leading-relaxed">
+            💬 <strong class="text-amber-900">상담 핵심 한 줄 요약:</strong> {{ faqList[expandedFaqIndex].summary }}
+          </div>
+
+          <!-- 대형 상세 답변 박스 -->
+          <div class="p-6 sm:p-7 rounded-2xl bg-slate-50/80 border border-slate-200 text-base sm:text-lg text-slate-700 leading-relaxed font-normal whitespace-pre-line shadow-xs">
+            {{ faqList[expandedFaqIndex].answer }}
+          </div>
+        </div>
+
+        <!-- 하단 액션 바 -->
+        <div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <span class="text-xs text-slate-400">
+            💡 발표 팁: [ESC] 키를 누르거나 [목록으로 축소]를 누르면 5개 질문 목록으로 돌아갑니다.
+          </span>
+
+          <div class="flex items-center gap-2 self-end sm:self-auto">
+            <button
+              type="button"
+              @click="copyFaqScript(faqList[expandedFaqIndex])"
+              class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <span>📋</span>
+              <span>답변 스크립트 복사</span>
+            </button>
+            <button
+              type="button"
+              @click="expandedFaqIndex = null"
+              class="text-indigo-600 font-bold text-xs hover:underline cursor-pointer"
+            >
+              전체 질문 목록 보기
+            </button>
           </div>
         </div>
       </div>
@@ -441,10 +873,78 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const activeGrade = ref('grade2') // 'grade2' (2028 개편 첫세대) | 'grade1' (2029) | 'middle3' (2030)
 const openedFaqIndex = ref(0)
+
+// 프레젠테이션 카드 확대 모드 상태 관리 (null: 기본 그리드, number: 해당 인덱스 카드 전면 확대)
+const expandedInsightIndex = ref(null) // 0..3: 4대 시사점
+const expandedGradeCardIndex = ref(null) // 0..2: 학년별 3개 전략
+const expandedSubjectSkewIndex = ref(null) // 0..1: 탐구 쏠림 2개 카드
+const expandedFaqIndex = ref(null) // 0..4: Q&A TOP 5
+
+// ESC 키 입력 시 모든 확대 모드 닫기
+const handleKeydown = (e) => {
+  if (e.key === 'Escape') {
+    expandedInsightIndex.value = null
+    expandedGradeCardIndex.value = null
+    expandedSubjectSkewIndex.value = null
+    expandedFaqIndex.value = null
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
+
+// 4대 시사점 데이터
+const insightsList = [
+  {
+    num: '01',
+    badgeBg: 'bg-rose-100 text-rose-700',
+    alertBorder: 'border-rose-100 text-rose-900',
+    title: "수능 사탐런 ➔ 고교 내신의 '과탐 기피(내신 사탐런)'로 전이",
+    descHtml: "학생들이 사탐런을 감행한 본질은 사회가 좋아서가 아니라 <strong>과탐의 극심한 학습량과 의대생·N수생에 의한 등급 분쇄 공포</strong> 때문이었습니다. 2028 수능에서는 수능 과목을 피할 수 없게 되자, 역으로 <strong>고2~3 내신에서 성적 따기 쉬운 과목만 찾고 물리·화학 등 핵심 과탐을 기피하는 '내신 사탐런'</strong> 현상이 심화될 위험이 큽니다.",
+    alertIcon: '⚠️',
+    alertTitle: '지도 경계령:',
+    alertText: '내신 5등급제 상대평가에서 불리할까 봐 이공계 핵심 과목을 회피하면, 대입 서류평가에서 치명적인 불이익을 받게 됩니다.'
+  },
+  {
+    num: '02',
+    badgeBg: 'bg-indigo-100 text-indigo-700',
+    alertBorder: 'border-indigo-100 text-indigo-900',
+    title: '대학의 필연적 반격: 학생부(과탐 이수·세특) 정밀 평가',
+    descHtml: "2028 수능 탐구가 1학년 수준의 공통과목(통합과학·통합사회)으로 축소되면, <strong>상위권 이공계 대학(서울대, 연고대, 카이스트 등)은 수능 성적표만으로 이과 역량을 검증할 수 없습니다.</strong> 따라서 <strong>정시에서도 학생부 교과평가(정성평가)를 전면 도입</strong>하고, 수시 학종에서 <strong>고2~3 물리/화학/미적분II/기하 이수 여부</strong>를 절대적 당락 요소로 반영합니다.",
+    alertIcon: '🎯',
+    alertTitle: '진학 팩트:',
+    alertText: '"수능 탐구가 쉬워진 만큼, 대학은 고교 3년간 학생이 어떤 과목에 과감히 도전했는지를 매섭게 검증합니다."'
+  },
+  {
+    num: '03',
+    badgeBg: 'bg-amber-100 text-amber-800',
+    alertBorder: 'border-amber-100 text-amber-950',
+    title: "수시 수능 최저학력기준의 '체감 난이도 급상승'",
+    descHtml: "기존 일반고의 주효한 전략은 \"과탐은 놔두고 사문·생윤 1과목을 집중 공략해 2등급을 따서 수시 최저(2합5, 3합7)를 맞추는 것\"이었습니다. 그러나 2028에는 <strong>[통합사회 1과목 + 통합과학 1과목]</strong>이 고정되어 우회로가 차단됩니다. 문과생에게는 <code>통합과학</code>이, 이과생에게는 1문항 실수로 등급이 추락하는 <code>통합사회</code>가 최저 미충족의 거대한 덫이 됩니다.",
+    alertIcon: '📊',
+    alertTitle: '충격 예측:',
+    alertText: '편법성 1과목 몰입이 불가능해져, 일반고 학생들의 실질 수능 최저 충족률이 전반적으로 하락할 전망입니다.'
+  },
+  {
+    num: '04',
+    badgeBg: 'bg-emerald-100 text-emerald-800',
+    alertBorder: 'border-emerald-100 text-emerald-950',
+    title: "고1 통합사회·통합과학의 위상 '수능 코어 과목' 격상",
+    descHtml: "과거 통합사회·통합과학은 1학년 때 지나가는 교양·내신 과목으로 여겨졌습니다. 그러나 2028 체제에서는 <strong>고3 수능 당일까지 수능 성적표의 절반을 차지하는 메인 수능 과목</strong>으로 격상됩니다. 1학년 1학기 첫 시험부터 수능 실전 연계형 사고력을 길러두지 않으면 고3 때 다시 1학년 교과서를 뒤적여야 하는 촌극이 빚어집니다.",
+    alertIcon: '🚀',
+    alertTitle: '현장 대응:',
+    alertText: '고1 단계의 통사·통과를 "고3 수능 직결 과목"으로 프레이밍하여 조기 학습 몰입도를 높여야 합니다.'
+  }
+]
 
 const gradeTargets = [
   { id: 'grade2', label: '예비 고3 (현 고2)', shortLabel: '고2 (2028 대입)', year: '2028', icon: '🚀' },
@@ -560,6 +1060,43 @@ const targetDetails = {
 const currentTargetData = computed(() => {
   return targetDetails[activeGrade.value] || targetDetails.grade2
 })
+
+// 학년별 3대 핵심 전략 카드 목록 (수능, 내신&학생부, 상담 코칭)
+const gradeStrategyCards = computed(() => [
+  {
+    type: 'csat',
+    title: '수능(CSAT) 대비 전략',
+    icon: '📝',
+    color: 'indigo',
+    borderClass: 'border-indigo-100',
+    bgClass: 'bg-indigo-50/40',
+    titleClass: 'text-indigo-950',
+    badgeClass: 'bg-indigo-600 text-white',
+    items: currentTargetData.value.csatStrategy || []
+  },
+  {
+    type: 'gpa',
+    title: '내신 & 학생부 설계 전략',
+    icon: '📚',
+    color: 'amber',
+    borderClass: 'border-amber-100',
+    bgClass: 'bg-amber-50/40',
+    titleClass: 'text-amber-950',
+    badgeClass: 'bg-amber-600 text-white',
+    items: currentTargetData.value.gpaStrategy || []
+  },
+  {
+    type: 'counsel',
+    title: '교사 상담 코칭 가이드',
+    icon: '💬',
+    color: 'emerald',
+    borderClass: 'border-emerald-100',
+    bgClass: 'bg-emerald-50/40',
+    titleClass: 'text-emerald-950',
+    badgeClass: 'bg-emerald-600 text-white',
+    items: currentTargetData.value.counselStrategy || []
+  }
+])
 
 const faqList = [
   {

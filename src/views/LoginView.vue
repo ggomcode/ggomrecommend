@@ -42,11 +42,13 @@
             v-if="isFromStat"
             type="button"
             @click="goToStatDashboard"
-            class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
+            :disabled="isNavigatingToStat"
+            class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-75 disabled:cursor-wait"
             title="대입 통계 시스템 대시보드로 이동"
           >
-            <span>📊</span>
-            <span>대입 통계 시스템으로 돌아가기</span>
+            <div v-if="isNavigatingToStat" class="w-3.5 h-3.5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            <span v-else>📊</span>
+            <span>{{ isNavigatingToStat ? '이동 중...' : '대입 통계 시스템으로 돌아가기' }}</span>
           </button>
 
           <button
@@ -704,11 +706,20 @@ const isFromStat = computed(() => {
   return route.query.from === 'stat' || sessionStorage.getItem('pcm_calendar_from') === 'stat'
 })
 
-function goToStatDashboard() {
+const isNavigatingToStat = ref(false)
+
+async function goToStatDashboard() {
+  if (isNavigatingToStat.value) return
+  isNavigatingToStat.value = true
   try {
     sessionStorage.removeItem('pcm_calendar_from')
   } catch (e) {}
-  router.push('/stat')
+  try {
+    await router.push('/stat')
+  } catch (err) {
+    console.error('Failed to navigate to /stat:', err)
+    isNavigatingToStat.value = false
+  }
 }
 
 function openLoginView() {

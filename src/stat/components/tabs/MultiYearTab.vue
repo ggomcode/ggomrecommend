@@ -45,8 +45,8 @@
       </div>
     </div>
 
-    <!-- 2. 4 Key Metric Summary Cards -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- 2. 3 Key Metric Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <!-- KPI 1: 5개년 총 누적 지원 -->
       <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
         <div class="flex items-center justify-between text-slate-500 mb-2">
@@ -111,151 +111,6 @@
                 <span>{{ gradeDiff <= 0 ? '▲ +' : '▼ -' }}</span>{{ Math.abs(gradeDiff).toFixed(2) }}등급
               </span>
               <span>전년({{ previousYearData.year }}년 {{ previousYearData.avgGrade }}) 대비 {{ gradeDiff <= 0 ? '상승' : '하락' }}</span>
-            </template>
-            <template v-else>
-              <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
-            </template>
-          </div>
-        </div>
-      </div>
-
-      <!-- KPI 4: 주요대 및 과기원 지원 -->
-      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between">
-        <div class="flex items-center justify-between text-slate-500 mb-2">
-          <span class="text-xs font-bold">주요대·과기원 지원 건수</span>
-          <span class="p-1.5 rounded-lg bg-amber-50 text-amber-600 text-sm">🌟</span>
-        </div>
-        <div>
-          <div class="text-2xl sm:text-3xl font-black text-amber-600 tracking-tight">
-            {{ latestYearData?.topTierApps != null ? latestYearData.topTierApps : '-' }}<span v-if="latestYearData?.topTierApps != null" class="text-xs font-semibold text-slate-400 ml-1">건</span>
-          </div>
-          <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-            <template v-if="hasMultiYearComparison && previousYearData?.topTierApps != null">
-              <span :class="topTierGrowth >= 0 ? 'text-amber-600 font-bold flex items-center' : 'text-slate-600 font-bold flex items-center'">
-                <span>{{ topTierGrowth >= 0 ? '▲ +' : '▼ ' }}</span>{{ topTierGrowth }}%
-              </span>
-              <span>({{ previousYearData.year }}년 {{ previousYearData.topTierApps }}건 → {{ latestYearData.year }}년 {{ latestYearData.topTierApps }}건)</span>
-            </template>
-            <template v-else>
-              <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
-            </template>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 2-1. 특화 전형(학교장추천 & 농어촌 & 수능최저 & 논술전형) 4대 핵심 지표 카드 -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <!-- Special KPI 1: 학교장추천 전형 지원 -->
-      <div class="bg-linear-to-br from-violet-50/70 via-white to-purple-50/30 rounded-2xl p-5 border border-violet-100 shadow-xs flex flex-col justify-between">
-        <div class="flex items-center justify-between text-violet-800 mb-2">
-          <div class="flex items-center gap-2">
-            <span class="p-1.5 rounded-lg bg-violet-100 text-violet-700 text-sm">🤝</span>
-            <span class="text-xs font-black">학교장추천 전형(학추) 지원 현황</span>
-          </div>
-          <span class="text-[11px] font-bold text-violet-700 bg-violet-100/70 px-2.5 py-0.5 rounded-full border border-violet-200/50">
-            수시 지원 중 {{ (latestYearData?.totalApplications && latestYearData?.recommendationApps) ? ((latestYearData.recommendationApps / latestYearData.totalApplications) * 100).toFixed(1) : '-' }}%
-          </span>
-        </div>
-        <div>
-          <div class="text-2xl sm:text-3xl font-black text-violet-900 tracking-tight">
-            {{ latestYearData?.recommendationApps != null ? latestYearData.recommendationApps.toLocaleString() : '-' }}<span v-if="latestYearData?.recommendationApps != null" class="text-xs font-semibold text-violet-400 ml-1">건</span>
-          </div>
-          <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-            <template v-if="hasMultiYearComparison && previousYearData?.recommendationApps != null">
-              <span :class="recGrowth >= 0 ? 'text-violet-700 font-bold flex items-center' : 'text-slate-600 font-bold flex items-center'">
-                <span>{{ recGrowth >= 0 ? '▲ +' : '▼ ' }}</span>{{ recGrowth }}% ({{ recDiff >= 0 ? '+' : '' }}{{ recDiff }}건)
-              </span>
-              <span>전년({{ previousYearData.year }}년 {{ previousYearData.recommendationApps }}건) 대비</span>
-            </template>
-            <template v-else>
-              <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
-            </template>
-          </div>
-        </div>
-      </div>
-
-      <!-- Special KPI 2: 농어촌 학생 특별전형 지원 -->
-      <div class="bg-linear-to-br from-emerald-50/70 via-white to-teal-50/30 rounded-2xl p-5 border border-emerald-100 shadow-xs flex flex-col justify-between">
-        <div class="flex items-center justify-between text-emerald-800 mb-2">
-          <div class="flex items-center gap-2">
-            <span class="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 text-sm">🌾</span>
-            <span class="text-xs font-black">농어촌 학생 특별전형 지원 현황</span>
-          </div>
-          <span class="text-[11px] font-bold text-emerald-700 bg-emerald-100/70 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
-            수시 지원 중 {{ (latestYearData?.totalApplications && latestYearData?.ruralApps) ? ((latestYearData.ruralApps / latestYearData.totalApplications) * 100).toFixed(1) : '-' }}%
-          </span>
-        </div>
-        <div>
-          <div class="text-2xl sm:text-3xl font-black text-emerald-900 tracking-tight">
-            {{ latestYearData?.ruralApps != null ? latestYearData.ruralApps.toLocaleString() : '-' }}<span v-if="latestYearData?.ruralApps != null" class="text-xs font-semibold text-emerald-400 ml-1">건</span>
-          </div>
-          <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-            <template v-if="hasMultiYearComparison && previousYearData?.ruralApps != null">
-              <span :class="ruralGrowth >= 0 ? 'text-emerald-700 font-bold flex items-center' : 'text-slate-600 font-bold flex items-center'">
-                <span>{{ ruralGrowth >= 0 ? '▲ +' : '▼ ' }}</span>{{ ruralGrowth }}% ({{ ruralDiff >= 0 ? '+' : '' }}{{ ruralDiff }}건)
-              </span>
-              <span>전년({{ previousYearData.year }}년 {{ previousYearData.ruralApps }}건) 대비</span>
-            </template>
-            <template v-else>
-              <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
-            </template>
-          </div>
-        </div>
-      </div>
-
-      <!-- Special KPI 3: 수능 최저학력기준 충족 현황 -->
-      <div class="bg-linear-to-br from-blue-50/70 via-white to-indigo-50/30 rounded-2xl p-5 border border-blue-100 shadow-xs flex flex-col justify-between">
-        <div class="flex items-center justify-between text-blue-800 mb-2">
-          <div class="flex items-center gap-2">
-            <span class="p-1.5 rounded-lg bg-blue-100 text-blue-700 text-sm">🎯</span>
-            <span class="text-xs font-black">수능 최저학력기준 충족 현황</span>
-          </div>
-          <span class="text-[11px] font-bold text-blue-700 bg-blue-100/70 px-2.5 py-0.5 rounded-full border border-blue-200/50">
-            최저 반영 {{ latestYearData?.csatMinApps ? `${latestYearData.csatMinApps}건 중` : '-' }}
-          </span>
-        </div>
-        <div>
-          <div class="text-2xl sm:text-3xl font-black text-blue-900 tracking-tight">
-            {{ latestYearData?.csatMinPassRate != null ? `${latestYearData.csatMinPassRate}%` : '-' }}<span v-if="latestYearData?.csatMinPassApps != null" class="text-xs font-semibold text-blue-500 ml-1.5">({{ latestYearData.csatMinPassApps }}건 충족)</span>
-          </div>
-          <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-            <template v-if="hasMultiYearComparison && previousYearData?.csatMinPassRate != null">
-              <span :class="csatMinGrowth >= 0 ? 'text-blue-700 font-bold flex items-center' : 'text-slate-600 font-bold flex items-center'">
-                <span>{{ csatMinGrowth >= 0 ? '▲ +' : '▼ ' }}</span>{{ csatMinGrowth }}%p ({{ csatMinDiff >= 0 ? '+' : '' }}{{ csatMinDiff }}건)
-              </span>
-              <span>전년({{ previousYearData.year }}년 {{ previousYearData.csatMinPassRate }}%) 대비</span>
-            </template>
-            <template v-else>
-              <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
-            </template>
-          </div>
-        </div>
-      </div>
-
-      <!-- Special KPI 4: 논술위주 전형 지원 및 합격률 현황 -->
-      <div class="bg-linear-to-br from-pink-50/70 via-white to-rose-50/30 rounded-2xl p-5 border border-pink-100 shadow-xs flex flex-col justify-between">
-        <div class="flex items-center justify-between text-pink-800 mb-2">
-          <div class="flex items-center gap-2">
-            <span class="p-1.5 rounded-lg bg-pink-100 text-pink-700 text-sm">✍️</span>
-            <span class="text-xs font-black">논술전형 지원 & 합격률 현황</span>
-          </div>
-          <span class="text-[11px] font-bold text-pink-700 bg-pink-100/70 px-2.5 py-0.5 rounded-full border border-pink-200/50">
-            수시 지원 중 {{ (latestYearData?.totalApplications && latestYearData?.essayApps) ? ((latestYearData.essayApps / latestYearData.totalApplications) * 100).toFixed(1) : '-' }}%
-          </span>
-        </div>
-        <div>
-          <div class="text-2xl sm:text-3xl font-black text-pink-900 tracking-tight">
-            {{ latestYearData?.essayApps != null ? latestYearData.essayApps.toLocaleString() : '-' }}<span v-if="latestYearData?.essayApps != null" class="text-xs font-semibold text-pink-400 ml-1">건</span>
-            <span v-if="latestYearData?.essayPassRate != null" class="text-xs font-bold text-rose-600 ml-1.5">(합격률 {{ latestYearData.essayPassRate }}%)</span>
-            <span v-else-if="previousYearData?.essayPassRate != null" class="text-xs font-semibold text-slate-500 ml-1.5">(전년 합격률 {{ previousYearData.essayPassRate }}%)</span>
-          </div>
-          <div class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-            <template v-if="hasMultiYearComparison && previousYearData?.essayApps != null">
-              <span :class="essayGrowth >= 0 ? 'text-pink-700 font-bold flex items-center' : 'text-slate-600 font-bold flex items-center'">
-                <span>{{ essayGrowth >= 0 ? '▲ +' : '▼ ' }}</span>{{ essayGrowth }}% ({{ essayDiff >= 0 ? '+' : '' }}{{ essayDiff }}건)
-              </span>
-              <span>전년({{ previousYearData.year }}년 {{ previousYearData.essayApps }}건) 대비</span>
             </template>
             <template v-else>
               <span class="text-slate-400 text-[11px]">과거 비교 데이터 미등록 (-)</span>
@@ -723,62 +578,7 @@ const gradeDiff = computed(() => {
   return Number((latestYearData.value.avgGrade - previousYearData.value.avgGrade).toFixed(2))
 })
 
-const topTierGrowth = computed(() => {
-  if (!latestYearData.value?.topTierApps || !previousYearData.value?.topTierApps) return 0
-  const cur = latestYearData.value.topTierApps
-  const prev = previousYearData.value.topTierApps
-  return Number((((cur - prev) / prev) * 100).toFixed(1))
-})
 
-// 학교장추천 전형 지원 건수 증감률 및 편차
-const recGrowth = computed(() => {
-  if (!latestYearData.value?.recommendationApps || !previousYearData.value?.recommendationApps) return 0
-  const cur = latestYearData.value.recommendationApps
-  const prev = previousYearData.value.recommendationApps
-  return Number((((cur - prev) / prev) * 100).toFixed(1))
-})
-
-const recDiff = computed(() => {
-  if (latestYearData.value?.recommendationApps == null || previousYearData.value?.recommendationApps == null) return 0
-  return latestYearData.value.recommendationApps - previousYearData.value.recommendationApps
-})
-
-// 농어촌 특별전형 지원 건수 증감률 및 편차
-const ruralGrowth = computed(() => {
-  if (!latestYearData.value?.ruralApps || !previousYearData.value?.ruralApps) return 0
-  const cur = latestYearData.value.ruralApps
-  const prev = previousYearData.value.ruralApps
-  return Number((((cur - prev) / prev) * 100).toFixed(1))
-})
-
-const ruralDiff = computed(() => {
-  if (latestYearData.value?.ruralApps == null || previousYearData.value?.ruralApps == null) return 0
-  return latestYearData.value.ruralApps - previousYearData.value.ruralApps
-})
-
-// 수능 최저학력기준 충족률 증감(%p) 및 충족 건수 편차
-const csatMinGrowth = computed(() => {
-  if (latestYearData.value?.csatMinPassRate == null || previousYearData.value?.csatMinPassRate == null) return 0
-  return Number((latestYearData.value.csatMinPassRate - previousYearData.value.csatMinPassRate).toFixed(1))
-})
-
-const csatMinDiff = computed(() => {
-  if (latestYearData.value?.csatMinPassApps == null || previousYearData.value?.csatMinPassApps == null) return 0
-  return latestYearData.value.csatMinPassApps - previousYearData.value.csatMinPassApps
-})
-
-// 논술전형 지원 건수 증감률 및 편차
-const essayGrowth = computed(() => {
-  if (!latestYearData.value?.essayApps || !previousYearData.value?.essayApps) return 0
-  const cur = latestYearData.value.essayApps
-  const prev = previousYearData.value.essayApps
-  return Number((((cur - prev) / prev) * 100).toFixed(1))
-})
-
-const essayDiff = computed(() => {
-  if (latestYearData.value?.essayApps == null || previousYearData.value?.essayApps == null) return 0
-  return latestYearData.value.essayApps - previousYearData.value.essayApps
-})
 
 const total5YearApps = computed(() => {
   return years.reduce((acc, y) => acc + (byYear[y]?.totalApplications || 0), 0)

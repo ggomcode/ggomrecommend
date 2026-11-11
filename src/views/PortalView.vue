@@ -381,7 +381,10 @@
         <div
           v-else-if="mod.id === 'stat' && isModuleVisible('stat')"
           @click="enterStatSystem"
-          class="group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-indigo-500 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden"
+          :class="[
+            'group relative bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-md hover:shadow-xl hover:border-indigo-500 transition-all duration-300 flex flex-col justify-between overflow-hidden',
+            isCheckingStat ? 'cursor-wait pointer-events-none ring-2 ring-indigo-400 opacity-95' : 'cursor-pointer'
+          ]"
         >
           <div class="absolute -top-20 -right-20 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
 
@@ -413,12 +416,9 @@
           </div>
 
           <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-indigo-600">
-            <span v-if="isCheckingStat" class="inline-flex items-center gap-2 text-indigo-500 font-medium">
-              <svg class="animate-spin h-4 w-4 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              보안 인증 확인 중...
+            <span v-if="isCheckingStat" class="inline-flex items-center gap-2 text-indigo-600 font-extrabold animate-pulse">
+              <div class="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+              <span>{{ statLoadingMessage || '대입 통계 시스템 로딩 중...' }}</span>
             </span>
             <span v-else>통계 대시보드 바로가기</span>
             <svg v-if="!isCheckingStat" class="w-5 h-5 group-hover:translate-x-1.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -430,6 +430,31 @@
         </template>
       </div>
     </main>
+
+    <!-- 🌀 대입 통계 시스템 진입 로딩 오버레이 (뱅글뱅글 돌아가는 로딩 표시) -->
+    <div
+      v-if="isCheckingStat"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs transition-opacity duration-200"
+    >
+      <div class="bg-white rounded-3xl p-8 max-w-sm w-full mx-4 shadow-2xl border border-slate-100 flex flex-col items-center text-center gap-5 animate-in fade-in zoom-in-95 duration-150">
+        <!-- 뱅글뱅글 돌아가는 인디고 로딩 스피너 -->
+        <div class="relative flex items-center justify-center">
+          <div class="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin shadow-inner"></div>
+          <span class="absolute text-2xl select-none">📊</span>
+        </div>
+        <div class="space-y-1.5">
+          <h4 class="text-base sm:text-lg font-black text-slate-900 m-0">
+            대입 통계 시스템 로딩 중
+          </h4>
+          <p class="text-xs text-indigo-600 font-bold m-0 leading-relaxed">
+            {{ statLoadingMessage || '원자료 보안 상태를 점검하고 있습니다...' }}
+          </p>
+          <p class="text-[11.5px] text-slate-400 font-medium m-0 mt-1">
+            잠시만 기다려 주세요. 곧 대시보드로 이동합니다.
+          </p>
+        </div>
+      </div>
+    </div>
 
     <!-- 🔐 대입 통계 시스템 보안 암호 입력 모달 -->
     <div
@@ -737,13 +762,14 @@ const portalGridClass = computed(() => {
   return 'grid-cols-1 max-w-xl'
 })
 
-// 대입 통계 시스템 보안 암호 상태
+// 대입 통계 시스템 보안 암호 및 로딩 상태
 const showStatPasswordModal = ref(false)
 const statInputPassword = ref('')
 const isVerifyingPassword = ref(false)
 const statPasswordError = ref('')
 const statPwInputRef = ref(null)
 const isCheckingStat = ref(false)
+const statLoadingMessage = ref('')
 
 async function enterStatSystem() {
   if (isCheckingStat.value) return
@@ -760,7 +786,10 @@ async function enterStatSystem() {
   const existingPw = getStatSessionPassword()
 
   isCheckingStat.value = true
+  statLoadingMessage.value = '대교협 원자료 보안 상태 및 세션을 확인하고 있습니다...'
   statPasswordError.value = ''
+
+  let shouldKeepLoading = false
 
   try {
     const sheetId = await getKcueSheetId()
@@ -768,7 +797,15 @@ async function enterStatSystem() {
     const verifyRes = await verifyStatSheetPassword(sheetId, existingPw)
     if (verifyRes.success) {
       // ⭕ 통과 (시트 미암호화 또는 세션 암호 일치): 모달 없이 즉시 대시보드 입장!
-      router.push('/stat')
+      shouldKeepLoading = true
+      statLoadingMessage.value = '대입 통계 대시보드를 불러오는 중입니다...'
+      try {
+        await router.push('/stat')
+      } catch (err) {
+        console.error('Failed to navigate to /stat:', err)
+        isCheckingStat.value = false
+        shouldKeepLoading = false
+      }
       return
     }
 
@@ -791,7 +828,10 @@ async function enterStatSystem() {
       statPwInputRef.value?.focus()
     })
   } finally {
-    isCheckingStat.value = false
+    if (!shouldKeepLoading) {
+      isCheckingStat.value = false
+      statLoadingMessage.value = ''
+    }
   }
 }
 
@@ -818,7 +858,15 @@ async function submitStatPassword() {
     // ⭕ 인증 성공: 브라우저 세션에 저장하고 시스템 대문 통과
     setStatSessionPassword(pw)
     showStatPasswordModal.value = false
-    router.push('/stat')
+    isCheckingStat.value = true
+    statLoadingMessage.value = '대입 통계 대시보드를 불러오는 중입니다...'
+    try {
+      await router.push('/stat')
+    } catch (err) {
+      console.error('Failed to navigate to /stat:', err)
+      isCheckingStat.value = false
+      statLoadingMessage.value = ''
+    }
   } catch (err) {
     statPasswordError.value = '인증 중 오류가 발생했습니다: ' + (err.message || '')
   } finally {
@@ -994,6 +1042,8 @@ async function loadPrincipalStatus() {
 }
 
 onMounted(async () => {
+  isCheckingStat.value = false
+  statLoadingMessage.value = ''
   await fetchLoginSystemName()
   // 대입 통계 구글 시트 암호문 샘플 백그라운드 초고속 사전 로드 (포털 진입 즉시 병렬 시작)
   getKcueSheetId().then(sheetId => {

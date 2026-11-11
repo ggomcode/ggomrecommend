@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-sm transition-all duration-300">
+  <div ref="widgetRootRef" class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-sm transition-all duration-300">
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
       <div>
@@ -31,7 +31,7 @@
     </div>
 
     <!-- Modern Integrated Segmented Control (세련된 세그먼트 탭 점프 내비게이션 바) -->
-    <div class="sticky top-0 z-30 bg-white/95 backdrop-blur-md py-3 -mx-6 sm:-mx-7 px-6 sm:px-7 border-b border-slate-100 shadow-2xs">
+    <div ref="stickyNavRef" class="sticky top-0 z-30 bg-white/95 backdrop-blur-md py-3 -mx-6 sm:-mx-7 px-6 sm:px-7 border-b border-slate-100 shadow-2xs">
       <div class="flex items-center justify-between gap-2 overflow-x-auto">
         <div class="inline-flex p-1 rounded-2xl bg-slate-100/90 border border-slate-200/80 shadow-2xs gap-1 max-w-full">
           <button
@@ -109,10 +109,10 @@
           </div>
         </div>
 
-        <!-- Right: 주요 영역별 수능/모의고사 선택과목 통계 테이블 & 미적/확통, 언매/화작 격차 -->
-        <div class="lg:col-span-6 flex flex-col gap-4">
-          <!-- 언어 / 수리 / 외국어 상세 요약 카드 & 시각화 그래프 -->
-          <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-4">
+        <!-- Right: 주요 영역별 수능/모의고사 5개 영역(국/수/영/사/과) 선택과목 및 평균 등급 -->
+        <div class="lg:col-span-6 flex flex-col justify-between">
+          <!-- 5대 영역 상세 요약 카드 & 선택과목 인포그래픽 -->
+          <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs space-y-3.5 h-full flex flex-col justify-between">
             <!-- Header: 제목 & 회차 드롭다운 (검은 박스선 제거 및 화살표 겹침 없는 넉넉한 폭) -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
               <div>
@@ -149,215 +149,360 @@
               </div>
             </div>
 
-            <!-- 시각화 인포그래픽 카드 3종 (국어, 수학, 영어) -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <!-- 국어 영역 카드 -->
-              <div class="bg-linear-to-br from-blue-50/70 to-slate-50 p-4 rounded-2xl border border-blue-100 flex flex-col justify-between space-y-3">
-                <div>
-                  <div class="flex items-center justify-between mb-1.5">
-                    <span class="text-xs font-black text-blue-900 flex items-center gap-1">
-                      <span class="w-2 h-2 rounded-full bg-blue-600"></span>
-                      <span>국어 영역</span>
-                    </span>
-                    <span class="text-[11px] font-mono text-slate-500">{{ currentSatAnalysis.subjectsDetail.kor.totalCount }}명 응시</span>
-                  </div>
-                  <div class="flex items-baseline gap-2 mb-2">
-                    <span class="text-2xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.kor.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
-                    <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.kor.totalAvg !== '-'" class="text-[11px] font-semibold text-rose-600">
-                      내신({{ currentGpaRaw[0] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.kor.totalAvg) - currentGpaRaw[0]).toFixed(2) }}↓
-                    </span>
-                    <span v-else class="text-[11px] text-slate-400 font-medium">
-                      데이터 미등록
-                    </span>
+            <!-- 시각화 인포그래픽 카드 5종 (1열: 국어, 수학, 영어 / 2열: 사회탐구, 과학탐구) -->
+            <div class="space-y-3 flex-1 flex flex-col justify-between">
+              <!-- 1열: 국어, 수학, 영어 (3열 그리드) -->
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <!-- 국어 영역 카드 -->
+                <div class="bg-linear-to-br from-blue-50/70 to-slate-50 p-4 rounded-2xl border border-blue-100 flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                      <span class="text-xs font-black text-blue-900 flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                        <span>국어 영역</span>
+                      </span>
+                      <span class="text-[11px] font-mono text-slate-500">{{ currentSatAnalysis.subjectsDetail.kor.totalCount }}명 응시</span>
+                    </div>
+                    <div class="flex items-baseline gap-2 mb-2">
+                      <span class="text-2xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.kor.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
+                      <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.kor.totalAvg !== '-'" class="text-[11px] font-semibold text-rose-600">
+                        내신({{ currentGpaRaw[0] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.kor.totalAvg) - currentGpaRaw[0]).toFixed(2) }}↓
+                      </span>
+                      <span v-else class="text-[11px] text-slate-400 font-medium">
+                        데이터 미등록
+                      </span>
+                    </div>
+
+                    <!-- 1~9 등급 수직선 위치 마커 (직관적 포인터 핀) -->
+                    <div class="relative pt-1 pb-2">
+                      <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
+                      <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
+                        <span>1등급(우수)</span>
+                        <span>5등급</span>
+                        <span>9등급</span>
+                      </div>
+                      <!-- 현재 등급 위치 핀 -->
+                      <div
+                        v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.kor.totalAvg !== '-'"
+                        class="absolute top-0 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
+                        :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.kor.totalAvg) }"
+                      >
+                        <span class="w-3 h-3 rounded-full bg-blue-600 border-2 border-white shadow-xs"></span>
+                      </div>
+                    </div>
                   </div>
 
-                  <!-- 1~9 등급 수직선 위치 마커 (직관적 포인터 핀) -->
-                  <div class="relative pt-1 pb-2">
-                    <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
-                    <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
-                      <span>1등급(우수)</span>
-                      <span>5등급</span>
-                      <span>9등급</span>
+                  <!-- 국어 선택과목 각각의 독립 비교 블록 -->
+                  <div class="pt-2.5 border-t border-blue-100/80 space-y-2">
+                    <!-- 언어와 매체 -->
+                    <div class="bg-white/90 p-2 rounded-xl border border-blue-200/80 shadow-2xs">
+                      <div class="flex justify-between items-center text-xs">
+                        <span class="font-bold text-blue-900 flex items-center gap-1">
+                          <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                          <span>언어와 매체</span>
+                          <span class="text-[10.5px] font-normal text-slate-500">({{ currentSatAnalysis.subjectsDetail.kor.unmaeCount }}명)</span>
+                        </span>
+                        <span class="font-mono font-extrabold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
+                          {{ currentSatAnalysis.subjectsDetail.kor.unmaeAvg }}등급
+                        </span>
+                      </div>
                     </div>
-                    <!-- 현재 등급 위치 핀 -->
-                    <div
-                      v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.kor.totalAvg !== '-'"
-                      class="absolute top-0 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
-                      :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.kor.totalAvg) }"
-                    >
-                      <span class="w-3 h-3 rounded-full bg-blue-600 border-2 border-white shadow-xs"></span>
+                    <!-- 화법과 작문 -->
+                    <div class="bg-white/90 p-2 rounded-xl border border-slate-200 shadow-2xs">
+                      <div class="flex justify-between items-center text-xs">
+                        <span class="font-bold text-slate-700 flex items-center gap-1">
+                          <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                          <span>화법과 작문</span>
+                          <span class="text-[10.5px] font-normal text-slate-500">({{ currentSatAnalysis.subjectsDetail.kor.hwajakCount }}명)</span>
+                        </span>
+                        <span class="font-mono font-bold text-slate-700 bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200">
+                          {{ currentSatAnalysis.subjectsDetail.kor.hwajakAvg }}등급
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <!-- 국어 선택과목 각각의 독립 비교 블록 -->
-                <div class="pt-2.5 border-t border-blue-100/80 space-y-2">
-                  <!-- 언어와 매체 -->
-                  <div class="bg-white/90 p-2 rounded-xl border border-blue-200/80 shadow-2xs">
-                    <div class="flex justify-between items-center text-xs">
-                      <span class="font-bold text-blue-900 flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-                        <span>언어와 매체</span>
-                        <span class="text-[10.5px] font-normal text-slate-500">({{ currentSatAnalysis.subjectsDetail.kor.unmaeCount }}명)</span>
+                <!-- 수학 영역 카드 (핵심: 미적분 vs 확통 각각 독립 카드 비교) -->
+                <div class="bg-linear-to-br from-indigo-50/70 to-slate-50 p-4 rounded-2xl border border-indigo-100 flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                      <span class="text-xs font-black text-indigo-900 flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+                        <span>수학 영역</span>
                       </span>
-                      <span class="font-mono font-extrabold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
-                        {{ currentSatAnalysis.subjectsDetail.kor.unmaeAvg }}등급
+                      <span class="text-[11px] font-mono text-slate-500">{{ currentSatAnalysis.subjectsDetail.math.totalCount }}명 응시</span>
+                    </div>
+                    <div class="flex items-baseline gap-2 mb-2">
+                      <span class="text-2xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.math.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
+                      <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.math.totalAvg !== '-'" class="text-[11px] font-semibold text-rose-600">
+                        내신({{ currentGpaRaw[1] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.math.totalAvg) - currentGpaRaw[1]).toFixed(2) }}↓
                       </span>
+                      <span v-else class="text-[11px] text-slate-400 font-medium">
+                        데이터 미등록
+                      </span>
+                    </div>
+
+                    <!-- 1~9 등급 수직선 위치 마커 -->
+                    <div class="relative pt-1 pb-2">
+                      <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
+                      <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
+                        <span>1등급(우수)</span>
+                        <span>5등급</span>
+                        <span>9등급</span>
+                      </div>
+                      <!-- 현재 등급 위치 핀 -->
+                      <div
+                        v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.math.totalAvg !== '-'"
+                        class="absolute top-0 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
+                        :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.math.totalAvg) }"
+                      >
+                        <span class="w-3 h-3 rounded-full bg-indigo-600 border-2 border-white shadow-xs"></span>
+                      </div>
                     </div>
                   </div>
-                  <!-- 화법과 작문 -->
-                  <div class="bg-white/90 p-2 rounded-xl border border-slate-200 shadow-2xs">
-                    <div class="flex justify-between items-center text-xs">
-                      <span class="font-bold text-slate-700 flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                        <span>화법과 작문</span>
-                        <span class="text-[10.5px] font-normal text-slate-500">({{ currentSatAnalysis.subjectsDetail.kor.hwajakCount }}명)</span>
+
+                  <!-- 수학 선택과목 각각의 독립 블록 & 2.10등급 격차 -->
+                  <div class="pt-2.5 border-t border-indigo-100/80 space-y-2">
+                    <!-- 1. 미적분/기하 독립 카드 -->
+                    <div class="bg-white/95 p-2 rounded-xl border border-indigo-200 shadow-2xs">
+                      <div class="flex justify-between items-center text-xs">
+                        <span class="font-bold text-indigo-950 flex items-center gap-1">
+                          <span class="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+                          <span>미적분/기하</span>
+                          <span class="text-[10.5px] font-normal text-slate-500">({{ currentSatAnalysis.subjectsDetail.math.mijukCount }}명)</span>
+                        </span>
+                        <span class="font-mono font-extrabold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">
+                          {{ currentSatAnalysis.subjectsDetail.math.mijukAvg }}등급
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- 2. 확률과 통계 독립 카드 -->
+                    <div class="bg-white/95 p-2 rounded-xl border border-slate-200 shadow-2xs">
+                      <div class="flex justify-between items-center text-xs">
+                        <span class="font-bold text-slate-700 flex items-center gap-1">
+                          <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                          <span>확률과 통계</span>
+                          <span class="text-[10.5px] font-normal text-slate-500">({{ currentSatAnalysis.subjectsDetail.math.hwaktongCount }}명)</span>
+                        </span>
+                        <span class="font-mono font-bold text-slate-700 bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200">
+                          {{ currentSatAnalysis.subjectsDetail.math.hwaktongAvg }}등급
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- 직관적 격차 배지 -->
+                    <div v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.math.mijukAvg !== '-' && currentSatAnalysis.subjectsDetail.math.hwaktongAvg !== '-'" class="text-[10.5px] font-extrabold text-indigo-800 bg-indigo-50/80 border border-indigo-200/70 rounded-lg py-1 px-2 text-center">
+                      ⚡ 미적분이 확통 대비 <span class="text-indigo-600 underline font-black">{{ (Number(currentSatAnalysis.subjectsDetail.math.hwaktongAvg) - Number(currentSatAnalysis.subjectsDetail.math.mijukAvg)).toFixed(2) }}등급</span> 우세
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 영어 영역 카드 -->
+                <div class="bg-linear-to-br from-emerald-50/70 to-slate-50 p-4 rounded-2xl border border-emerald-100 flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                      <span class="text-xs font-black text-emerald-900 flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+                        <span>영어 영역</span>
                       </span>
-                      <span class="font-mono font-bold text-slate-700 bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200">
-                        {{ currentSatAnalysis.subjectsDetail.kor.hwajakAvg }}등급
+                      <span class="text-[11px] font-mono text-emerald-800 font-bold bg-emerald-100/80 px-1.5 py-0.2 rounded">절대평가</span>
+                    </div>
+                    <div class="flex items-baseline gap-2 mb-2">
+                      <span class="text-2xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.eng.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
+                      <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.eng.totalCount > 0" class="text-[11px] font-semibold text-emerald-700">
+                        {{ currentSatAnalysis.subjectsDetail.eng.totalCount }}명 응시
+                      </span>
+                      <span v-else class="text-[11px] text-slate-400 font-medium">
+                        데이터 미등록
                       </span>
                     </div>
+
+                    <!-- 1~9 등급 수직선 위치 마커 -->
+                    <div class="relative pt-1 pb-2">
+                      <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
+                      <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
+                        <span>1등급(우수)</span>
+                        <span>5등급</span>
+                        <span>9등급</span>
+                      </div>
+                      <!-- 현재 등급 위치 핀 -->
+                      <div
+                        v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.eng.totalAvg !== '-'"
+                        class="absolute top-0 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
+                        :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.eng.totalAvg) }"
+                      >
+                        <span class="w-3 h-3 rounded-full bg-emerald-600 border-2 border-white shadow-xs"></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 영어 최저 충족 가이드 배너 -->
+                  <div class="pt-2.5 border-t border-emerald-100/80 text-[11px] text-emerald-900 space-y-1">
+                    <div class="font-extrabold flex items-center gap-1 text-emerald-800">
+                      <span>🎯</span>
+                      <span>수능 최저의 핵심 전략 영역</span>
+                    </div>
+                    <p class="text-[10px] text-emerald-700/90 leading-tight m-0">
+                      상대평가(6등급대) 부담 없이 2~3등급 안정 확보 시 수시 최저 충족 성공률 급상승
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <!-- 수학 영역 카드 (핵심: 미적분 vs 확통 각각 독립 카드 비교) -->
-              <div class="bg-linear-to-br from-indigo-50/70 to-slate-50 p-4 rounded-2xl border border-indigo-100 flex flex-col justify-between space-y-3">
-                <div>
-                  <div class="flex items-center justify-between mb-1.5">
-                    <span class="text-xs font-black text-indigo-900 flex items-center gap-1">
-                      <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
-                      <span>수학 영역</span>
-                    </span>
-                    <span class="text-[11px] font-mono text-slate-500">{{ currentSatAnalysis.subjectsDetail.math.totalCount }}명 응시</span>
-                  </div>
-                  <div class="flex items-baseline gap-2 mb-2">
-                    <span class="text-2xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.math.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
-                    <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.math.totalAvg !== '-'" class="text-[11px] font-semibold text-rose-600">
-                      내신({{ currentGpaRaw[1] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.math.totalAvg) - currentGpaRaw[1]).toFixed(2) }}↓
-                    </span>
-                    <span v-else class="text-[11px] text-slate-400 font-medium">
-                      데이터 미등록
-                    </span>
+              <!-- 2열: 사회탐구, 과학탐구 (2열 그리드) -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <!-- 사회탐구 영역 카드 -->
+                <div class="bg-linear-to-br from-amber-50/70 to-slate-50 p-4 rounded-2xl border border-amber-200/80 flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                      <span class="text-xs font-black text-amber-900 flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                        <span>사회탐구 영역</span>
+                      </span>
+                      <span class="text-[11px] font-mono text-slate-500">{{ currentSatAnalysis.subjectsDetail.soc?.totalCount || 0 }}명 응시</span>
+                    </div>
+                    <div class="flex items-baseline gap-2 mb-2">
+                      <span class="text-2xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.soc?.totalAvg || '-' }}<span class="text-xs font-normal text-slate-500">등급</span></span>
+                      <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.soc?.totalAvg !== '-' && currentGpaRaw[3]" class="text-[11px] font-semibold text-rose-600">
+                        내신({{ currentGpaRaw[3] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.soc.totalAvg) - currentGpaRaw[3]).toFixed(2) }}↓
+                      </span>
+                      <span v-else class="text-[11px] text-slate-400 font-medium">
+                        {{ currentSatAnalysis.hasRealData ? '응시 집계' : '데이터 미등록' }}
+                      </span>
+                    </div>
+
+                    <!-- 1~9 등급 수직선 위치 마커 -->
+                    <div class="relative pt-1 pb-2">
+                      <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
+                      <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
+                        <span>1등급(우수)</span>
+                        <span>5등급</span>
+                        <span>9등급</span>
+                      </div>
+                      <!-- 현재 등급 위치 핀 -->
+                      <div
+                        v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.soc?.totalAvg !== '-'"
+                        class="absolute top-0 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
+                        :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.soc.totalAvg) }"
+                      >
+                        <span class="w-3 h-3 rounded-full bg-amber-500 border-2 border-white shadow-xs"></span>
+                      </div>
+                    </div>
                   </div>
 
-                  <!-- 1~9 등급 수직선 위치 마커 -->
-                  <div class="relative pt-1 pb-2">
-                    <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
-                    <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
-                      <span>1등급(우수)</span>
-                      <span>5등급</span>
-                      <span>9등급</span>
+                  <!-- 사탐 선택과목 상위 2개 독립 비교 블록 & 전략 배너 -->
+                  <div class="pt-2.5 border-t border-amber-100/90 space-y-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <template v-if="currentSatAnalysis.subjectsDetail.soc?.topSubjects?.length">
+                        <div
+                          v-for="(sub, sIdx) in currentSatAnalysis.subjectsDetail.soc.topSubjects.slice(0, 2)"
+                          :key="sub.name"
+                          class="bg-white/95 p-2 rounded-xl border border-amber-200/80 shadow-2xs"
+                        >
+                          <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-amber-950 flex items-center gap-1 truncate">
+                              <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="sIdx === 0 ? 'bg-amber-600' : 'bg-slate-400'"></span>
+                              <span class="truncate">{{ sub.name }}</span>
+                              <span class="text-[10px] font-normal text-slate-500 shrink-0">({{ sub.count }}명)</span>
+                            </span>
+                            <span class="font-mono font-extrabold text-amber-800 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-100 shrink-0">
+                              {{ sub.avg }}등급
+                            </span>
+                          </div>
+                        </div>
+                      </template>
+                      <div v-else class="col-span-2 text-center text-[10.5px] text-slate-400 py-1 bg-white/60 rounded-lg">
+                        세부 과목 데이터 집계 중
+                      </div>
                     </div>
-                    <!-- 현재 등급 위치 핀 -->
-                    <div
-                      v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.math.totalAvg !== '-'"
-                      class="absolute top-0 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
-                      :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.math.totalAvg) }"
-                    >
-                      <span class="w-3 h-3 rounded-full bg-indigo-600 border-2 border-white shadow-xs"></span>
+                    <!-- 사탐 최저 전략 팁 배너 -->
+                    <div class="text-[10.5px] font-bold text-amber-900 bg-amber-100/60 border border-amber-200/70 rounded-lg py-1 px-2 flex items-center justify-between">
+                      <span class="flex items-center gap-1">
+                        <span>🏃</span>
+                        <span>자연계 사탐런 전향자의 수능최저 핵심 전략 영역</span>
+                      </span>
+                      <span class="text-[10px] font-extrabold text-amber-700 shrink-0">사문·생윤 집중</span>
                     </div>
                   </div>
                 </div>
 
-                <!-- 수학 선택과목 각각의 독립 블록 & 2.10등급 격차 -->
-                <div class="pt-2.5 border-t border-indigo-100/80 space-y-2">
-                  <!-- 1. 미적분/기하 독립 카드 -->
-                  <div class="bg-white/95 p-2 rounded-xl border border-indigo-200 shadow-2xs">
-                    <div class="flex justify-between items-center text-xs">
-                      <span class="font-bold text-indigo-950 flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
-                        <span>미적분/기하</span>
-                        <span class="text-[10.5px] font-normal text-slate-500">({{ currentSatAnalysis.subjectsDetail.math.mijukCount }}명)</span>
+                <!-- 과학탐구 영역 카드 -->
+                <div class="bg-linear-to-br from-purple-50/70 to-slate-50 p-4 rounded-2xl border border-purple-200/80 flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                      <span class="text-xs font-black text-purple-900 flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-purple-600"></span>
+                        <span>과학탐구 영역</span>
                       </span>
-                      <span class="font-mono font-extrabold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">
-                        {{ currentSatAnalysis.subjectsDetail.math.mijukAvg }}등급
+                      <span class="text-[11px] font-mono text-slate-500">{{ currentSatAnalysis.subjectsDetail.sci?.totalCount || 0 }}명 응시</span>
+                    </div>
+                    <div class="flex items-baseline gap-2 mb-2">
+                      <span class="text-2xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.sci?.totalAvg || '-' }}<span class="text-xs font-normal text-slate-500">등급</span></span>
+                      <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.sci?.totalAvg !== '-' && currentGpaRaw[4]" class="text-[11px] font-semibold text-rose-600">
+                        내신({{ currentGpaRaw[4] }}) 대비 {{ (Number(currentSatAnalysis.subjectsDetail.sci.totalAvg) - currentGpaRaw[4]).toFixed(2) }}↓
                       </span>
+                      <span v-else class="text-[11px] text-slate-400 font-medium">
+                        {{ currentSatAnalysis.hasRealData ? '응시 집계' : '데이터 미등록' }}
+                      </span>
+                    </div>
+
+                    <!-- 1~9 등급 수직선 위치 마커 -->
+                    <div class="relative pt-1 pb-2">
+                      <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
+                      <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
+                        <span>1등급(우수)</span>
+                        <span>5등급</span>
+                        <span>9등급</span>
+                      </div>
+                      <!-- 현재 등급 위치 핀 -->
+                      <div
+                        v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.sci?.totalAvg !== '-'"
+                        class="absolute top-0 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
+                        :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.sci.totalAvg) }"
+                      >
+                        <span class="w-3 h-3 rounded-full bg-purple-600 border-2 border-white shadow-xs"></span>
+                      </div>
                     </div>
                   </div>
 
-                  <!-- 2. 확률과 통계 독립 카드 -->
-                  <div class="bg-white/95 p-2 rounded-xl border border-slate-200 shadow-2xs">
-                    <div class="flex justify-between items-center text-xs">
-                      <span class="font-bold text-slate-700 flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                        <span>확률과 통계</span>
-                        <span class="text-[10.5px] font-normal text-slate-500">({{ currentSatAnalysis.subjectsDetail.math.hwaktongCount }}명)</span>
-                      </span>
-                      <span class="font-mono font-bold text-slate-700 bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200">
-                        {{ currentSatAnalysis.subjectsDetail.math.hwaktongAvg }}등급
-                      </span>
+                  <!-- 과탐 선택과목 상위 2개 독립 비교 블록 & 전략 배너 -->
+                  <div class="pt-2.5 border-t border-purple-100/90 space-y-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <template v-if="currentSatAnalysis.subjectsDetail.sci?.topSubjects?.length">
+                        <div
+                          v-for="(sub, sIdx) in currentSatAnalysis.subjectsDetail.sci.topSubjects.slice(0, 2)"
+                          :key="sub.name"
+                          class="bg-white/95 p-2 rounded-xl border border-purple-200/80 shadow-2xs"
+                        >
+                          <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-purple-950 flex items-center gap-1 truncate">
+                              <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="sIdx === 0 ? 'bg-purple-600' : 'bg-slate-400'"></span>
+                              <span class="truncate">{{ sub.name }}</span>
+                              <span class="text-[10px] font-normal text-slate-500 shrink-0">({{ sub.count }}명)</span>
+                            </span>
+                            <span class="font-mono font-extrabold text-purple-800 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-100 shrink-0">
+                              {{ sub.avg }}등급
+                            </span>
+                          </div>
+                        </div>
+                      </template>
+                      <div v-else class="col-span-2 text-center text-[10.5px] text-slate-400 py-1 bg-white/60 rounded-lg">
+                        세부 과목 데이터 집계 중
+                      </div>
                     </div>
-                  </div>
-
-                  <!-- 직관적 격차 배지 -->
-                  <div v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.math.mijukAvg !== '-' && currentSatAnalysis.subjectsDetail.math.hwaktongAvg !== '-'" class="text-[10.5px] font-extrabold text-indigo-800 bg-indigo-50/80 border border-indigo-200/70 rounded-lg py-1 px-2 text-center">
-                    ⚡ 미적분이 확통 대비 <span class="text-indigo-600 underline font-black">{{ (Number(currentSatAnalysis.subjectsDetail.math.hwaktongAvg) - Number(currentSatAnalysis.subjectsDetail.math.mijukAvg)).toFixed(2) }}등급</span> 우세
+                    <!-- 과탐 최저 전략 팁 배너 -->
+                    <div class="text-[10.5px] font-bold text-purple-900 bg-purple-100/60 border border-purple-200/70 rounded-lg py-1 px-2 flex items-center justify-between">
+                      <span class="flex items-center gap-1">
+                        <span>🔬</span>
+                        <span>의약학·상위권 이공계열 필수 반영 영역</span>
+                      </span>
+                      <span class="text-[10px] font-extrabold text-purple-700 shrink-0">생Ⅰ·지Ⅰ 중심</span>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              <!-- 영어 영역 카드 -->
-              <div class="bg-linear-to-br from-emerald-50/70 to-slate-50 p-4 rounded-2xl border border-emerald-100 flex flex-col justify-between space-y-3">
-                <div>
-                  <div class="flex items-center justify-between mb-1.5">
-                    <span class="text-xs font-black text-emerald-900 flex items-center gap-1">
-                      <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
-                      <span>영어 영역</span>
-                    </span>
-                    <span class="text-[11px] font-mono text-emerald-800 font-bold bg-emerald-100/80 px-1.5 py-0.2 rounded">절대평가</span>
-                  </div>
-                  <div class="flex items-baseline gap-2 mb-2">
-                    <span class="text-2xl font-black text-slate-900 font-mono">{{ currentSatAnalysis.subjectsDetail.eng.totalAvg }}<span class="text-xs font-normal text-slate-500">등급</span></span>
-                    <span v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.eng.totalCount > 0" class="text-[11px] font-semibold text-emerald-700">
-                      {{ currentSatAnalysis.subjectsDetail.eng.totalCount }}명 응시
-                    </span>
-                    <span v-else class="text-[11px] text-slate-400 font-medium">
-                      데이터 미등록
-                    </span>
-                  </div>
-
-                  <!-- 1~9 등급 수직선 위치 마커 -->
-                  <div class="relative pt-1 pb-2">
-                    <div class="h-1.5 w-full bg-slate-200 rounded-full"></div>
-                    <div class="flex justify-between text-[10px] text-slate-400 font-bold mt-1">
-                      <span>1등급(우수)</span>
-                      <span>5등급</span>
-                      <span>9등급</span>
-                    </div>
-                    <!-- 현재 등급 위치 핀 -->
-                    <div
-                      v-if="currentSatAnalysis.hasRealData && currentSatAnalysis.subjectsDetail.eng.totalAvg !== '-'"
-                      class="absolute top-0 transform -translate-x-1/2 flex flex-col items-center pointer-events-none"
-                      :style="{ left: getRankMarkerLeft(currentSatAnalysis.subjectsDetail.eng.totalAvg) }"
-                    >
-                      <span class="w-3 h-3 rounded-full bg-emerald-600 border-2 border-white shadow-xs"></span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 영어 최저 충족 가이드 배너 -->
-                <div class="pt-2.5 border-t border-emerald-100/80 text-[11px] text-emerald-900 space-y-1">
-                  <div class="font-extrabold flex items-center gap-1 text-emerald-800">
-                    <span>🎯</span>
-                    <span>수능 최저의 핵심 전략 영역</span>
-                  </div>
-                  <p class="text-[10px] text-emerald-700/90 leading-tight m-0">
-                    상대평가(6등급대) 부담 없이 2~3등급 안정 확보 시 수시 최저 충족 성공률 급상승
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 과목별 비교 바 차트 -->
-          <div class="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-2xs">
-            <h4 class="text-sm font-black text-slate-900 mb-2 flex items-center justify-between">
-              <span>선택과목별 등급 격차 시각화</span>
-              <span class="text-[11px] text-slate-500 font-normal">낮을수록 우수 (1등급 기준)</span>
-            </h4>
-            <div class="h-36">
-              <Bar :data="subjectComparisonBarData" :options="subjectBarOptions" />
             </div>
           </div>
         </div>
@@ -2242,7 +2387,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   Chart as ChartJS,
   RadialLinearScale,
@@ -2281,9 +2426,17 @@ ChartJS.register(
   Legend
 )
 
+const widgetRootRef = ref(null)
+const stickyNavRef = ref(null)
 const activeSubTab = ref('radar')
 let isClickScrolling = false
 let clickScrollTimeout = null
+let scrollContainerEl = null
+let scrollRafId = null
+let sectionObserver = null
+let handleScrollEvent = null
+let handleUserIntentEvent = null
+let handleScrollEndEvent = null
 
 // 상단 세그먼트 버튼 클릭 시 해당 섹션으로 부드럽게 점프
 function scrollToTab(tabId) {
@@ -2292,7 +2445,7 @@ function scrollToTab(tabId) {
   if (clickScrollTimeout) clearTimeout(clickScrollTimeout)
   clickScrollTimeout = setTimeout(() => {
     isClickScrolling = false
-  }, 1800)
+  }, 900)
 
   const targetEl = document.getElementById(`sec-${tabId}`)
   if (targetEl) {
@@ -2300,17 +2453,27 @@ function scrollToTab(tabId) {
   }
 }
 
-// 스크롤 시 현재 뷰포트에 위치한 섹션 버튼 자동 동기화 (구간 포함 판정 알고리즘)
+// 사용자 직접 스크롤(마우스 휠, 터치) 시 클릭 스크롤 잠금 즉시 해제
+function handleUserScrollIntent() {
+  if (isClickScrolling) {
+    isClickScrolling = false
+    if (clickScrollTimeout) clearTimeout(clickScrollTimeout)
+  }
+}
+
+// 스크롤 시 현재 뷰포트에 위치한 섹션 버튼 자동 동기화 (Scroll Spy)
 function updateActiveSection() {
   if (isClickScrolling) return
 
   const sectionIds = ['radar', 'satamRun', 'minScoreMagic', 'strategyCards']
-  const targetLine = 280 // 상단 헤더 및 스티키 내비게이션 바 아래 기준선
 
-  // 바닥에 거의 도달했을 때 마지막 4번 섹션 우선 활성화
-  const scrollContainer = document.querySelector('.overflow-y-auto') || document.documentElement
-  if (scrollContainer) {
-    const isAtBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 120
+  // 1. 실제 부모 스크롤 컨테이너 바닥 도달 판정 (4번 섹션 바닥 도달 시 우선 활성화)
+  const scrollContainer = widgetRootRef.value?.closest('.overflow-y-auto') || (document.scrollingElement || document.documentElement)
+  if (scrollContainer && scrollContainer !== document.documentElement) {
+    const isScrollable = scrollContainer.scrollHeight > scrollContainer.clientHeight + 80
+    const isAtBottom = isScrollable && 
+      (scrollContainer.scrollTop > 100) && 
+      (scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 60)
     if (isAtBottom) {
       if (activeSubTab.value !== 'strategyCards') {
         activeSubTab.value = 'strategyCards'
@@ -2319,32 +2482,21 @@ function updateActiveSection() {
     }
   }
 
-  let matchedId = null
+  // 2. 기준선(targetLine) 계산: 스티키 내비게이션 바 하단 위치 + 70px 여유
+  let targetLine = 240
+  if (stickyNavRef.value) {
+    const navRect = stickyNavRef.value.getBoundingClientRect()
+    targetLine = navRect.bottom + 70
+  }
+
+  // 3. 섹션 판정: 기준선(targetLine)보다 위쪽에 위치한 가장 마지막 섹션 선택 (기본값: 'radar')
+  let matchedId = 'radar'
   for (const id of sectionIds) {
     const el = document.getElementById(`sec-${id}`)
     if (el) {
       const rect = el.getBoundingClientRect()
-      // 해당 섹션이 targetLine을 포함하고 있으면 그 섹션이 현재 활성 섹션!
-      if (rect.top <= targetLine && rect.bottom > targetLine) {
+      if (rect.top <= targetLine) {
         matchedId = id
-        break
-      }
-    }
-  }
-
-  if (!matchedId) {
-    // 뷰포트 맨 위쪽에 있는 경우 첫 번째 섹션
-    const firstEl = document.getElementById('sec-radar')
-    if (firstEl && firstEl.getBoundingClientRect().top > targetLine) {
-      matchedId = 'radar'
-    } else {
-      // 그 외에는 targetLine 이전 가장 가까운 섹션
-      for (let i = sectionIds.length - 1; i >= 0; i--) {
-        const el = document.getElementById(`sec-${sectionIds[i]}`)
-        if (el && el.getBoundingClientRect().top <= targetLine) {
-          matchedId = sectionIds[i]
-          break
-        }
       }
     }
   }
@@ -2354,8 +2506,15 @@ function updateActiveSection() {
   }
 }
 
-let sectionObserver = null
-let handleScrollEvent = null
+// 60fps 부드러운 스크롤 감지를 위한 requestAnimationFrame 핸들러
+function onScroll() {
+  if (isClickScrolling) return
+  if (scrollRafId) return
+  scrollRafId = requestAnimationFrame(() => {
+    updateActiveSection()
+    scrollRafId = null
+  })
+}
 
 // useStatData 전역 상태 연동 (학년도 선택 & 2027 모의가채점 연계)
 const {
@@ -2378,17 +2537,40 @@ onMounted(() => {
   }
   loadCsatPassRateData().catch(() => {})
 
-  // 스크롤 이벤트 캡처 리스너 등록 (부모 컨테이너 스크롤 감지)
-  handleScrollEvent = () => {
+  handleScrollEvent = onScroll
+  handleUserIntentEvent = handleUserScrollIntent
+  handleScrollEndEvent = () => {
+    isClickScrolling = false
     updateActiveSection()
   }
+
   window.addEventListener('scroll', handleScrollEvent, { passive: true, capture: true })
+  window.addEventListener('wheel', handleUserIntentEvent, { passive: true, capture: true })
+  window.addEventListener('touchmove', handleUserIntentEvent, { passive: true, capture: true })
+  window.addEventListener('scrollend', handleScrollEndEvent, { passive: true })
+
+  nextTick(() => {
+    scrollContainerEl = widgetRootRef.value?.closest('.overflow-y-auto')
+    if (scrollContainerEl) {
+      scrollContainerEl.addEventListener('scroll', handleScrollEvent, { passive: true })
+      scrollContainerEl.addEventListener('wheel', handleUserIntentEvent, { passive: true })
+      scrollContainerEl.addEventListener('touchmove', handleUserIntentEvent, { passive: true })
+      scrollContainerEl.addEventListener('scrollend', handleScrollEndEvent, { passive: true })
+    }
+
+    // 초기 마운트 시 위치 감지 1회 실행
+    setTimeout(() => {
+      updateActiveSection()
+    }, 250)
+  })
 
   // IntersectionObserver 연동
   const sectionIds = ['radar', 'satamRun', 'minScoreMagic', 'strategyCards']
   if (typeof IntersectionObserver !== 'undefined') {
     sectionObserver = new IntersectionObserver(() => {
-      updateActiveSection()
+      if (!isClickScrolling) {
+        updateActiveSection()
+      }
     }, {
       rootMargin: '-80px 0px -40% 0px',
       threshold: [0, 0.2, 0.5]
@@ -2405,8 +2587,18 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (clickScrollTimeout) clearTimeout(clickScrollTimeout)
+  if (scrollRafId) cancelAnimationFrame(scrollRafId)
   if (handleScrollEvent) {
     window.removeEventListener('scroll', handleScrollEvent, { capture: true })
+    window.removeEventListener('wheel', handleUserIntentEvent, { capture: true })
+    window.removeEventListener('touchmove', handleUserIntentEvent, { capture: true })
+    window.removeEventListener('scrollend', handleScrollEndEvent)
+    if (scrollContainerEl) {
+      scrollContainerEl.removeEventListener('scroll', handleScrollEvent)
+      scrollContainerEl.removeEventListener('wheel', handleUserIntentEvent)
+      scrollContainerEl.removeEventListener('touchmove', handleUserIntentEvent)
+      scrollContainerEl.removeEventListener('scrollend', handleScrollEndEvent)
+    }
   }
   if (sectionObserver) {
     sectionObserver.disconnect()
@@ -2733,6 +2925,32 @@ const normalizeInqGradeVal = (val) => {
   return null
 }
 
+// -------------------------------------------------------------
+// 탐구 기준 과목 리스트 (사탐 9과목, 과탐 8과목)
+// -------------------------------------------------------------
+const satamList = [
+  { name: '사회·문화', count: 127, grade: '5.94', color: '#15803d' },
+  { name: '생활과 윤리', count: 111, grade: '6.00', color: '#0284c7' },
+  { name: '한국지리', count: 18, grade: '6.89', color: '#0f766e' },
+  { name: '윤리와 사상', count: 16, grade: '6.38', color: '#0369a1' },
+  { name: '정치와 법', count: 14, grade: '5.93', color: '#b45309' },
+  { name: '세계 지리', count: 13, grade: '7.59', color: '#c026d3' },
+  { name: '세계사', count: 7, grade: '5.43', color: '#65a30d' },
+  { name: '경제', count: 3, grade: '6.00', color: '#0284c7' },
+  { name: '동아시아사', count: 3, grade: '6.00', color: '#ea580c' }
+]
+
+const gwatamList = [
+  { name: '생명 과학 Ⅰ', count: 35, grade: '6.23', color: '#166534' },
+  { name: '지구 과학 Ⅰ', count: 17, grade: '6.35', color: '#9333ea' },
+  { name: '물리학 Ⅰ', count: 16, grade: '5.81', color: '#0369a1' },
+  { name: '화학 Ⅰ', count: 14, grade: '6.58', color: '#0f172a' },
+  { name: '생명 과학 Ⅱ', count: 8, grade: '6.13', color: '#0284c7' },
+  { name: '물리학 Ⅱ', count: 3, grade: '6.33', color: '#ea580c' },
+  { name: '지구 과학 Ⅱ', count: 3, grade: '7.67', color: '#65a30d' },
+  { name: '화학 Ⅱ', count: 2, grade: '6.50', color: '#9a3412' }
+]
+
 /**
  * 주어진 레코드 목록에 대해 모의고사 통계(학생별 평균, 과목별/선택과목별 통계)를 산출하는 순수 집계 함수
  */
@@ -2754,8 +2972,8 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
         kor: { totalCount: 0, totalAvg: '-', unmaeCount: 0, unmaeAvg: '-', hwajakCount: 0, hwajakAvg: '-' },
         math: { totalCount: 0, totalAvg: '-', mijukCount: 0, mijukAvg: '-', hwaktongCount: 0, hwaktongAvg: '-' },
         eng: { totalCount: 0, totalAvg: '-' },
-        soc: { totalCount: 0, totalAvg: '-' },
-        sci: { totalCount: 0, totalAvg: '-' }
+        soc: { totalCount: 0, totalAvg: '-', topSubjects: [] },
+        sci: { totalCount: 0, totalAvg: '-', topSubjects: [] }
       }
     }
   }
@@ -2765,6 +2983,8 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
   let unmaeGrades = [], hwajakGrades = []
   let mijukGrades = [], hwaktongGrades = []
   let engAllGrades = []
+  const socSubjectGrades = new Map()
+  const sciSubjectGrades = new Map()
 
   targetRecords.forEach(r => {
     const key = r.studentKey || r.name
@@ -2792,8 +3012,17 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
     const isSci1 = norm1?.field === '과탐' || /생명|물리|화학|지구/.test(inq1)
     const isSoc1 = norm1?.field === '사탐' || /윤리|사회|지리|역사|사문|생윤|경제|정치/.test(inq1)
     if (inq1G) {
-      if (isSci1) entry.sci.push(inq1G)
-      else if (isSoc1) entry.soc.push(inq1G)
+      if (isSci1) {
+        entry.sci.push(inq1G)
+        const sName = norm1?.standardName || inq1
+        if (!sciSubjectGrades.has(sName)) sciSubjectGrades.set(sName, [])
+        sciSubjectGrades.get(sName).push(inq1G)
+      } else if (isSoc1) {
+        entry.soc.push(inq1G)
+        const sName = norm1?.standardName || inq1
+        if (!socSubjectGrades.has(sName)) socSubjectGrades.set(sName, [])
+        socSubjectGrades.get(sName).push(inq1G)
+      }
     }
 
     // 탐구 2
@@ -2803,8 +3032,17 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
     const isSci2 = norm2?.field === '과탐' || /생명|물리|화학|지구/.test(inq2)
     const isSoc2 = norm2?.field === '사탐' || /윤리|사회|지리|역사|사문|생윤|경제|정치/.test(inq2)
     if (inq2G) {
-      if (isSci2) entry.sci.push(inq2G)
-      else if (isSoc2) entry.soc.push(inq2G)
+      if (isSci2) {
+        entry.sci.push(inq2G)
+        const sName = norm2?.standardName || inq2
+        if (!sciSubjectGrades.has(sName)) sciSubjectGrades.set(sName, [])
+        sciSubjectGrades.get(sName).push(inq2G)
+      } else if (isSoc2) {
+        entry.soc.push(inq2G)
+        const sName = norm2?.standardName || inq2
+        if (!socSubjectGrades.has(sName)) socSubjectGrades.set(sName, [])
+        socSubjectGrades.get(sName).push(inq2G)
+      }
     }
 
     const rawMathSub = String(r.mathSubject || '').trim()
@@ -2969,6 +3207,24 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
     mathHwaktongAvg = (finalMath + 0.45).toFixed(2)
   }
 
+  const getTopInquirySubjects = (gradeMap, fallbackList) => {
+    if (gradeMap && gradeMap.size > 0) {
+      return Array.from(gradeMap.entries())
+        .map(([name, grades]) => ({
+          name,
+          count: grades.length,
+          avg: (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 2)
+    }
+    return (fallbackList || []).slice(0, 2).map(s => ({
+      name: s.name,
+      count: s.count,
+      avg: s.grade || s.avg || '-'
+    }))
+  }
+
   return {
     mode: isCsat ? '2027_CSAT' : '2027_MOCK',
     isCsat,
@@ -3002,11 +3258,13 @@ function computeMockRecordAnalysis(targetRecords, filterKey = 'ALL', isCsatExpli
       },
       soc: {
         totalCount: effectiveSocCount,
-        totalAvg: cntSoc > 0 ? finalSoc.toFixed(2) : '-'
+        totalAvg: cntSoc > 0 ? finalSoc.toFixed(2) : '-',
+        topSubjects: getTopInquirySubjects(socSubjectGrades, satamList)
       },
       sci: {
         totalCount: effectiveSciCount,
-        totalAvg: cntSci > 0 ? finalSci.toFixed(2) : '-'
+        totalAvg: cntSci > 0 ? finalSci.toFixed(2) : '-',
+        topSubjects: getTopInquirySubjects(sciSubjectGrades, gwatamList)
       }
     }
   }
@@ -3029,7 +3287,23 @@ const currentSatAnalysis = computed(() => {
       subjectsDetail: {
         kor: { totalCount: 227, totalAvg: '6.10', unmaeCount: 36, unmaeAvg: '5.28', hwajakCount: 191, hwajakAvg: '6.26' },
         math: { totalCount: 214, totalAvg: '5.80', mijukCount: 69, mijukAvg: '4.71', hwaktongCount: 145, hwaktongAvg: '6.32' },
-        eng: { totalCount: 221, totalAvg: '4.94' }
+        eng: { totalCount: 221, totalAvg: '4.94' },
+        soc: {
+          totalCount: 210,
+          totalAvg: '6.00',
+          topSubjects: [
+            { name: '사회·문화', count: 127, avg: '5.94' },
+            { name: '생활과 윤리', count: 111, avg: '6.00' }
+          ]
+        },
+        sci: {
+          totalCount: 42,
+          totalAvg: '6.30',
+          topSubjects: [
+            { name: '생명 과학 Ⅰ', count: 35, avg: '6.23' },
+            { name: '지구 과학 Ⅰ', count: 17, avg: '6.35' }
+          ]
+        }
       }
     }
   }
@@ -3616,91 +3890,9 @@ const radarChartOptions = {
 }
 
 // -------------------------------------------------------------
-// Subject comparison bar data (언매 vs 화작, 미적 vs 확통, 영어)
-// -------------------------------------------------------------
-const subjectComparisonBarData = computed(() => {
-  const d = currentSatAnalysis.value.subjectsDetail
-  const data = [
-    Number(d.kor.unmaeAvg) || 5.28,
-    Number(d.kor.hwajakAvg) || 6.26,
-    Number(d.math.mijukAvg) || 4.71,
-    Number(d.math.hwaktongAvg) || 6.32,
-    Number(d.eng.totalAvg) || 4.94
-  ]
-
-  return {
-    labels: ['국어: 언매', '국어: 화작', '수학: 미적분', '수학: 확통', '영어 (전체)'],
-    datasets: [
-      {
-        data,
-        backgroundColor: ['#2563eb', '#64748b', '#4f46e5', '#94a3b8', '#059669'],
-        borderRadius: 8,
-        barThickness: 18
-      }
-    ]
-  }
-})
-
-const subjectBarOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  indexAxis: 'y',
-  scales: {
-    x: {
-      min: 1,
-      max: 9,
-      reverse: true, // 1등급이 왼쪽(우수)
-      title: { display: true, text: '평균 등급 (← 1등급 쪽이 우수)', font: { size: 10 } },
-      grid: { color: '#f1f5f9' },
-      ticks: {
-        stepSize: 1,
-        callback: (v) => `${v}등급`
-      }
-    },
-    y: {
-      grid: { display: false },
-      ticks: { font: { family: 'Pretendard', size: 11, weight: 'bold' }, color: '#334155' }
-    }
-  },
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      callbacks: {
-        label: (ctx) => ` 평균 등급: ${ctx.formattedValue}등급`
-      }
-    }
-  }
-}
-
-// -------------------------------------------------------------
 // 2. 사탐 & 과탐 데이터 (보고서 2페이지)
 // -------------------------------------------------------------
-const satamList = [
-  { name: '사회·문화', count: 127, grade: '5.94', color: '#15803d' },
-  { name: '생활과 윤리', count: 111, grade: '6.00', color: '#0284c7' },
-  { name: '한국지리', count: 18, grade: '6.89', color: '#0f766e' },
-  { name: '윤리와 사상', count: 16, grade: '6.38', color: '#0369a1' },
-  { name: '정치와 법', count: 14, grade: '5.93', color: '#b45309' },
-  { name: '세계 지리', count: 13, grade: '7.59', color: '#c026d3' },
-  { name: '세계사', count: 7, grade: '5.43', color: '#65a30d' },
-  { name: '경제', count: 3, grade: '6.00', color: '#0284c7' },
-  { name: '동아시아사', count: 3, grade: '6.00', color: '#ea580c' }
-]
-
-const gwatamList = [
-  { name: '생명 과학 Ⅰ', count: 35, grade: '6.23', color: '#166534' },
-  { name: '지구 과학 Ⅰ', count: 17, grade: '6.35', color: '#9333ea' },
-  { name: '물리학 Ⅰ', count: 16, grade: '5.81', color: '#0369a1' },
-  { name: '화학 Ⅰ', count: 14, grade: '6.58', color: '#0f172a' },
-  { name: '생명 과학 Ⅱ', count: 8, grade: '6.13', color: '#0284c7' },
-  { name: '물리학 Ⅱ', count: 3, grade: '6.33', color: '#ea580c' },
-  { name: '지구 과학 Ⅱ', count: 3, grade: '7.67', color: '#65a30d' },
-  { name: '화학 Ⅱ', count: 2, grade: '6.50', color: '#9a3412' }
-]
-
-// -------------------------------------------------------------
 // 탐구 과목별 그래프 시각화 및 정렬 상태
-// -------------------------------------------------------------
 const satamSortMode = ref('count') // 'count' | 'grade'
 const gwatamSortMode = ref('count') // 'count' | 'grade'
 const satamViewType = ref('bars') // 'bars' | 'chart'
