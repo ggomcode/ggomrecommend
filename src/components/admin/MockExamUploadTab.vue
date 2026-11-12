@@ -343,8 +343,37 @@
 
             <pre class="m-0 text-[11px] font-mono leading-relaxed bg-slate-950/90 p-3 rounded-lg border border-slate-800 text-emerald-400 overflow-x-auto max-h-44"><code>{{ gasSnippetCode }}</code></pre>
             
+            <!-- 등록된 Web App URL 및 원클릭 연결 테스트 바 -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-slate-800 text-xs">
+              <div class="flex items-center gap-2 overflow-hidden">
+                <span class="text-slate-400 text-[11px] shrink-0">등록된 Web App URL:</span>
+                <code v-if="configuredGasUrl" class="font-mono text-emerald-300 text-[11px] truncate bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700 max-w-[280px]" :title="configuredGasUrl">
+                  {{ maskGasUrl(configuredGasUrl) }}
+                </code>
+                <span v-else class="text-rose-400 text-[11px] font-bold">미등록 (우측 버튼으로 등록)</span>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  @click="promptChangeGasUrl"
+                  class="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold border border-slate-700 cursor-pointer transition-colors"
+                >
+                  ✏️ URL 등록/수정
+                </button>
+                <button
+                  type="button"
+                  @click="testGasConnection"
+                  :disabled="isTestingGas || !configuredGasUrl"
+                  class="px-2.5 py-1 rounded-md bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-[11px] font-bold border-none cursor-pointer flex items-center gap-1 transition-colors"
+                >
+                  <RefreshCw :size="11" :class="{ 'animate-spin': isTestingGas }" />
+                  <span>{{ isTestingGas ? '테스트 중...' : '🔍 Web App 연결 테스트' }}</span>
+                </button>
+              </div>
+            </div>
+
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10.5px] text-slate-400 pt-1 border-t border-slate-800">
-              <div>💡 <strong>배포 시 필수 체크:</strong> '다음 사용자 계정으로 실행: <span class="text-amber-300 font-bold">나</span>', '액세스 권한: <span class="text-amber-300 font-bold">모든 사용자</span>'로 지정해야 웹 브라우저에서 차단 없이 직접 저장됩니다.</div>
+              <div>💡 <strong>배포 시 필수 체크:</strong> '다음 사용자 계정으로 실행: <span class="text-amber-300 font-bold">나</span>', '액세스 권한: <span class="text-amber-300 font-bold">모든 사용자</span>', 그리고 코드 수정 시 반드시 <strong>[배포 관리 ➔ 수정 ➔ 버전: 새 버전]</strong>으로 배포해야 실시간 반영됩니다.</div>
               <router-link to="/admin" class="text-indigo-300 hover:text-white underline shrink-0 font-bold">
                 ⚙️ [관리자 설정 ➔ 환경설정]에서 URL 등록하기 ➔
               </router-link>
@@ -840,6 +869,7 @@ import {
   maskGasUrl,
   fetchAndParseKcueMockData,
   hasAnyMockScore,
+  fetchKcueSheetTabCsv
 } from '../../api/statApi'
 import { dialog } from '../common/dialog'
 
@@ -859,7 +889,8 @@ const isGuideOpen = ref(false)
 // Apps Script 수신 코드 복사 상태
 const copiedGasSnippet = ref(false)
 const gasSnippetCode = `/**
- * [모의고사 성적 원격 수신] 44개 컬럼 자동 적재 및 회차별 누적/자동 정렬 핸들러
+ * [모의고사 성적 원격 수신 Web App]
+ * 44개 컬럼 자동 적재, 1행/2행 헤더 자동 감지, 회차별 자동 누적 및 정렬 핸들러
  */
 function doGet(e) {
   return ContentService.createTextOutput(JSON.stringify({
@@ -871,95 +902,143 @@ function doGet(e) {
 
 function doPost(e) {
   try {
-    const payload = JSON.parse(e.postData.contents);
-    let ss = SpreadsheetApp.getActiveSpreadsheet();
+    var raw = '';
+    if (e && e.postData && e.postData.contents) {
+      raw = e.postData.contents;
+    } else if (e && e.parameter && e.parameter.data) {
+      raw = e.parameter.data;
+    } else if (e && e.parameters && e.parameters.data) {
+      raw = e.parameters.data[0];
+    }
+    
+    if (!raw) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: '전송된 데이터(Payload)가 비어 있습니다.'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
 
-    // 1. 대상 스프레드시트 매칭 (시트 내 배포면 activeSpreadsheet 우선, 외부 배포면 openById)
-    if (!ss && payload.spreadsheetId) {
+    var payload = JSON.parse(raw);
+    var ss = null;
+    var targetId = payload.spreadsheetId ? String(payload.spreadsheetId).trim() : '';
+
+    // 1. 현재 바인딩된 활성 스프레드시트 확인
+    var activeSs = null;
+    try {
+      activeSs = SpreadsheetApp.getActiveSpreadsheet();
+    } catch (_) {}
+
+    // activeSs가 있고 ID가 일치하거나 targetId가 없으면 activeSs 사용
+    if (activeSs && (!targetId || activeSs.getId() === targetId)) {
+      ss = activeSs;
+    } else if (targetId) {
       try {
-        ss = SpreadsheetApp.openById(payload.spreadsheetId);
+        ss = SpreadsheetApp.openById(targetId);
       } catch (openErr) {
-        throw new Error('스프레드시트를 열 수 없습니다: ' + openErr.message);
+        if (activeSs) {
+          ss = activeSs;
+        } else {
+          throw new Error('스프레드시트(' + targetId + ')를 열 수 없습니다: ' + openErr.message);
+        }
       }
+    } else if (activeSs) {
+      ss = activeSs;
     }
 
     if (!ss) {
-      return ContentService.createTextOutput(JSON.stringify({ success: false, error: '스프레드시트를 열 수 없습니다.' }))
-        .setMimeType(ContentService.MimeType.JSON);
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: '대상 스프레드시트를 열 수 없습니다. 시트 창에서 [확장 프로그램 > Apps Script]를 열고 배포했는지 확인하세요.'
+      })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    const sheetName = payload.sheetName || '2027모의결과';
-    let sheet = ss.getSheetByName(sheetName);
-    if (!sheet) sheet = ss.insertSheet(sheetName);
+    var sheetName = payload.sheetName || '2027모의결과';
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+    }
 
-    const rows = payload.rows;
+    var rows = payload.rows;
     if (!rows || rows.length === 0) {
-      return ContentService.createTextOutput(JSON.stringify({ success: false, error: '데이터가 없습니다.' }))
-        .setMimeType(ContentService.MimeType.JSON);
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: '반영할 학생 성적 데이터(rows)가 비어 있습니다.'
+      })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 2. 업로드할 회차(월) 번호 파악 (예: 3, 5, 6, 9 등)
-    const targetMonth = payload.month != null ? Number(payload.month) : (rows[0] ? Number(rows[0][0]) : null);
+    // 2. 44개 컬럼 확보 (데이터 읽기 전에 반드시 컬럼 수 확장!)
+    if (sheet.getMaxColumns() < 44) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), 44 - sheet.getMaxColumns());
+    }
 
-    // 3. 기존 시트 데이터 확인 (1, 2행 복합 헤더 제외 3행부터)
-    const lastRow = sheet.getLastRow();
-    let combined = [];
+    // 3. 업로드할 회차(월) 번호 파악 (예: 3, 5, 6, 9, 10 등)
+    var targetMonth = payload.month != null ? Number(payload.month) : (rows[0] ? Number(rows[0][0]) : null);
+    var lastRow = sheet.getLastRow();
 
-    if (lastRow <= 2) {
-      // 기존 데이터가 없으면 바로 신규 적재
+    // 4. 헤더 행 수 자동 감지
+    // 1행은 항상 헤더. 2행 A열이 숫자(응시월)이면 1행만 헤더, 문자열(소분류 등)이면 2행까지 복합 헤더
+    var headerRows = 1;
+    if (lastRow >= 2) {
+      var row2Val = sheet.getRange(2, 1).getValue();
+      var isRow2Data = row2Val !== '' && row2Val !== null && !isNaN(Number(String(row2Val).trim()));
+      headerRows = isRow2Data ? 1 : 2;
+    }
+    var dataStartRow = headerRows + 1;
+
+    // 5. 기존 시트 데이터 확인 및 병합
+    var combined = [];
+    if (lastRow < dataStartRow) {
       combined = rows;
     } else {
-      // 기존 학생 데이터(3행 ~ lastRow) 읽기
-      const existingData = sheet.getRange(3, 1, lastRow - 2, 44).getValues();
+      var numDataRows = lastRow - headerRows;
+      var existingData = sheet.getRange(dataStartRow, 1, numDataRows, 44).getValues();
 
-      // 기존 데이터 중 '월(A열)'이 업로드 대상 월과 다른 회차 데이터만 유지 (동일 월 재업로드 시 중복 방지 및 최신화)
-      const otherMonthsData = existingData.filter(function(r) {
-        if (!r || r[0] === null || r[0] === undefined) return false;
-        const m = Number(String(r[0]).trim());
+      // 기존 데이터 중 '월(A열)'이 업로드 대상 월과 다른 회차 데이터만 보존 (동일 월 재업로드 시 교체)
+      var otherMonthsData = existingData.filter(function(r) {
+        if (!r || r[0] === null || r[0] === undefined || String(r[0]).trim() === '') return false;
+        var m = Number(String(r[0]).trim());
         return !isNaN(m) && m > 0 && (targetMonth == null || m !== targetMonth);
       });
 
-      // 기존 타 회차 데이터 + 이번 회차 데이터 결합
       combined = otherMonthsData.concat(rows);
     }
 
-    // 4. 모의고사 표준 정렬: 월(A열) 오름차순 -> 반(D열) 오름차순 -> 번호(E열) 오름차순
+    // 6. 표준 정렬: 월(A열) -> 학년(C열) -> 반(D열) -> 번호(E열) 오름차순
     combined.sort(function(a, b) {
       var mA = Number(a[0]) || 0, mB = Number(b[0]) || 0;
       if (mA !== mB) return mA - mB;
+      var gA = Number(a[2]) || 0, gB = Number(b[2]) || 0;
+      if (gA !== gB) return gA - gB;
       var cA = Number(a[3]) || 0, cB = Number(b[3]) || 0;
       if (cA !== cB) return cA - cB;
       var nA = Number(a[4]) || 0, nB = Number(b[4]) || 0;
       return nA - nB;
     });
 
-    // 5. 시트 행/열 확장
-    const neededRows = 2 + combined.length;
-    if (sheet.getMaxRows() < neededRows) {
-      sheet.insertRowsAfter(sheet.getMaxRows(), neededRows - sheet.getMaxRows());
-    }
-    if (sheet.getMaxColumns() < 44) {
-      sheet.insertColumnsAfter(sheet.getMaxColumns(), 44 - sheet.getMaxColumns());
+    // 7. 시트 총 행 수 확장
+    var neededTotalRows = headerRows + combined.length;
+    if (sheet.getMaxRows() < neededTotalRows) {
+      sheet.insertRowsAfter(sheet.getMaxRows(), neededTotalRows - sheet.getMaxRows());
     }
 
-    // 6. 3행부터 깨끗하게 일괄 반영 (기존 잔여 행 클리어 포함)
-    if (lastRow > 2) {
-      const clearRows = Math.max(lastRow - 2, combined.length);
-      sheet.getRange(3, 1, clearRows, 44).clearContent();
+    // 8. 기존 데이터 영역 클리어 후 새 데이터 일괄 쓰기
+    if (lastRow >= dataStartRow) {
+      var clearRowCount = Math.max(lastRow - headerRows, combined.length);
+      sheet.getRange(dataStartRow, 1, clearRowCount, 44).clearContent();
     }
 
-    sheet.getRange(3, 1, combined.length, 44).setValues(combined);
+    sheet.getRange(dataStartRow, 1, combined.length, 44).setValues(combined);
     SpreadsheetApp.flush();
 
-    // 이번 업로드된 회차의 실제 배치 시작행 및 종료행 계산
-    let startRowForThisExam = 3;
-    for (let i = 0; i < combined.length; i++) {
+    // 9. 이번 업로드 회차 시작행 계산
+    var startRowForThisExam = dataStartRow;
+    for (var i = 0; i < combined.length; i++) {
       if (Number(combined[i][0]) === targetMonth) {
-        startRowForThisExam = 3 + i;
+        startRowForThisExam = dataStartRow + i;
         break;
       }
     }
-    const endRowForThisExam = startRowForThisExam + rows.length - 1;
+    var endRowForThisExam = startRowForThisExam + rows.length - 1;
 
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
@@ -969,8 +1048,10 @@ function doPost(e) {
       endRow: endRowForThisExam,
       sheetName: sheetName,
       spreadsheetName: ss.getName(),
-      spreadsheetId: ss.getId()
+      spreadsheetId: ss.getId(),
+      targetMonth: targetMonth
     })).setMimeType(ContentService.MimeType.JSON);
+
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({
       success: false,
@@ -1031,9 +1112,69 @@ async function promptChangeGasUrl() {
     configuredGasUrl.value = saved
     dialog.alert(
       saved 
-        ? '✓ Web App URL이 성공적으로 저장되었습니다.\n[🔗 웹앱 응답 확인]을 눌러 정상 작동 여부를 확인해 보세요.' 
+        ? '✓ Web App URL이 성공적으로 저장되었습니다.\n우측의 [🔍 Web App 연결 테스트]를 눌러 정상 작동 여부를 바로 확인해 보세요.' 
         : 'Web App URL이 초기화되었습니다.'
     )
+  }
+}
+
+// Web App 연결 상태 진단 테스트
+const isTestingGas = ref(false)
+async function testGasConnection() {
+  let gasUrl = configuredGasUrl.value || await getKcueGasUrl()
+  if (!gasUrl) {
+    dialog.alert('등록된 Web App URL이 없습니다.\n[✏️ URL 등록/수정] 버튼을 눌러 먼저 배포 URL을 입력해 주세요.')
+    return
+  }
+
+  isTestingGas.value = true
+  try {
+    const sep = gasUrl.includes('?') ? '&' : '?'
+    const testUrl = `${gasUrl}${sep}_t=${Date.now()}`
+    const res = await fetch(testUrl, { method: 'GET', redirect: 'follow' })
+    const text = await res.text()
+    let json = null
+    try {
+      json = JSON.parse(text)
+    } catch (_) {}
+
+    if (json && json.status === 'online') {
+      await dialog.alert({
+        title: 'Web App 연결 정상',
+        message: `🟢 [Web App 연결 성공!]\n\n` +
+          `• 상태: ${json.status} (정상 응답)\n` +
+          `• 응답: ${json.message || '모의고사 성적 원격 수신 Web App이 정상 작동 중입니다.'}\n\n` +
+          `브라우저에서 Web App으로 직접 전송 가능한 상태입니다.`
+      })
+    } else if (text.includes('<html') || text.includes('accounts.google.com')) {
+      await dialog.alert({
+        title: 'Web App 배포 권한 확인 필요',
+        level: 'warning',
+        message: `⚠️ Web App 응답이 구글 로그인 화면으로 리다이렉트되었습니다.\n\n` +
+          `구글 시트 Apps Script 창에서:\n` +
+          `1. [배포] ➔ [배포 관리] ➔ [수정(연필 아이콘)] 클릭\n` +
+          `2. [액세스 권한]이 반드시 "모든 사용자(Anyone)"로 설정되었는지 확인해 주세요.\n` +
+          `3. [다음 사용자 계정으로 실행]이 "나 (내 구글 계정)"로 설정되었는지 확인해 주세요.`
+      })
+    } else {
+      await dialog.alert({
+        title: 'Web App 응답 확인',
+        message: `Web App 응답 내용:\n${text.substring(0, 300)}`
+      })
+    }
+  } catch (err) {
+    await dialog.alert({
+      title: 'Web App 연결 실패',
+      level: 'error',
+      message: `🔴 Web App에 연결할 수 없습니다.\n\n` +
+        `오류 내용: ${err.message}\n\n` +
+        `🔍 [체크리스트]\n` +
+        `• URL 끝이 /exec 인지 확인해 주세요. (테스트용 /dev는 외부 호출 불가)\n` +
+        `• [배포] > [새 배포] 또는 [배포 관리]에서 [버전: 새 버전]으로 배포되었는지 확인해 주세요.\n` +
+        `• [액세스 권한]이 "모든 사용자(Anyone)"로 배포되었는지 확인해 주세요.`
+    })
+  } finally {
+    isTestingGas.value = false
   }
 }
 
@@ -1526,13 +1667,12 @@ async function handleSaveToGoogleSheet() {
     let isSuccess = false
     let resJson = null
     let responseText = ''
+    let serverErrorMessage = ''
 
-    // 1차 시도: 표준 CORS 모드 전송 (명시적 redirect: 'follow', mode: 'cors')
+    // 1차 시도: 표준 CORS 모드 전송 (명시적 redirect: 'follow', Content-Type: text/plain)
     try {
       const res = await fetch(gasUrl, {
         method: 'POST',
-        mode: 'cors',
-        redirect: 'follow',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: payloadStr
       })
@@ -1541,51 +1681,105 @@ async function handleSaveToGoogleSheet() {
         resJson = JSON.parse(responseText)
         if (resJson && resJson.success === true) {
           isSuccess = true
+        } else if (resJson && resJson.success === false) {
+          serverErrorMessage = resJson.error || 'Google Apps Script 실행 실패'
         }
       } catch (_) {
-        if (responseText.includes('<html') || responseText.includes('<!DOCTYPE')) {
-          console.warn('[MockExamUploadTab] 구글 로그인 리다이렉트 또는 HTML 반환 감지')
+        if (responseText.includes('<html') || responseText.includes('<!DOCTYPE') || responseText.includes('accounts.google.com')) {
+          serverErrorMessage = 'Google 로그인 리다이렉트가 감지되었습니다. Apps Script [배포 관리]에서 [액세스 권한: 모든 사용자] 설정이 필요합니다.'
         }
       }
     } catch (corsErr) {
-      console.warn('[MockExamUploadTab] 1차 CORS 전송 실패 (브라우저 302 리다이렉트 차단), 2차 no-cors 직접 전송 실행:', corsErr)
+      console.warn('[MockExamUploadTab] 1차 CORS 전송 응답 수신 불가:', corsErr)
     }
 
-    // 2차 시도: 브라우저 CORS 302 리다이렉트 차단 완벽 우회를 위해 no-cors 모드로 직접 전송!
+    // 서버가 명시적으로 오류(success: false)를 반환한 경우 즉시 예외 처리
+    if (serverErrorMessage) {
+      throw new Error(serverErrorMessage)
+    }
+
+    // 2차 시도: 1차 CORS 수신이 브라우저 302 리다이렉트 등으로 차단된 경우, no-cors 모드로 직접 전송
     if (!isSuccess) {
-      await fetch(gasUrl, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: payloadStr
-      })
-      isSuccess = true
+      try {
+        await fetch(gasUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: payloadStr
+        })
+      } catch (noCorsErr) {
+        console.warn('[MockExamUploadTab] 2차 no-cors 전송 오류:', noCorsErr)
+      }
     }
 
-    // 구글 시트 백그라운드 반영 및 flush 대기 (2.5초)
-    await new Promise(r => setTimeout(r, 2500))
+    // 3. 구글 시트 원본 실시간 적재 여부 직접 검증 (핵심!)
+    let isVerifiedInSheet = false
+    let verifiedCount = 0
 
-    // 저장 후 구글 시트 데이터 즉시 최신으로 자동 갱신
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      await new Promise(r => setTimeout(r, attempt === 1 ? 2500 : 2000))
+      try {
+        const csvText = await fetchKcueSheetTabCsv(targetSheetId, targetSheetName.value)
+        if (csvText && typeof csvText === 'string') {
+          const lines = csvText.trim().split(/\r?\n/)
+          let countForMonth = 0
+          for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(',')
+            const m = Number(String(cols[0] || '').replace(/["']/g, '').trim())
+            if (m === examMonth) {
+              countForMonth++
+            }
+          }
+          if (countForMonth > 0) {
+            isVerifiedInSheet = true
+            verifiedCount = countForMonth
+            break
+          }
+        }
+      } catch (checkErr) {
+        console.warn(`[MockExamUploadTab] 시트 검증 ${attempt}차 시도 오류:`, checkErr)
+      }
+    }
+
+    // 구글 시트 기존 목록 최신화
     try {
       await loadExistingSheetData(true)
     } catch (_) {}
 
-    const savedSheetName = resJson?.spreadsheetName || '대교협 원본 구글 시트'
-    const savedTab = resJson?.sheetName || targetSheetName.value
-    const rowRangeInfo = (resJson?.startRow && resJson?.endRow)
-      ? `• 이번 적재 위치: [${resJson.startRow}행 ~ ${resJson.endRow}행] (전체 누적: ${resJson.totalCount || resJson.count}명)\n`
-      : `• 적재 완료: ${allParsedStudents.value.length}명\n`
+    // 검증 성공 또는 서버에서 성공 응답을 수신한 경우
+    if (isVerifiedInSheet || (isSuccess && resJson?.success === true)) {
+      const savedSheetName = resJson?.spreadsheetName || '대교협 원본 구글 시트'
+      const savedTab = resJson?.sheetName || targetSheetName.value
+      const countMsg = verifiedCount > 0 ? `${verifiedCount}명` : `${allParsedStudents.value.length}명`
+      const rowRangeInfo = (resJson?.startRow && resJson?.endRow)
+        ? `• 이번 적재 위치: [${resJson.startRow}행 ~ ${resJson.endRow}행] (전체 누적: ${resJson.totalCount || resJson.count}명)\n`
+        : `• 적재 완료: ${countMsg} (실시간 시트 적재 확인 완료 ✓)\n`
 
-    await dialog.alert({
-      title: '구글 시트 직접 반영 성공',
-      message: `🎉 [구글 시트 직접 반영 성공!]\n\n` +
-        `• 저장된 구글 시트: [${savedSheetName}]\n` +
-        `• 저장된 시트 탭: [${savedTab}]\n` +
-        `• 이번 적재 시험: [${selectedExam.value}] ${allParsedStudents.value.length}명\n` +
-        rowRangeInfo +
-        `• 컬럼 규격: 44개 컬럼(A열 '월' ~ AR열 '제2외국어 등급') 자동 누적 및 정렬 완료\n\n` +
-        `구글 시트에 성공적으로 직접 전송 및 저장되었습니다.`
-    })
+      await dialog.alert({
+        title: '구글 시트 직접 반영 성공',
+        message: `🎉 [구글 시트 직접 반영 성공!]\n\n` +
+          `• 저장된 구글 시트: [${savedSheetName}]\n` +
+          `• 저장된 시트 탭: [${savedTab}]\n` +
+          `• 이번 적재 시험: [${selectedExam.value}] ${countMsg}\n` +
+          rowRangeInfo +
+          `• 컬럼 규격: 44개 컬럼(A열 '월' ~ AR열 '제2외국어 등급') 자동 누적 및 정렬 완료\n\n` +
+          `구글 시트에 성공적으로 직접 전송 및 저장되었습니다.`
+      })
+    } else {
+      // 전송 요청은 보냈으나 시트에 실제 데이터가 확인되지 않은 경우 정직하고 상세한 진단 안내
+      await dialog.alert({
+        title: '구글 시트 반영 미확인 안내',
+        level: 'warning',
+        message: `⚠️ Web App으로 전송 요청을 전달하였으나, 원본 구글 시트 [${targetSheetName.value}] 탭에 [${selectedExam.value}] 데이터가 아직 기록되지 않았습니다.\n\n` +
+          `🔍 [원인 진단 및 해결 방법]\n\n` +
+          `1. ⚠️ [배포 관리 ➔ 버전: 새 버전] 필수 적용:\n` +
+          `   구글 Apps Script는 코드를 편집창에 붙여넣고 저장(Ctrl + S)하더라도, 우측 상단 [배포] ➔ [배포 관리] ➔ [수정(연필 아이콘)] ➔ [버전: 새 버전]으로 다시 배포하지 않으면 과거 코드를 계속 실행합니다.\n\n` +
+          `2. 최신 수신 코드 확인:\n` +
+          `   위 안내 박스의 [수신 코드 전체 복사]를 눌러 구글 시트의 [확장 프로그램 ➔ Apps Script] 코드창 맨 아래에 덮어씌워 주세요.\n\n` +
+          `3. 실행 로그 확인:\n` +
+          `   Apps Script 좌측 시계 모양 메뉴 [실행 (Executions)]에 들어가시면, doPost 실행 내역과 오류 메시지를 직접 확인하실 수 있습니다.`
+      })
+    }
   } catch (e) {
     console.error('GAS Web App 전송 오류:', e)
 
@@ -1593,14 +1787,12 @@ async function handleSaveToGoogleSheet() {
     if (e.message && e.message.includes('Failed to fetch')) {
       diagnoseMsg = 
         `\n\n🔍 [Failed to fetch 핵심 원인 체크리스트]\n` +
-        `1. [실행 권한(Execute as)] 확인 (가장 빈번한 원인!):\n` +
-        `   Apps Script [배포 관리]에서 [다음 사용자 권한으로 실행]이 반드시 "나 (내 구글 계정)"로 되어 있어야 합니다.\n` +
-        `   ("웹 앱에 액세스하는 사용자"로 되어 있으면 로그인이 강제되어 외부 전송이 무조건 차단됩니다.)\n\n` +
-        `2. 배포 URL 끝자리 확인:\n` +
-        `   URL 끝이 반드시 '/exec'여야 합니다. (테스트용 '/dev'는 외부 호출이 차단됩니다.)\n\n` +
-        `3. 학교 구글 계정(@goe.go.kr 등) 외부 접근 차단 정책:\n` +
-        `   교육청/학교 구글 워크스페이스 계정은 보안상 외부 웹사이트의 원격 호출을 차단하는 경우가 많습니다.\n` +
-        `   💡 [해결 대안]: 상단의 [📋 클립보드 복사] 버튼을 누른 후, 구글 시트 해당 탭의 [A3] 셀에 [Ctrl + V]로 붙여넣으시면 Apps Script 설정 없이도 1초 만에 즉시 적재됩니다!`
+        `1. [실행 권한(Execute as)] 확인:\n` +
+        `   Apps Script [배포 관리]에서 [다음 사용자 권한으로 실행]이 반드시 "나 (내 구글 계정)"로 되어 있어야 합니다.\n\n` +
+        `2. [액세스 권한] 확인:\n` +
+        `   [액세스 권한]이 반드시 "모든 사용자(Anyone)"로 설정되어야 브라우저에서 차단되지 않습니다.\n\n` +
+        `3. 배포 URL 확인:\n` +
+        `   URL 끝이 반드시 '/exec'여야 합니다. (테스트용 '/dev'는 외부 호출 불가)`
     }
 
     await dialog.alert({
