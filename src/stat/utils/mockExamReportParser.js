@@ -3,6 +3,15 @@ import * as pdfjsLib from 'pdfjs-dist'
 import 'pdfjs-dist/build/pdf.worker.min.js'
 import * as XLSX from 'xlsx'
 
+// PDF.js 워커 설정 (CDN 최신 안정 버전 및 인라인 번들 워커 이중화)
+if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+  } catch (_) {
+    // fallback
+  }
+}
+
 export const MOCK_RESULT_STANDARD_HEADERS = [
   '학년',
   '반',
@@ -243,7 +252,17 @@ export async function parseMockExamReportFile(file, options = {}) {
                   fileName.toLowerCase().endsWith('.xls') || 
                   fileName.toLowerCase().endsWith('.csv')
 
-  const arrayBuffer = await file.arrayBuffer()
+  let arrayBuffer
+  if (typeof file.arrayBuffer === 'function') {
+    arrayBuffer = await file.arrayBuffer()
+  } else {
+    arrayBuffer = await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = reject
+      reader.readAsArrayBuffer(file)
+    })
+  }
   const defaultGrade = Number(options.defaultGrade) || 3
   const examName = options.examName || ''
   const uploadDate = options.uploadDate || new Date()
@@ -438,6 +457,7 @@ async function parseMockExamPdf(arrayBuffer, options) {
   return {
     success: students.length > 0,
     formatType,
+    error: students.length === 0 ? '성적 데이터(학생 행)를 추출하지 못했습니다. 파일 양식을 확인해 주세요.' : undefined,
     meta: {
       fileName: options.fileName,
       totalTextItems,

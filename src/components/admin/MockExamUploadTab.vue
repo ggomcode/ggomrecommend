@@ -786,7 +786,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import {
   UploadCloud,
   FileSpreadsheet,
@@ -1204,7 +1204,7 @@ async function processIncomingFiles(files) {
 
   // 새 파일 목록 추가 (기존 파일이 있으면 덧붙임)
   for (const file of files) {
-    const itemObj = {
+    const itemObj = reactive({
       id: `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       file,
       name: file.name,
@@ -1216,7 +1216,7 @@ async function processIncomingFiles(files) {
       students: [],
       parsedExamName: selectedExam.value,
       parsedClass: ''
-    }
+    })
 
     fileList.value.push(itemObj)
 
@@ -1226,13 +1226,14 @@ async function processIncomingFiles(files) {
 }
 
 async function parseSingleItem(targetItem) {
+  const itemInList = fileList.value.find(f => f.id === targetItem.id) || targetItem
   try {
     // UI 스피너 즉각 노출을 위한 짧은 틱
     await new Promise(r => setTimeout(r, 50))
 
-    const parsePromise = parseMockExamReportFile(targetItem.file, {
-      defaultGrade: targetItem.selectedGrade,
-      examName: targetItem.selectedExam,
+    const parsePromise = parseMockExamReportFile(itemInList.file, {
+      defaultGrade: itemInList.selectedGrade,
+      examName: itemInList.selectedExam,
       uploadDate: now
     })
     const timeoutPromise = new Promise((_, reject) =>
@@ -1242,21 +1243,21 @@ async function parseSingleItem(targetItem) {
     const res = await Promise.race([parsePromise, timeoutPromise])
 
     if (!res || !res.success) {
-      targetItem.status = 'error'
-      targetItem.error = res?.error || '성적 데이터를 추출하지 못했습니다.'
+      itemInList.status = 'error'
+      itemInList.error = res?.error || '성적 데이터를 추출하지 못했습니다.'
     } else {
-      targetItem.status = 'success'
-      targetItem.students = res.students || []
-      targetItem.parsedExamName = targetItem.selectedExam || res.meta?.examName || ''
-      targetItem.parsedClass = res.meta?.classNum || ''
+      itemInList.status = 'success'
+      itemInList.students = res.students || []
+      itemInList.parsedExamName = itemInList.selectedExam || res.meta?.examName || ''
+      itemInList.parsedClass = res.meta?.classNum || ''
       if (res.meta?.grade) {
-        targetItem.selectedGrade = res.meta.grade
+        itemInList.selectedGrade = res.meta.grade
       }
     }
   } catch (err) {
-    console.error(`[Mock Parser] ${targetItem.name} 처리 오류:`, err)
-    targetItem.status = 'error'
-    targetItem.error = err.message || '파일 처리 중 오류가 발생했습니다.'
+    console.error(`[Mock Parser] ${itemInList.name} 처리 오류:`, err)
+    itemInList.status = 'error'
+    itemInList.error = err.message || '파일 처리 중 오류가 발생했습니다.'
   }
 }
 

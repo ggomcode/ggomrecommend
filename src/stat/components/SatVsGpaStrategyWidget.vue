@@ -2557,6 +2557,63 @@ watch(selectedAcademicYear, (newYear) => {
   }
 })
 
+// -------------------------------------------------------------
+// 2-1. 사탐런 모의고사 분석 상태 및 로직 (단일 통합 모드)
+// -------------------------------------------------------------
+const mockStats = ref(null)
+const studentFilter = ref('ALL') // 'ALL' | 'RUN_1' | 'RUN_2' | 'RUN_ALL' | 'KEPT'
+const studentSearch = ref('')
+
+const effectiveSatamStats = computed(() => {
+  if (mockStats.value && mockStats.value.naturalCohortCount > 0) {
+    return mockStats.value
+  }
+  return {
+    naturalCohortCount: 0,
+    appsBasedCohortCount: 0,
+    mockBasedCohortCount: 0,
+    totalRunCount: 0,
+    totalRunRate: '0.0',
+    run1Count: 0,
+    run1Rate: '0.0',
+    run2Count: 0,
+    run2Rate: '0.0',
+    keptCount: 0,
+    keptRate: '0.0',
+    popularSocialSubjects: [],
+    naturalCohort: []
+  }
+})
+
+const filteredCohortStudents = computed(() => {
+  if (!effectiveSatamStats.value?.naturalCohort) return []
+  let list = effectiveSatamStats.value.naturalCohort
+
+  if (studentFilter.value === 'RUN_1') {
+    list = list.filter(s => s.status === 'RUN_1')
+  } else if (studentFilter.value === 'RUN_2') {
+    list = list.filter(s => s.status === 'RUN_2')
+  } else if (studentFilter.value === 'RUN_ALL') {
+    list = list.filter(s => s.status === 'RUN_1' || s.status === 'RUN_2')
+  } else if (studentFilter.value === 'KEPT') {
+    list = list.filter(s => s.status === 'KEPT_SCIENCE')
+  }
+
+  if (studentSearch.value.trim()) {
+    const q = studentSearch.value.trim().toLowerCase()
+    list = list.filter(s =>
+      s.name.toLowerCase().includes(q) ||
+      String(s.classNum).includes(q) ||
+      (s.cohortBadgeText && s.cohortBadgeText.toLowerCase().includes(q)) ||
+      (s.cohortDetail && s.cohortDetail.toLowerCase().includes(q)) ||
+      s.socialSubjectsList.some(sub => sub.toLowerCase().includes(q)) ||
+      s.scienceSubjectsList.some(sub => sub.toLowerCase().includes(q))
+    )
+  }
+
+  return list
+})
+
 // 모의고사 성적 레코드 및 수시 지원 데이터 로드 시 사탐런 통계 자동 산출
 watch([mockExamRecords, applications, selectedAcademicYear], ([records, apps, yr]) => {
   mockStats.value = null
@@ -4156,63 +4213,6 @@ const gwatamChartOptions = {
   }
 }
 
-
-// -------------------------------------------------------------
-// 2-1. 사탐런 모의고사 분석 상태 및 로직 (단일 통합 모드)
-// -------------------------------------------------------------
-const mockStats = ref(null)
-const studentFilter = ref('ALL') // 'ALL' | 'RUN_1' | 'RUN_2' | 'RUN_ALL' | 'KEPT'
-const studentSearch = ref('')
-
-const effectiveSatamStats = computed(() => {
-  if (mockStats.value && mockStats.value.naturalCohortCount > 0) {
-    return mockStats.value
-  }
-  return {
-    naturalCohortCount: 0,
-    appsBasedCohortCount: 0,
-    mockBasedCohortCount: 0,
-    totalRunCount: 0,
-    totalRunRate: '0.0',
-    run1Count: 0,
-    run1Rate: '0.0',
-    run2Count: 0,
-    run2Rate: '0.0',
-    keptCount: 0,
-    keptRate: '0.0',
-    popularSocialSubjects: [],
-    naturalCohort: []
-  }
-})
-
-const filteredCohortStudents = computed(() => {
-  if (!effectiveSatamStats.value?.naturalCohort) return []
-  let list = effectiveSatamStats.value.naturalCohort
-
-  if (studentFilter.value === 'RUN_1') {
-    list = list.filter(s => s.status === 'RUN_1')
-  } else if (studentFilter.value === 'RUN_2') {
-    list = list.filter(s => s.status === 'RUN_2')
-  } else if (studentFilter.value === 'RUN_ALL') {
-    list = list.filter(s => s.status === 'RUN_1' || s.status === 'RUN_2')
-  } else if (studentFilter.value === 'KEPT') {
-    list = list.filter(s => s.status === 'KEPT_SCIENCE')
-  }
-
-  if (studentSearch.value.trim()) {
-    const q = studentSearch.value.trim().toLowerCase()
-    list = list.filter(s =>
-      s.name.toLowerCase().includes(q) ||
-      String(s.classNum).includes(q) ||
-      (s.cohortBadgeText && s.cohortBadgeText.toLowerCase().includes(q)) ||
-      (s.cohortDetail && s.cohortDetail.toLowerCase().includes(q)) ||
-      s.socialSubjectsList.some(sub => sub.toLowerCase().includes(q)) ||
-      s.scienceSubjectsList.some(sub => sub.toLowerCase().includes(q))
-    )
-  }
-
-  return list
-})
 
 // -------------------------------------------------------------
 // 3. 수능 최저 충족 실질 경쟁률 & 공교육 역전 전략 (4~6등급 집중 지원)
