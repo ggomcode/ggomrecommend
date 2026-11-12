@@ -23,30 +23,30 @@
 
       <!-- 통합 학년도 & 모집범위 & 새로고침 툴바 -->
       <div class="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/90 p-0.5 shadow-2xs shrink-0">
-        <!-- 1. 학년도 선택 드롭다운 (고1·2 분석 시 해당 학년 대입학년도로 고정 및 잠금) -->
+        <!-- 1. 학년도 선택 드롭다운 (고1·2 및 고입 분석 시 해당 학년 대입학년도로 고정 및 잠금) -->
         <div class="relative">
           <select
-            :value="displayedAdmissionYear"
-            :disabled="isLoadingYearData || isLowerGradeMode"
+            :value="lockedYearInfo.isLocked ? lockedYearInfo.admissionYear : selectedAcademicYear"
+            :disabled="isLoadingYearData || lockedYearInfo.isLocked"
             @change="e => handleYearChange(e.target.value)"
             :class="[
-              'appearance-none pl-2 pr-6 py-1 rounded-md text-xs font-black shadow-2xs focus:outline-none transition-colors',
-              isLowerGradeMode
+              'appearance-none pl-2.5 pr-6 py-1 rounded-md text-xs font-black shadow-2xs focus:outline-none transition-colors max-w-[260px] truncate',
+              lockedYearInfo.isLocked
                 ? 'bg-amber-50 text-amber-950 border border-amber-300/80 cursor-not-allowed select-none font-bold'
                 : 'bg-white text-amber-950 border border-amber-200/80 hover:border-amber-400 cursor-pointer disabled:opacity-60'
             ]"
-            :title="lowerGradeDropdownTitle"
+            :title="lockedYearInfo.title"
           >
-            <option v-if="isLowerGradeMode" :value="displayedAdmissionYear">
-              {{ displayedAdmissionYear }}학년도
+            <option v-if="lockedYearInfo.isLocked" :value="lockedYearInfo.admissionYear">
+              {{ lockedYearInfo.label }}
             </option>
             <template v-else>
               <option v-for="y in availableAcademicYears" :key="y" :value="y">
-                {{ y }}학년도
+                {{ y }}학년도 대입 ({{ Number(y) - 1 }}학년도 고3)
               </option>
             </template>
           </select>
-          <span v-if="isLowerGradeMode" class="absolute right-1.5 top-1/2 -translate-y-1/2 text-amber-700 pointer-events-none text-[10px]" title="해당 학년 대입학년도 고정">
+          <span v-if="lockedYearInfo.isLocked" class="absolute right-1.5 top-1/2 -translate-y-1/2 text-amber-700 pointer-events-none text-[10px]" :title="lockedYearInfo.title">
             🔒
           </span>
           <svg v-else class="w-3 h-3 text-amber-700 pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,7 +253,7 @@ const props = defineProps({
 import KcueYearSheetModal from './KcueYearSheetModal.vue'
 import PromotionProcessModal from './modals/PromotionProcessModal.vue'
 import { useRouter } from 'vue-router'
-import { useStatData, getGradeAdmissionYear } from '../composables/useStatData'
+import { useStatData, getGradeAdmissionYear, getCurrentAcademicYear } from '../composables/useStatData'
 import { schoolName } from '../../utils/schoolConfig'
 import { getKcueSheetId } from '../../api/statApi'
 
@@ -303,21 +303,49 @@ const targetGradeNumber = computed(() => {
   return null
 })
 
-const isLowerGradeMode = computed(() => targetGradeNumber.value !== null)
+const lockedYearInfo = computed(() => {
+  const tabId = props.currentTabItem?.id
+  // 현재 학사연도 (2026.11 기준 2026학년도 학사)
+  const currentAcademicSchoolYear = Number(getCurrentAcademicYear()) - 1
 
-const displayedAdmissionYear = computed(() => {
-  if (targetGradeNumber.value) {
-    return getGradeAdmissionYear(targetGradeNumber.value)
+  if (tabId === 'grade2Analysis' || tabId === 'preExamineeStrategy') {
+    const admYear = currentAcademicSchoolYear + 2 // 2028
+    return {
+      isLocked: true,
+      admissionYear: String(admYear),
+      label: `${admYear}학년도 대입 (${currentAcademicSchoolYear}학년도 고2)`,
+      title: `고2 대입 분석: ${admYear}학년도 대입 (${currentAcademicSchoolYear}학년도 고2)으로 고정됩니다. (변경 불가)`
+    }
   }
-  return selectedAcademicYear.value
+  if (tabId === 'grade1Analysis') {
+    const admYear = currentAcademicSchoolYear + 3 // 2029
+    return {
+      isLocked: true,
+      admissionYear: String(admYear),
+      label: `${admYear}학년도 대입 (${currentAcademicSchoolYear}학년도 고1)`,
+      title: `고1 대입 분석: ${admYear}학년도 대입 (${currentAcademicSchoolYear}학년도 고1)으로 고정됩니다. (변경 불가)`
+    }
+  }
+  if (tabId === 'admission') {
+    const admYear = currentAcademicSchoolYear + 4 // 2030
+    return {
+      isLocked: true,
+      admissionYear: String(admYear),
+      label: `${admYear}학년도 대입 (${currentAcademicSchoolYear}학년도 중3)`,
+      title: `고입 설명회: ${admYear}학년도 대입 (${currentAcademicSchoolYear}학년도 중3)으로 고정됩니다. (변경 불가)`
+    }
+  }
+  return {
+    isLocked: false,
+    admissionYear: selectedAcademicYear.value,
+    label: `${selectedAcademicYear.value}학년도 대입 (${Number(selectedAcademicYear.value) - 1}학년도 고3)`,
+    title: '대입 학년도 선택'
+  }
 })
 
-const lowerGradeDropdownTitle = computed(() => {
-  if (targetGradeNumber.value) {
-    return `고${targetGradeNumber.value} 대입 분석: 해당 학년의 대입 학년도인 ${displayedAdmissionYear.value}학년도로 고정됩니다. (변경 불가)`
-  }
-  return '대입 학년도 선택'
-})
+const isLowerGradeMode = computed(() => lockedYearInfo.value.isLocked)
+const displayedAdmissionYear = computed(() => lockedYearInfo.value.admissionYear)
+const lowerGradeDropdownTitle = computed(() => lockedYearInfo.value.title)
 
 async function handlePromotionApplied(promotedRecords) {
   isPromotionModalOpen.value = false

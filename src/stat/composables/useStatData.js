@@ -166,6 +166,296 @@ export async function loadMockExamData(forceReload = false, targetYear = null) {
   }
 }
 
+// ==========================================================
+// 📈 3개년 코호트 모의고사 성적 추적 & 비교분석 상태 및 로더
+// ==========================================================
+export const cohortTrackingData = ref({
+  currentGrade: 2,
+  admissionYear: '2028',
+  academicSchoolYear: '2026',
+  sheetsInfo: [],
+  recordsByGrade: { 1: [], 2: [], 3: [] },
+  studentsTimeline: [],
+  summary: {
+    totalStudents: 0,
+    trackedMultiYearCount: 0,
+    improvedCount: 0,
+    maintainedCount: 0,
+    declinedCount: 0,
+    grade1Avg: { kor: '-', math: '-', eng: '-', inq: '-', hist: '-', overall: '-' },
+    grade2Avg: { kor: '-', math: '-', eng: '-', inq: '-', hist: '-', overall: '-' },
+    grade3Avg: { kor: '-', math: '-', eng: '-', inq: '-', hist: '-', overall: '-' },
+    deltas: { kor: null, math: null, eng: null, inq: null, overall: null }
+  }
+})
+export const isLoadingCohortTracking = ref(false)
+
+/**
+ * 코호트 모의고사 성적 데이터 비동기 로드 및 비교분석
+ * - 고2(2028대입): 고1(2026모의결과) ➔ 고2(2027모의결과) 2개년 성적만 비교 (고3 때는 고3 메뉴 사용)
+ * - 고1(2029대입): 해당 학년도 고1(2027모의결과) 모의고사 성적만 회차별 분석 (내년에 고2가 되면 고2 메뉴 사용)
+ * @param {number} targetGrade 현재 학년 (2: 고2 - 2028대입, 1: 고1 - 2029대입)
+ * @param {boolean} forceReload 강제 재로드 여부
+ */
+export async function loadCohortMockTracking(targetGrade = 2, forceReload = false) {
+  isLoadingCohortTracking.value = true
+  try {
+    const sheetId = await getKcueSheetId()
+    const baseSchoolYear = Number(getCurrentAcademicYear()) - 1 // 2026
+
+    let yearConfigs = []
+    let admYear = ''
+
+    if (Number(targetGrade) === 2) {
+      admYear = String(baseSchoolYear + 2) // '2028'
+      const g1Year = String(baseSchoolYear) // '2026'
+      const g2Year = String(baseSchoolYear + 1) // '2027'
+      yearConfigs = [
+        { gradeNum: 1, label: '고1 성적', year: g1Year, tabName: `${g1Year}모의결과` },
+        { gradeNum: 2, label: '고2 성적 (현재)', year: g2Year, tabName: `${g2Year}모의결과` }
+      ]
+    } else {
+      // 고1의 경우 해당 학년도 고1 성적만 단일 연동
+      admYear = String(baseSchoolYear + 3) // '2029'
+      const g1Year = String(baseSchoolYear + 1) // '2027'
+      yearConfigs = [
+        { gradeNum: 1, label: '고1 성적 (현재)', year: g1Year, tabName: `${g1Year}모의결과` }
+      ]
+    }
+
+    const sheetsInfo = []
+    const recordsByGrade = { 1: [], 2: [] }
+
+    for (const conf of yearConfigs) {
+      try {
+        const records = await fetchAndParseKcueMockData(sheetId, null, null, forceReload, conf.year)
+        if (records && records.length > 0) {
+          sheetsInfo.push({
+            grade: conf.gradeNum,
+            label: conf.label,
+            year: conf.year,
+            tabName: conf.tabName,
+            count: records.length,
+            status: 'connected'
+          })
+
+          records.forEach(r => {
+            const rGrade = Number(r.grade)
+            if (conf.gradeNum === 1) {
+              recordsByGrade[1].push({ ...r, cohortGrade: 1, sheetYear: conf.year })
+            } else if (conf.gradeNum === 2) {
+              if (rGrade === 2 || !rGrade) {
+                recordsByGrade[2].push({ ...r, cohortGrade: 2, sheetYear: conf.year })
+              } else if (rGrade === 1 && recordsByGrade[1].length === 0) {
+                recordsByGrade[1].push({ ...r, cohortGrade: 1, sheetYear: conf.year })
+              }
+            }
+          })
+        } else {
+          sheetsInfo.push({
+            grade: conf.gradeNum,
+            label: conf.label,
+            year: conf.year,
+            tabName: conf.tabName,
+            count: 0,
+            status: 'empty'
+          })
+        }
+      } catch (err) {
+        sheetsInfo.push({
+          grade: conf.gradeNum,
+          label: conf.label,
+          year: conf.year,
+          tabName: conf.tabName,
+          count: 0,
+          status: 'empty'
+        })
+      }
+    }
+
+    // 학생별 타임라인 매핑 (이름 기준)
+    const studentMap = new Map()
+
+    const addRecordToStudent = (r, gNum) => {
+      const name = String(r.name || '').trim()
+      if (!name) return
+      if (!studentMap.has(name)) {
+        studentMap.set(name, {
+          name,
+          classNum: r.classNum || '',
+          studentNum: r.studentNum || '',
+          grade1Exams: [],
+          grade2Exams: []
+        })
+      }
+      const st = studentMap.get(name)
+      if (r.classNum) st.classNum = r.classNum
+      if (r.studentNum) st.studentNum = r.studentNum
+      if (gNum === 1) st.grade1Exams.push(r)
+      else if (gNum === 2) st.grade2Exams.push(r)
+    }
+
+    recordsByGrade[1].forEach(r => addRecordToStudent(r, 1))
+    if (recordsByGrade[2]) {
+      recordsByGrade[2].forEach(r => addRecordToStudent(r, 2))
+    }
+
+    // 평균 등급 계산 헬퍼
+    const calcAvg = (exams, key) => {
+      const valid = exams.map(e => e[key]).filter(v => v !== null && v !== undefined && !isNaN(v) && Number(v) > 0)
+      if (valid.length === 0) return null
+      const sum = valid.reduce((a, b) => a + Number(b), 0)
+      return Math.round((sum / valid.length) * 100) / 100
+    }
+
+    const calcOverall = (kor, math, eng, inq1, inq2) => {
+      const parts = [kor, math, eng, inq1, inq2].filter(v => v !== null && v !== undefined && !isNaN(v) && Number(v) > 0)
+      if (parts.length === 0) return null
+      const sum = parts.reduce((a, b) => a + Number(b), 0)
+      return Math.round((sum / parts.length) * 100) / 100
+    }
+
+    const studentsTimeline = []
+    let improvedCount = 0
+    let maintainedCount = 0
+    let declinedCount = 0
+    let trackedMultiYearCount = 0
+
+    studentMap.forEach((st) => {
+      const sortExams = (arr) => arr.sort((a, b) => (Number(a.monthOrder) || 0) - (Number(b.monthOrder) || 0))
+      st.grade1Exams = sortExams(st.grade1Exams)
+      st.grade2Exams = sortExams(st.grade2Exams)
+
+      // 고1 평균
+      const g1Kor = calcAvg(st.grade1Exams, 'korGrade')
+      const g1Math = calcAvg(st.grade1Exams, 'mathGrade')
+      const g1Eng = calcAvg(st.grade1Exams, 'engGrade')
+      const g1Hist = calcAvg(st.grade1Exams, 'histGrade')
+      const g1Inq1 = calcAvg(st.grade1Exams, 'inq1Grade')
+      const g1Inq2 = calcAvg(st.grade1Exams, 'inq2Grade')
+      const g1Inq = (g1Inq1 && g1Inq2) ? Math.round(((g1Inq1 + g1Inq2) / 2) * 100) / 100 : (g1Inq1 || g1Inq2 || null)
+      const g1Overall = calcOverall(g1Kor, g1Math, g1Eng, g1Inq1, g1Inq2)
+
+      // 고2 평균
+      const g2Kor = calcAvg(st.grade2Exams, 'korGrade')
+      const g2Math = calcAvg(st.grade2Exams, 'mathGrade')
+      const g2Eng = calcAvg(st.grade2Exams, 'engGrade')
+      const g2Hist = calcAvg(st.grade2Exams, 'histGrade')
+      const g2Inq1 = calcAvg(st.grade2Exams, 'inq1Grade')
+      const g2Inq2 = calcAvg(st.grade2Exams, 'inq2Grade')
+      const g2Inq = (g2Inq1 && g2Inq2) ? Math.round(((g2Inq1 + g2Inq2) / 2) * 100) / 100 : (g2Inq1 || g2Inq2 || null)
+      const g2Overall = calcOverall(g2Kor, g2Math, g2Eng, g2Inq1, g2Inq2)
+
+      // 고1 ➔ 고2 비교
+      let deltaOverall = null
+      let trend = 'SINGLE'
+      if (g1Overall !== null && g2Overall !== null) {
+        trackedMultiYearCount++
+        deltaOverall = Math.round((g1Overall - g2Overall) * 100) / 100
+        if (deltaOverall >= 0.1) {
+          trend = 'UP'
+          improvedCount++
+        } else if (deltaOverall <= -0.1) {
+          trend = 'DOWN'
+          declinedCount++
+        } else {
+          trend = 'SAME'
+          maintainedCount++
+        }
+      }
+
+      const calcDelta = (b, c) => (b !== null && c !== null) ? Math.round((b - c) * 100) / 100 : null
+
+      studentsTimeline.push({
+        ...st,
+        g1: { kor: g1Kor, math: g1Math, eng: g1Eng, hist: g1Hist, inq: g1Inq, overall: g1Overall },
+        g2: { kor: g2Kor, math: g2Math, eng: g2Eng, hist: g2Hist, inq: g2Inq, overall: g2Overall },
+        deltas: {
+          kor: calcDelta(g1Kor, g2Kor),
+          math: calcDelta(g1Math, g2Math),
+          eng: calcDelta(g1Eng, g2Eng),
+          inq: calcDelta(g1Inq, g2Inq),
+          overall: deltaOverall
+        },
+        trend
+      })
+    })
+
+    studentsTimeline.sort((a, b) => {
+      const cA = Number(a.classNum) || 99
+      const cB = Number(b.classNum) || 99
+      if (cA !== cB) return cA - cB
+      const nA = Number(a.studentNum) || 99
+      const nB = Number(b.studentNum) || 99
+      return nA - nB
+    })
+
+    const cohortAvg = (items, path) => {
+      const vals = items.map(it => path(it)).filter(v => v !== null && v !== undefined && !isNaN(v))
+      if (vals.length === 0) return '-'
+      const sum = vals.reduce((a, b) => a + Number(b), 0)
+      return (sum / vals.length).toFixed(2)
+    }
+
+    const g1Avg = {
+      kor: cohortAvg(studentsTimeline, s => s.g1.kor),
+      math: cohortAvg(studentsTimeline, s => s.g1.math),
+      eng: cohortAvg(studentsTimeline, s => s.g1.eng),
+      inq: cohortAvg(studentsTimeline, s => s.g1.inq),
+      hist: cohortAvg(studentsTimeline, s => s.g1.hist),
+      overall: cohortAvg(studentsTimeline, s => s.g1.overall)
+    }
+
+    const g2Avg = {
+      kor: cohortAvg(studentsTimeline, s => s.g2.kor),
+      math: cohortAvg(studentsTimeline, s => s.g2.math),
+      eng: cohortAvg(studentsTimeline, s => s.g2.eng),
+      inq: cohortAvg(studentsTimeline, s => s.g2.inq),
+      hist: cohortAvg(studentsTimeline, s => s.g2.hist),
+      overall: cohortAvg(studentsTimeline, s => s.g2.overall)
+    }
+
+    const cohortDelta = (a1, a2) => {
+      if (a1 === '-' || a2 === '-') return null
+      return Math.round((Number(a1) - Number(a2)) * 100) / 100
+    }
+
+    const deltas = {
+      kor: cohortDelta(g1Avg.kor, g2Avg.kor),
+      math: cohortDelta(g1Avg.math, g2Avg.math),
+      eng: cohortDelta(g1Avg.eng, g2Avg.eng),
+      inq: cohortDelta(g1Avg.inq, g2Avg.inq),
+      overall: cohortDelta(g1Avg.overall, g2Avg.overall)
+    }
+
+    cohortTrackingData.value = {
+      currentGrade: Number(targetGrade),
+      admissionYear: admYear,
+      academicSchoolYear: String(baseSchoolYear),
+      sheetsInfo,
+      recordsByGrade,
+      studentsTimeline,
+      summary: {
+        totalStudents: studentsTimeline.length,
+        trackedMultiYearCount,
+        improvedCount,
+        maintainedCount,
+        declinedCount,
+        grade1Avg: g1Avg,
+        grade2Avg: g2Avg,
+        deltas
+      }
+    }
+
+    return cohortTrackingData.value
+  } catch (err) {
+    console.error('[useStatData] loadCohortMockTracking error:', err)
+    return null
+  } finally {
+    isLoadingCohortTracking.value = false
+  }
+}
+
 // Academic Year State & Multi-Year Sheet Management
 const currentAcademicYear = getCurrentAcademicYear() // 오늘(2026.11 기준) '2027' 대입
 const savedYear = localStorage.getItem('pcm_stat_selected_year')
@@ -1351,7 +1641,10 @@ export function useStatData() {
     loadCsatMinScoreData,
     csatPassRateTable,
     isLoadingCsatPassRate,
-    loadCsatPassRateData
+    loadCsatPassRateData,
+    cohortTrackingData,
+    isLoadingCohortTracking,
+    loadCohortMockTracking
   }
 }
 
