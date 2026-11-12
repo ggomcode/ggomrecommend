@@ -1230,11 +1230,16 @@ async function parseSingleItem(targetItem) {
     // UI 스피너 즉각 노출을 위한 짧은 틱
     await new Promise(r => setTimeout(r, 50))
 
-    const res = await parseMockExamReportFile(targetItem.file, {
+    const parsePromise = parseMockExamReportFile(targetItem.file, {
       defaultGrade: targetItem.selectedGrade,
       examName: targetItem.selectedExam,
       uploadDate: now
     })
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('파일 분석 시간이 초과되었습니다 (15초). 파일 형식을 확인해 주세요.')), 15000)
+    )
+
+    const res = await Promise.race([parsePromise, timeoutPromise])
 
     if (!res || !res.success) {
       targetItem.status = 'error'

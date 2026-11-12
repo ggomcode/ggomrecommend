@@ -1,11 +1,14 @@
 import * as pdfjsLib from 'pdfjs-dist'
 import * as XLSX from 'xlsx'
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.js?url'
 
-// PDF.js 워커 설정 (Vite 번들 로컬 워커 우선 적용)
+// PDF.js 워커 및 CMap 설정 (검증된 cdnjs 공식 CDN 적용 - Vite 빌드 번들링 및 CJK 한글 폰트 완벽 지원)
+const PDFJS_VERSION = '3.11.174'
+const PDF_WORKER_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.js`
+const PDF_CMAP_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/cmaps/`
+
 if (typeof window !== 'undefined') {
   try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL
   } catch (_) {
     // fallback
   }
@@ -290,24 +293,27 @@ async function parseMockExamPdf(arrayBuffer, options) {
   try {
     const loadingTask = pdfjsLib.getDocument({
       data: new Uint8Array(arrayBuffer),
+      cMapUrl: PDF_CMAP_URL,
       cMapPacked: true,
       stopAtErrors: false
     })
-    // 3.5초 타임아웃 레이스로 워커 먹통/Hang 완벽 차단
+    // 4초 타임아웃 레이스로 워커 먹통/Hang 완벽 차단
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('PDF 로드 시간 초과 (3.5초)')), 3500)
+      setTimeout(() => reject(new Error('PDF 로드 시간 초과 (4초)')), 4000)
     )
     doc = await Promise.race([loadingTask.promise, timeoutPromise])
   } catch (err) {
-    console.warn('[mockExamReportParser] PDF 로드 1차 실패, 메인 스레드 모드로 재시도:', err)
+    console.warn('[mockExamReportParser] PDF 로드 1차 실패, fallback 재시도:', err)
     try {
       const fallbackTask = pdfjsLib.getDocument({ 
         data: new Uint8Array(arrayBuffer),
+        cMapUrl: PDF_CMAP_URL,
+        cMapPacked: true,
         disableFontFace: true,
         stopAtErrors: false
       })
       const timeoutPromise2 = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('PDF 로드 최종 시간 초과 (2.5초)')), 2500)
+        setTimeout(() => reject(new Error('PDF 로드 최종 시간 초과 (3초)')), 3000)
       )
       doc = await Promise.race([fallbackTask.promise, timeoutPromise2])
     } catch (err2) {
@@ -323,13 +329,27 @@ async function parseMockExamPdf(arrayBuffer, options) {
 
   const allRowCells = []
   const allRawTextItems = []
+  const pageItemsList = []
   let totalTextItems = 0
 
   for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
-    const page = await doc.getPage(pageNum)
-    const content = await page.getTextContent()
+    let content = null
+    try {
+      const page = await doc.getPage(pageNum)
+      const pageTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`PDF ${pageNum}페이지 텍스트 추출 시간 초과 (5초)`)), 5000)
+      )
+      content = await Promise.race([page.getTextContent(), pageTimeout])
+    } catch (pageErr) {
+      console.warn(`[mockExamReportParser] ${pageNum}페이지 텍스트 추출 건너뜀:`, pageErr)
+      continue
+    }
+
+    if (!content || !content.items) continue
+
     totalTextItems += content.items.length
     allRawTextItems.push(...content.items)
+    pageItemsList.push(content.items)
 
     // Y 좌표별로 항목 수집
     const rows = {}
@@ -390,19 +410,18 @@ async function parseMockExamPdf(arrayBuffer, options) {
 
   // 3. 양식 자동 분류 (공백 제거 텍스트 기준 판별)
   const fullTextClean = allRawTextItems.map(it => it.str || '').join('').replace(/\s+/g, '')
-  const isKiceReport = fullTextClean.includes('대학수학능력시험') || 
-                       fullTextClean.includes('모의평가성적일람표') || 
-                       allRawTextItems.some(it => /^\d{9}$/.test(it.str?.trim()))
-  const isMoeReport = fullTextClean.includes('전국연합학력평가') || 
-                      fullTextClean.includes('성적일람표1(학급별)') ||
-                      (!isKiceReport && allRowCells.some(r => r.cells.length >= 10 && /^\d{1,2}$/.test(r.cells[0]) && /^[가-힣]{2,4}$/.test(r.cells[1])))
+  const isExplicitMoe = fullTextClean.includes('전국연합학력평가') || fullTextClean.includes('성적일람표1(학급별)')
+  const isExplicitKice = fullTextClean.includes('대학수학능력시험') || fullTextClean.includes('모의평가성적일람표')
+
+  const isKiceReport = !isExplicitMoe && (isExplicitKice || allRawTextItems.some(it => /^\d{9}$/.test(it.str?.trim())))
+  const isMoeReport = isExplicitMoe || (!isKiceReport && allRowCells.some(r => r.cells.length >= 10 && /^\d{1,2}$/.test(r.cells[0]) && /^[가-힣]{2,4}$/.test(r.cells[1])))
 
   let students = []
   let formatType = 'UNKNOWN'
 
   if (isKiceReport) {
     formatType = 'KICE_MOCK_EVALUATION' // 평가원 모평 (6모·9모: 수험번호 9자리 + 4행 블록 구조)
-    students = parseKicePages(doc, {
+    students = parseKicePages(pageItemsList, {
       grade: effectiveGrade,
       classNum: effectiveClass,
       examName: effectiveExamName
@@ -424,7 +443,7 @@ async function parseMockExamPdf(arrayBuffer, options) {
     })
   }
 
-  // parseKicePages가 비동기이므로 await 처리 필요
+  // Promise인 경우 안전하게 await
   if (students instanceof Promise) {
     students = await students
   }
@@ -642,7 +661,7 @@ function parseMoeClusteredRows(allRowCells, defaultMeta) {
  * - 1페이지당 약 10명의 학생이 4개 행(선택과목 / 표준점수 / 백분위 / 등급) 블록으로 배치됨
  * - 9자리 수험번호(시도학교+반2자리+번호2자리) 및 성명, 7개 영역 정밀 추출
  */
-async function parseKicePages(doc, defaultMeta) {
+function parseKicePages(pageItemsList = [], defaultMeta = {}) {
   const students = []
   const parseNum = (v) => {
     if (!v || v === '-') return null
@@ -652,10 +671,9 @@ async function parseKicePages(doc, defaultMeta) {
 
   const isLabel = (w) => ['선','택','과','목','선택과목','표','준','점','수','표준점수','백','분','위','백분위','등','급','등급'].includes(w)
 
-  for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
-    const page = await doc.getPage(pageNum)
-    const content = await page.getTextContent()
-    const items = content.items.filter(it => it.str && it.str.trim() !== '')
+  for (let pageIdx = 0; pageIdx < pageItemsList.length; pageIdx++) {
+    const rawItems = pageItemsList[pageIdx] || []
+    const items = rawItems.filter(it => it.str && it.str.trim() !== '')
 
     // Y좌표 그룹핑 (tolerance 4pt)
     const rows = []
