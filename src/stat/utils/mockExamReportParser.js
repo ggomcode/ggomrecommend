@@ -452,9 +452,13 @@ async function parseMockExamPdf(arrayBuffer, options) {
 
 /**
  * 교육청 전국연합학력평가 클러스터링 셀 파싱 (1행 = 1학생)
+ * - 1학년 양식: 국/수 선택과목 없음(공통), 영어, 한국사, 사회, 과학 (20개 컬럼, 직탐·제2외국어 없음)
+ * - 2학년 양식: 국/수 선택과목 없음(공통), 영어, 한국사, 사탐, 과탐, 직탐, 제2외국어 (26개 컬럼)
+ * - 3학년 양식: 국어(선택), 수학(선택), 영어, 한국사, 제1선택, 제2선택, 제2외국어 (26개 컬럼)
  */
 function parseMoeClusteredRows(allRowCells, defaultMeta) {
   const students = []
+  const targetGrade = Number(defaultMeta.grade) || 3
 
   for (const rowObj of allRowCells) {
     const rawC = rowObj.cells
@@ -474,15 +478,6 @@ function parseMoeClusteredRows(allRowCells, defaultMeta) {
     const studentNum = Number(c[0])
     const name = c[1]
 
-    // 인덱스 기반 과목 매핑
-    // [0]: 번호, [1]: 성명
-    // [2]: 국어과목, [3]: 국어표점, [4]: 국어석차, [5]: 국어백분위, [6]: 국어등급
-    // [7]: 수학과목, [8]: 수학표점, [9]: 수학석차, [10]: 수학백분위, [11]: 수학등급
-    // [12]: 영어등급, [13]: 한국사등급
-    // [14]: 탐구1과목, [15]: 탐구1표점, [16]: 탐구1석차, [17]: 탐구1백분위, [18]: 탐구1등급
-    // [19]: 탐구2과목, [20]: 탐구2표점, [21]: 탐구2석차, [22]: 탐구2백분위, [23]: 탐구2등급
-    // [24]: 제2외과목, [25]: 제2외등급
-
     const parseNum = (v) => {
       if (v === undefined || v === null || v === '-' || v === '') return null
       const clean = String(v).replace(/[^0-9.]/g, '')
@@ -490,39 +485,153 @@ function parseMoeClusteredRows(allRowCells, defaultMeta) {
       return isNaN(n) ? null : n
     }
 
-    students.push({
-      grade: defaultMeta.grade,
-      classNum: defaultMeta.classNum,
-      studentNum,
-      name,
-      studentKey: `${defaultMeta.grade || 3}-${defaultMeta.classNum}-${studentNum}_${name}`,
-      legacyStudentKey: `${defaultMeta.classNum}-${studentNum}_${name}`,
-      examName: defaultMeta.examName,
-      korSubject: c[2] || '화법과작문',
-      korStandardScore: parseNum(c[3]),
-      korSchoolRank: parseNum(c[4]),
-      korPercentile: parseNum(c[5]),
-      korGrade: parseNum(c[6]),
-      mathSubject: c[7] || '확률과통계',
-      mathStandardScore: parseNum(c[8]),
-      mathSchoolRank: parseNum(c[9]),
-      mathPercentile: parseNum(c[10]),
-      mathGrade: parseNum(c[11]),
-      engGrade: parseNum(c[12]),
-      histGrade: parseNum(c[13]),
-      inquiry1: c[14] || '',
-      inq1StandardScore: parseNum(c[15]),
-      inq1SchoolRank: parseNum(c[16]),
-      inq1Percentile: parseNum(c[17]),
-      inq1Grade: parseNum(c[18]),
-      inquiry2: c[19] || '',
-      inq2StandardScore: parseNum(c[20]),
-      inq2SchoolRank: parseNum(c[21]),
-      inq2Percentile: parseNum(c[22]),
-      inq2Grade: parseNum(c[23]),
-      secondLangSubject: c[24] || '-',
-      secondLangGrade: parseNum(c[25])
-    })
+    // 학년별 양식 판별
+    // 1) 3학년 판별: c[2]가 한글 선택과목명이거나 (targetGrade === 3 이고 c[2]가 텍스트)
+    const isGrade3Format = (c[2] && /[가-힣]/.test(c[2])) || (targetGrade === 3 && c.length >= 25 && isNaN(Number(c[2])))
+
+    // 2) 1학년 판별: targetGrade === 1 이거나 (직탐/제2외가 없어 전체 컬럼 수가 22개 이하)
+    const isGrade1Format = !isGrade3Format && (targetGrade === 1 || c.length <= 22)
+
+    let studentData = null
+
+    if (isGrade3Format) {
+      // ─────────────────────────────────────────────────────────────
+      // [3학년 양식] (26개 컬럼 규격)
+      // c[0]: 번호, c[1]: 성명
+      // c[2~6]: 국어 선택과목, 표점, 석차, 백분위, 등급
+      // c[7~11]: 수학 선택과목, 표점, 석차, 백분위, 등급
+      // c[12]: 영어등급, c[13]: 한국사등급
+      // c[14~18]: 탐구1 과목명, 표점, 석차, 백분위, 등급
+      // c[19~23]: 탐구2 과목명, 표점, 석차, 백분위, 등급
+      // c[24~25]: 제2외국어 과목명, 등급
+      // ─────────────────────────────────────────────────────────────
+      studentData = {
+        grade: defaultMeta.grade || 3,
+        classNum: defaultMeta.classNum,
+        studentNum,
+        name,
+        studentKey: `${defaultMeta.grade || 3}-${defaultMeta.classNum}-${studentNum}_${name}`,
+        legacyStudentKey: `${defaultMeta.classNum}-${studentNum}_${name}`,
+        examName: defaultMeta.examName,
+        korSubject: c[2] || '',
+        korStandardScore: parseNum(c[3]),
+        korSchoolRank: parseNum(c[4]),
+        korPercentile: parseNum(c[5]),
+        korGrade: parseNum(c[6]),
+        mathSubject: c[7] || '',
+        mathStandardScore: parseNum(c[8]),
+        mathSchoolRank: parseNum(c[9]),
+        mathPercentile: parseNum(c[10]),
+        mathGrade: parseNum(c[11]),
+        engGrade: parseNum(c[12]),
+        histGrade: parseNum(c[13]),
+        inquiry1: c[14] || '',
+        inq1StandardScore: parseNum(c[15]),
+        inq1SchoolRank: parseNum(c[16]),
+        inq1Percentile: parseNum(c[17]),
+        inq1Grade: parseNum(c[18]),
+        inquiry2: c[19] || '',
+        inq2StandardScore: parseNum(c[20]),
+        inq2SchoolRank: parseNum(c[21]),
+        inq2Percentile: parseNum(c[22]),
+        inq2Grade: parseNum(c[23]),
+        secondLangSubject: (c[24] && c[24] !== '-') ? c[24] : '',
+        secondLangGrade: parseNum(c[25])
+      }
+    } else if (isGrade1Format) {
+      // ─────────────────────────────────────────────────────────────
+      // [1학년 양식] (20개 컬럼 규격)
+      // c[0]: 번호, c[1]: 성명
+      // c[2~5]: 국어 표점, 석차, 백분위, 등급 (선택과목 없음 -> 빈칸)
+      // c[6~9]: 수학 표점, 석차, 백분위, 등급 (선택과목 없음 -> 빈칸)
+      // c[10]: 영어등급, c[11]: 한국사등급
+      // c[12~15]: 사회 표점, 석차, 백분위, 등급 (제1선택 -> '통합사회')
+      // c[16~19]: 과학 표점, 석차, 백분위, 등급 (제2선택 -> '통합과학')
+      // (직탐 없음, 제2외국어 없음)
+      // ─────────────────────────────────────────────────────────────
+      studentData = {
+        grade: defaultMeta.grade || 1,
+        classNum: defaultMeta.classNum,
+        studentNum,
+        name,
+        studentKey: `${defaultMeta.grade || 1}-${defaultMeta.classNum}-${studentNum}_${name}`,
+        legacyStudentKey: `${defaultMeta.classNum}-${studentNum}_${name}`,
+        examName: defaultMeta.examName,
+        korSubject: '', // 국어 선택과목 빈칸
+        korStandardScore: parseNum(c[2]),
+        korSchoolRank: parseNum(c[3]),
+        korPercentile: parseNum(c[4]),
+        korGrade: parseNum(c[5]),
+        mathSubject: '', // 수학 선택과목 빈칸
+        mathStandardScore: parseNum(c[6]),
+        mathSchoolRank: parseNum(c[7]),
+        mathPercentile: parseNum(c[8]),
+        mathGrade: parseNum(c[9]),
+        engGrade: parseNum(c[10]),
+        histGrade: parseNum(c[11]),
+        inquiry1: '통합사회', // 제1선택: 사회 성적
+        inq1StandardScore: parseNum(c[12]),
+        inq1SchoolRank: parseNum(c[13]),
+        inq1Percentile: parseNum(c[14]),
+        inq1Grade: parseNum(c[15]),
+        inquiry2: '통합과학', // 제2선택: 과학 성적
+        inq2StandardScore: parseNum(c[16]),
+        inq2SchoolRank: parseNum(c[17]),
+        inq2Percentile: parseNum(c[18]),
+        inq2Grade: parseNum(c[19]),
+        secondLangSubject: '',
+        secondLangGrade: null
+      }
+    } else {
+      // ─────────────────────────────────────────────────────────────
+      // [2학년 양식] (26개 컬럼 규격)
+      // c[0]: 번호, c[1]: 성명
+      // c[2~5]: 국어 표점, 석차, 백분위, 등급 (선택과목 없음 -> 빈칸)
+      // c[6~9]: 수학 표점, 석차, 백분위, 등급 (선택과목 없음 -> 빈칸)
+      // c[10]: 영어등급, c[11]: 한국사등급
+      // c[12~15]: 사회탐구 표점, 석차, 백분위, 등급 (제1선택 -> '사회탐구')
+      // c[16~19]: 과학탐구 표점, 석차, 백분위, 등급 (제2선택 -> '과학탐구')
+      // c[20~23]: 직업탐구 표점, 석차, 백분위, 등급
+      // c[24~25]: 제2외국어/한문 선택과목, 등급
+      // ─────────────────────────────────────────────────────────────
+      studentData = {
+        grade: defaultMeta.grade || 2,
+        classNum: defaultMeta.classNum,
+        studentNum,
+        name,
+        studentKey: `${defaultMeta.grade || 2}-${defaultMeta.classNum}-${studentNum}_${name}`,
+        legacyStudentKey: `${defaultMeta.classNum}-${studentNum}_${name}`,
+        examName: defaultMeta.examName,
+        korSubject: '', // 국어 선택과목 빈칸
+        korStandardScore: parseNum(c[2]),
+        korSchoolRank: parseNum(c[3]),
+        korPercentile: parseNum(c[4]),
+        korGrade: parseNum(c[5]),
+        mathSubject: '', // 수학 선택과목 빈칸
+        mathStandardScore: parseNum(c[6]),
+        mathSchoolRank: parseNum(c[7]),
+        mathPercentile: parseNum(c[8]),
+        mathGrade: parseNum(c[9]),
+        engGrade: parseNum(c[10]),
+        histGrade: parseNum(c[11]),
+        inquiry1: '사회탐구', // 제1선택: 사회 성적
+        inq1StandardScore: parseNum(c[12]),
+        inq1SchoolRank: parseNum(c[13]),
+        inq1Percentile: parseNum(c[14]),
+        inq1Grade: parseNum(c[15]),
+        inquiry2: '과학탐구', // 제2선택: 과학 성적
+        inq2StandardScore: parseNum(c[16]),
+        inq2SchoolRank: parseNum(c[17]),
+        inq2Percentile: parseNum(c[18]),
+        inq2Grade: parseNum(c[19]),
+        secondLangSubject: (c[24] && c[24] !== '-') ? c[24] : '',
+        secondLangGrade: parseNum(c[25])
+      }
+    }
+
+    if (studentData) {
+      students.push(studentData)
+    }
   }
 
   return students

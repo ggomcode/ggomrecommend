@@ -6,7 +6,7 @@
         <div>
           <div class="flex items-center gap-2 mb-1.5">
             <span class="px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 text-[11px] font-bold">
-              1·2·3학년 전 학년 엑셀 등록
+              1·2·3학년 PDF/엑셀 성적일람표 등록
             </span>
             <span class="px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 text-[11px] font-mono font-bold">
               {{ autoAdmissionYear }}학년도 대입 연동
@@ -17,8 +17,8 @@
             <span>모의고사 성적일람표 등록</span>
           </h1>
           <p class="text-xs text-slate-300 mt-2 m-0 leading-relaxed max-w-2xl">
-            대교협 상담프로그램에서 추출한 <strong>전교생 모의고사 엑셀 파일(.xlsx)</strong>을 업로드하여 1·2·3학년 전체 성적을 한 번에 등록합니다.<br class="hidden sm:inline" />
-            1학년, 2학년, 3학년 모두 동일한 방식으로 등록되며, <code class="px-1.5 py-0.5 rounded bg-indigo-800/80 text-amber-300 font-mono font-bold">{{ targetSheetName }}</code> 시트에 학년별로 통합 분류 적재됩니다.
+            <strong>1·2학년</strong>은 학급별 <strong>성적일람표 PDF(.pdf)</strong>를 업로드하면 자동 파싱(국/수 공통과목, 제1선택 사탐, 제2선택 과탐)되어 시트 규격으로 등록됩니다.<br class="hidden sm:inline" />
+            <strong>3학년</strong>은 대교협 엑셀(.xlsx) 또는 성적일람표 PDF를 등록할 수 있으며, 모두 원본 시트의 <code class="px-1.5 py-0.5 rounded bg-indigo-800/80 text-amber-300 font-mono font-bold">{{ targetSheetName }}</code> 탭에 학년별로 안전하게 적재됩니다.
           </p>
         </div>
 
@@ -518,7 +518,7 @@
         </div>
       </div>
 
-      <!-- 3-2. 단일 엑셀 파일 드래그앤드롭 영역 (Drag & Drop Zone) -->
+      <!-- 3-2. 성적 파일(PDF 또는 엑셀) 드래그앤드롭 영역 (Drag & Drop Zone) -->
       <div
         @dragover.prevent="isDragging = true"
         @dragleave.prevent="isDragging = false"
@@ -534,7 +534,8 @@
         <input
           ref="fileInputRef"
           type="file"
-          accept=".xlsx,.xls,.csv"
+          accept=".pdf,.xlsx,.xls,.csv"
+          multiple
           class="hidden"
           @change="handleFileInputChange"
         />
@@ -545,19 +546,22 @@
           </div>
           <div class="space-y-1">
             <div class="text-base font-black text-slate-800">
-              <span class="text-indigo-700 font-black">[{{ selectedGrade }}학년 · {{ selectedExam }}]</span> 대교협 엑셀 파일(.xlsx) 1개를 올려주세요
+              <span class="text-indigo-700 font-black">[{{ selectedGrade }}학년 · {{ selectedExam }}]</span> 
+              {{ selectedGrade === 3 ? '성적일람표 PDF 또는 대교협 엑셀 파일' : '학급별 성적일람표 PDF 파일' }}을 올려주세요
             </div>
             <p class="text-xs text-slate-500 m-0">
-              회차(몇 월)별로 해당 시험 엑셀 파일 1개씩 단일 업로드하여 구글 시트에 반영합니다.
+              {{ selectedGrade === 3 
+                ? '대교협 전교생 엑셀(.xlsx) 1개 또는 반별 성적일람표 PDF(.pdf)를 업로드하여 구글 시트에 반영합니다.' 
+                : '1·2학년은 반별 성적일람표 PDF(.pdf)를 한 번에 여러 개 선택(드래그)하여 전교생을 즉시 취합할 수 있습니다.' }}
             </p>
           </div>
           <div class="flex flex-wrap items-center justify-center gap-2 pt-1">
             <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-300 text-[11.5px] font-bold text-emerald-800 shadow-2xs">
-              <span>📗 단일 회차 등록</span>
-              <span><strong>선택회차 입력내용 엑셀다운(.xlsx)</strong> 1개 업로드 시 전교생 즉시 반영</span>
+              <span>📄 PDF / 엑셀 다중 선택 지원</span>
+              <span>1반, 2반... 여러 파일 동시 선택 시 전교생 자동 합산</span>
             </div>
             <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-[11px] font-medium text-slate-600">
-              <span>클릭하여 파일 선택 또는 드래그앤드롭</span>
+              <span>클릭하여 파일 선택(Ctrl 다중 선택) 또는 드래그앤드롭</span>
             </div>
           </div>
         </div>
@@ -585,9 +589,9 @@
         </button>
       </div>
 
-      <!-- 단일 파일 상태 카드 -->
+      <!-- 단일/다중 파일 상태 카드 목록 -->
       <div
-        v-for="fItem in fileList"
+        v-for="(fItem, fIndex) in fileList"
         :key="fItem.id"
         class="p-4 rounded-xl border transition-all duration-150 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         :class="[
@@ -599,8 +603,11 @@
         ]"
       >
         <div class="flex items-center gap-3.5 min-w-0">
-          <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 font-black text-sm shadow-xs">
-            XLS
+          <div 
+            class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-black text-xs shadow-xs"
+            :class="fItem.name.toLowerCase().endsWith('.pdf') ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'"
+          >
+            {{ fItem.name.toLowerCase().endsWith('.pdf') ? 'PDF' : 'XLS' }}
           </div>
           <div class="truncate leading-tight space-y-1">
             <div class="text-sm font-bold text-slate-800 truncate" :title="fItem.name">
@@ -610,6 +617,8 @@
               <span>{{ formatFileSize(fItem.size) }}</span>
               <span>•</span>
               <span class="font-bold text-indigo-700">{{ fItem.selectedGrade }}학년</span>
+              <span v-if="fItem.parsedClass">•</span>
+              <span v-if="fItem.parsedClass" class="font-bold text-blue-700">{{ fItem.parsedClass }}반</span>
               <span>•</span>
               <span class="font-bold text-emerald-800">{{ fItem.parsedExamName }}</span>
             </div>
@@ -626,7 +635,7 @@
           <!-- 성공 배지 -->
           <div v-else-if="fItem.status === 'success'" class="flex items-center gap-2">
             <span class="px-3 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 shadow-2xs">
-              ✓ 전교생 {{ fItem.students.length }}명 파싱 완료
+              ✓ {{ fItem.parsedClass ? `${fItem.parsedClass}반 ` : '' }}{{ fItem.students.length }}명 파싱 완료
             </span>
           </div>
 
@@ -637,11 +646,11 @@
             </span>
           </div>
 
-          <!-- 파일 삭제 -->
+          <!-- 개별 파일 삭제 -->
           <button
-            @click="clearAllFiles"
+            @click="removeFile(fIndex)"
             class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-white border-none cursor-pointer transition-colors"
-            title="파일 비우기"
+            title="파일 삭제"
           >
             <Trash2 :size="16" />
           </button>
@@ -1109,8 +1118,19 @@ const currentTargetAdmissionYear = computed(() => {
   return String(baseYear)
 })
 
-// 7개 모의고사 회차 드롭다운 목록 (2028 대입부터 9월 ➔ 8월 모평으로 변경)
+// 모의고사 회차 드롭다운 목록 (1·2학년 학평 일정 vs 3학년 모평/수능 일정 분기)
 const availableExamList = computed(() => {
+  const g = Number(selectedGrade.value) || 3
+  if (g === 1 || g === 2) {
+    return [
+      { value: '3월 학평', label: '3월 학평' },
+      { value: '6월 학평', label: '6월 학평' },
+      { value: '9월 학평', label: '9월 학평' },
+      { value: '10월 학평', label: '10월 학평' },
+      { value: '11월 학평', label: '11월 학평' }
+    ]
+  }
+
   const is2028OrLater = Number(currentTargetAdmissionYear.value) >= 2028
   const mopyeongFall = is2028OrLater ? '8월 모평' : '9월 모평'
 
@@ -1128,7 +1148,7 @@ const availableExamList = computed(() => {
 // 선택된 모의고사 회차 (기본값: 3월 학평)
 const selectedExam = ref('3월 학평')
 
-// 2028 대입 이상으로 학년 변경 시 8월/9월 모평 자동 싱크
+// 학년 변경 시 또는 2028 대입 이상일 때 회차 유효성 자동 싱크
 watch(availableExamList, (newList) => {
   const exists = newList.some(e => e.value === selectedExam.value)
   if (!exists) {
@@ -1159,50 +1179,58 @@ function triggerFileInput() {
 }
 
 function handleFileInputChange(e) {
-  const file = e.target.files?.[0]
-  if (file) {
-    processSingleFile(file)
+  const files = e.target.files
+  if (files && files.length > 0) {
+    processIncomingFiles(Array.from(files))
   }
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
 function handleFileDrop(e) {
   isDragging.value = false
-  const file = e.dataTransfer.files?.[0]
-  if (file) {
-    processSingleFile(file)
+  const files = e.dataTransfer.files
+  if (files && files.length > 0) {
+    processIncomingFiles(Array.from(files))
   }
 }
 
 /**
- * 단일 엑셀 파일 등록 및 실시간 즉시 파싱
- * (회차별 단일 파일 업로드 구조로 100% 반응형 및 무한대기 방지)
+ * 성적 파일(PDF 또는 엑셀) 단일/다중 등록 및 실시간 즉시 파싱
+ * - 1, 2학년은 반별 성적일람표 PDF 여러 개를 한 번에 선택하여 전교생 자동 취합 가능
+ * - 3학년은 대교협 엑셀 1개 또는 PDF 파일 여러 개 모두 지원
  */
-async function processSingleFile(file) {
-  clearAllFiles()
+async function processIncomingFiles(files) {
+  if (!files || files.length === 0) return
 
-  const itemObj = {
-    id: `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-    file,
-    name: file.name,
-    size: file.size,
-    selectedGrade: selectedGrade.value,
-    selectedExam: selectedExam.value,
-    status: 'parsing',
-    error: '',
-    students: [],
-    parsedExamName: selectedExam.value,
-    parsedClass: ''
+  // 새 파일 목록 추가 (기존 파일이 있으면 덧붙임)
+  for (const file of files) {
+    const itemObj = {
+      id: `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      file,
+      name: file.name,
+      size: file.size,
+      selectedGrade: selectedGrade.value,
+      selectedExam: selectedExam.value,
+      status: 'parsing',
+      error: '',
+      students: [],
+      parsedExamName: selectedExam.value,
+      parsedClass: ''
+    }
+
+    fileList.value.push(itemObj)
+
+    // 비동기 파싱 실행
+    parseSingleItem(itemObj)
   }
+}
 
-  fileList.value.push(itemObj)
-  const targetItem = fileList.value[0]
-
+async function parseSingleItem(targetItem) {
   try {
     // UI 스피너 즉각 노출을 위한 짧은 틱
     await new Promise(r => setTimeout(r, 50))
 
-    const res = await parseMockExamReportFile(file, {
+    const res = await parseMockExamReportFile(targetItem.file, {
       defaultGrade: targetItem.selectedGrade,
       examName: targetItem.selectedExam,
       uploadDate: now
