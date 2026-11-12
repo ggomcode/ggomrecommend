@@ -572,8 +572,8 @@
                             </template>
                           </td>
                           <td class="text-base" style="padding: 12px 18px; color: #475569; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                            <span v-if="r.is_enrolled">{{ r.grade }}학년 {{ r.class_no }}반 {{ r.seq_no }}번</span>
-                            <span v-else class="font-mono">{{ r.student_code }}</span>
+                            <span v-if="r.is_enrolled && r.grade">{{ r.grade }}학년 {{ r.class_no }}반 {{ r.seq_no }}번</span>
+                            <span v-else class="font-mono text-amber-700 font-semibold">[졸업생] {{ r.student_code || r.name }}</span>
                           </td>
                           <td class="text-base font-medium" style="padding: 12px 18px; color: #1e293b; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                             <span v-if="showAbandonOnly" class="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 mr-1 border border-rose-200">
@@ -2400,18 +2400,36 @@ async function openAdminExtraApplicationModal() {
 
   extraAppLoading.value = true
   try {
-    // 1. 재학생 및 졸업생 전체 목록 로드
-    const { data: students, error: stErr } = await supabase
-      .from('enrolled_students')
-      .select('id, name, student_code, grade, class_no, seq_no, is_enrolled, gpa_overall')
-      .order('grade', { ascending: true })
-      .order('class_no', { ascending: true })
-      .order('seq_no', { ascending: true })
+    // 1. 재학생 및 졸업생 전체 목록 로드 (enrolled_students + profiles 졸업생 병합)
+    const [{ data: students, error: stErr }, { data: profilesData }] = await Promise.all([
+      supabase
+        .from('enrolled_students')
+        .select('id, name, student_code, grade, class_no, seq_no, is_enrolled, gpa_overall')
+        .order('grade', { ascending: true })
+        .order('class_no', { ascending: true })
+        .order('seq_no', { ascending: true }),
+      supabase
+        .from('profiles')
+        .select('id, name, student_code, grade, class_no, seq_no, is_enrolled, grad_year')
+        .eq('role', 'student')
+    ])
 
     if (stErr) throw stErr
 
+    const studentListRaw = [...(students || [])]
+    const enrolledIds = new Set(studentListRaw.map(s => s.id))
+    for (const p of (profilesData || [])) {
+      if (!enrolledIds.has(p.id) && (p.is_enrolled === false || !p.grade || p.grade === 0)) {
+        enrolledIds.add(p.id)
+        studentListRaw.push({
+          ...p,
+          is_enrolled: false
+        })
+      }
+    }
+
     // 학생 이름 복호화
-    const decrypted = await Promise.all((students || []).map(async s => {
+    const decrypted = await Promise.all(studentListRaw.map(async s => {
       let decName = s.name
       if (decName && decName.startsWith('enc:')) {
         try { decName = await decryptText(decName) } catch { decName = '학생' }

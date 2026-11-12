@@ -712,8 +712,11 @@ export function buildOverviewFromKcue(teachers = []) {
 
   // 반별 지원자 수 집계
   const classCounts = {};  // key: "grade_classNo" -> Set of student_id
+  const gradStudentSet = new Set();
   apps.forEach(a => {
-    if (a.class_no) {
+    if (a.is_graduated || !a.class_no || Number(a.grade) === 0) {
+      gradStudentSet.add(a.student_id);
+    } else if (a.class_no) {
       const key = `${a.grade}_${a.class_no}`;
       if (!classCounts[key]) classCounts[key] = new Set();
       classCounts[key].add(a.student_id);
@@ -755,14 +758,14 @@ export function buildOverviewFromKcue(teachers = []) {
     }
   }
 
-  const graduated = graduatedTeacher ? {
+  const graduated = {
     grade: 0,
     class_no: 0,
-    teacher_name: graduatedTeacher.decryptedName || graduatedTeacher.teacher_name || '졸업생 담당',
-    submitted: 0,
-    count: 0,
+    teacher_name: graduatedTeacher ? (graduatedTeacher.decryptedName || graduatedTeacher.teacher_name || '졸업생 담당') : '관리자',
+    submitted: gradStudentSet.size,
+    count: gradStudentSet.size,
     confirmed: true
-  } : null;
+  };
 
   return {
     classes,

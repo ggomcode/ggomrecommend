@@ -1154,7 +1154,7 @@ async function openClassDetailModal(classObj, isGraduated = false) {
     // 혹시 enrolled_students에 누락되었으나 지원서에만 등록된 학생이 있는 경우 fallback 추가
     const knownStudentIds = new Set(allStudents.map(s => s.id))
     for (const app of roundApps) {
-      const matchGrad = isGrad && (!app.is_enrolled || app.grade === 0)
+      const matchGrad = isGrad && (!app.is_enrolled || !app.grade || app.grade === 0)
       const matchClass = !isGrad && app.grade === classObj.grade && app.class_no === classObj.class_no
       if ((matchGrad || matchClass) && !knownStudentIds.has(app.student_id)) {
         knownStudentIds.add(app.student_id)
@@ -1289,7 +1289,7 @@ async function handleDirectPrintClass(classObj, isGraduated = false, event) {
 
     const knownStudentIds = new Set(allStudents.map(s => s.id))
     for (const app of roundApps) {
-      const matchGrad = isGrad && (!app.is_enrolled || app.grade === 0)
+      const matchGrad = isGrad && (!app.is_enrolled || !app.grade || app.grade === 0)
       const matchClass = !isGrad && app.grade === classObj.grade && app.class_no === classObj.class_no
       if ((matchGrad || matchClass) && !knownStudentIds.has(app.student_id)) {
         knownStudentIds.add(app.student_id)

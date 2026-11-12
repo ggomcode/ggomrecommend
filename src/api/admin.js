@@ -272,14 +272,18 @@ export const getOverview = async (targetRoundId = null) => {
     }
   }))
 
-  const graduatedObj = graduatedTeacher ? {
+  const gradTeacherName = graduatedTeacher
+    ? ((graduatedTeacher.name === '관리자' ? '관리자' : await decryptText(graduatedTeacher.name)) || '졸업생 담당')
+    : '관리자'
+
+  const graduatedObj = {
     grade: 0,
     class_no: 0,
-    teacher_name: (graduatedTeacher.name === '관리자' ? '관리자' : await decryptText(graduatedTeacher.name)) || '졸업생 담당',
+    teacher_name: gradTeacherName,
     submitted: gradApplicantsSet.size,
     count: gradApplicantsSet.size,
     confirmed: true
-  } : null
+  }
 
   // [4] 대학/모집단위 배열 생성 (정원 계산 헬퍼 getQuotaStats와 연동하여 정밀한 정원 계산 반영)
   // 이전 차수에서 추천 확정되어 아직 포기되지 않은(유효한) 추천 인원 집계
@@ -1246,7 +1250,12 @@ export const getStudents = async (params = {}) => {
   let query = supabase.from('enrolled_students').select('*', { count: 'exact' })
 
   if (params.is_enrolled !== undefined && params.is_enrolled !== null) {
-    query = query.eq('is_enrolled', Boolean(Number(params.is_enrolled)))
+    const isEnr = Boolean(Number(params.is_enrolled))
+    if (isEnr) {
+      query = query.eq('is_enrolled', true)
+    } else {
+      query = query.or('is_enrolled.eq.false,grade.eq.0,grade.is.null')
+    }
   }
   if (params.grade !== undefined && params.grade !== null && params.grade !== '') {
     query = query.eq('grade', params.grade)
@@ -1979,8 +1988,11 @@ export const getResults = async (roundId, trackId) => {
         const stA = studentMap.get(a.student_id) || profileMap.get(a.student_id) || {}
         const stB = studentMap.get(b.student_id) || profileMap.get(b.student_id) || {}
 
-        if (stA.is_enrolled !== stB.is_enrolled) {
-          return stA.is_enrolled ? -1 : 1
+        const isEnrA = Boolean(stA.is_enrolled !== false && stA.grade && Number(stA.grade) > 0)
+        const isEnrB = Boolean(stB.is_enrolled !== false && stB.grade && Number(stB.grade) > 0)
+
+        if (isEnrA !== isEnrB) {
+          return isEnrA ? -1 : 1
         }
         const scoreA = a.manual_score != null ? Number(a.manual_score) : 0
         const scoreB = b.manual_score != null ? Number(b.manual_score) : 0
@@ -2034,12 +2046,13 @@ export const getResults = async (roundId, trackId) => {
       if (studentName.startsWith('enc:')) {
         try { studentName = await decryptText(studentName) } catch { studentName = '복호화실패' }
       }
+      const isEnr = Boolean(stInfo.is_enrolled !== false && stInfo.grade && Number(stInfo.grade) > 0)
       return {
         ...ap,
         stInfo: {
           ...stInfo,
           name: studentName,
-          is_enrolled: stInfo.is_enrolled !== false
+          is_enrolled: isEnr
         }
       }
     }))
@@ -2267,7 +2280,7 @@ export const getApplications = async (roundId, trackId) => {
       grade: stInfo.grade,
       class_no: stInfo.class_no,
       seq_no: stInfo.seq_no,
-      is_enrolled: stInfo.is_enrolled !== false,
+      is_enrolled: Boolean(stInfo.is_enrolled !== false && stInfo.grade && Number(stInfo.grade) > 0),
       univ_id: ap.univ_id,
       univ_name: ap.universities?.univ_name || '',
       track_name: ap.universities?.track_name || '',
@@ -3026,7 +3039,7 @@ export const getTrackRecommendedList = async (trackId) => {
       student_id: ap.student_id,
       name: studentName,
       student_code: stInfo.student_code || '',
-      is_enrolled: stInfo.is_enrolled !== false,
+      is_enrolled: Boolean(stInfo.is_enrolled !== false && stInfo.grade && Number(stInfo.grade) > 0),
       abandoned: ap.is_abandoned,
       ranking: index + 1
     }

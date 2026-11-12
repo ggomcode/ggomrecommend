@@ -1628,15 +1628,16 @@ const enrichedApplications = computed(() => {
     const studentCode = st?.student_code || app.student_code || '';
 
     // 졸업생 여부: 2026학년도 고3(2027 대입 수험생)은 2027년 1월 졸업식(2027-01-06) 이전까지 무조건 재학생
+    const isAppOfficialKcue = Boolean(app.is_official_kcue);
     const isGrad = isGraduatedStudent({
       ...app,
       class_no: studentClass,
       student_class: studentClass,
       seq_no: studentSeq,
       student_code: studentCode,
-      grad_year: st?.grad_year || app.grad_year,
-      is_graduated: st?.is_graduated || app.is_graduated,
-      is_enrolled: st?.is_enrolled ?? app.is_enrolled
+      grad_year: isAppOfficialKcue ? null : (st?.grad_year || app.grad_year),
+      is_graduated: isAppOfficialKcue ? false : (st?.is_graduated || app.is_graduated),
+      is_enrolled: isAppOfficialKcue ? true : (st?.is_enrolled ?? app.is_enrolled)
     });
 
     const elig = st?.eligibility;

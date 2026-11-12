@@ -1017,7 +1017,7 @@ const flatStats = computed(() => {
         const stInfo = studentMap.value[ap.student_id] || {}
         const rawCode = String(ap.student_code || '').trim()
         const code5 = rawCode.length > 5 ? rawCode.slice(-5) : rawCode
-        const isGrad = stInfo.is_graduated || (!stInfo.grade && stInfo.grad_year)
+        const isGrad = Boolean(stInfo.is_graduated || (!stInfo.grade && stInfo.grad_year) || stInfo.is_enrolled === false || !stInfo.grade || Number(stInfo.grade) === 0 || rawCode.length > 5)
         if (isGrad) {
           gradCount++
         } else {
@@ -1065,7 +1065,7 @@ const flatStats = computed(() => {
       let gradApplied = 0
       for (const ap of relevantAppliedApps) {
         const stInfo = studentMap.value[ap.student_id] || {}
-        const isGrad = stInfo.is_graduated || (!stInfo.grade && stInfo.grad_year)
+        const isGrad = Boolean(stInfo.is_graduated || (!stInfo.grade && stInfo.grad_year) || stInfo.is_enrolled === false || !stInfo.grade || Number(stInfo.grade) === 0 || rawCode.length > 5)
         if (isGrad) gradApplied++
         else enrolledApplied++
       }
@@ -1318,10 +1318,11 @@ async function loadData() {
 
     stats.value = await getQuotaStats()
     if (supabase) {
-      // 1. 지원서, 학생 마스터, 수도권/지역 추천 전형(졸업조건), 라운드 목록, 라운드 일정 로드
-      const [{ data: allAppsRaw }, { data: students }, { data: regRecs }, { data: roundsData }, sMap] = await Promise.all([
+      // 1. 지원서, 학생 마스터, 프로필, 수도권/지역 추천 전형(졸업조건), 라운드 목록, 라운드 일정 로드
+      const [{ data: allAppsRaw }, { data: students }, { data: profilesData }, { data: regRecs }, { data: roundsData }, sMap] = await Promise.all([
         supabase.from('applications').select('*, universities:univ_id(*)'),
-        supabase.from('enrolled_students').select('id, name, student_code, gpa_overall, grad_year, grade, is_enrolled'),
+        supabase.from('enrolled_students').select('id, name, student_code, gpa_overall, grad_year, grade, class_no, seq_no, is_enrolled'),
+        supabase.from('profiles').select('id, name, student_code, grad_year, grade, class_no, seq_no, is_enrolled'),
         supabase.from('regional_recommendations').select('univ_name, track_name, grad_condition'),
         supabase.from('timeline_rounds').select('*').order('id'),
         fetchRoundSchedulesMap()
@@ -1349,14 +1350,36 @@ async function loadData() {
       const studentMapLocal = {}
       for (const s of (students || [])) {
         const decName = await decryptText(s.name)
-        const isGrad = s.is_enrolled === false || (!s.grade && !!s.grad_year)
+        const isGrad = s.is_enrolled === false || (!s.grade && !!s.grad_year) || !s.grade || Number(s.grade) === 0
         studentMapLocal[s.id] = {
           id: s.id,
           name: decName,
           student_code: s.student_code || '',
+          grade: s.grade,
+          class_no: s.class_no,
+          seq_no: s.seq_no,
           gpa_overall: s.gpa_overall,
           grad_year: s.grad_year || null,
+          is_enrolled: s.is_enrolled,
           is_graduated: isGrad
+        }
+      }
+      for (const p of (profilesData || [])) {
+        if (!studentMapLocal[p.id]) {
+          const decName = await decryptText(p.name)
+          const isGrad = p.is_enrolled === false || (!p.grade && !!p.grad_year) || !p.grade || Number(p.grade) === 0
+          studentMapLocal[p.id] = {
+            id: p.id,
+            name: decName,
+            student_code: p.student_code || '',
+            grade: p.grade,
+            class_no: p.class_no,
+            seq_no: p.seq_no,
+            gpa_overall: null,
+            grad_year: p.grad_year || null,
+            is_enrolled: p.is_enrolled,
+            is_graduated: isGrad
+          }
         }
       }
       studentMap.value = studentMapLocal
@@ -1530,6 +1553,14 @@ async function loadData() {
 
           const effRound = ap.calculated_round || (ap.recommended_round != null ? ap.recommended_round : (ap.round != null ? ap.round : 1))
 
+          const isGrad = s.is_graduated || (!s.grade && !!s.grad_year) || s.is_enrolled === false || !s.grade || Number(s.grade) === 0
+          const code = s.student_code || ap.student_code || ''
+          let cNo = s.class_no || ap.class_no
+          if (!cNo && code.length >= 5 && !isGrad) {
+            const parsed = parseInt(code.substring(1, 3), 10)
+            if (!isNaN(parsed) && parsed > 0) cNo = parsed
+          }
+
           if (isSelected) {
             selectedApps.push({
               id: ap.id,
@@ -1540,18 +1571,14 @@ async function loadData() {
               is_recommended: true,
               student_code: s.student_code || '',
               name: s.name || '',
+              grade_type: isGrad ? '졸업생' : '재학생',
+              is_graduated: isGrad,
+              class_no: isGrad ? null : cNo,
               rank: rank,
               score_text: scoreText
             })
           } else {
             // 정원 초과 미선발 지원서 수집 -> 포기자 명단에 추가
-            const isGrad = s.is_graduated || (!s.grade && s.grad_year)
-            const code = s.student_code || ap.student_code || ''
-            let cNo = s.class_no || ap.class_no
-            if (!cNo && code.length >= 5 && !isGrad) {
-              const parsed = parseInt(code.substring(1, 3), 10)
-              if (!isNaN(parsed) && parsed > 0) cNo = parsed
-            }
             const tInfo = trackInfoMap[ap.univ_id] || {}
             overQuotaApps.push({
               id: `db_over_quota_${ap.id}`,
