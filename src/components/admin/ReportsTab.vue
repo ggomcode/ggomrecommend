@@ -751,6 +751,7 @@ import { formatScore } from '../../utils/scorePreviewShared.js'
 import { fetchRoundSchedulesMap, DEFAULT_SCHEDULES, parseKstDate, isRoundAnnouncedOrDone } from '../../utils/roundSchedule.js'
 import { getKcueRecommendationApps, buildReportsDataFromKcue, exportKcueQuotaStatsExcel } from '../../utils/recommendationKcueAdapter.js'
 import { lookupMasterData, lookupMasterQuota, lookupMasterRawQuota, lookupMasterGradCondition, cleanUnivName } from '../../utils/recommendationMasterData.js'
+import { checkIsGraduate } from '../../utils/ruralGraduationHelper.js'
 
 const loading = ref(false)
 const downloading = ref(false)
@@ -1017,7 +1018,7 @@ const flatStats = computed(() => {
         const stInfo = studentMap.value[ap.student_id] || {}
         const rawCode = String(ap.student_code || '').trim()
         const code5 = rawCode.length > 5 ? rawCode.slice(-5) : rawCode
-        const isGrad = Boolean(stInfo.is_graduated || (!stInfo.grade && stInfo.grad_year) || stInfo.is_enrolled === false || !stInfo.grade || Number(stInfo.grade) === 0 || rawCode.length > 5)
+        const isGrad = checkIsGraduate({ ...stInfo, ...ap, student_code: rawCode })
         if (isGrad) {
           gradCount++
         } else {
@@ -1066,7 +1067,7 @@ const flatStats = computed(() => {
       for (const ap of relevantAppliedApps) {
         const stInfo = studentMap.value[ap.student_id] || {}
         const rawCode = String(ap.student_code || stInfo.student_code || '').trim()
-        const isGrad = Boolean(stInfo.is_graduated || (!stInfo.grade && stInfo.grad_year) || stInfo.is_enrolled === false || !stInfo.grade || Number(stInfo.grade) === 0 || rawCode.length > 5)
+        const isGrad = checkIsGraduate({ ...stInfo, ...ap, student_code: rawCode })
         if (isGrad) gradApplied++
         else enrolledApplied++
       }
@@ -1351,7 +1352,7 @@ async function loadData() {
       const studentMapLocal = {}
       for (const s of (students || [])) {
         const decName = await decryptText(s.name)
-        const isGrad = s.is_enrolled === false || (!s.grade && !!s.grad_year) || !s.grade || Number(s.grade) === 0
+        const isGrad = checkIsGraduate(s)
         studentMapLocal[s.id] = {
           id: s.id,
           name: decName,
@@ -1361,14 +1362,14 @@ async function loadData() {
           seq_no: s.seq_no,
           gpa_overall: s.gpa_overall,
           grad_year: s.grad_year || null,
-          is_enrolled: s.is_enrolled,
+          is_enrolled: !isGrad,
           is_graduated: isGrad
         }
       }
       for (const p of (profilesData || [])) {
         if (!studentMapLocal[p.id]) {
           const decName = await decryptText(p.name)
-          const isGrad = p.is_enrolled === false || (!p.grade && !!p.grad_year) || !p.grade || Number(p.grade) === 0
+          const isGrad = checkIsGraduate(p)
           studentMapLocal[p.id] = {
             id: p.id,
             name: decName,
@@ -1378,7 +1379,7 @@ async function loadData() {
             seq_no: p.seq_no,
             gpa_overall: null,
             grad_year: p.grad_year || null,
-            is_enrolled: p.is_enrolled,
+            is_enrolled: !isGrad,
             is_graduated: isGrad
           }
         }
@@ -1424,7 +1425,7 @@ async function loadData() {
         const tInfo = trackInfoMap[ap.univ_id] || {}
         const univName = ap.universities?.univ_name || tInfo.univ_name || ap.univ_name || ''
         const trackName = ap.universities?.track_name || tInfo.track_name || ap.track_name || ''
-        const isGrad = s.is_graduated || (!s.grade && !!s.grad_year)
+        const isGrad = checkIsGraduate(s)
         const reason = reqMeta.abandon_reason || ap.abandon_reason || ap.excluded_reason || '개인 사유로 인한 추천 포기'
         const reqDate = reqMeta.requested_at || ap.abandoned_at || ap.updated_at || ap.created_at
         let dateStr = '-'
@@ -1554,7 +1555,7 @@ async function loadData() {
 
           const effRound = ap.calculated_round || (ap.recommended_round != null ? ap.recommended_round : (ap.round != null ? ap.round : 1))
 
-          const isGrad = s.is_graduated || (!s.grade && !!s.grad_year) || s.is_enrolled === false || !s.grade || Number(s.grade) === 0
+          const isGrad = checkIsGraduate(s) || s.is_enrolled === false || !s.grade || Number(s.grade) === 0
           const code = s.student_code || ap.student_code || ''
           let cNo = s.class_no || ap.class_no
           if (!cNo && code.length >= 5 && !isGrad) {

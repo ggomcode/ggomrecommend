@@ -6,6 +6,7 @@ import { fetchRoundSchedulesMap, computeRoundDisplayStatus, isRoundAnnouncedOrDo
 import { deleteApplicationStorageFiles } from '../utils/storageUtils'
 import { buildOverviewFromKcue } from '../utils/recommendationKcueAdapter'
 import { cleanUnivName, lookupMasterData, lookupMasterQuota, lookupMasterRawQuota, lookupMasterGradCondition } from '../utils/recommendationMasterData'
+import { checkIsGraduate } from '../utils/ruralGraduationHelper'
 
 // Helper for error parsing
 export async function blobErrMsg(e) {
@@ -217,14 +218,14 @@ export const getOverview = async (targetRoundId = null) => {
 
     const [appsRes, studentsRes] = await Promise.all([
       appQuery,
-      supabase.from('enrolled_students').select('id, grade, class_no, is_enrolled')
+      supabase.from('enrolled_students').select('id, grade, class_no, is_enrolled, student_code, grad_year')
     ])
     const roundApps = appsRes.data || []
     const students = studentsRes.data || []
 
     const enrolledMap = new Map()
     for (const s of students) {
-      enrolledMap.set(s.id, { grade: s.grade, class_no: s.class_no, is_enrolled: s.is_enrolled !== false })
+      enrolledMap.set(s.id, s)
     }
 
     for (const app of roundApps) {
@@ -233,7 +234,7 @@ export const getOverview = async (targetRoundId = null) => {
       }
       const st = enrolledMap.get(app.student_id)
       if (st) {
-        if (!st.is_enrolled || !st.grade || Number(st.grade) === 0) {
+        if (checkIsGraduate(st)) {
           gradApplicantsSet.add(app.student_id)
         } else {
           const key = `${st.grade}_${st.class_no}`
@@ -1254,7 +1255,7 @@ export const getStudents = async (params = {}) => {
     if (isEnr) {
       query = query.eq('is_enrolled', true)
     } else {
-      query = query.or('is_enrolled.eq.false,grade.eq.0,grade.is.null')
+      query = query.or('is_enrolled.eq.false,grade.eq.0,grade.is.null,grad_year.not.is.null,student_code.ilike.20%')
     }
   }
   if (params.grade !== undefined && params.grade !== null && params.grade !== '') {
@@ -1276,15 +1277,19 @@ export const getStudents = async (params = {}) => {
 
   if (error) throw error
 
-  const rows = await Promise.all((data || []).map(async s => ({
-    id: s.id,
-    student_code: s.student_code || (s.grade && s.class_no && s.student_no ? `${s.grade}${String(s.class_no).padStart(2, '0')}${String(s.student_no).padStart(2, '0')}` : ''),
-    name: await decryptText(s.name),
-    parent_name: await decryptText(s.parent_name_hash || s.parent_name),
-    is_enrolled: s.is_enrolled !== false,
-    grade: s.grade,
-    class_no: s.class_no,
-    seq_no: s.student_no || s.seq_no,
+  const rows = await Promise.all((data || []).map(async s => {
+    const isGrad = checkIsGraduate(s)
+    return {
+      id: s.id,
+      student_code: s.student_code || (s.grade && s.class_no && s.student_no ? `${s.grade}${String(s.class_no).padStart(2, '0')}${String(s.student_no).padStart(2, '0')}` : ''),
+      name: await decryptText(s.name),
+      parent_name: await decryptText(s.parent_name_hash || s.parent_name),
+      is_enrolled: !isGrad,
+      is_graduated: isGrad,
+      grade_type: isGrad ? '졸업생' : '재학생',
+      grade: s.grade,
+      class_no: s.class_no,
+      seq_no: s.student_no || s.seq_no,
     phone_last4: '****',
     status: s.status || 'approved',
     grad_year: s.grad_year,
@@ -1298,7 +1303,8 @@ export const getStudents = async (params = {}) => {
     gpa_3_2: s.gpa_3_2 || null,
     gpa_3_all: s.gpa_3_all || null,
     gpa_overall: s.gpa_overall != null ? s.gpa_overall : null
-  })))
+    }
+  }))
 
   return {
     rows,
@@ -1941,8 +1947,8 @@ export const getResults = async (roundId, trackId) => {
   // enrolled_students & profiles 매핑 (석차등급 gpa_overall 포함)
   const studentIds = apps.map(ap => ap.student_id)
   const [{ data: studentsData }, { data: profilesData }] = await Promise.all([
-    supabase.from('enrolled_students').select('id, name, student_code, grade, class_no, seq_no, is_enrolled, gpa_overall').in('id', studentIds),
-    supabase.from('profiles').select('id, name, student_code, grade, class_no, seq_no, is_enrolled').in('id', studentIds)
+    supabase.from('enrolled_students').select('id, name, student_code, grade, class_no, seq_no, is_enrolled, grad_year, gpa_overall').in('id', studentIds),
+    supabase.from('profiles').select('id, name, student_code, grade, class_no, seq_no, is_enrolled, grad_year').in('id', studentIds)
   ])
 
   const studentMap = new Map((studentsData || []).map(s => [s.id, s]))
@@ -1988,8 +1994,8 @@ export const getResults = async (roundId, trackId) => {
         const stA = studentMap.get(a.student_id) || profileMap.get(a.student_id) || {}
         const stB = studentMap.get(b.student_id) || profileMap.get(b.student_id) || {}
 
-        const isEnrA = Boolean(stA.is_enrolled !== false && stA.grade && Number(stA.grade) > 0)
-        const isEnrB = Boolean(stB.is_enrolled !== false && stB.grade && Number(stB.grade) > 0)
+        const isEnrA = !checkIsGraduate(stA || a)
+        const isEnrB = !checkIsGraduate(stB || b)
 
         if (isEnrA !== isEnrB) {
           return isEnrA ? -1 : 1
@@ -2046,13 +2052,16 @@ export const getResults = async (roundId, trackId) => {
       if (studentName.startsWith('enc:')) {
         try { studentName = await decryptText(studentName) } catch { studentName = '복호화실패' }
       }
-      const isEnr = Boolean(stInfo.is_enrolled !== false && stInfo.grade && Number(stInfo.grade) > 0)
+      const isGrad = checkIsGraduate(stInfo || ap)
+      const isEnr = !isGrad
       return {
         ...ap,
         stInfo: {
           ...stInfo,
           name: studentName,
-          is_enrolled: isEnr
+          is_enrolled: isEnr,
+          is_graduated: isGrad,
+          grade_type: isGrad ? '졸업생' : '재학생'
         }
       }
     }))
@@ -2139,6 +2148,8 @@ export const getResults = async (roundId, trackId) => {
         class_no: ap.stInfo.class_no,
         seq_no: ap.stInfo.seq_no,
         is_enrolled: ap.stInfo.is_enrolled,
+        is_graduated: ap.stInfo.is_graduated,
+        grade_type: ap.stInfo.grade_type || (ap.stInfo.is_enrolled ? '재학생' : '졸업생'),
         univ_name: ap.universities?.univ_name || '',
         track_name: ap.universities?.track_name || '',
         department_name: ap.department_name,
@@ -2226,7 +2237,7 @@ export const getApplications = async (roundId, trackId) => {
   const studentIds = appsData.map(ap => ap.student_id)
   const { data: studentsData, error: stErr } = await supabase
     .from('enrolled_students')
-    .select('id, name, student_code, grade, class_no, seq_no, is_enrolled, gpa_overall')
+    .select('id, name, student_code, grade, class_no, seq_no, is_enrolled, grad_year, gpa_overall')
     .in('id', studentIds)
 
   if (stErr) throw stErr
@@ -2241,7 +2252,7 @@ export const getApplications = async (roundId, trackId) => {
   // 3. profiles 데이터도 fallback 대비하여 전체 패치
   const { data: profilesData } = await supabase
     .from('profiles')
-    .select('id, name, student_code, grade, class_no, seq_no, is_enrolled')
+    .select('id, name, student_code, grade, class_no, seq_no, is_enrolled, grad_year')
     .in('id', studentIds)
 
   const profileMap = new Map()
@@ -2265,6 +2276,7 @@ export const getApplications = async (roundId, trackId) => {
       }
     }
 
+    const isGrad = checkIsGraduate(stInfo || ap)
     return {
       student_id: ap.student_id,
       track_id: ap.univ_id,
@@ -2280,7 +2292,9 @@ export const getApplications = async (roundId, trackId) => {
       grade: stInfo.grade,
       class_no: stInfo.class_no,
       seq_no: stInfo.seq_no,
-      is_enrolled: Boolean(stInfo.is_enrolled !== false && stInfo.grade && Number(stInfo.grade) > 0),
+      is_enrolled: !isGrad,
+      is_graduated: isGrad,
+      grade_type: isGrad ? '졸업생' : '재학생',
       univ_id: ap.univ_id,
       univ_name: ap.universities?.univ_name || '',
       track_name: ap.universities?.track_name || '',
@@ -2626,13 +2640,11 @@ export const getQuotaStats = async () => {
   // 학생 마스터 정보 조회 (재학생 vs 졸업생 구별용)
   const { data: studentList } = await supabase
     .from('enrolled_students')
-    .select('id, is_enrolled, grade')
+    .select('id, is_enrolled, grade, student_code, grad_year')
 
   const studentGradMap = new Map()
   studentList?.forEach(s => {
-    // is_enrolled가 false 이거나 grade가 0이면 졸업생
-    const isGrad = s.is_enrolled === false || s.grade === 0
-    studentGradMap.set(s.id, isGrad)
+    studentGradMap.set(s.id, checkIsGraduate(s))
   })
 
   // 추천 확정 현황 취합 (재학생/졸업생 구분)
@@ -2821,7 +2833,7 @@ export const exportQuotaStats = async (param = null) => {
   for (const ap of allRecApps) {
     const tId = ap.univ_id
     const r = ap.recommended_round ?? ap.round ?? 1
-    const isGrad = stMap[ap.student_id]?.is_enrolled === false || (!stMap[ap.student_id]?.grade && stMap[ap.student_id]?.grad_year)
+    const isGrad = checkIsGraduate(stMap[ap.student_id] || ap)
 
     if (selectedRound != null && selectedRound >= 2) {
       if (r < selectedRound) {
@@ -2951,7 +2963,7 @@ export const exportQuotaStats = async (param = null) => {
 
       const s = stMap[ap.student_id] || {}
       const u = uMap[ap.univ_id] || {}
-      const isGrad = s.is_enrolled === false || (!s.grade && s.grad_year)
+      const isGrad = checkIsGraduate(s || ap)
       const scoreVal = ap.univ_calc_score != null ? ap.univ_calc_score : ap.manual_score
       const scoreText = (scoreVal != null && Number(scoreVal) > 0) ? `${scoreVal}점` : (s.gpa_overall ? `${s.gpa_overall}등급` : '-')
 
@@ -3022,8 +3034,8 @@ export const getTrackRecommendedList = async (trackId) => {
 
   const studentIds = appsData.map(ap => ap.student_id)
   const [{ data: studentsData }, { data: profilesData }] = await Promise.all([
-    supabase.from('enrolled_students').select('id, name, student_code, is_enrolled').in('id', studentIds),
-    supabase.from('profiles').select('id, name, student_code, is_enrolled').in('id', studentIds)
+    supabase.from('enrolled_students').select('id, name, student_code, is_enrolled, grade, grad_year').in('id', studentIds),
+    supabase.from('profiles').select('id, name, student_code, is_enrolled, grade, grad_year').in('id', studentIds)
   ])
 
   const studentMap = new Map((studentsData || []).map(s => [s.id, s]))
@@ -3035,11 +3047,14 @@ export const getTrackRecommendedList = async (trackId) => {
     if (studentName.startsWith('enc:')) {
       try { studentName = await decryptText(studentName) } catch { studentName = '복호화실패' }
     }
+    const isGrad = checkIsGraduate(stInfo || ap)
     return {
       student_id: ap.student_id,
       name: studentName,
       student_code: stInfo.student_code || '',
-      is_enrolled: Boolean(stInfo.is_enrolled !== false && stInfo.grade && Number(stInfo.grade) > 0),
+      is_enrolled: !isGrad,
+      is_graduated: isGrad,
+      grade_type: isGrad ? '졸업생' : '재학생',
       abandoned: ap.is_abandoned,
       ranking: index + 1
     }

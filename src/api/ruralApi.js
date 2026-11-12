@@ -1052,8 +1052,8 @@ export async function getRuralEligibilityList() {
     if (enrolledSet.has(p.id)) return false;
     if (p.user_id && enrolledUserSet.has(p.user_id)) return false;
 
-    // 졸업생 프로필인 경우 (is_graduated, role === 'graduate', grad_year < 2027 등)
-    const isProfGrad = p.is_graduated === true || p.role === 'graduate' || (p.grad_year && Number(p.grad_year) < 2027) || p.is_enrolled === false;
+    // 졸업생 프로필인 경우 (isGraduatedStudent, 9자리 학번, is_graduated, role === 'graduate', grad_year < 2027 등)
+    const isProfGrad = isGraduatedStudent(p) || p.is_graduated === true || p.role === 'graduate' || (p.grad_year && Number(p.grad_year) < 2027) || p.is_enrolled === false;
     if (isProfGrad) {
       // 졸업생은 재학생과 5자리 학번이 우연히 일치하더라도 제외하지 않음
       return true;

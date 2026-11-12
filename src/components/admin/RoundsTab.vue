@@ -572,7 +572,7 @@
                             </template>
                           </td>
                           <td class="text-base" style="padding: 12px 18px; color: #475569; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                            <span v-if="r.is_enrolled && r.grade">{{ r.grade }}학년 {{ r.class_no }}반 {{ r.seq_no }}번</span>
+                            <span v-if="!checkIsGraduate(r) && r.grade">{{ r.grade }}학년 {{ r.class_no }}반 {{ r.seq_no }}번</span>
                             <span v-else class="font-mono text-amber-700 font-semibold">[졸업생] {{ r.student_code || r.name }}</span>
                           </td>
                           <td class="text-base font-medium" style="padding: 12px 18px; color: #1e293b; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
@@ -586,8 +586,8 @@
                           </td>
                           <td style="padding: 12px 18px;">
                             <span class="text-base font-medium"
-                              :style="{ color: r.is_enrolled ? '#16a34a' : '#94a3b8' }">
-                              {{ r.is_enrolled ? '재학생' : '졸업생' }}
+                              :style="{ color: !checkIsGraduate(r) ? '#16a34a' : '#94a3b8' }">
+                              {{ !checkIsGraduate(r) ? '재학생' : '졸업생' }}
                             </span>
                           </td>
                           <td style="padding: 12px 18px; overflow: hidden;">
@@ -1113,6 +1113,7 @@ import {
   repairCorruptedAbandonSignatures,
 } from '../../api/admin.js'
 import { decryptText } from '../../utils/cryptoUtils.js'
+import { checkIsGraduate } from '../../utils/ruralGraduationHelper.js'
 import HelpBox from '../common/HelpBox.vue'
 import { dialog } from '../common/dialog.js'
 import { roundStatusLabel } from '../../data/roundStatus.js'
@@ -1585,8 +1586,8 @@ function isAbandonRequested(r) {
 
 function sortRoundApplicants(a, b) {
   // 1. 재학생 우선 (재학생 -> 졸업생)
-  const aEnrolled = a.is_enrolled !== false
-  const bEnrolled = b.is_enrolled !== false
+  const aEnrolled = !checkIsGraduate(a)
+  const bEnrolled = !checkIsGraduate(b)
   if (aEnrolled !== bEnrolled) return aEnrolled ? -1 : 1
 
   // 2. 재학생인 경우 학년, 반, 번호 순
@@ -2419,11 +2420,12 @@ async function openAdminExtraApplicationModal() {
     const studentListRaw = [...(students || [])]
     const enrolledIds = new Set(studentListRaw.map(s => s.id))
     for (const p of (profilesData || [])) {
-      if (!enrolledIds.has(p.id) && (p.is_enrolled === false || !p.grade || p.grade === 0)) {
+      if (!enrolledIds.has(p.id) && (p.is_enrolled === false || !p.grade || p.grade === 0 || checkIsGraduate(p))) {
         enrolledIds.add(p.id)
         studentListRaw.push({
           ...p,
-          is_enrolled: false
+          is_enrolled: false,
+          is_graduated: true
         })
       }
     }

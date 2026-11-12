@@ -537,6 +537,7 @@ import { useAuthStore } from '../../../stores/auth'
 import { schoolName } from '../../../utils/schoolConfig'
 import { supabase } from '../../../utils/supabaseClient'
 import { decryptText } from '../../../utils/cryptoUtils'
+import { checkIsGraduate } from '../../../utils/ruralGraduationHelper'
 
 const auth = useAuthStore()
 const { selectedAcademicYear, applications } = useStatData()
@@ -615,12 +616,14 @@ async function load2027SystemData() {
         ? (!isAbandoned && isExplicitRec) 
         : (!isAbandoned && !isExcluded)
 
+      const isGrad = checkIsGraduate(st)
       return {
         id: a.id,
         studentId: a.student_id,
         name: st.name || '학생',
-        classNum: st.student_code ? st.student_code.substring(1, 3) : '-',
-        studentNum: st.student_code ? st.student_code.substring(3, 5) : '-',
+        classNum: isGrad ? '졸업생' : (st.student_code ? st.student_code.substring(1, 3) : '-'),
+        studentNum: isGrad ? '-' : (st.student_code ? st.student_code.substring(3, 5) : '-'),
+        isGraduate: isGrad,
         univName: univ.univ_name || '대학',
         dept: a.dept || univ.track_name || '-',
         admissionMajorType: univ.admission_type || '학교장추천',
