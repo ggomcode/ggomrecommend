@@ -211,15 +211,33 @@ export async function loadCohortMockTracking(targetGrade = 2, forceReload = fals
       const g1Year = String(baseSchoolYear) // '2026'
       const g2Year = String(baseSchoolYear + 1) // '2027'
       yearConfigs = [
-        { gradeNum: 1, label: '고1 성적', year: g1Year, tabName: `${g1Year}모의결과` },
-        { gradeNum: 2, label: '고2 성적 (현재)', year: g2Year, tabName: `${g2Year}모의결과` }
+        { 
+          gradeNum: 1, 
+          label: '고1 성적', 
+          examTitle: `${Number(baseSchoolYear) - 1}년 전국연합`, 
+          year: g1Year, 
+          tabName: `${g1Year}모의결과` 
+        },
+        { 
+          gradeNum: 2, 
+          label: '고2 성적(현재)', 
+          examTitle: `${baseSchoolYear}년 전국연합`, 
+          year: g2Year, 
+          tabName: `${g2Year}모의결과` 
+        }
       ]
     } else {
       // 고1의 경우 해당 학년도 고1 성적만 단일 연동
       admYear = String(baseSchoolYear + 3) // '2029'
       const g1Year = String(baseSchoolYear + 1) // '2027'
       yearConfigs = [
-        { gradeNum: 1, label: '고1 성적 (현재)', year: g1Year, tabName: `${g1Year}모의결과` }
+        { 
+          gradeNum: 1, 
+          label: '고1 성적(현재)', 
+          examTitle: `${baseSchoolYear}년 전국연합`, 
+          year: g1Year, 
+          tabName: `${g1Year}모의결과` 
+        }
       ]
     }
 
@@ -229,42 +247,39 @@ export async function loadCohortMockTracking(targetGrade = 2, forceReload = fals
     for (const conf of yearConfigs) {
       try {
         const records = await fetchAndParseKcueMockData(sheetId, null, null, forceReload, conf.year)
-        if (records && records.length > 0) {
-          sheetsInfo.push({
-            grade: conf.gradeNum,
-            label: conf.label,
-            year: conf.year,
-            tabName: conf.tabName,
-            count: records.length,
-            status: 'connected'
-          })
+        let gradeMatched = []
 
-          records.forEach(r => {
-            const rGrade = Number(r.grade)
-            if (conf.gradeNum === 1) {
+        if (records && records.length > 0) {
+          if (conf.gradeNum === 1) {
+            // 해당 시트에서 1학년 데이터만 정확히 선별
+            gradeMatched = records.filter(r => Number(r.grade) === 1)
+            gradeMatched.forEach(r => {
               recordsByGrade[1].push({ ...r, cohortGrade: 1, sheetYear: conf.year })
-            } else if (conf.gradeNum === 2) {
-              if (rGrade === 2 || !rGrade) {
-                recordsByGrade[2].push({ ...r, cohortGrade: 2, sheetYear: conf.year })
-              } else if (rGrade === 1 && recordsByGrade[1].length === 0) {
-                recordsByGrade[1].push({ ...r, cohortGrade: 1, sheetYear: conf.year })
-              }
-            }
-          })
-        } else {
-          sheetsInfo.push({
-            grade: conf.gradeNum,
-            label: conf.label,
-            year: conf.year,
-            tabName: conf.tabName,
-            count: 0,
-            status: 'empty'
-          })
+            })
+          } else if (conf.gradeNum === 2) {
+            // '2027모의결과' 등 대상 시트에서 2학년 데이터만 정확히 선별 (다른 학년 데이터 절대 제외)
+            gradeMatched = records.filter(r => Number(r.grade) === 2)
+            gradeMatched.forEach(r => {
+              recordsByGrade[2].push({ ...r, cohortGrade: 2, sheetYear: conf.year })
+            })
+          }
         }
+
+        const count = gradeMatched.length
+        sheetsInfo.push({
+          grade: conf.gradeNum,
+          label: conf.label,
+          examTitle: conf.examTitle,
+          year: conf.year,
+          tabName: conf.tabName,
+          count,
+          status: count > 0 ? 'connected' : 'empty'
+        })
       } catch (err) {
         sheetsInfo.push({
           grade: conf.gradeNum,
           label: conf.label,
+          examTitle: conf.examTitle,
           year: conf.year,
           tabName: conf.tabName,
           count: 0,

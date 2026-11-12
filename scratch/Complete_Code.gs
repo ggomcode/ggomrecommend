@@ -63,6 +63,7 @@ function onOpen() {
     .addItem(`1. [가채점] ${latestYear}모의등급컷 기준 등급 자동 변환 (AS:BB)`, 'convertMockGradesToEbs')
     .addSeparator()
     .addItem('2. [배포] 등록된 모든 시트 일괄 배포 (수시 자동 매칭 포함)', 'deployAllRegisteredSheets')
+    .addItem('3. [배포] 현재 보고 있는 시트만 단독 배포 (암호화/평문 자동감지)', 'deployCurrentActiveSheet')
     .addToUi();
 }
 
@@ -259,6 +260,73 @@ function deployAllRegisteredSheets() {
   }
 
   ui.alert(`🎉 [일괄 배포 완료]\n\n` + results.join('\n'));
+}
+
+/**
+ * ==========================================================
+ * [기능 3] 현재 활성 시트만 단독 배포 (암호화/평문 자동감지)
+ * ==========================================================
+ */
+function deployCurrentActiveSheet() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const currentSheet = ss.getActiveSheet();
+  const sheetName = currentSheet.getName();
+
+  let targetSs;
+  try {
+    targetSs = SpreadsheetApp.openById(TARGET_SPREADSHEET_ID);
+  } catch (e) {
+    ui.alert(`❌ 배포용 스프레드시트(${TARGET_SPREADSHEET_ID})를 열 수 없습니다.\n권한을 확인하세요.`);
+    return;
+  }
+
+  // 암호화 대상 여부 자동 판단
+  const isEncrypted = ENCRYPTED_SHEETS.includes(sheetName) || sheetName.includes('수시') || sheetName.includes('모의');
+  const isPlain = PLAIN_SHEETS.includes(sheetName);
+
+  if (isEncrypted) {
+    const confirm = ui.alert(
+      '🔒 [단독 암호화 배포]',
+      `현재 탭 '${sheetName}'은 학생 개인정보가 포함된 [암호화 배포] 대상입니다.\n\n배포를 진행하시겠습니까?`,
+      ui.ButtonSet.YES_NO
+    );
+    if (confirm !== ui.Button.YES) return;
+
+    const password = promptPassword(ui);
+    if (!password) return;
+
+    let matchSummary = '';
+    if (sheetName.includes('수시')) {
+      const matchRes = executeMatchingLogic(currentSheet);
+      if (matchRes.success) {
+        matchSummary = ` (CE:DR ${matchRes.matchedCount}건 매칭완료)`;
+      } else {
+        matchSummary = ` (⚠️ 매칭 경고: ${matchRes.error})`;
+      }
+    }
+
+    const res = executeEncryptedDeploy(currentSheet, targetSs, password, true);
+    if (res.success) {
+      ui.alert(`🎉 [단독 배포 성공]\n\n• 시트: '${sheetName}'\n• 배포 방식: A열 단일 암호화 배포\n• 반영 행 수: ${res.totalRows}건${matchSummary}`);
+    } else {
+      ui.alert(`❌ [단독 배포 실패]\n\n• 시트: '${sheetName}'\n• 오류 내용: ${res.error}`);
+    }
+  } else {
+    const confirm = ui.alert(
+      '📄 [단독 평문 배포]',
+      `현재 탭 '${sheetName}'은 [평문(원본 그대로) 배포] 대상입니다.\n\n배포를 진행하시겠습니까?`,
+      ui.ButtonSet.YES_NO
+    );
+    if (confirm !== ui.Button.YES) return;
+
+    const res = executePlainDeploy(currentSheet, targetSs);
+    if (res.success) {
+      ui.alert(`🎉 [단독 배포 성공]\n\n• 시트: '${sheetName}'\n• 배포 방식: 원본 평문 배포\n• 반영 행 수: ${res.rows}행 x ${res.cols}열`);
+    } else {
+      ui.alert(`❌ [단독 배포 실패]\n\n• 시트: '${sheetName}'\n• 오류 내용: ${res.error}`);
+    }
+  }
 }
 
 /**
@@ -669,5 +737,250 @@ function decryptAES(cipherText, password) {
     return str || null;
   } catch(e) {
     return null;
+  }
+}
+
+/**
+ * ==========================================================
+ * [기능 4] 모의고사 성적 원격 수신 Web App 핸들러 (doGet, doPost)
+ * ----------------------------------------------------------
+ * - 44개 컬럼 자동 적재 (A열 '월' ~ AR열 '제2외국어 등급')
+ * - 기존 데이터 100% 완전 보존 (어떤 경우에도 기존 행 삭제 없음)
+ * - 동일 월·동일 학년 재업로드 시: 기존 행 위치 그대로 UPSERT
+ * - 신규 학생 및 타 학년 업로드 시: 맨 아래 행부터 안전하게 APPEND
+ * ==========================================================
+ */
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({
+    success: true,
+    status: 'online',
+    message: '모의고사 성적 원격 수신 Web App이 정상 작동 중입니다.'
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  try {
+    var raw = '';
+    if (e && e.postData && e.postData.contents) {
+      raw = e.postData.contents;
+    } else if (e && e.parameter && e.parameter.data) {
+      raw = e.parameter.data;
+    } else if (e && e.parameters && e.parameters.data) {
+      raw = e.parameters.data[0];
+    }
+    
+    if (!raw) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: '전송된 데이터(Payload)가 비어 있습니다.'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var payload = JSON.parse(raw);
+    var ss = null;
+    var targetId = payload.spreadsheetId ? String(payload.spreadsheetId).trim() : '';
+
+    var activeSs = null;
+    try {
+      activeSs = SpreadsheetApp.getActiveSpreadsheet();
+    } catch (_) {}
+
+    if (activeSs && (!targetId || activeSs.getId() === targetId)) {
+      ss = activeSs;
+    } else if (targetId) {
+      try {
+        ss = SpreadsheetApp.openById(targetId);
+      } catch (openErr) {
+        if (activeSs) {
+          ss = activeSs;
+        } else {
+          throw new Error('스프레드시트(' + targetId + ')를 열 수 없습니다: ' + openErr.message);
+        }
+      }
+    } else if (activeSs) {
+      ss = activeSs;
+    }
+
+    if (!ss) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: '대상 스프레드시트를 열 수 없습니다. 시트 창에서 [확장 프로그램 > Apps Script]를 열고 배포했는지 확인하세요.'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var sheetName = payload.sheetName || '2027모의결과';
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+    }
+
+    var rows = payload.rows;
+    if (!rows || rows.length === 0) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: '반영할 학생 성적 데이터(rows)가 비어 있습니다.'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 44개 컬럼 확보
+    if (sheet.getMaxColumns() < 44) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), 44 - sheet.getMaxColumns());
+    }
+
+    var lastRow = sheet.getLastRow();
+
+    // 헤더 행 수 자동 감지
+    var headerRows = 1;
+    if (lastRow >= 2) {
+      var row2Val = sheet.getRange(2, 1).getValue();
+      var isRow2Data = row2Val !== '' && row2Val !== null && !isNaN(Number(String(row2Val).trim()));
+      headerRows = isRow2Data ? 1 : 2;
+    }
+    var dataStartRow = headerRows + 1;
+
+    // 기존 시트 데이터 전체 읽기 (그 어떤 경우에도 기존 행 삭제 없음)
+    var existingData = [];
+    if (lastRow >= dataStartRow) {
+      var numDataRows = lastRow - headerRows;
+      existingData = sheet.getRange(dataStartRow, 1, numDataRows, 44).getValues();
+
+      while (existingData.length > 0) {
+        var lastEx = existingData[existingData.length - 1];
+        var isBlank = !lastEx || (
+          (lastEx[0] === null || lastEx[0] === '' || lastEx[0] === undefined) &&
+          (!lastEx[5] || String(lastEx[5]).trim() === '')
+        );
+        if (isBlank) {
+          existingData.pop();
+        } else {
+          break;
+        }
+      }
+    }
+
+    // 학생 고유 식별 키 생성 헬퍼
+    function makeStudentKeys(r) {
+      if (!r) return [];
+      var m = Number(r[0]) || 0;
+      var g = Number(r[2]) || 0;
+      var c = Number(r[3]) || 0;
+      var n = Number(r[4]) || 0;
+      var name = String(r[5] || '').trim();
+
+      if (m === 0 || g === 0) return [];
+      var keys = [];
+
+      if (c > 0 && n > 0 && name) {
+        keys.push(m + '_' + g + '_' + c + '_' + n + '_' + name);
+      }
+      if (c > 0 && n > 0) {
+        keys.push(m + '_' + g + '_' + c + '_' + n);
+      }
+      if (c > 0 && name) {
+        keys.push(m + '_' + g + '_' + c + '_' + name);
+      }
+      if (name) {
+        keys.push(m + '_' + g + '_' + name);
+      }
+      return keys;
+    }
+
+    var exMap = {};
+    for (var i = 0; i < existingData.length; i++) {
+      var keys = makeStudentKeys(existingData[i]);
+      for (var k = 0; k < keys.length; k++) {
+        var kStr = keys[k];
+        if (exMap[kStr] === undefined) {
+          exMap[kStr] = i;
+        }
+      }
+    }
+
+    var matchedExisting = {};
+    var newRowsToAppend = [];
+    var upsertCount = 0;
+
+    for (var j = 0; j < rows.length; j++) {
+      var nRow = rows[j];
+      var nKeys = makeStudentKeys(nRow);
+      var matchedIdx = -1;
+
+      for (var k = 0; k < nKeys.length; k++) {
+        var keyToCheck = nKeys[k];
+        if (exMap[keyToCheck] !== undefined) {
+          var cand = exMap[keyToCheck];
+          if (!matchedExisting[cand]) {
+            matchedIdx = cand;
+            break;
+          }
+        }
+      }
+
+      if (matchedIdx >= 0) {
+        existingData[matchedIdx] = nRow;
+        matchedExisting[matchedIdx] = true;
+        upsertCount++;
+      } else {
+        newRowsToAppend.push(nRow);
+      }
+    }
+
+    if (newRowsToAppend.length > 0) {
+      newRowsToAppend.sort(function(a, b) {
+        var gA = Number(a[2]) || 0, gB = Number(b[2]) || 0;
+        if (gA !== gB) return gA - gB;
+        var cA = Number(a[3]) || 0, cB = Number(b[3]) || 0;
+        if (cA !== cB) return cA - cB;
+        var nA = Number(a[4]) || 0, nB = Number(b[4]) || 0;
+        return nA - nB;
+      });
+    }
+
+    var combined = existingData.concat(newRowsToAppend);
+
+    if (existingData.length === 0) {
+      combined.sort(function(a, b) {
+        var mA = Number(a[0]) || 0, mB = Number(b[0]) || 0;
+        if (mA !== mB) return mA - mB;
+        var gA = Number(a[2]) || 0, gB = Number(b[2]) || 0;
+        if (gA !== gB) return gA - gB;
+        var cA = Number(a[3]) || 0, cB = Number(b[3]) || 0;
+        if (cA !== cB) return cA - cB;
+        var nA = Number(a[4]) || 0, nB = Number(b[4]) || 0;
+        return nA - nB;
+      });
+    }
+
+    var neededTotalRows = headerRows + combined.length;
+    if (sheet.getMaxRows() < neededTotalRows) {
+      sheet.insertRowsAfter(sheet.getMaxRows(), neededTotalRows - sheet.getMaxRows());
+    }
+
+    if (combined.length > 0) {
+      sheet.getRange(dataStartRow, 1, combined.length, 44).setValues(combined);
+      SpreadsheetApp.flush();
+    }
+
+    var appendStartRow = dataStartRow + existingData.length;
+    var appendEndRow = dataStartRow + combined.length - 1;
+
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      count: rows.length,
+      upsertCount: upsertCount,
+      appendCount: newRowsToAppend.length,
+      totalCount: combined.length,
+      startRow: newRowsToAppend.length > 0 ? appendStartRow : dataStartRow,
+      endRow: newRowsToAppend.length > 0 ? appendEndRow : (dataStartRow + existingData.length - 1),
+      sheetName: sheetName,
+      spreadsheetName: ss.getName(),
+      spreadsheetId: ss.getId()
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: err.message
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 }

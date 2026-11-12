@@ -42,7 +42,7 @@
         <!-- 시트 연동 현황 미니 보드 -->
         <div class="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/15 shrink-0 space-y-2 text-right">
           <div class="flex items-center justify-between gap-3 text-xs">
-            <span class="text-slate-300 font-bold">대입 코호트:</span>
+            <span class="text-slate-300 font-bold">대입 학년도:</span>
             <span class="font-black text-amber-300 font-mono text-sm">
               {{ targetAdmissionYear }}학년도 대입
             </span>
@@ -53,28 +53,28 @@
             <!-- 고1 시트 -->
             <div class="bg-white/5 rounded-lg px-2.5 py-1.5 border border-white/10">
               <div class="text-[10px] text-slate-300 font-bold">고1 성적</div>
-              <div class="text-[11px] font-mono font-bold text-sky-300 truncate" :title="cohortTrackingData.sheetsInfo[0]?.tabName">
-                {{ cohortTrackingData.sheetsInfo[0]?.tabName || `${cohortSheetYears.g1Year}모의결과` }}
+              <div class="text-[11px] font-bold text-sky-300 truncate" :title="`시트: ${cohortTrackingData.sheetsInfo[0]?.tabName || '2026모의결과'}`">
+                {{ cohortTrackingData.sheetsInfo[0]?.examTitle || '2025년 전국연합' }}
               </div>
-              <div class="text-[9px] text-slate-400">
+              <div class="text-[9px]">
                 <span v-if="cohortTrackingData.sheetsInfo[0]?.count > 0" class="text-emerald-400 font-bold">
                   {{ cohortTrackingData.sheetsInfo[0]?.count }}건 연동
                 </span>
-                <span v-else class="text-slate-400">시트 대기</span>
+                <span v-else class="text-slate-400">0건 (등록 대기)</span>
               </div>
             </div>
 
             <!-- 고2 시트 -->
             <div class="bg-indigo-500/20 rounded-lg px-2.5 py-1.5 border border-indigo-400/30">
               <div class="text-[10px] text-indigo-200 font-bold">고2 성적(현재)</div>
-              <div class="text-[11px] font-mono font-bold text-indigo-200 truncate" :title="cohortTrackingData.sheetsInfo[1]?.tabName">
-                {{ cohortTrackingData.sheetsInfo[1]?.tabName || `${cohortSheetYears.g2Year}모의결과` }}
+              <div class="text-[11px] font-bold text-indigo-200 truncate" :title="`시트: ${cohortTrackingData.sheetsInfo[1]?.tabName || '2027모의결과'}`">
+                {{ cohortTrackingData.sheetsInfo[1]?.examTitle || '2026년 전국연합' }}
               </div>
               <div class="text-[9px]">
                 <span v-if="cohortTrackingData.sheetsInfo[1]?.count > 0" class="text-emerald-400 font-bold">
                   {{ cohortTrackingData.sheetsInfo[1]?.count }}건 연동
                 </span>
-                <span v-else class="text-slate-400">시트 대기</span>
+                <span v-else class="text-slate-400">0건 (등록 대기)</span>
               </div>
             </div>
           </div>
@@ -82,15 +82,15 @@
           <!-- 고1일 때: 1개 시트(고1 현재) 연동 상태 -->
           <div v-else class="text-center pt-1 border-t border-white/10">
             <div class="bg-indigo-500/20 rounded-lg px-4 py-1.5 border border-indigo-400/30 inline-block">
-              <div class="text-[10px] text-indigo-200 font-bold">고1 성적 (현재 학사년도)</div>
-              <div class="text-xs font-mono font-bold text-sky-200">
-                {{ cohortTrackingData.sheetsInfo[0]?.tabName || `${cohortSheetYears.g1Year}모의결과` }}
+              <div class="text-[10px] text-indigo-200 font-bold">고1 성적(현재)</div>
+              <div class="text-xs font-bold text-sky-200" :title="`시트: ${cohortTrackingData.sheetsInfo[0]?.tabName || '2027모의결과'}`">
+                {{ cohortTrackingData.sheetsInfo[0]?.examTitle || '2026년 전국연합' }}
               </div>
               <div class="text-[10px]">
                 <span v-if="currentGradeRecords.length > 0" class="text-emerald-400 font-bold">
-                  {{ currentGradeRecords.length }}건 실시간 연동
+                  {{ currentGradeRecords.length }}건 연동
                 </span>
-                <span v-else class="text-slate-400">시트 대기</span>
+                <span v-else class="text-slate-400">0건 (등록 대기)</span>
               </div>
             </div>
           </div>
@@ -157,7 +157,7 @@
 
       <div class="hidden sm:flex items-center gap-2 text-xs text-slate-500 pr-2">
         <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-        <span>기준 대입: <strong>{{ targetAdmissionYear }}학년도</strong> ({{ academicYear }}학사 고2)</span>
+        <span>기준: <strong>{{ targetAdmissionYear }}학년도 대입</strong> ({{ academicYear }}학년도 고{{ targetGrade }} 전국연합)</span>
       </div>
     </div>
 

@@ -396,10 +396,10 @@
           <div class="rounded-xl p-3.5 bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-950 leading-relaxed space-y-1">
             <div class="font-black flex items-center gap-1.5 text-emerald-900">
               <span>✨</span>
-              <span>회차별 자동 누적 & 중복 방지</span>
+              <span>스마트 UPSERT & 전 학년 안전 보존</span>
             </div>
             <p class="text-[11.5px] text-emerald-950/80 m-0">
-              3월(3~266행), 5월(267행~) 등 여러 시험을 차례로 올리시면 덮어쓰기 없이 행이 차곡차곡 누적됩니다. 만약 동일 회차를 다시 올리면 해당 회차만 최신으로 안전하게 자동 갱신됩니다.
+              1·2·3학년이 같은 달(예: 10월 학평)을 치르더라도 기존 데이터는 <strong>절대 지워지지 않고</strong> 다음 행에 안전하게 차곡차곡 누적(APPEND)됩니다. 동일 학년을 재업로드할 때는 기존 행은 덮어쓰기(UPSERT)되고 신규 학생만 맨 아래에 추가됩니다.
             </p>
           </div>
 
@@ -889,8 +889,8 @@ const isGuideOpen = ref(false)
 // Apps Script 수신 코드 복사 상태
 const copiedGasSnippet = ref(false)
 const gasSnippetCode = `/**
- * [모의고사 성적 원격 수신 Web App]
- * 44개 컬럼 자동 적재, 1행/2행 헤더 자동 감지, 회차별 자동 누적 및 정렬 핸들러
+ * [모의고사 성적 원격 수신 Web App - 스마트 UPSERT & 전 학년 보존 엔진]
+ * 44개 컬럼 자동 적재, 1·2행 복합 헤더 자동 감지, 기존 행 100% 보존 + UPSERT + 신규 APPEND 핸들러
  */
 function doGet(e) {
   return ContentService.createTextOutput(JSON.stringify({
@@ -971,11 +971,9 @@ function doPost(e) {
       sheet.insertColumnsAfter(sheet.getMaxColumns(), 44 - sheet.getMaxColumns());
     }
 
-    // 3. 업로드할 회차(월) 번호 파악 (예: 3, 5, 6, 9, 10 등)
-    var targetMonth = payload.month != null ? Number(payload.month) : (rows[0] ? Number(rows[0][0]) : null);
     var lastRow = sheet.getLastRow();
 
-    // 4. 헤더 행 수 자동 감지
+    // 3. 헤더 행 수 자동 감지
     // 1행은 항상 헤더. 2행 A열이 숫자(응시월)이면 1행만 헤더, 문자열(소분류 등)이면 2행까지 복합 헤더
     var headerRows = 1;
     if (lastRow >= 2) {
@@ -985,74 +983,167 @@ function doPost(e) {
     }
     var dataStartRow = headerRows + 1;
 
-    // 5. 기존 시트 데이터 확인 및 병합
-    var combined = [];
-    if (lastRow < dataStartRow) {
-      combined = rows;
-    } else {
+    // 4. 기존 시트 데이터 전체 읽기 (⭐ 그 어떤 경우에도 기존 행 삭제 없음!)
+    var existingData = [];
+    if (lastRow >= dataStartRow) {
       var numDataRows = lastRow - headerRows;
-      var existingData = sheet.getRange(dataStartRow, 1, numDataRows, 44).getValues();
+      existingData = sheet.getRange(dataStartRow, 1, numDataRows, 44).getValues();
 
-      // 기존 데이터 중 '월(A열)'이 업로드 대상 월과 다른 회차 데이터만 보존 (동일 월 재업로드 시 교체)
-      var otherMonthsData = existingData.filter(function(r) {
-        if (!r || r[0] === null || r[0] === undefined || String(r[0]).trim() === '') return false;
-        var m = Number(String(r[0]).trim());
-        return !isNaN(m) && m > 0 && (targetMonth == null || m !== targetMonth);
-      });
-
-      combined = otherMonthsData.concat(rows);
+      // 시트 맨 뒤의 완전히 빈 행들(트레일링 공백 행) 정리
+      while (existingData.length > 0) {
+        var lastEx = existingData[existingData.length - 1];
+        var isBlank = !lastEx || (
+          (lastEx[0] === null || lastEx[0] === '' || lastEx[0] === undefined) &&
+          (!lastEx[5] || String(lastEx[5]).trim() === '')
+        );
+        if (isBlank) {
+          existingData.pop();
+        } else {
+          break;
+        }
+      }
     }
 
-    // 6. 표준 정렬: 월(A열) -> 학년(C열) -> 반(D열) -> 번호(E열) 오름차순
-    combined.sort(function(a, b) {
-      var mA = Number(a[0]) || 0, mB = Number(b[0]) || 0;
-      if (mA !== mB) return mA - mB;
-      var gA = Number(a[2]) || 0, gB = Number(b[2]) || 0;
-      if (gA !== gB) return gA - gB;
-      var cA = Number(a[3]) || 0, cB = Number(b[3]) || 0;
-      if (cA !== cB) return cA - cB;
-      var nA = Number(a[4]) || 0, nB = Number(b[4]) || 0;
-      return nA - nB;
-    });
+    // 5. 학생 고유 식별 키 생성 헬퍼 (월_학년_반_번호_이름)
+    // 컬럼 인덱스: 0:월, 2:학년, 3:반, 4:번호, 5:이름
+    function makeStudentKeys(r) {
+      if (!r) return [];
+      var m = Number(r[0]) || 0;
+      var g = Number(r[2]) || 0;
+      var c = Number(r[3]) || 0;
+      var n = Number(r[4]) || 0;
+      var name = String(r[5] || '').trim();
 
-    // 7. 시트 총 행 수 확장
+      if (m === 0 || g === 0) return [];
+      var keys = [];
+
+      // 1순위: 월_학년_반_번호_이름 (완벽 일치)
+      if (c > 0 && n > 0 && name) {
+        keys.push(m + '_' + g + '_' + c + '_' + n + '_' + name);
+      }
+      // 2순위: 월_학년_반_번호 (동일 월·학년·학급 내 번호는 학생 고유 식별자)
+      if (c > 0 && n > 0) {
+        keys.push(m + '_' + g + '_' + c + '_' + n);
+      }
+      // 3순위: 월_학년_반_이름 (번호 누락 시)
+      if (c > 0 && name) {
+        keys.push(m + '_' + g + '_' + c + '_' + name);
+      }
+      // 4순위: 월_학년_이름 (반/번호 모두 누락 시)
+      if (name) {
+        keys.push(m + '_' + g + '_' + name);
+      }
+      return keys;
+    }
+
+    // 6. 기존 데이터 행 인덱스 매핑 (0-based)
+    var exMap = {};
+    for (var i = 0; i < existingData.length; i++) {
+      var keys = makeStudentKeys(existingData[i]);
+      for (var k = 0; k < keys.length; k++) {
+        var kStr = keys[k];
+        if (exMap[kStr] === undefined) {
+          exMap[kStr] = i;
+        }
+      }
+    }
+
+    // 7. 업로드된 새 데이터(rows) 처리: 기존 행 위치 UPSERT or 하단 신규 APPEND
+    var matchedExisting = {};
+    var newRowsToAppend = [];
+    var upsertCount = 0;
+
+    for (var j = 0; j < rows.length; j++) {
+      var nRow = rows[j];
+      var nKeys = makeStudentKeys(nRow);
+      var matchedIdx = -1;
+
+      for (var k = 0; k < nKeys.length; k++) {
+        var keyToCheck = nKeys[k];
+        if (exMap[keyToCheck] !== undefined) {
+          var cand = exMap[keyToCheck];
+          if (!matchedExisting[cand]) {
+            matchedIdx = cand;
+            break;
+          }
+        }
+      }
+
+      if (matchedIdx >= 0) {
+        // [UPSERT]: 기존 행 위치(matchedIdx)를 그대로 보존하면서 새 성적 데이터로 갱신
+        existingData[matchedIdx] = nRow;
+        matchedExisting[matchedIdx] = true;
+        upsertCount++;
+      } else {
+        // [APPEND]: 기존에 없던 학생(예: 2학년 뒤에 1학년 등록, 신규 추가 학생)은 하단 덧붙이기
+        newRowsToAppend.push(nRow);
+      }
+    }
+
+    // 새로 덧붙여질 학생들은 학년 -> 반 -> 번호 순으로 정렬하여 차곡차곡 누적
+    if (newRowsToAppend.length > 0) {
+      newRowsToAppend.sort(function(a, b) {
+        var gA = Number(a[2]) || 0, gB = Number(b[2]) || 0;
+        if (gA !== gB) return gA - gB;
+        var cA = Number(a[3]) || 0, cB = Number(b[3]) || 0;
+        if (cA !== cB) return cA - cB;
+        var nA = Number(a[4]) || 0, nB = Number(b[4]) || 0;
+        return nA - nB;
+      });
+    }
+
+    // 8. 기존 데이터(보존+UPSERT) + 하단 신규 추가 데이터 결합
+    // ⭐ 기존 행은 절대 지우지 않으며 원래 행 인덱스가 100% 보존됩니다.
+    var combined = existingData.concat(newRowsToAppend);
+
+    // 만약 시트에 아무 데이터도 없었던 최초 적재라면 전체 표준 정렬
+    if (existingData.length === 0) {
+      combined.sort(function(a, b) {
+        var mA = Number(a[0]) || 0, mB = Number(b[0]) || 0;
+        if (mA !== mB) return mA - mB;
+        var gA = Number(a[2]) || 0, gB = Number(b[2]) || 0;
+        if (gA !== gB) return gA - gB;
+        var cA = Number(a[3]) || 0, cB = Number(b[3]) || 0;
+        if (cA !== cB) return cA - cB;
+        var nA = Number(a[4]) || 0, nB = Number(b[4]) || 0;
+        return nA - nB;
+      });
+    }
+
+    // 9. 시트 총 행 수 확장 (필요 시)
     var neededTotalRows = headerRows + combined.length;
     if (sheet.getMaxRows() < neededTotalRows) {
       sheet.insertRowsAfter(sheet.getMaxRows(), neededTotalRows - sheet.getMaxRows());
     }
 
-    // 8. 기존 데이터 영역 클리어 후 새 데이터 일괄 쓰기
-    if (lastRow >= dataStartRow) {
-      var clearRowCount = Math.max(lastRow - headerRows, combined.length);
-      sheet.getRange(dataStartRow, 1, clearRowCount, 44).clearContent();
+    // 10. 시트에 안전하게 일괄 쓰기 (clearContent 없이 그대로 덮어쓰기 및 하단 추가)
+    if (combined.length > 0) {
+      sheet.getRange(dataStartRow, 1, combined.length, 44).setValues(combined);
+      SpreadsheetApp.flush();
     }
 
-    sheet.getRange(dataStartRow, 1, combined.length, 44).setValues(combined);
-    SpreadsheetApp.flush();
-
-    // 9. 이번 업로드 회차 시작행 계산
-    var startRowForThisExam = dataStartRow;
-    for (var i = 0; i < combined.length; i++) {
-      if (Number(combined[i][0]) === targetMonth) {
-        startRowForThisExam = dataStartRow + i;
-        break;
-      }
-    }
-    var endRowForThisExam = startRowForThisExam + rows.length - 1;
+    var appendStartRow = dataStartRow + existingData.length;
+    var appendEndRow = dataStartRow + combined.length - 1;
 
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
       count: rows.length,
+      upsertCount: upsertCount,
+      appendCount: newRowsToAppend.length,
       totalCount: combined.length,
-      startRow: startRowForThisExam,
-      endRow: endRowForThisExam,
+      startRow: newRowsToAppend.length > 0 ? appendStartRow : dataStartRow,
+      endRow: newRowsToAppend.length > 0 ? appendEndRow : (dataStartRow + existingData.length - 1),
       sheetName: sheetName,
       spreadsheetName: ss.getName(),
-      spreadsheetId: ss.getId(),
-      targetMonth: targetMonth
+      spreadsheetId: ss.getId()
     })).setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: err.message
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
     return ContentService.createTextOutput(JSON.stringify({
       success: false,
       error: err.message
@@ -1722,17 +1813,20 @@ async function handleSaveToGoogleSheet() {
         const csvText = await fetchKcueSheetTabCsv(targetSheetId, targetSheetName.value)
         if (csvText && typeof csvText === 'string') {
           const lines = csvText.trim().split(/\r?\n/)
-          let countForMonth = 0
+          let countForMonthAndGrade = 0
+          const uploadGrade = Number(selectedGrade.value) || (rows[0] ? Number(rows[0][2]) : null)
+
           for (let i = 1; i < lines.length; i++) {
             const cols = lines[i].split(',')
             const m = Number(String(cols[0] || '').replace(/["']/g, '').trim())
-            if (m === examMonth) {
-              countForMonth++
+            const g = Number(String(cols[2] || '').replace(/["']/g, '').trim())
+            if (m === examMonth && (uploadGrade == null || g === uploadGrade)) {
+              countForMonthAndGrade++
             }
           }
-          if (countForMonth > 0) {
+          if (countForMonthAndGrade > 0) {
             isVerifiedInSheet = true
-            verifiedCount = countForMonth
+            verifiedCount = countForMonthAndGrade
             break
           }
         }
@@ -1750,9 +1844,12 @@ async function handleSaveToGoogleSheet() {
     if (isVerifiedInSheet || (isSuccess && resJson?.success === true)) {
       const savedSheetName = resJson?.spreadsheetName || '대교협 원본 구글 시트'
       const savedTab = resJson?.sheetName || targetSheetName.value
-      const countMsg = verifiedCount > 0 ? `${verifiedCount}명` : `${allParsedStudents.value.length}명`
+      const countMsg = `${rows.length}명`
+      const upsertDetail = (resJson?.upsertCount !== undefined || resJson?.appendCount !== undefined)
+        ? `• 반영 상세: 기존 성적 갱신(UPSERT) ${resJson?.upsertCount || 0}명 / 신규 추가(APPEND) ${resJson?.appendCount || 0}명\n`
+        : ''
       const rowRangeInfo = (resJson?.startRow && resJson?.endRow)
-        ? `• 이번 적재 위치: [${resJson.startRow}행 ~ ${resJson.endRow}행] (전체 누적: ${resJson.totalCount || resJson.count}명)\n`
+        ? `• 시트 반영 위치: [${resJson.startRow}행 ~ ${resJson.endRow}행] (시트 전체 누적: ${resJson.totalCount || resJson.count}명)\n`
         : `• 적재 완료: ${countMsg} (실시간 시트 적재 확인 완료 ✓)\n`
 
       await dialog.alert({
@@ -1761,9 +1858,11 @@ async function handleSaveToGoogleSheet() {
           `• 저장된 구글 시트: [${savedSheetName}]\n` +
           `• 저장된 시트 탭: [${savedTab}]\n` +
           `• 이번 적재 시험: [${selectedExam.value}] ${countMsg}\n` +
+          upsertDetail +
           rowRangeInfo +
-          `• 컬럼 규격: 44개 컬럼(A열 '월' ~ AR열 '제2외국어 등급') 자동 누적 및 정렬 완료\n\n` +
-          `구글 시트에 성공적으로 직접 전송 및 저장되었습니다.`
+          `• 데이터 보존: 타 학년(1·2·3학년) 및 타 회차 데이터 100% 완전 보존 (삭제 없음)\n` +
+          `• 컬럼 규격: 44개 컬럼(A열 '월' ~ AR열 '제2외국어 등급') 자동 누적 완료\n\n` +
+          `구글 시트에 성공적으로 직접 전송 및 안전하게 적재되었습니다.`
       })
     } else {
       // 전송 요청은 보냈으나 시트에 실제 데이터가 확인되지 않은 경우 정직하고 상세한 진단 안내
