@@ -189,7 +189,7 @@ import { fetchLoginSystemName, loginSystemName, DEFAULT_SYSTEM_NAME } from '../a
 const router = useRouter()
 const auth = useAuthStore()
 
-const displaySystemName = computed(() => loginSystemName.value || DEFAULT_SYSTEM_NAME || '3학년 진학·학사 통합 포털')
+const displaySystemName = computed(() => loginSystemName.value || '')
 
 onMounted(() => {
   fetchSchoolName()

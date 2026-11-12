@@ -95,7 +95,7 @@
         </div>
 
         <!-- 통합 시스템 명칭 (관리자 설정값 연동) -->
-        <h1 class="text-slate-900 m-0 text-xl sm:text-2xl font-black tracking-tight leading-snug portal-title-font">
+        <h1 class="text-slate-900 m-0 text-xl sm:text-2xl font-black tracking-tight leading-snug portal-title-font min-h-[2rem] flex items-center justify-center">
           {{ displaySystemName }}
         </h1>
       </div>
@@ -868,7 +868,7 @@ const cleanPhoneInput = computed(() => {
 })
 
 const suiteModules = ref([])
-const displaySystemName = computed(() => loginSystemName.value || DEFAULT_SYSTEM_NAME || '3학년 진학·학사 통합 포털')
+const displaySystemName = computed(() => loginSystemName.value || '')
 
 const activeModuleBadges = computed(() => {
   if (suiteModules.value && suiteModules.value.length > 0) {
