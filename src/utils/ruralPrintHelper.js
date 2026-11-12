@@ -1,4 +1,5 @@
 import { schoolName } from './schoolConfig';
+import { isGraduatedStudent } from './ruralGraduationHelper';
 
 /**
  * 학생용 '2027학년도 대입 농어촌 전형 추천 확인서' (A4 2페이지 양면 서식) 인쇄
@@ -17,22 +18,8 @@ export function printRuralConfirmationDocument(studentInfo, applications, studen
   const classNoVal = info.classNo ?? info.class_no ?? '';
   const seqNoVal = info.seqNo ?? info.seq_no ?? info.studentNo ?? '';
 
-  // 졸업생 판별
-  // 1) isEnrolled가 명시적으로 false이거나 isGraduated가 true인 경우 -> 졸업생
-  // 2) isEnrolled가 명시적으로 true인 경우 -> 무조건 재학생
-  // 3) 지정되지 않은 경우 -> 학번이 5자리 초과(예: 202530101 등 과거 연도 포함)이거나 과거 졸업연도인 경우
-  let isGrad = false;
-  if (info.isEnrolled === false || info.is_enrolled === false || info.isGraduated === true || info.is_graduated === true || info.is_separate_applicant === true) {
-    isGrad = true;
-  } else if (info.isEnrolled === true || info.is_enrolled === true) {
-    isGrad = false;
-  } else {
-    if (rawCodeVal.length > 5 && !rawCodeVal.startsWith('3')) {
-      isGrad = true;
-    } else if (info.gradYear && Number(info.gradYear) < year) {
-      isGrad = true;
-    }
-  }
+  // 졸업생 판별 (학사 일정 2027-01-06 기준)
+  const isGrad = isGraduatedStudent(info);
 
   // 1) 학번: 재학생은 5자리(예: 30518), 졸업생은 전체 학번(예: 202630518) 표시
   let sCodeVal = rawCodeVal;
@@ -594,7 +581,7 @@ export function printRuralClassRoster(title, rosterRows) {
   const groupsMap = new Map();
   (rosterRows || []).forEach(r => {
     const rawCode = String(r.student_code || '').trim();
-    const isGrad = r.is_enrolled === false || Boolean(r.grad_year) || (rawCode.length > 5);
+    const isGrad = isGraduatedStudent(r);
     
     let groupKey = 'grad';
     let groupLabel = '졸업생';
@@ -648,7 +635,7 @@ export function printRuralClassRoster(title, rosterRows) {
       const rawCode = String(r.student_code || '').trim();
       const code5 = rawCode ? (rawCode.length > 5 ? rawCode.slice(-5) : rawCode) : '-';
 
-      const isGrad = r.is_enrolled === false || Boolean(r.grad_year) || (rawCode.length > 5);
+      const isGrad = isGraduatedStudent(r);
       const gradYearVal = r.grad_year || (rawCode.length > 5 ? rawCode.slice(0, 4) : '');
 
       let codeDisplay = `<span style="font-family: monospace; font-weight: bold; font-size: 11px;">${code5}</span>`;

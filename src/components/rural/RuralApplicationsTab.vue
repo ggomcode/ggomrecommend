@@ -192,7 +192,12 @@
             >
               <td class="py-3 px-3.5 text-center font-semibold text-slate-500 whitespace-nowrap">{{ idx + 1 }}</td>
               <td class="py-3 px-3.5 font-semibold text-slate-700 whitespace-nowrap">
-                {{ app.student_class ? `3-${app.student_class}반` : '졸업생' }}
+                <span v-if="isGraduatedStudent(app)" class="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                  졸업생
+                </span>
+                <span v-else class="text-slate-800">
+                  {{ app.student_class ? `3-${app.student_class}반` : '3학년' }}
+                </span>
               </td>
               <td class="py-3 px-3.5 font-mono text-slate-600 whitespace-nowrap">{{ app.student_code || '-' }}</td>
               <td
@@ -821,6 +826,7 @@ import {
   getRuralSignatures
 } from '../../api/ruralApi';
 import { printRuralClassRoster, printRuralConfirmationDocument } from '../../utils/ruralPrintHelper';
+import { isGraduatedStudent } from '../../utils/ruralGraduationHelper';
 import { dialog } from '../common/dialog';
 import { useAuthStore } from '../../stores/auth';
 import officialApplicationsData from '../../stat/data/applications.json';
@@ -918,16 +924,31 @@ function buildRuralAppsFromKcue(kcueList) {
   const studentChoiceTracker = new Map();
 
   return ruralList.map((a, idx) => {
-    const studentKey = a.studentKey || `${a.grade || 3}-${a.classNum}-${a.studentNum}_${a.name}`;
+    let parsedClass = a.classNum != null ? Number(a.classNum) : null;
+    let parsedSeq = a.studentNum != null ? Number(a.studentNum) : null;
+    let studentKey = a.studentKey || '';
+
+    if ((parsedClass == null || parsedSeq == null) && studentKey) {
+      const match = studentKey.match(/^(\d+)-(\d+)_(.+)$/);
+      if (match) {
+        parsedClass = Number(match[1]);
+        parsedSeq = Number(match[2]);
+      }
+    }
+
+    if (!studentKey) {
+      studentKey = `${a.grade || 3}-${parsedClass || 0}-${parsedSeq || 0}_${a.name}`;
+    }
+
     const choiceNum = (studentChoiceTracker.get(studentKey) || 0) + 1;
     studentChoiceTracker.set(studentKey, choiceNum);
 
-    // 5자리 표준 학번 (예: 3학년 1반 3번 -> 30103)
+    // 5자리 표준 학번 (예: 3학년 11반 25번 -> 31125)
     let studentCode = '';
-    if (a.classNum && a.studentNum) {
+    if (parsedClass && parsedSeq) {
       const g = a.grade || 3;
-      const c = String(a.classNum).padStart(2, '0');
-      const n = String(a.studentNum).padStart(2, '0');
+      const c = String(parsedClass).padStart(2, '0');
+      const n = String(parsedSeq).padStart(2, '0');
       studentCode = `${g}${c}${n}`;
     } else {
       studentCode = String(a.studentKey || a.studentNum || '').trim();
@@ -940,10 +961,10 @@ function buildRuralAppsFromKcue(kcueList) {
       student_id: studentId,
       student_name: a.name || '학생',
       student_code: studentCode,
-      student_class: a.classNum ? Number(a.classNum) : null,
-      student_seq: a.studentNum ? Number(a.studentNum) : null,
+      student_class: parsedClass,
+      student_seq: parsedSeq,
       grade: a.grade || 3,
-      is_enrolled: !a.isGraduate,
+      is_enrolled: true,
       choice_number: choiceNum,
       term_type: a.period || '수시',
       univ_name: a.univName || '',
@@ -966,6 +987,7 @@ function buildRuralAppsFromKcue(kcueList) {
 function enrichStudentListWithKcue(kcueRuralApps) {
   const existingIds = new Set((studentList.value || []).map(s => s.id));
   const existingCodes = new Set((studentList.value || []).filter(s => s.student_code).map(s => String(s.student_code).trim()));
+  const existingKeys = new Set((studentList.value || []).map(s => `${s.class_no}-${s.seq_no || s.student_no}_${s.name}`));
   const newStudentsMap = new Map();
 
   kcueRuralApps.forEach(a => {
@@ -978,7 +1000,7 @@ function enrichStudentListWithKcue(kcueRuralApps) {
         class_no: a.student_class,
         student_no: a.student_seq,
         seq_no: a.student_seq,
-        is_enrolled: a.is_enrolled,
+        is_enrolled: true,
         eligibility: {
           is_eligible: true,
           is_type1_eligible: true,
@@ -989,7 +1011,8 @@ function enrichStudentListWithKcue(kcueRuralApps) {
   });
 
   newStudentsMap.forEach((st, sId) => {
-    if (!existingIds.has(sId) && (!st.student_code || !existingCodes.has(st.student_code))) {
+    const stKey = `${st.class_no}-${st.seq_no}_${st.name}`;
+    if (!existingIds.has(sId) && (!st.student_code || !existingCodes.has(st.student_code)) && !existingKeys.has(stKey)) {
       studentList.value.push(st);
     }
   });
@@ -1042,7 +1065,7 @@ const availableStudentsForModal = computed(() => {
   if (!studentList.value || studentList.value.length === 0) return [];
 
   return studentList.value.filter(st => {
-    const isGrad = st.is_separate_applicant || st.is_graduated || st.is_enrolled === false;
+    const isGrad = isGraduatedStudent(st);
     if (c === 'all') return true;
     if (c === 'grad') return isGrad;
     return !isGrad && Number(st.class_no) === Number(c);
@@ -1564,21 +1587,73 @@ async function deleteApplication(app) {
 
 // ── 데이터 테이블 정렬 및 필터링 ────────────────────────
 const enrichedApplications = computed(() => {
-  const studentMap = new Map();
+  const studentMapById = new Map();
+  const studentMapByCode = new Map();
+  const studentMapByKey = new Map();
+  const studentMapByName = new Map();
+
   studentList.value.forEach(s => {
-    studentMap.set(s.id, s);
+    if (s.id) studentMapById.set(String(s.id), s);
+    if (s.user_id) studentMapById.set(String(s.user_id), s);
+    if (s.student_code) studentMapByCode.set(String(s.student_code).trim(), s);
+
+    const nameKey = String(s.name || '').trim();
+    if (nameKey) {
+      if (s.class_no && (s.seq_no || s.student_no)) {
+        const k = `${s.class_no}-${s.seq_no || s.student_no}_${nameKey}`;
+        studentMapByKey.set(k, s);
+        studentMapByKey.set(`kcue_${k}`, s);
+        studentMapByKey.set(`3-${k}`, s);
+      }
+      studentMapByName.set(nameKey, s);
+    }
   });
 
   return rawApps.value.map(app => {
-    const st = studentMap.get(app.student_id);
+    let st = null;
+    if (app.student_id) st = studentMapById.get(String(app.student_id));
+    if (!st && app.student_code) st = studentMapByCode.get(String(app.student_code).trim());
+    if (!st && app.student_name) {
+      const cls = app.student_class ?? app.class_no;
+      const seq = app.student_seq ?? app.seq_no;
+      if (cls && seq) {
+        st = studentMapByKey.get(`${cls}-${seq}_${app.student_name}`) ||
+             studentMapByKey.get(`kcue_${cls}-${seq}_${app.student_name}`);
+      }
+      if (!st) st = studentMapByName.get(app.student_name);
+    }
+
+    const studentClass = st?.class_no != null ? Number(st.class_no) : (app.student_class != null ? Number(app.student_class) : null);
+    const studentSeq = st?.seq_no != null ? Number(st.seq_no) : (app.student_seq != null ? Number(app.student_seq) : null);
+    const studentCode = st?.student_code || app.student_code || '';
+
+    // 졸업생 여부: 2026학년도 고3(2027 대입 수험생)은 2027년 1월 졸업식(2027-01-06) 이전까지 무조건 재학생
+    const isGrad = isGraduatedStudent({
+      ...app,
+      class_no: studentClass,
+      student_class: studentClass,
+      seq_no: studentSeq,
+      student_code: studentCode,
+      grad_year: st?.grad_year || app.grad_year,
+      is_graduated: st?.is_graduated || app.is_graduated,
+      is_enrolled: st?.is_enrolled ?? app.is_enrolled
+    });
+
     const elig = st?.eligibility;
-    const isEligible = Boolean(elig?.is_eligible || elig?.is_manual_approved);
+    const isEligible = Boolean(
+      elig?.is_eligible ||
+      elig?.is_manual_approved ||
+      (app.is_official_kcue && elig?.is_eligible !== false)
+    );
+
     return {
       ...app,
       student_name: st?.name || app.student_name || '미확인학생',
-      student_code: st?.student_code || '',
-      student_class: st?.class_no || null,
-      student_seq: st?.seq_no || null,
+      student_code: studentCode,
+      student_class: studentClass,
+      student_seq: studentSeq,
+      is_graduated: isGrad,
+      is_enrolled: !isGrad,
       is_warning: !isEligible,
       ineligible_reason: elig?.evaluation_notes || ''
     };
@@ -1607,9 +1682,9 @@ const customStudentsCount = computed(() => {
 });
 
 function sortRuralApplications(a, b) {
-  const enrolledA = a.is_enrolled !== false ? 0 : 1;
-  const enrolledB = b.is_enrolled !== false ? 0 : 1;
-  if (enrolledA !== enrolledB) return enrolledA - enrolledB;
+  const gradA = isGraduatedStudent(a) ? 1 : 0;
+  const gradB = isGraduatedStudent(b) ? 1 : 0;
+  if (gradA !== gradB) return gradA - gradB;
 
   const classA = a.student_class != null ? Number(a.student_class) : 999;
   const classB = b.student_class != null ? Number(b.student_class) : 999;
@@ -1638,9 +1713,13 @@ function sortRuralApplications(a, b) {
 
 const filteredApplications = computed(() => {
   const filtered = enrichedApplications.value.filter(app => {
+    const isGrad = isGraduatedStudent(app);
     if (filterClass.value !== 'all') {
-      if (filterClass.value === 'grad' && app.student_class != null) return false;
-      if (filterClass.value !== 'grad' && app.student_class !== Number(filterClass.value)) return false;
+      if (filterClass.value === 'grad' && !isGrad) return false;
+      if (filterClass.value !== 'grad') {
+        if (isGrad) return false;
+        if (app.student_class !== Number(filterClass.value)) return false;
+      }
     }
 
     if (searchQuery.value.trim()) {
@@ -1676,9 +1755,13 @@ const printTargetApplications = computed(() => {
     if (printFilterCategory.value !== 'all' && app.term_type !== printFilterCategory.value) {
       return false;
     }
+    const isGrad = isGraduatedStudent(app);
     if (printFilterClass.value !== 'all') {
-      if (printFilterClass.value === 'grad' && app.student_class != null) return false;
-      if (printFilterClass.value !== 'grad' && app.student_class !== Number(printFilterClass.value)) return false;
+      if (printFilterClass.value === 'grad' && !isGrad) return false;
+      if (printFilterClass.value !== 'grad') {
+        if (isGrad) return false;
+        if (app.student_class !== Number(printFilterClass.value)) return false;
+      }
     }
     if (printFilterStatus.value === 'eligible' && app.is_warning) return false;
     if (printFilterStatus.value === 'warning' && !app.is_warning) return false;

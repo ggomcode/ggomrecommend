@@ -311,7 +311,7 @@
               class="hover:bg-slate-50 transition-colors"
             >
               <td class="py-3 px-3 font-semibold text-slate-800 whitespace-nowrap">
-                <span v-if="item.is_separate_applicant || item.is_graduated || item.is_enrolled === false" class="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-xs">
+                <span v-if="isGrad(item)" class="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-xs">
                   졸업생
                 </span>
                 <span v-else class="text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-xs">
@@ -635,6 +635,7 @@ import {
 } from 'lucide-vue-next';
 
 import { getRuralEligibilityList, updateRuralManualApproval, evaluateAllRuralEligibility } from '../../api/ruralApi';
+import { isGraduatedStudent } from '../../utils/ruralGraduationHelper';
 import { dialog } from '../common/dialog';
 
 const loading = ref(false);
@@ -696,8 +697,8 @@ async function handleReevaluateAll() {
   }
 }
 
-// 3학년 재학생 통계
-const isGrad = (s) => s.is_separate_applicant || s.is_graduated || s.is_enrolled === false;
+// 학사 일정(2027-01-06 졸업식) 기준 졸업생 판정
+const isGrad = (s) => isGraduatedStudent(s);
 
 const grade3List = computed(() => studentList.value.filter(s => !isGrad(s)));
 const grade3TotalCount = computed(() => grade3List.value.length);
@@ -705,8 +706,12 @@ const grade3EligibleCount = computed(() => grade3List.value.filter(s => s.eligib
 const grade3IneligibleCount = computed(() => grade3List.value.filter(s => !s.eligibility?.is_eligible && !s.eligibility?.is_type1_eligible && !s.eligibility?.is_type2_eligible && !s.eligibility?.is_manual_approved).length);
 const grade3ManualApprovedCount = computed(() => grade3List.value.filter(s => s.eligibility?.is_manual_approved || s.eligibility?.is_type2_eligible).length);
 
-// 졸업생 통계 (농어촌 전형 지원을 체크한 졸업생만 잡히도록 필터링)
-const gradList = computed(() => studentList.value.filter(s => isGrad(s) && s.apply_rural !== false));
+// 졸업생 통계 (농어촌 전형에 접수 또는 신청한 졸업생)
+const gradList = computed(() => studentList.value.filter(s => {
+  if (!isGrad(s)) return false;
+  if (s.has_rural_application || s.apply_rural === true || s.eligibility != null) return true;
+  return s.apply_rural !== false;
+}));
 const gradTotalCount = computed(() => gradList.value.length);
 const gradEligibleCount = computed(() => gradList.value.filter(s => s.eligibility?.is_eligible || s.eligibility?.is_type1_eligible || s.eligibility?.is_type2_eligible || s.eligibility?.is_manual_approved).length);
 const gradIneligibleCount = computed(() => gradList.value.filter(s => !s.eligibility?.is_eligible && !s.eligibility?.is_type1_eligible && !s.eligibility?.is_type2_eligible && !s.eligibility?.is_manual_approved).length);

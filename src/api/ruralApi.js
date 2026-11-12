@@ -2,6 +2,7 @@ import { supabase } from '../utils/supabaseClient';
 import * as XLSX from 'xlsx';
 import { encryptText, decryptText } from '../utils/cryptoUtils';
 import { clearAllRuralStorage, deleteStudentRuralSignatures } from '../utils/storageUtils';
+import { isGraduatedStudent } from '../utils/ruralGraduationHelper';
 
 const API_BASE_URL = 'https://www.schoolinfo.go.kr/openApi.do';
 
@@ -1027,7 +1028,7 @@ export async function evaluateStudentRuralEligibility(studentId, profileId = nul
 export async function getRuralEligibilityList() {
   const { data: enrolledStudents } = await supabase
     .from('enrolled_students')
-    .select('id, user_id, student_code, name, grade, class_no, student_no, seq_no, is_enrolled, is_rural_eligible')
+    .select('*');
 
   const { data: allProfs } = await supabase
     .from('profiles')
@@ -1036,6 +1037,7 @@ export async function getRuralEligibilityList() {
   const profs = (allProfs || []).filter(p => p.role !== 'teacher' && p.role !== 'admin');
 
   const enrolledSet = new Set((enrolledStudents || []).map(e => e.id));
+  const enrolledUserSet = new Set((enrolledStudents || []).filter(e => e.user_id).map(e => e.user_id));
   const enrolledCodeSet = new Set((enrolledStudents || []).filter(e => e.student_code).map(e => String(e.student_code).trim()));
 
   const profSet = new Set((profs || []).map(p => p.id));
@@ -1048,14 +1050,24 @@ export async function getRuralEligibilityList() {
 
   const separateProfs = (profs || []).filter(p => {
     if (enrolledSet.has(p.id)) return false;
+    if (p.user_id && enrolledUserSet.has(p.user_id)) return false;
+
+    // 졸업생 프로필인 경우 (is_graduated, role === 'graduate', grad_year < 2027 등)
+    const isProfGrad = p.is_graduated === true || p.role === 'graduate' || (p.grad_year && Number(p.grad_year) < 2027) || p.is_enrolled === false;
+    if (isProfGrad) {
+      // 졸업생은 재학생과 5자리 학번이 우연히 일치하더라도 제외하지 않음
+      return true;
+    }
+
     if (p.student_code && enrolledCodeSet.has(String(p.student_code).trim())) return false;
     return true;
   });
 
-  const [addrRes, eligRes, acadRes] = await Promise.all([
+  const [addrRes, eligRes, acadRes, ruralAppsRes] = await Promise.all([
     supabase.from('student_rural_addresses').select('*'),
     supabase.from('student_rural_eligibility').select('*'),
-    supabase.from('student_academic_records').select('*, rural_school_cache(*)').order('seq_order', { ascending: true })
+    supabase.from('student_academic_records').select('*, rural_school_cache(*)').order('seq_order', { ascending: true }),
+    supabase.from('rural_applications').select('*')
   ]);
 
   const addrMap = new Map();
@@ -1070,15 +1082,83 @@ export async function getRuralEligibilityList() {
     acadMap.get(ar.student_id).push(ar);
   });
 
+  const ruralApps = ruralAppsRes.data || [];
+  const appsByStudentId = new Map();
+  ruralApps.forEach(ap => {
+    if (ap.student_id) {
+      if (!appsByStudentId.has(ap.student_id)) appsByStudentId.set(ap.student_id, []);
+      appsByStudentId.get(ap.student_id).push(ap);
+    }
+  });
+
   const list = [];
   const rawList = [...(enrolledStudents || [])];
+  const rawListIdSet = new Set(rawList.map(s => s.id));
 
+  // 1. 별도 가입한 졸업생 프로필 병합
   separateProfs.forEach(sp => {
-    rawList.push({
-      ...sp,
-      is_separate_applicant: true,
-      is_graduated: sp.is_graduated || sp.grade !== 3
-    });
+    if (!rawListIdSet.has(sp.id)) {
+      rawListIdSet.add(sp.id);
+      rawList.push({
+        ...sp,
+        is_separate_applicant: true,
+        is_graduated: sp.is_graduated || sp.grade !== 3
+      });
+    }
+  });
+
+  // 2. rural_applications에 실제 지원 접수 내역이 있는 졸업생 병합
+  appsByStudentId.forEach((apps, sId) => {
+    const existing = rawList.find(s => s.id === sId || s.user_id === sId);
+    if (existing) {
+      existing.has_rural_application = true;
+      existing.apply_rural = true;
+    } else {
+      // profiles나 enrolled_students에서 검색
+      const prof = (allProfs || []).find(p => p.id === sId || p.user_id === sId);
+      const firstApp = apps[0] || {};
+      rawListIdSet.add(sId);
+      rawList.push({
+        id: sId,
+        user_id: prof?.user_id || sId,
+        student_code: prof?.student_code || firstApp.student_code || '',
+        name: prof?.name || firstApp.student_name || '졸업생 신청자',
+        grade: prof?.grade || firstApp.grade || 0,
+        class_no: prof?.class_no || firstApp.student_class || null,
+        student_no: prof?.seq_no || firstApp.student_seq || null,
+        seq_no: prof?.seq_no || firstApp.student_seq || null,
+        is_enrolled: false,
+        is_graduated: true,
+        is_separate_applicant: true,
+        apply_rural: true,
+        has_rural_application: true
+      });
+    }
+  });
+
+  // 3. student_rural_eligibility에 자격 신청 내역이 있는 학생 병합
+  (eligRes.data || []).forEach(e => {
+    if (!e.student_id) return;
+    const existing = rawList.find(s => s.id === e.student_id || s.user_id === e.student_id);
+    if (existing) {
+      if (existing.apply_rural === undefined) existing.apply_rural = true;
+    } else {
+      const prof = (allProfs || []).find(p => p.id === e.student_id || p.user_id === e.student_id);
+      rawListIdSet.add(e.student_id);
+      rawList.push({
+        id: e.student_id,
+        user_id: prof?.user_id || e.student_id,
+        student_code: prof?.student_code || '',
+        name: prof?.name || '졸업생 신청자',
+        grade: prof?.grade || 0,
+        class_no: prof?.class_no || null,
+        seq_no: prof?.seq_no || null,
+        is_enrolled: false,
+        is_graduated: true,
+        is_separate_applicant: true,
+        apply_rural: true
+      });
+    }
   });
 
   for (const s of rawList) {
@@ -1094,7 +1174,7 @@ export async function getRuralEligibilityList() {
       }
     }
 
-    const candidateIds = [profileId, s.id].filter(Boolean);
+    const candidateIds = [profileId, s.id, s.user_id].filter(Boolean);
 
     let rawAcad = null;
     for (const cid of candidateIds) {
@@ -1166,8 +1246,9 @@ export async function getRuralEligibilityList() {
     const hasAcademicRecords = decryptedAcademic && decryptedAcademic.length > 0;
     const isAcademicDisqualified = hasNonRuralMiddle || hasNonRuralHigh;
 
-    const isGradStudent = s.is_separate_applicant || s.is_graduated || s.is_enrolled === false;
-    const isSelfChecked = s.apply_rural !== false && (s.rural_self_check === true || isGradStudent);
+    // 학사 일정(2027-01-06) 기준 졸업생 판정
+    const isGradStudent = isGraduatedStudent(s);
+    const isSelfChecked = s.apply_rural !== false && (s.rural_self_check === true || isGradStudent || s.has_rural_application === true);
     const selectedType = s.rural_type || '유형I';
 
     let finalEligibility = null;
@@ -1219,7 +1300,7 @@ export async function getRuralEligibilityList() {
     });
   }
 
-  const isGrad = (s) => s.is_separate_applicant || s.is_graduated || s.is_enrolled === false;
+  const isGrad = (s) => isGraduatedStudent(s);
   list.sort((a, b) => {
     const gradA = isGrad(a) ? 1 : 0;
     const gradB = isGrad(b) ? 1 : 0;
