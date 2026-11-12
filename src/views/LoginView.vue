@@ -95,7 +95,7 @@
         </div>
 
         <!-- 통합 시스템 명칭 (관리자 설정값 연동) -->
-        <h1 class="text-slate-900 m-0 text-xl sm:text-2xl font-black tracking-tight leading-snug portal-title-font min-h-[2rem] flex items-center justify-center">
+        <h1 class="text-slate-900 m-0 text-xl sm:text-2xl font-black tracking-tight leading-snug portal-title-font min-h-8 flex items-center justify-center">
           {{ displaySystemName }}
         </h1>
       </div>

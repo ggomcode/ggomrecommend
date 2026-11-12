@@ -6,7 +6,7 @@
         <!-- Class Selector -->
         <select 
           v-model="studentClassFilter" 
-          class="min-w-[270px] bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 pl-3.5 pr-8 py-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          class="min-w-67.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 pl-3.5 pr-8 py-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         >
           <option value="ALL">전체 학급 (재학생 + 졸업생)</option>
           <option value="ENROLLED">재학생 전체 (1~11반)</option>

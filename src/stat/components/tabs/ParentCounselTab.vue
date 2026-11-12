@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <!-- Header Banner -->
-    <div class="bg-gradient-to-r from-indigo-900 via-blue-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
+    <div class="bg-linear-to-r from-indigo-900 via-blue-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
       <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
         <div>
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-extrabold bg-blue-500/30 text-blue-200 border border-blue-400/30 mb-3">
@@ -426,7 +426,7 @@
               <div class="text-[11px] text-slate-500 mt-1 leading-snug">{{ currentJumpLine.univs }}</div>
             </div>
 
-            <div class="p-3 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 relative">
+            <div class="p-3 rounded-2xl bg-linear-to-br from-emerald-50 to-teal-50 border border-emerald-200 relative">
               <div class="text-base absolute top-2 right-2">✨</div>
               <span class="text-[11px] text-emerald-800 font-bold block mb-1">1과목 +1등급 상승 시 도달</span>
               <div class="text-sm font-black text-emerald-700 font-mono">{{ nextJumpLine.level }}</div>

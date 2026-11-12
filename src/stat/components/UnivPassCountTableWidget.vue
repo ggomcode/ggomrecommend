@@ -87,7 +87,7 @@
           <div
             :class="[
               'px-2 py-1.5 text-center text-[11px] font-bold truncate border-b transition-colors',
-              'print:bg-slate-100 print:text-black print:border-black print:py-1 print:text-[9.5px] print:whitespace-normal print:overflow-visible print:break-words print:leading-tight',
+              'print:bg-slate-100 print:text-black print:border-black print:py-1 print:text-[9.5px] print:whitespace-normal print:overflow-visible print:wrap-break-word print:leading-tight',
               target.id === 'MED'
                 ? 'bg-rose-50 text-rose-800 border-rose-200 font-black'
                 : statsMap[target.id]?.studentCount > 0
@@ -165,7 +165,7 @@
           <div
             :class="[
               'px-2 py-1.5 text-center text-[11px] font-bold truncate border-b transition-colors',
-              'print:bg-slate-100 print:text-black print:border-black print:py-1 print:text-[9.5px] print:whitespace-normal print:overflow-visible print:break-words print:leading-tight',
+              'print:bg-slate-100 print:text-black print:border-black print:py-1 print:text-[9.5px] print:whitespace-normal print:overflow-visible print:wrap-break-word print:leading-tight',
               statsMap[target.id]?.studentCount > 0
                 ? 'bg-emerald-50/60 text-slate-800 border-emerald-100 group-hover:bg-emerald-100/70'
                 : 'bg-slate-100/80 text-slate-600 border-slate-200'
@@ -207,7 +207,7 @@
     </div>
 
     <!-- Print Footer note -->
-    <div class="hidden print:block print:mt-3 print:pt-2 print:border-t print:border-black text-[9px] text-slate-500 font-mono flex justify-between">
+    <div class="hidden print:flex print:mt-3 print:pt-2 print:border-t print:border-black text-[9px] text-slate-500 font-mono justify-between">
       <span>* 의치한약수 계열은 전공 기준 집계로 타 대학 합격 인원과 일부 중복 집계될 수 있습니다.</span>
       <span>출력일시: {{ printDateTime }}</span>
     </div>

@@ -66,3 +66,4 @@ export function isGraduatedStudent(studentOrApp, targetGraduationDate = DEFAULT_
 
   return false;
 }
+
