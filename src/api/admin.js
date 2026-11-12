@@ -5,7 +5,7 @@ import { encryptText, decryptText, hashText } from '../utils/cryptoUtils'
 import { fetchRoundSchedulesMap, computeRoundDisplayStatus, isRoundAnnouncedOrDone } from '../utils/roundSchedule'
 import { deleteApplicationStorageFiles } from '../utils/storageUtils'
 import { buildOverviewFromKcue } from '../utils/recommendationKcueAdapter'
-import { cleanUnivName, lookupMasterData, lookupMasterQuota, lookupMasterRawQuota } from '../utils/recommendationMasterData'
+import { cleanUnivName, lookupMasterData, lookupMasterQuota, lookupMasterRawQuota, lookupMasterGradCondition } from '../utils/recommendationMasterData'
 
 // Helper for error parsing
 export async function blobErrMsg(e) {
