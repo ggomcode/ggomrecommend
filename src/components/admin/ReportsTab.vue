@@ -1065,6 +1065,7 @@ const flatStats = computed(() => {
       let gradApplied = 0
       for (const ap of relevantAppliedApps) {
         const stInfo = studentMap.value[ap.student_id] || {}
+        const rawCode = String(ap.student_code || stInfo.student_code || '').trim()
         const isGrad = Boolean(stInfo.is_graduated || (!stInfo.grade && stInfo.grad_year) || stInfo.is_enrolled === false || !stInfo.grade || Number(stInfo.grade) === 0 || rawCode.length > 5)
         if (isGrad) gradApplied++
         else enrolledApplied++
