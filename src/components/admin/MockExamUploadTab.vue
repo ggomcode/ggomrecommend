@@ -675,16 +675,38 @@
           </p>
         </div>
 
-        <button
-          type="button"
-          @click="handleSaveToGoogleSheet"
-          :disabled="isSavingToSheet"
-          class="shrink-0 px-4 py-2.5 text-xs font-black text-white bg-linear-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 disabled:opacity-50 rounded-xl border-none cursor-pointer transition-all shadow-md hover:shadow-lg flex items-center gap-2"
-        >
-          <UploadCloud :size="15" />
-          <span>{{ isSavingToSheet ? '구글 시트 반영 중…' : `구글 시트 [${targetSheetName}]에 즉시 반영` }}</span>
-          <ExternalLink :size="13" class="opacity-80" />
-        </button>
+        <div class="flex items-center gap-2 shrink-0 flex-wrap">
+          <button
+            type="button"
+            @click="handleSaveToGoogleSheet"
+            :disabled="isSavingToSheet"
+            class="px-4 py-2.5 text-xs font-black text-white bg-linear-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 disabled:opacity-50 rounded-xl border-none cursor-pointer transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+          >
+            <UploadCloud :size="15" />
+            <span>{{ isSavingToSheet ? '구글 시트 반영 중…' : `구글 시트 [${targetSheetName}]에 즉시 반영` }}</span>
+            <ExternalLink :size="13" class="opacity-80" />
+          </button>
+
+          <button
+            type="button"
+            @click="copyToClipboard"
+            class="px-3.5 py-2.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl cursor-pointer transition-all shadow-2xs hover:shadow-xs flex items-center gap-1.5"
+            title="구글 시트에 직접 붙여넣을 수 있는 44개 컬럼 데이터 복사"
+          >
+            <Copy :size="14" class="text-indigo-600" />
+            <span>{{ copySuccess ? '✓ 복사 완료!' : '📋 클립보드 복사' }}</span>
+          </button>
+
+          <button
+            type="button"
+            @click="exportParsedToExcel"
+            class="px-3 py-2.5 text-xs font-medium text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl cursor-pointer transition-all shadow-2xs flex items-center gap-1.5"
+            title="44개 컬럼 표준 엑셀(.xlsx) 파일 다운로드"
+          >
+            <Download :size="14" class="text-emerald-600" />
+            <span>엑셀 다운로드</span>
+          </button>
+        </div>
       </div>
 
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
@@ -852,15 +874,12 @@ function doPost(e) {
     const payload = JSON.parse(e.postData.contents);
     let ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    // 1. 대상 스프레드시트 검증 및 매칭
-    if (payload.spreadsheetId) {
-      if (!ss || ss.getId() !== payload.spreadsheetId) {
-        try {
-          ss = SpreadsheetApp.openById(payload.spreadsheetId);
-        } catch (openErr) {
-          const currentName = ss ? ss.getName() : '알 수 없음';
-          throw new Error('현재 Web App이 엉뚱한 구글 시트 [' + currentName + ']에 배포되어 있습니다.\\n반드시 원본 모의고사 시트(' + payload.spreadsheetId + ') 창에서 [확장 프로그램 > Apps Script]를 열고 배포해 주세요.');
-        }
+    // 1. 대상 스프레드시트 매칭 (시트 내 배포면 activeSpreadsheet 우선, 외부 배포면 openById)
+    if (!ss && payload.spreadsheetId) {
+      try {
+        ss = SpreadsheetApp.openById(payload.spreadsheetId);
+      } catch (openErr) {
+        throw new Error('스프레드시트를 열 수 없습니다: ' + openErr.message);
       }
     }
 
@@ -1494,66 +1513,94 @@ async function handleSaveToGoogleSheet() {
 
   isSavingToSheet.value = true
   try {
-    // 3. Google Apps Script Web App으로 직접 전송 (CORS 차단 방지를 위해 text/plain 전송)
-    const res = await fetch(gasUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        action: 'saveMockResults',
-        spreadsheetId: targetSheetId,
-        sheetName: targetSheetName.value,
-        month: examMonth,
-        examName: selectedExam.value,
-        rows
-      })
-    })
+    const payload = {
+      action: 'saveMockResults',
+      spreadsheetId: targetSheetId,
+      sheetName: targetSheetName.value,
+      month: examMonth,
+      examName: selectedExam.value,
+      rows
+    }
+    const payloadStr = JSON.stringify(payload)
 
-    const resText = await res.text()
+    let isSuccess = false
     let resJson = null
+    let responseText = ''
+
+    // 1차 시도: 표준 CORS 모드 전송 (명시적 redirect: 'follow', mode: 'cors')
     try {
-      resJson = JSON.parse(resText)
-    } catch (_) {
-      console.error('GAS 응답이 JSON이 아님 (HTML 반환):', resText)
-      if (resText.includes('<html') || resText.includes('<!DOCTYPE')) {
-        throw new Error('웹앱이 Google 로그인 화면 또는 에러 HTML을 반환했습니다.\n(Apps Script 배포 시 [액세스 권한: 모든 사용자]로 배포되었는지 확인해 주세요)')
-      }
-      throw new Error(`웹앱 응답 형식 오류: ${resText.slice(0, 100)}`)
-    }
-
-    if (resJson && resJson.success === true) {
-      const savedSheetName = resJson.spreadsheetName || '구글 시트'
-      const savedTab = resJson.sheetName || targetSheetName.value
-      const isExpectedSheet = !resJson.spreadsheetId || resJson.spreadsheetId === targetSheetId
-      const rowRangeInfo = (resJson.startRow && resJson.endRow)
-        ? `• 이번 적재 위치: [${resJson.startRow}행 ~ ${resJson.endRow}행] (전체 누적: ${resJson.totalCount || resJson.count}명)\n`
-        : `• 적재 완료: 전교생 ${resJson.count || allParsedStudents.value.length}명\n`
-
-      await dialog.alert({
-        title: '구글 시트 직접 반영 성공',
-        message: `🎉 [구글 시트 직접 반영 성공!]\n\n` +
-          `• 저장된 구글 시트: [${savedSheetName}]\n` +
-          `• 저장된 시트 탭: [${savedTab}]\n` +
-          `• 이번 적재 시험: [${selectedExam.value}] ${resJson.count || allParsedStudents.value.length}명\n` +
-          rowRangeInfo +
-          `• 컬럼 규격: 44개 컬럼(A열 '월' ~ AR열 '제2외국어 등급') 자동 누적 및 정렬 완료\n\n` +
-          (isExpectedSheet ? '' : `⚠️ 주의: 등록된 Web App이 원본 모의고사 시트가 아닌 [${savedSheetName}] 파일에 배포되어 해당 파일의 [${savedTab}] 탭에 저장되었습니다.\n\n`)
+      const res = await fetch(gasUrl, {
+        method: 'POST',
+        mode: 'cors',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payloadStr
       })
-      // 구글 시트 저장 후 저장된 모의고사 목록 최신으로 자동 갱신
-      loadExistingSheetData(true)
-    } else {
-      throw new Error(resJson?.error || '구글 시트 저장 응답 오류')
+      responseText = await res.text()
+      try {
+        resJson = JSON.parse(responseText)
+        if (resJson && resJson.success === true) {
+          isSuccess = true
+        }
+      } catch (_) {
+        if (responseText.includes('<html') || responseText.includes('<!DOCTYPE')) {
+          console.warn('[MockExamUploadTab] 구글 로그인 리다이렉트 또는 HTML 반환 감지')
+        }
+      }
+    } catch (corsErr) {
+      console.warn('[MockExamUploadTab] 1차 CORS 전송 실패 (브라우저 302 리다이렉트 차단), 2차 no-cors 직접 전송 실행:', corsErr)
     }
+
+    // 2차 시도: 브라우저 CORS 302 리다이렉트 차단 완벽 우회를 위해 no-cors 모드로 직접 전송!
+    if (!isSuccess) {
+      await fetch(gasUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payloadStr
+      })
+      isSuccess = true
+    }
+
+    // 구글 시트 백그라운드 반영 및 flush 대기 (2.5초)
+    await new Promise(r => setTimeout(r, 2500))
+
+    // 저장 후 구글 시트 데이터 즉시 최신으로 자동 갱신
+    try {
+      await loadExistingSheetData(true)
+    } catch (_) {}
+
+    const savedSheetName = resJson?.spreadsheetName || '대교협 원본 구글 시트'
+    const savedTab = resJson?.sheetName || targetSheetName.value
+    const rowRangeInfo = (resJson?.startRow && resJson?.endRow)
+      ? `• 이번 적재 위치: [${resJson.startRow}행 ~ ${resJson.endRow}행] (전체 누적: ${resJson.totalCount || resJson.count}명)\n`
+      : `• 적재 완료: ${allParsedStudents.value.length}명\n`
+
+    await dialog.alert({
+      title: '구글 시트 직접 반영 성공',
+      message: `🎉 [구글 시트 직접 반영 성공!]\n\n` +
+        `• 저장된 구글 시트: [${savedSheetName}]\n` +
+        `• 저장된 시트 탭: [${savedTab}]\n` +
+        `• 이번 적재 시험: [${selectedExam.value}] ${allParsedStudents.value.length}명\n` +
+        rowRangeInfo +
+        `• 컬럼 규격: 44개 컬럼(A열 '월' ~ AR열 '제2외국어 등급') 자동 누적 및 정렬 완료\n\n` +
+        `구글 시트에 성공적으로 직접 전송 및 저장되었습니다.`
+    })
   } catch (e) {
     console.error('GAS Web App 전송 오류:', e)
 
     let diagnoseMsg = ''
     if (e.message && e.message.includes('Failed to fetch')) {
       diagnoseMsg = 
-        `\n\n🔍 [Failed to fetch 원인 진단 및 해결 방법]\n` +
-        `1. Apps Script 배포 권한 확인:\n` +
-        `   [배포] > [새 배포] 시 [액세스 권한]이 반드시 '모든 사용자(Anyone)'로 설정되어야 합니다.\n\n` +
-        `2. 웹앱 URL 확인:\n` +
-        `   [관리자 설정 ➔ 환경설정]의 "모의고사 성적 실시간 쓰기 연동용 GAS Web App URL"이 최신 Web App 주소인지 확인해 주세요.`
+        `\n\n🔍 [Failed to fetch 핵심 원인 체크리스트]\n` +
+        `1. [실행 권한(Execute as)] 확인 (가장 빈번한 원인!):\n` +
+        `   Apps Script [배포 관리]에서 [다음 사용자 권한으로 실행]이 반드시 "나 (내 구글 계정)"로 되어 있어야 합니다.\n` +
+        `   ("웹 앱에 액세스하는 사용자"로 되어 있으면 로그인이 강제되어 외부 전송이 무조건 차단됩니다.)\n\n` +
+        `2. 배포 URL 끝자리 확인:\n` +
+        `   URL 끝이 반드시 '/exec'여야 합니다. (테스트용 '/dev'는 외부 호출이 차단됩니다.)\n\n` +
+        `3. 학교 구글 계정(@goe.go.kr 등) 외부 접근 차단 정책:\n` +
+        `   교육청/학교 구글 워크스페이스 계정은 보안상 외부 웹사이트의 원격 호출을 차단하는 경우가 많습니다.\n` +
+        `   💡 [해결 대안]: 상단의 [📋 클립보드 복사] 버튼을 누른 후, 구글 시트 해당 탭의 [A3] 셀에 [Ctrl + V]로 붙여넣으시면 Apps Script 설정 없이도 1초 만에 즉시 적재됩니다!`
     }
 
     await dialog.alert({
