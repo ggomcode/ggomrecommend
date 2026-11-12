@@ -206,8 +206,8 @@
 </template>
 
 <script setup>
-import { ref, computed, defineAsyncComponent, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, defineAsyncComponent, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { schoolName, fetchSchoolName } from '../utils/schoolConfig'
 import { changeAdminPassword } from '../api/admin'
@@ -221,29 +221,34 @@ import {
   Home,
   LogOut,
   KeyRound,
-  FileSpreadsheet
+  FileSpreadsheet,
+  School
 } from 'lucide-vue-next'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
 // ── 탭 컴포넌트 ──────────────────────────────────────────────
+const ClassesTab = defineAsyncComponent(() => import('../components/admin/ClassesTab.vue'))
 const ApprovalTab = defineAsyncComponent(() => import('../components/teacher/ApprovalTab.vue'))
 const StudentsTab = defineAsyncComponent(() => import('../components/admin/StudentsTab.vue'))
 const MockExamUploadTab = defineAsyncComponent(() => import('../components/admin/MockExamUploadTab.vue'))
 const SettingsTab = defineAsyncComponent(() => import('../components/admin/SettingsTab.vue'))
 
 const menus = [
+  { key: 'classes', label: '학급 현황 설정', icon: School },
   { key: 'approval', label: '가입 승인', icon: UserCheck },
   { key: 'students', label: '학생 관리', icon: Users },
   { key: 'mockExamUpload', label: '모의고사 성적 업로드', icon: FileSpreadsheet },
   { key: 'settings', label: '환경 설정', icon: Settings },
 ]
 
-const active = ref('approval')
+const active = ref(route.query?.tab && menus.some(m => m.key === route.query.tab) ? route.query.tab : 'classes')
 const collapsed = ref(false)
 
 const currentTab = computed(() => {
+  if (active.value === 'classes') return ClassesTab
   if (active.value === 'approval') return ApprovalTab
   if (active.value === 'students') return StudentsTab
   if (active.value === 'mockExamUpload') return MockExamUploadTab
@@ -303,8 +308,17 @@ async function logout() {
   router.push('/login')
 }
 
+watch(() => route.query.tab, (newTab) => {
+  if (newTab && menus.some(m => m.key === newTab)) {
+    active.value = newTab
+  }
+})
+
 onMounted(() => {
   fetchSchoolName()
+  if (route.query?.tab && menus.some(m => m.key === route.query.tab)) {
+    active.value = route.query.tab
+  }
 })
 </script>
 

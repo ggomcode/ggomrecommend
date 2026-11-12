@@ -254,7 +254,8 @@ export const getOverview = async (targetRoundId = null) => {
   for (const t of teachers) {
     if (!t.grade || Number(t.grade) === 0) {
       graduatedTeacher = t
-    } else {
+    } else if (Number(t.grade) === 3 || t.grade == null) {
+      // 학교장추천전형은 고3(3학년) 대상이므로 3학년 학급만 집계
       regularTeachers.push(t)
     }
   }

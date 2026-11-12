@@ -332,7 +332,6 @@ async function fetchPendingAbandonCount() {
 const mainMenus = computed(() => {
   const menus = [
     { key: 'home',     label: '개요',          icon: Home },
-    { key: 'classes',  label: '학급 현황',     icon: School },
     { key: 'univs',    label: '대학 설정',     icon: Building2 },
     { key: 'areas',    label: '추천순위 기준 설정', icon: SlidersHorizontal },
     { key: 'rounds',   label: '학교장 추천 선발', icon: Trophy },

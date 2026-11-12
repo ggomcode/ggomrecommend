@@ -511,11 +511,10 @@ function parseMoeClusteredRows(allRowCells, defaultMeta) {
       return isNaN(n) ? null : n
     }
 
-    // 학년별 양식 판별
-    // 1) 3학년 판별: c[2]가 한글 선택과목명이거나 (targetGrade === 3 이고 c[2]가 텍스트)
-    const isGrade3Format = (c[2] && /[가-힣]/.test(c[2])) || (targetGrade === 3 && c.length >= 25 && isNaN(Number(c[2])))
-
-    // 2) 1학년 판별: targetGrade === 1 이거나 (직탐/제2외가 없어 전체 컬럼 수가 22개 이하)
+    // 학년별 양식 판별:
+    // 1) targetGrade가 지정되어 있으면 해당 학년 표준 양식을 최우선 적용 (결시 과목이 있어도 양식 왜곡 방지)
+    // 2) 미지정 시 행별 셀 구조(국어 선택과목명 존재 여부, 컬럼 수)로 자동 판별
+    const isGrade3Format = targetGrade === 3 || (c[2] && /[가-힣]/.test(c[2]))
     const isGrade1Format = !isGrade3Format && (targetGrade === 1 || c.length <= 22)
 
     let studentData = null

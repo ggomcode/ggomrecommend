@@ -827,7 +827,7 @@ async function loadReadiness() {
       getUniversities(),
     ])
     readiness.value = {
-      classes:  classes.filter(c => !(c.grade === 0 && c.class_no === 0)).length,
+      classes:  classes.filter(c => (Number(c.grade) === 3 || c.grade == null) && !(c.grade === 0 && c.class_no === 0)).length,
       students: studentPage.total,
       areas:    areas.length,
       univs:    univs.length,
