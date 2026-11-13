@@ -15,7 +15,37 @@
             <h1 class="text-base font-bold text-slate-900 m-0">수능응시 · 수시/정시 원서접수계획 관리</h1>
           </div>
         </div>
-        <div v-if="!auth.isGuest" class="flex items-center gap-3">
+        <div v-if="!auth.isGuest" class="flex items-center gap-2.5">
+          <!-- 학생 이름 3단계 마스킹 토글 버튼 (대입 통계 시스템과 동일) -->
+          <div 
+            v-if="auth.isTeacher" 
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-slate-700 bg-slate-100 border border-slate-300 rounded-lg shadow-2xs cursor-not-allowed select-none"
+            title="교사 계정은 학생 개인정보 보호를 위해 이름 마스킹이 항상 강제 적용됩니다."
+          >
+            <span>🔒</span>
+            <span>**동</span>
+          </div>
+
+          <button 
+            v-else-if="auth.isAdmin"
+            @click="cycleAdminMaskMode"
+            :class="[
+              'inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg transition-all duration-150 border cursor-pointer shadow-2xs select-none',
+              adminMaskMode === 0 
+                ? 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100' 
+                : adminMaskMode === 1
+                ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+            ]"
+            :title="adminMaskTooltip"
+          >
+            <span>{{ adminMaskMode === 0 ? '🔒' : (adminMaskMode === 1 ? '🔓' : '👁️') }}</span>
+            <span>{{ adminMaskLabel }}</span>
+            <span class="text-[9px] px-1 py-0.2 rounded font-black bg-white border border-current">
+              {{ adminMaskMode === 0 ? '1단' : (adminMaskMode === 1 ? '2단' : '3단') }}
+            </span>
+          </button>
+
           <button @click="$router.push('/select-system')" class="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer">🏠 포털 이동</button>
           <button @click="$router.push('/calendar')" class="text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5" title="학사일정 & 대입 캘린더">
             <span>📅</span>
@@ -42,19 +72,19 @@
           <div class="grid grid-cols-3 gap-2">
             <!-- 전체 학생 -->
             <button @click="selectStatusCard('all')"
-              :class="['rounded-xl p-2.5 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-[76px]', filterStatus === 'all' && activeTab === 'overview' ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-500 shadow-sm' : 'bg-slate-50/70 border-slate-200/80 hover:bg-slate-100 hover:border-slate-300']">
+              :class="['rounded-xl p-2.5 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-19', filterStatus === 'all' && activeTab === 'overview' ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-500 shadow-sm' : 'bg-slate-50/70 border-slate-200/80 hover:bg-slate-100 hover:border-slate-300']">
               <p class="text-[11px] font-bold text-slate-500 leading-tight">전체 학생</p>
               <p class="text-xl font-extrabold text-slate-900">{{ stats.total }}</p>
             </button>
             <!-- 접수 완료 -->
             <button @click="selectStatusCard('csat_registered')"
-              :class="['rounded-xl p-2.5 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-[76px]', filterStatus === 'csat_registered' && activeTab === 'overview' ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-500 shadow-sm' : 'bg-indigo-50/40 border-indigo-200/80 hover:bg-indigo-50 hover:border-indigo-300']">
+              :class="['rounded-xl p-2.5 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-19', filterStatus === 'csat_registered' && activeTab === 'overview' ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-500 shadow-sm' : 'bg-indigo-50/40 border-indigo-200/80 hover:bg-indigo-50 hover:border-indigo-300']">
               <p class="text-[11px] font-bold text-indigo-700 leading-tight">접수 완료</p>
               <p class="text-xl font-extrabold text-indigo-600">{{ stats.csatRegistered }}</p>
             </button>
             <!-- 미접수 -->
             <button @click="selectStatusCard('csat_not_registered')"
-              :class="['rounded-xl p-2.5 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-[76px]', filterStatus === 'csat_not_registered' && activeTab === 'overview' ? 'bg-slate-100 border-slate-400 ring-2 ring-slate-500 shadow-sm' : 'bg-slate-50/70 border-slate-200/80 hover:bg-slate-100 hover:border-slate-300']">
+              :class="['rounded-xl p-2.5 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-19', filterStatus === 'csat_not_registered' && activeTab === 'overview' ? 'bg-slate-100 border-slate-400 ring-2 ring-slate-500 shadow-sm' : 'bg-slate-50/70 border-slate-200/80 hover:bg-slate-100 hover:border-slate-300']">
               <p class="text-[11px] font-bold text-slate-600 leading-tight">미접수</p>
               <p class="text-xl font-extrabold text-slate-700">{{ stats.csatNotRegistered }}</p>
             </button>
@@ -62,7 +92,7 @@
         </div>
 
         <!-- 2) 수능셀프체크 불일치 (단독 박스) -->
-        <div class="lg:col-span-2 bg-white rounded-2xl p-4 border border-red-200 shadow-sm flex flex-col justify-between bg-red-50/20">
+        <div class="lg:col-span-2 rounded-2xl p-4 border border-red-200 shadow-sm flex flex-col justify-between bg-red-50/20">
           <div class="flex items-center justify-between pb-2 mb-2.5 border-b border-red-100">
             <span class="text-xs font-black text-red-800 flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
@@ -70,7 +100,7 @@
             </span>
           </div>
           <button @click="selectStatusCard('mismatch')"
-            :class="['rounded-xl p-2.5 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-[76px]', filterStatus === 'mismatch' && activeTab === 'overview' ? 'bg-red-50 border-red-400 ring-2 ring-red-500 shadow-sm' : 'bg-red-50/40 border-red-200 hover:bg-red-50 hover:border-red-300']">
+            :class="['rounded-xl p-2.5 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-19', filterStatus === 'mismatch' && activeTab === 'overview' ? 'bg-red-50 border-red-400 ring-2 ring-red-500 shadow-sm' : 'bg-red-50/40 border-red-200 hover:bg-red-50 hover:border-red-300']">
             <p class="text-[11px] font-bold text-red-700 leading-tight">대조 불일치</p>
             <p class="text-xl font-extrabold text-red-600">{{ stats.mismatch }}</p>
           </button>
@@ -87,37 +117,37 @@
           <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
             <!-- 셀프 체크 참여 -->
             <button @click="selectStatusCard('surveyed')"
-              :class="['rounded-xl p-2 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-[76px]', filterStatus === 'surveyed' && activeTab === 'overview' ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-500 shadow-sm' : 'bg-emerald-50/40 border-emerald-200/80 hover:bg-emerald-50 hover:border-emerald-300']">
+              :class="['rounded-xl p-2 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-19', filterStatus === 'surveyed' && activeTab === 'overview' ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-500 shadow-sm' : 'bg-emerald-50/40 border-emerald-200/80 hover:bg-emerald-50 hover:border-emerald-300']">
               <p class="text-[11px] font-bold text-emerald-800 leading-tight">셀프 체크<br>참여</p>
               <p class="text-lg font-extrabold text-emerald-600">{{ stats.surveyed }}</p>
             </button>
             <!-- 수능 미응시 -->
             <button @click="selectStatusCard('no_take')"
-              :class="['rounded-xl p-2 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-[76px]', filterStatus === 'no_take' && activeTab === 'overview' ? 'bg-orange-50 border-orange-400 ring-2 ring-orange-500 shadow-sm' : 'bg-orange-50/40 border-orange-200/80 hover:bg-orange-50 hover:border-orange-300']">
+              :class="['rounded-xl p-2 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-19', filterStatus === 'no_take' && activeTab === 'overview' ? 'bg-orange-50 border-orange-400 ring-2 ring-orange-500 shadow-sm' : 'bg-orange-50/40 border-orange-200/80 hover:bg-orange-50 hover:border-orange-300']">
               <p class="text-[11px] font-bold text-orange-800 leading-tight">수능<br>미응시</p>
               <p class="text-lg font-extrabold text-orange-600">{{ stats.csatNoTake }}</p>
             </button>
             <!-- 일반대 수시 미접수 -->
             <button @click="selectStatusCard('no_apply_gen_susi')"
-              :class="['rounded-xl p-2 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-[76px]', filterStatus === 'no_apply_gen_susi' && activeTab === 'overview' ? 'bg-purple-50 border-purple-400 ring-2 ring-purple-500 shadow-sm' : 'bg-purple-50/40 border-purple-200/80 hover:bg-purple-50 hover:border-purple-300']">
+              :class="['rounded-xl p-2 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-19', filterStatus === 'no_apply_gen_susi' && activeTab === 'overview' ? 'bg-purple-50 border-purple-400 ring-2 ring-purple-500 shadow-sm' : 'bg-purple-50/40 border-purple-200/80 hover:bg-purple-50 hover:border-purple-300']">
               <p class="text-[11px] font-bold text-purple-800 leading-tight">일반대 수시<br>미접수</p>
               <p class="text-lg font-extrabold text-purple-600">{{ stats.susiGenNoApply }}</p>
             </button>
             <!-- 일반대 정시 미접수 -->
             <button @click="selectStatusCard('no_apply_gen_jung')"
-              :class="['rounded-xl p-2 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-[76px]', filterStatus === 'no_apply_gen_jung' && activeTab === 'overview' ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-500 shadow-sm' : 'bg-indigo-50/40 border-indigo-200/80 hover:bg-indigo-50 hover:border-indigo-300']">
+              :class="['rounded-xl p-2 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-19', filterStatus === 'no_apply_gen_jung' && activeTab === 'overview' ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-500 shadow-sm' : 'bg-indigo-50/40 border-indigo-200/80 hover:bg-indigo-50 hover:border-indigo-300']">
               <p class="text-[11px] font-bold text-indigo-800 leading-tight">일반대 정시<br>미접수</p>
               <p class="text-lg font-extrabold text-indigo-600">{{ stats.jungsiGenNoApply }}</p>
             </button>
             <!-- 전문대 수시 미접수 -->
             <button @click="selectStatusCard('no_apply_col_susi')"
-              :class="['rounded-xl p-2 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-[76px]', filterStatus === 'no_apply_col_susi' && activeTab === 'overview' ? 'bg-pink-50 border-pink-400 ring-2 ring-pink-500 shadow-sm' : 'bg-pink-50/40 border-pink-200/80 hover:bg-pink-50 hover:border-pink-300']">
+              :class="['rounded-xl p-2 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-19', filterStatus === 'no_apply_col_susi' && activeTab === 'overview' ? 'bg-pink-50 border-pink-400 ring-2 ring-pink-500 shadow-sm' : 'bg-pink-50/40 border-pink-200/80 hover:bg-pink-50 hover:border-pink-300']">
               <p class="text-[11px] font-bold text-pink-800 leading-tight">전문대 수시<br>미접수</p>
               <p class="text-lg font-extrabold text-pink-600">{{ stats.susiColNoApply }}</p>
             </button>
             <!-- 전문대 정시 미접수 -->
             <button @click="selectStatusCard('no_apply_col_jung')"
-              :class="['rounded-xl p-2 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-[76px]', filterStatus === 'no_apply_col_jung' && activeTab === 'overview' ? 'bg-rose-50 border-rose-400 ring-2 ring-rose-500 shadow-sm' : 'bg-rose-50/40 border-rose-200/80 hover:bg-rose-50 hover:border-rose-300']">
+              :class="['rounded-xl p-2 text-center cursor-pointer transition-all border flex flex-col justify-between min-h-19', filterStatus === 'no_apply_col_jung' && activeTab === 'overview' ? 'bg-rose-50 border-rose-400 ring-2 ring-rose-500 shadow-sm' : 'bg-rose-50/40 border-rose-200/80 hover:bg-rose-50 hover:border-rose-300']">
               <p class="text-[11px] font-bold text-rose-800 leading-tight">전문대 정시<br>미접수</p>
               <p class="text-lg font-extrabold text-rose-600">{{ stats.jungsiColNoApply }}</p>
             </button>
@@ -138,13 +168,13 @@
         <!-- 필터 및 액션 버튼 -->
         <div class="flex flex-wrap gap-3 mb-4 items-center justify-between">
           <div class="flex flex-wrap gap-2 items-center">
-            <select v-model="filterClass" class="text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-slate-700 cursor-pointer min-w-[220px] shadow-sm focus:outline-none focus:border-indigo-500 transition-all">
+            <select v-model="filterClass" class="text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-slate-700 cursor-pointer min-w-55 shadow-sm focus:outline-none focus:border-indigo-500 transition-all">
               <option value="all">전체 (재학생 + 졸업생)</option>
               <option value="enrolled_all">재학생 전체 (1~11반)</option>
               <option v-for="c in classList" :key="c" :value="c">{{ c }}반</option>
               <option value="grad">🎓 졸업생 (수능접수)</option>
             </select>
-            <select v-model="filterStatus" class="text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-slate-700 cursor-pointer min-w-[170px] shadow-sm focus:outline-none focus:border-indigo-500 transition-all">
+            <select v-model="filterStatus" class="text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-slate-700 cursor-pointer min-w-42.5 shadow-sm focus:outline-none focus:border-indigo-500 transition-all">
               <option value="all">전체 상태</option>
               <option value="csat_registered">수능 접수 완료자만</option>
               <option value="csat_not_registered">수능 미접수자만</option>
@@ -184,7 +214,7 @@
                 <th class="px-3 py-3 text-center font-bold text-slate-600">(전문대)수시</th>
                 <th class="px-3 py-3 text-center font-bold text-slate-600">(전문대)정시</th>
                 <th class="px-3 py-3 text-center font-bold text-slate-600">수정이력</th>
-                <th class="px-2 py-3 text-center font-bold text-slate-600 min-w-[85px] whitespace-nowrap">확인서</th>
+                <th class="px-2 py-3 text-center font-bold text-slate-600 min-w-21.25 whitespace-nowrap">확인서</th>
                 <th class="px-3 py-3 text-center font-bold text-slate-600">개별인쇄</th>
               </tr>
             </thead>
@@ -198,7 +228,7 @@
               <tr v-for="row in filteredData" :key="row.student_code"
                 :class="['border-b border-slate-100 transition-colors text-xs', isMismatch(row) ? 'bg-red-50/70' : 'hover:bg-slate-50']">
                 <td class="px-3 py-3 font-mono text-slate-700 font-bold">{{ row.student_code }}</td>
-                <td class="px-3 py-3 font-semibold text-slate-800">{{ row.name }}</td>
+                <td class="px-3 py-3 font-semibold text-slate-800">{{ maskName(row.name) }}</td>
                 <td class="px-2 py-3 text-center text-slate-600">
                   <span v-if="row.class_no">{{ row.class_no }}반</span>
                   <span v-else class="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">졸업생({{ row.grad_year || '졸업' }})</span>
@@ -315,7 +345,7 @@
         <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
           <div class="flex flex-wrap items-center gap-3">
             <span class="text-sm font-bold text-slate-700">조회 학급:</span>
-            <select v-model="filterClass" class="text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-slate-800 cursor-pointer min-w-[220px] shadow-sm focus:outline-none focus:border-indigo-500 transition-all">
+            <select v-model="filterClass" class="text-sm border border-slate-200 rounded-xl px-4 py-2.5 bg-white font-semibold text-slate-800 cursor-pointer min-w-55 shadow-sm focus:outline-none focus:border-indigo-500 transition-all">
               <option value="all">전체 (재학생 + 졸업생)</option>
               <option value="enrolled_all">재학생 전체 (1~11반)</option>
               <option v-for="c in classList" :key="c" :value="c">{{ c }}반</option>
@@ -383,7 +413,7 @@
               <h4 class="font-bold text-slate-900 text-sm flex items-center gap-2">🌐 제2외국어 / 한문</h4>
               <span class="text-xs font-semibold text-emerald-600">응시 {{ electiveStats.foreign.takers }}명 ({{ getPct(electiveStats.foreign.takers, electiveStats.totalRegistered) }}%)</span>
             </div>
-            <div class="space-y-2.5 max-h-[160px] overflow-y-auto pr-1 text-xs">
+            <div class="space-y-2.5 max-h-40 overflow-y-auto pr-1 text-xs">
               <div v-if="Object.keys(electiveStats.foreign.map).length === 0" class="text-center text-slate-400 py-6">응시자 없음</div>
               <div v-for="(count, name) in electiveStats.foreign.map" :key="name" class="flex justify-between items-center py-1 border-b border-slate-50">
                 <span class="font-medium text-slate-700">{{ name }}</span>
@@ -545,7 +575,7 @@
                   <td class="py-2.5 px-3 text-center font-semibold" :class="row.csat_registered ? 'text-slate-600' : 'text-slate-400'">
                     {{ row.student_no ? `${row.student_no}번` : '-' }}
                   </td>
-                  <td class="py-2.5 px-4 text-center font-bold" :class="row.csat_registered ? 'text-slate-900' : 'text-slate-500'">{{ row.name }}</td>
+                  <td class="py-2.5 px-4 text-center font-bold" :class="row.csat_registered ? 'text-slate-900' : 'text-slate-500'">{{ maskName(row.name) }}</td>
 
                   <template v-if="row.csat_registered">
                     <td class="py-2.5 px-4 text-center font-semibold" :class="row.subjects.korean !== 'X' ? 'text-indigo-600' : 'text-slate-300'">
@@ -675,7 +705,7 @@
           <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
             <div>
               <h3 class="text-base font-bold text-slate-900">
-                📋 {{ selectedHistoryStudent.name }} ({{ selectedHistoryStudent.student_code }}) 변경 이력
+                📋 {{ maskName(selectedHistoryStudent.name) }} ({{ selectedHistoryStudent.student_code }}) 변경 이력
               </h3>
               <p class="text-xs text-slate-500 mt-0.5">{{ selectedHistoryStudent.grade || 3 }}학년 {{ selectedHistoryStudent.class_no }}반 {{ selectedHistoryStudent.student_no }}번 · 총 {{ selectedHistoryStudent.history_count }}회 수정</p>
             </div>
@@ -880,6 +910,13 @@ import { buildComparisonData, getLatestUploadBatchTime, upsertCsatRecords, toggl
 import { parseCsatPdf } from '../utils/csatPdfParser'
 import { printCsatNoTakeForm, printSusiNoApplyForm, printBatchIntentForms, printSummaryRoster, printElectiveStatsReport } from '../utils/printTemplates'
 import * as XLSX from 'xlsx'
+import {
+  maskName,
+  adminMaskMode,
+  cycleAdminMaskMode,
+  adminMaskLabel,
+  adminMaskTooltip
+} from '../utils/maskUtils'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -1020,7 +1057,8 @@ function executeRosterPrint() {
     title,
     classInfo,
     filterSummary,
-    allRecords: allTargetRecords
+    allRecords: allTargetRecords,
+    maskName
   })
   isRosterModalOpen.value = false
 }
@@ -1098,7 +1136,8 @@ function handlePrintElectiveStats() {
     stats: electiveStats.value,
     studentRecords: electiveStudentList.value,
     schoolName: schoolName.value || '포곡고등학교',
-    batchTime: formatBatchTime(latestBatchTime.value)
+    batchTime: formatBatchTime(latestBatchTime.value),
+    maskName
   })
 }
 
@@ -1505,7 +1544,7 @@ async function toggleCsatIntent(row) {
   const newIntent = currentIntent === 'TAKE' ? 'NO_TAKE' : 'TAKE'
   const newLabel = newIntent === 'TAKE' ? '응시' : '미응시'
 
-  if (!confirm(`[${row.name}] 학생의 수능 셀프체크 상태를 '${newLabel}'(으)로 변경하시겠습니까?`)) {
+  if (!confirm(`[${maskName(row.name)}] 학생의 수능 셀프체크 상태를 '${newLabel}'(으)로 변경하시겠습니까?`)) {
     return
   }
 
@@ -1696,7 +1735,7 @@ function printBatchSusi() {
 function downloadExcel() {
   const rows = filteredData.value.map(r => ({
     '학번': r.student_code,
-    '성명': r.name,
+    '성명': maskName(r.name),
     '반': r.class_no,
     '번호': r.student_no,
     '수능자가체크': r.has_survey ? (r.csat_intent === 'TAKE' ? '응시' : '미응시') : '미응답',

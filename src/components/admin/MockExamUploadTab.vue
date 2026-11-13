@@ -347,7 +347,7 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-slate-800 text-xs">
               <div class="flex items-center gap-2 overflow-hidden">
                 <span class="text-slate-400 text-[11px] shrink-0">등록된 Web App URL:</span>
-                <code v-if="configuredGasUrl" class="font-mono text-emerald-300 text-[11px] truncate bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700 max-w-[280px]" :title="configuredGasUrl">
+                <code v-if="configuredGasUrl" class="font-mono text-emerald-300 text-[11px] truncate bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700 max-w-70" :title="configuredGasUrl">
                   {{ maskGasUrl(configuredGasUrl) }}
                 </code>
                 <span v-else class="text-rose-400 text-[11px] font-bold">미등록 (우측 버튼으로 등록)</span>

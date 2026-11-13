@@ -2448,7 +2448,7 @@ export function printSummaryRoster(records, options = {}) {
       <tr>
         <td>${idx + 1}</td>
         <td style="font-family:monospace; font-weight:700;">${r.student_code || '-'}</td>
-        <td style="font-weight:700;">${r.name || '-'}</td>
+        <td style="font-weight:700;">${options.maskName ? options.maskName(r.name) : (r.name || '-')}</td>
         <td>${classDisplay} ${noDisplay !== '-' ? noDisplay : ''}</td>
         <td>${csatOfficial}</td>
         <td>${csatSelf}</td>
@@ -2859,7 +2859,7 @@ export function printElectiveStatsReport({ filterClass = 'all', filterLabel = '�
             <td style="padding: 3px 4px; text-align: center; color: #94a3b8;">${idx + 1}</td>
             <td style="padding: 3px 4px; text-align: center; font-weight: 600; color: #64748b;">${classCol}</td>
             <td style="padding: 3px 4px; text-align: center; color: #64748b;">${noCol}</td>
-            <td style="padding: 3px 6px; text-align: center; font-weight: 800; color: #64748b;">${r.name}</td>
+            <td style="padding: 3px 6px; text-align: center; font-weight: 800; color: #64748b;">${options.maskName ? options.maskName(r.name) : r.name}</td>
             <td colspan="7" style="padding: 3px 6px; text-align: center; font-weight: 700; color: #94a3b8; letter-spacing: 1px;">수능 원서 미접수</td>
           </tr>
         `
@@ -2871,7 +2871,7 @@ export function printElectiveStatsReport({ filterClass = 'all', filterLabel = '�
           <td style="padding: 3px 4px; text-align: center; color: #64748b;">${idx + 1}</td>
           <td style="padding: 3px 4px; text-align: center; font-weight: 600;">${classCol}</td>
           <td style="padding: 3px 4px; text-align: center;">${noCol}</td>
-          <td style="padding: 3px 6px; text-align: center; font-weight: 800; color: #0f172a;">${r.name}</td>
+          <td style="padding: 3px 6px; text-align: center; font-weight: 800; color: #0f172a;">${options.maskName ? options.maskName(r.name) : r.name}</td>
           <td style="padding: 3px 6px; text-align: center; font-weight: 600; color: ${subs.korean !== 'X' ? '#4338ca' : '#cbd5e1'};">${subs.korean}</td>
           <td style="padding: 3px 6px; text-align: center; font-weight: 600; color: ${subs.math !== 'X' ? '#2563eb' : '#cbd5e1'};">${subs.math}</td>
           <td style="padding: 3px 4px; text-align: center; font-weight: 800; color: ${subs.english === 'O' ? '#16a34a' : '#cbd5e1'};">${subs.english === 'O' ? '○' : '✕'}</td>
