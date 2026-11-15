@@ -22,6 +22,15 @@ import {
 import { supabase } from '../../utils/supabaseClient'
 import officialStatsData from '../data/officialStats.json'
 import * as XLSX from 'xlsx'
+import {
+  MASK_MODES,
+  adminMaskMode,
+  cycleAdminMaskMode,
+  adminMaskToggle,
+  maskName,
+  adminMaskLabel,
+  adminMaskTooltip
+} from '../../utils/maskUtils'
 
 /**
  * 대입 학년도 자동 계산 규칙:
@@ -953,8 +962,10 @@ export {
   adminMaskMode,
   cycleAdminMaskMode,
   adminMaskToggle,
-  maskName
-} from '../../utils/maskUtils'
+  maskName,
+  adminMaskLabel,
+  adminMaskTooltip
+}
 
 // Standalone Helper: Format grade
 export function formatGrade(val) {
@@ -1543,6 +1554,8 @@ export function useStatData() {
     adminMaskMode,
     adminMaskToggle,
     cycleAdminMaskMode,
+    adminMaskLabel,
+    adminMaskTooltip,
     MASK_MODES,
     isPrivacyMasked,
     filteredApplications,

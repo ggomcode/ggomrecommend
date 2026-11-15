@@ -1,22 +1,19 @@
-import { supabase } from '../utils/supabaseClient.js';
-
 /**
- * Google Sheets API & CSV Loader Service for ggomrollbook
- * Supports live Google Sheets fetch via gviz/tq (JSONP / CSV) with offline fallback.
- * 
  * ─────────────────────────────────────────────────────────────────────────────
- * [통합 설정 허브] 학교 맞춤 구글 스프레드시트 및 드라이브 폴더 일괄 관리
+ * [통합 환경 설정] 선택교과 출석관리 및 결석계 관리 시스템
+ * 구글 스크립트 속성에 일일이 들어갈 필요 없이, 모든 시트 ID, GID, GAS 웹앱 URL,
+ * 드라이브 폴더 ID를 이 파일 상단에서 모두 일괄 관리합니다.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 export const ROLLBOOK_CONFIG = {
   // 1. 구글 스프레드시트 ID (단 하나만 필요)
-  SHEET_ID: '',
+  SHEET_ID: '1-Ki9X_EKw5xEq-Pc-ba-PBU6VWhvdBun-1bkUjTTH0Q',
 
-  // 2. 스프레드시트 각 시트 GID 및 시트명 (gviz로 0초 만에 실시간 조회)
+  // 2. 스프레드시트 각 탭 GID 및 시트명 (gviz로 0초 만에 실시간 조회)
   GIDS: {
     ATTENDANCE: '923106420',   // 출결사항 (학생·시간표)
-    HOLIDAYS: '969683114',     // 행사및휴업
+    HOLIDAYS: '969683114',     // 행사및휴일
     REGISTRY: '334191447',     // 결석계 접수 대장
     PRINT: '256444665',        // 공식 결석계 인쇄 양식
     RECORDS_NAME: '출결기록'   // 실시간 출결 오버라이드 기록 시트명
@@ -54,9 +51,8 @@ let _configuredGasUrl = localStorage.getItem('ggom_gas_webapp_url') || DEFAULT_G
 
 export const SheetAPI = {
   config: ROLLBOOK_CONFIG,
-  get sheetId() {
-    return localStorage.getItem('pcm_google_sheet_rollbook_id') || ROLLBOOK_CONFIG.SHEET_ID;
-  },
+  sheetId: SHEET_ID,
+
   gidAttendance: GID_ATTENDANCE,
   gidHolidays: GID_HOLIDAYS,
   sheetNameRecords: SHEET_NAME_RECORDS,
@@ -93,55 +89,22 @@ export const SheetAPI = {
   /**
    * Fetch sheet data via gviz JSONP or CSV
    */
-  /**
-   * DB(Supabase) config 테이블로부터 구글 시트 ID 및 GAS Web App URL 동기화
-   */
-  async syncConfigFromDatabase() {
-    if (typeof window !== 'undefined' && supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('config')
-          .select('key, value')
-          .in('key', ['google_sheet_rollbook_id', 'google_sheet_rollbook_gas_url']);
-        if (!error && Array.isArray(data)) {
-          data.forEach(item => {
-            if (item.key === 'google_sheet_rollbook_id' && item.value) {
-              localStorage.setItem('pcm_google_sheet_rollbook_id', item.value);
-            }
-            if (item.key === 'google_sheet_rollbook_gas_url' && item.value) {
-              localStorage.setItem('ggom_gas_webapp_url', item.value);
-            }
-          });
-        }
-      } catch (e) {
-        console.warn('[SheetAPI] config sync from db failed:', e);
-      }
-    }
-  },
-
   async loadAllData() {
-    await this.syncConfigFromDatabase();
-    if (!this.sheetId) {
-      throw new Error('선택교과 출석관리 구글 스프레드시트 ID가 설정되지 않았습니다. 관리자 설정 > 환경 설정 > 구글 스프레드시트 DB 연동 설정에서 시트 ID를 등록해 주세요.');
-    }
     let attendanceCsv = '';
     let holidaysCsv = '';
     let recordsCsv = '';
-    let registryCsv = '';
     let isLive = false;
 
     try {
-      // Live fetch for attendance, holidays, records, and registry sheets
-      const [attData, holData, recData, regData] = await Promise.all([
+      // Live fetch for attendance, holidays, and records sheet
+      const [attData, holData, recData] = await Promise.all([
         this.fetchSheetCsv(this.gidAttendance),
         this.fetchSheetCsv(this.gidHolidays),
-        this.fetchSheetByName(this.sheetNameRecords).catch(() => ''),
-        this.fetchSheetCsv(this.gidRegistry).catch(() => '')
+        this.fetchSheetByName(this.sheetNameRecords).catch(() => '')
       ]);
       attendanceCsv = attData;
       holidaysCsv = holData;
       recordsCsv = recData;
-      registryCsv = regData;
       isLive = true;
     } catch (err) {
       console.error('Live Google Sheets fetch failed:', err);
@@ -152,43 +115,39 @@ export const SheetAPI = {
       attendanceCsv,
       holidaysCsv,
       recordsCsv,
-      registryCsv,
       isLive,
-      timestamp: new Date().toISOString()
+      timestamp: new Date()
     };
   },
 
   /**
-   * Fetch a sheet by GID as CSV (with JSONP fallback)
+   * Fetch CSV from Google Sheets with JSONP fallback
    */
   async fetchSheetCsv(gid) {
     const csvUrl = `https://docs.google.com/spreadsheets/d/${this.sheetId}/export?format=csv&gid=${gid}`;
     try {
-      const resp = await fetch(csvUrl, { cache: 'no-cache' });
-      if (resp.ok) {
-        return await resp.text();
-      }
-    } catch (e) {
-      // Fallback to gviz JSONP
+      const response = await fetch(csvUrl);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.text();
+    } catch (fetchErr) {
+      // Try gviz JSONP approach if direct fetch is blocked by CORS
+      return await this.fetchViaGvizJsonp(gid);
     }
-    return await this.fetchViaGvizJsonp(gid);
   },
 
   /**
-   * Fetch a sheet by name (for user-added sheets like '출결기록')
+   * Fetch sheet by tab name (e.g. '출결기록')
    */
   async fetchSheetByName(sheetName) {
     const encName = encodeURIComponent(sheetName);
     const csvUrl = `https://docs.google.com/spreadsheets/d/${this.sheetId}/gviz/tq?tqx=out:csv&sheet=${encName}`;
     try {
-      const resp = await fetch(csvUrl, { cache: 'no-cache' });
-      if (resp.ok) {
-        return await resp.text();
-      }
-    } catch (e) {
-      // Fallback to gviz JSONP by name
+      const response = await fetch(csvUrl);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.text();
+    } catch (err) {
+      return await this.fetchViaGvizJsonpByName(sheetName);
     }
-    return await this.fetchViaGvizJsonpByName(sheetName);
   },
 
   fetchViaGvizJsonpByName(sheetName) {
@@ -229,68 +188,66 @@ export const SheetAPI = {
   },
 
   /**
-   * Fetch sheet data using Google Visualization API (JSONP callback)
+   * Send attendance override records to Google Apps Script Web App
+   * @param {Array|Object} records [{ key, date, period, studentId, ban, num, name, room, status }]
    */
-  fetchViaGvizJsonp(gid) {
-    return new Promise((resolve, reject) => {
-      const callbackName = `gvizCallback_${gid}_${Date.now()}`;
-      const script = document.createElement('script');
-      script.src = `https://docs.google.com/spreadsheets/d/${this.sheetId}/gviz/tq?tqx=responseHandler:${callbackName}&gid=${gid}`;
+  async saveAttendanceRecords(records) {
+    const url = this.getGasUrl();
+    if (!url) {
+      console.warn('Google Apps Script Web App URL이 설정되지 않았습니다.');
+      return { status: 'no_gas_url', message: 'GAS URL 미설정' };
+    }
 
-      const timeout = setTimeout(() => {
-        cleanup();
-        reject(new Error(`Timeout fetching GID ${gid} via gviz JSONP`));
-      }, 10000);
+    const payload = Array.isArray(records) ? { records } : records;
 
-      const cleanup = () => {
-        clearTimeout(timeout);
-        delete window[callbackName];
-        if (script.parentNode) script.parentNode.removeChild(script);
-      };
-
-      window[callbackName] = (response) => {
-        cleanup();
-        try {
-          const csvText = this.convertGvizJsonToCsv(response);
-          resolve(csvText);
-        } catch (err) {
-          reject(err);
-        }
-      };
-
-      script.onerror = () => {
-        cleanup();
-        reject(new Error(`Script load error for GID ${gid}`));
-      };
-
-      document.head.appendChild(script);
+    // Use text/plain to avoid CORS preflight OPTIONS check in GAS Web App
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
+      body: JSON.stringify(payload)
     });
+
+    if (!response.ok) {
+      throw new Error(`GAS POST failed with HTTP ${response.status}`);
+    }
+
+    try {
+      return await response.json();
+    } catch (e) {
+      // Sometimes GAS redirects with opaque or plain response
+      return { status: 'success', raw: true };
+    }
   },
 
   /**
-   * Convert Google Visualization API JSON response to CSV text
+   * Fetch submitted absence reports from GAS Web App
    */
-  convertGvizJsonToCsv(json) {
-    if (!json || !json.table || !json.table.rows) return '';
-    const rows = json.table.rows;
-    const lines = [];
+  async fetchSubmittedReports() {
+    const gasUrl = this.getGasUrl();
+    if (!gasUrl) return [];
+    const teacherKey = localStorage.getItem('teacher_auth_key') || 'teacher2026';
+    const sep = gasUrl.includes('?') ? '&' : '?';
+    const url = `${gasUrl}${sep}action=get_submitted_reports&key=${encodeURIComponent(teacherKey)}`;
 
-    rows.forEach(r => {
-      const cells = r.c || [];
-      const line = cells.map(cell => {
-        if (!cell || cell.v === null || cell.v === undefined) return '';
-        let val = String(cell.v);
-        if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-          val = '"' + val.replace(/"/g, '""') + '"';
-        }
-        return val;
-      }).join(',');
-      lines.push(line);
-    });
-
-    return lines.join('\n');
+    try {
+      const response = await fetch(url);
+      if (!response.ok) return [];
+      const json = await response.json();
+      if (json && json.status === 'success' && Array.isArray(json.reports)) {
+        return json.reports;
+      }
+      return [];
+    } catch (e) {
+      console.warn('Failed to fetch submitted reports from GAS:', e);
+      return [];
+    }
   },
 
+  /**
+   * Fetch sheet data using Google Visualization API (JSONP callback)
+   */
   /**
    * Common helper to POST JSON payload to GAS Web App
    */
@@ -338,13 +295,6 @@ export const SheetAPI = {
   },
 
   /**
-   * Send attendance override records to Google Apps Script Web App
-   */
-  async saveAttendanceRecords(records) {
-    return await this.postToGas(Array.isArray(records) ? { records } : records);
-  },
-
-  /**
    * Submit absence report to GAS (Maps to '인쇄' sheet, creates PDF, saves to '대장')
    */
   async submitAbsenceReport(reportData) {
@@ -384,35 +334,82 @@ export const SheetAPI = {
     });
   },
 
-  /**
-   * Fetch submitted absence reports from GAS Web App
-   */
-  async fetchSubmittedReports() {
-    const gasUrl = this.getGasUrl();
-    if (!gasUrl) return [];
-    const teacherKey = 'teacher2026';
-    const sep = gasUrl.includes('?') ? '&' : '?';
-    const url = `${gasUrl}${sep}action=get_submitted_reports&key=${encodeURIComponent(teacherKey)}`;
+  fetchViaGvizJsonp(gid) {
+    return new Promise((resolve, reject) => {
+      const callbackName = `gvizCallback_${gid}_${Date.now()}`;
+      const script = document.createElement('script');
+      script.src = `https://docs.google.com/spreadsheets/d/${this.sheetId}/gviz/tq?tqx=responseHandler:${callbackName}&gid=${gid}`;
 
-    try {
-      const response = await fetch(url);
-      if (!response.ok) return [];
-      const json = await response.json();
-      if (json && json.status === 'success' && Array.isArray(json.reports)) {
-        return json.reports;
-      }
-      return [];
-    } catch (e) {
-      console.warn('결석계 대장 조회 실패:', e);
-      return [];
-    }
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error(`Timeout fetching GID ${gid} via JSONP`));
+      }, 10000);
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        delete window[callbackName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+      };
+
+      window[callbackName] = (json) => {
+        cleanup();
+        try {
+          const csv = this.convertGvizJsonToCsv(json);
+          resolve(csv);
+        } catch (e) {
+          reject(e);
+        }
+      };
+
+      script.onerror = () => {
+        cleanup();
+        reject(new Error(`Script load error for GID ${gid}`));
+      };
+
+      document.head.appendChild(script);
+    });
   },
 
   /**
-   * Parse CSV string into 2D array, handling quoted cells with commas and newlines
+   * Convert gviz JSON table format to CSV string
+   */
+  convertGvizJsonToCsv(json) {
+    if (!json || !json.table || !json.table.rows) return '';
+    const lines = [];
+
+    // Include header row from cols if present
+    if (json.table.cols && json.table.cols.some(c => c && c.label)) {
+      const headerLine = json.table.cols.map(c => {
+        let val = c ? (c.label || '') : '';
+        if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+          val = '"' + val.replace(/"/g, '""') + '"';
+        }
+        return val;
+      }).join(',');
+      lines.push(headerLine);
+    }
+
+    const rows = json.table.rows;
+    rows.forEach(r => {
+      const cells = r.c || [];
+      const line = cells.map(cell => {
+        if (!cell || cell.v === null || cell.v === undefined) return '';
+        let val = String(cell.v);
+        if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+          val = '"' + val.replace(/"/g, '""') + '"';
+        }
+        return val;
+      }).join(',');
+      lines.push(line);
+    });
+
+    return lines.join('\n');
+  },
+
+  /**
+   * Standard robust CSV parser handling quoted values with commas
    */
   parseCsv(text) {
-    if (!text || typeof text !== 'string') return [];
     const lines = [];
     let row = [''];
     let inQuotes = false;
