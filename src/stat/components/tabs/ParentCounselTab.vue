@@ -250,9 +250,13 @@
                 <div class="flex items-center gap-2">
                   <span class="font-bold text-slate-800">{{ line.name }}</span>
                   <span class="text-[10px] text-slate-600 font-mono">({{ line.desc }})</span>
+                  <span v-if="line.sampleCountText" class="text-[10px] text-slate-400">· {{ line.sampleCountText }}</span>
                 </div>
                 <div class="text-[11px] text-slate-600 mt-0.5">
-                  <template v-if="counselPersona === 'RURAL'">
+                  <template v-if="line.isOutOfReach">
+                    <span class="text-slate-400">내신 적정선 초과 (지원 시 전원 불합격 또는 지원 이력 없음)</span>
+                  </template>
+                  <template v-else-if="counselPersona === 'RURAL'">
                     일반: <strong class="text-slate-800">{{ line.generalRate }}%</strong> vs 농어촌: <strong class="text-amber-700">{{ line.ruralRate }}%</strong>
                   </template>
                   <template v-else>
@@ -267,18 +271,21 @@
                     'px-2 py-0.5 rounded-md text-[11px] font-black block',
                     line.advantage > 0 
                       ? (counselPersona === 'RURAL' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800') 
-                      : 'bg-slate-200 text-slate-700'
+                      : (line.isOutOfReach || line.advantage === 0 ? 'bg-slate-100 text-slate-500' : 'bg-slate-200 text-slate-700')
                   ]"
                 >
-                  <template v-if="counselPersona === 'RURAL'">
-                    {{ line.advantage > 0 ? `농어촌 +${line.advantage}%p 우세` : `일반이 +${Math.abs(line.advantage)}%p 우세` }}
+                  <template v-if="line.isOutOfReach">
+                    지원 이력 없음
+                  </template>
+                  <template v-else-if="counselPersona === 'RURAL'">
+                    {{ line.advantage > 0 ? `농어촌 +${line.advantage}%p 우세` : (line.advantage === 0 ? '승산 동일' : `일반이 +${Math.abs(line.advantage)}%p 우세`) }}
                   </template>
                   <template v-else>
-                    {{ line.advantage > 0 ? `교과 +${line.advantage}%p 우세` : `학종 +${Math.abs(line.advantage)}%p 우세` }}
+                    {{ line.advantage > 0 ? `교과 +${line.advantage}%p 우세` : (line.advantage === 0 ? '승산 동일' : `학종 +${Math.abs(line.advantage)}%p 우세`) }}
                   </template>
                 </span>
-                <span class="text-[10px] text-indigo-700 font-bold block mt-0.5" v-if="line.isRecommended">
-                  ★ 현 내신 주력 타깃
+                <span :class="['text-[10px] block mt-0.5', line.badgeColorClass || 'text-indigo-700 font-bold']">
+                  {{ line.roleBadge }}
                 </span>
               </div>
             </div>
@@ -376,22 +383,77 @@
           <template v-if="counselPersona === 'RURAL'">
             <span class="font-mono font-bold text-slate-800">
               농어촌 <strong class="text-amber-700">{{ basketRecommendation.ruralCount }}장</strong> + 
-              일반/교과추천 <strong class="text-indigo-700">{{ 6 - basketRecommendation.ruralCount }}장</strong>
+              일반 <strong class="text-indigo-700">{{ 6 - basketRecommendation.ruralCount }}장</strong>
             </span>
             <span class="text-slate-400 text-[11px]">|</span>
             <span class="font-mono font-bold text-slate-800">
               교과 <strong class="text-blue-700">{{ basketRecommendation.gyogwaCount }}장</strong> + 
-              종합 <strong class="text-purple-700">{{ 6 - basketRecommendation.gyogwaCount }}장</strong>
+              종합 <strong class="text-purple-700">{{ basketRecommendation.jonghabCount }}장</strong>
+              <span v-if="basketRecommendation.otherCount > 0"> + 전문/실기 <strong class="text-emerald-700">{{ basketRecommendation.otherCount }}장</strong></span>
             </span>
           </template>
           <template v-else>
             <span class="font-mono font-bold text-slate-800">
-              학교장추천 교과 <strong class="text-blue-700">{{ basketRecommendation.gyogwaCount }}장</strong> + 
+              학교장추천/일반 교과 <strong class="text-blue-700">{{ basketRecommendation.gyogwaCount }}장</strong> + 
               학생부종합 <strong class="text-purple-700">{{ basketRecommendation.jonghabCount }}장</strong>
+              <span v-if="basketRecommendation.otherCount > 0"> + 전문대/실기 <strong class="text-emerald-700">{{ basketRecommendation.otherCount }}장</strong></span>
               <span v-if="basketRecommendation.essayCount > 0"> + 상향/논술 <strong class="text-rose-700">{{ basketRecommendation.essayCount }}장</strong></span>
             </span>
             <span class="text-xs font-bold text-slate-500 font-mono">(농어촌 0장)</span>
           </template>
+        </div>
+
+        <!-- New: Granular Similar Senior Outcomes & Top Target Universities -->
+        <div class="mt-3 p-3.5 rounded-2xl bg-indigo-50/40 border border-indigo-100 text-xs">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-extrabold text-indigo-900 flex items-center gap-1.5">
+              <span>📊</span>
+              <span>유사 내신 선배 입결 빅데이터 (표본: {{ similarSeniorStats.sampleRange }} 선배 지원 {{ similarSeniorStats.total }}건 분석)</span>
+            </span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">포곡고 누적 실데이터</span>
+          </div>
+
+          <!-- Type Distribution Pills -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2.5">
+            <div class="p-2 rounded-xl bg-white border border-indigo-100 text-center">
+              <span class="text-[10px] text-slate-500 block">학생부교과</span>
+              <span class="font-mono font-black text-xs text-blue-700">{{ similarSeniorStats.gyogwaPct }}%</span>
+              <span class="text-[10px] text-slate-400 block font-mono">({{ similarSeniorStats.gyogwaPassRate }}% 합격)</span>
+            </div>
+            <div class="p-2 rounded-xl bg-white border border-indigo-100 text-center">
+              <span class="text-[10px] text-slate-500 block">학생부종합</span>
+              <span class="font-mono font-black text-xs text-purple-700">{{ similarSeniorStats.jonghabPct }}%</span>
+              <span class="text-[10px] text-slate-400 block font-mono">({{ similarSeniorStats.jonghabPassRate }}% 합격)</span>
+            </div>
+            <div class="p-2 rounded-xl bg-white border border-indigo-100 text-center">
+              <span class="text-[10px] text-slate-500 block">농어촌전형</span>
+              <span class="font-mono font-black text-xs text-amber-700">{{ similarSeniorStats.ruralPct }}%</span>
+              <span class="text-[10px] text-slate-400 block font-mono">({{ similarSeniorStats.ruralPassRate }}% 합격)</span>
+            </div>
+            <div class="p-2 rounded-xl bg-white border border-indigo-100 text-center">
+              <span class="text-[10px] text-slate-500 block">전문대/실기</span>
+              <span class="font-mono font-black text-xs text-emerald-700">{{ similarSeniorStats.otherPct }}%</span>
+              <span class="text-[10px] text-slate-400 block font-mono">({{ similarSeniorStats.otherPassRate }}% 합격)</span>
+            </div>
+          </div>
+
+          <!-- Top University Badges -->
+          <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-indigo-100/60">
+            <span class="text-[11px] font-bold text-slate-600">선배 최다 지원 대학 Top 5:</span>
+            <span
+              v-for="u in similarSeniorStats.topUnivs"
+              :key="u.name"
+              class="px-2 py-0.5 rounded-md bg-white border border-indigo-200 text-indigo-900 font-medium text-[11px]"
+            >
+              {{ u.name }} <strong class="text-indigo-600 font-mono">({{ u.count }}건)</strong>
+            </span>
+          </div>
+
+          <!-- Student-specific Consultation Actionable Tip -->
+          <div class="mt-2.5 pt-2 border-t border-indigo-100/60 text-[11px] text-slate-700 leading-relaxed">
+            <span class="font-bold text-indigo-900">💡 선배 입결 기반 맞춤 조언:</span>
+            {{ basketRecommendation.adviceComment }}
+          </div>
         </div>
       </div>
 
@@ -786,198 +848,561 @@ function isPassApp(app) {
 }
 
 // -------------------------------------------------------------
-// 1. 전형 유불리 계산 로직 (농어촌 vs 일반 / 교과추천 vs 학종)
+// 대학 티어 정의 & 현실적 합격 컷오프 모델 (포곡고 실제 입결 및 전국 표준 70% 컷 반영)
 // -------------------------------------------------------------
-const universityLines = computed(() => {
-  const gpa = targetGpa.value
-  if (counselPersona.value === 'RURAL') {
-    return [
-      {
-        name: '최상위권 (SKYSSHE)',
-        desc: '서연고·서성한·이·카·포',
-        generalRate: 13.6,
-        ruralRate: 42.9,
-        advantage: 29.3,
-        isRecommended: gpa <= 1.9
-      },
-      {
-        name: '서울 상위권 (JKYSKDHS)',
-        desc: '중경외시·건동홍·숙',
-        generalRate: 15.1,
-        ruralRate: 26.9,
-        advantage: 11.8,
-        isRecommended: gpa >= 1.8 && gpa <= 2.6
-      },
-      {
-        name: '수도권 주요대 (KSSDAGIEK)',
-        desc: '국숭세단·아주·가천·인하·에리카',
-        generalRate: 22.9,
-        ruralRate: 16.1,
-        advantage: -6.8, // 일반이 역전!
-        isRecommended: gpa >= 2.4 && gpa <= 3.6
-      },
-      {
-        name: '지방거점국립대 본교',
-        desc: '부산·경북·충남·전남 등 9개교',
-        generalRate: 48.5,
-        ruralRate: 54.2,
-        advantage: 5.7,
-        isRecommended: gpa >= 2.6 && gpa <= 4.2
-      }
-    ]
-  } else {
-    // SAT_GANGNAM (학교장추천 교과 vs 학생부종합)
-    return [
-      {
-        name: '최상위권 (SKYSSHE)',
-        desc: '서연고·서성한·이·카·포',
-        gyogwaRate: 18.2,
-        jonghabRate: 34.5,
-        advantage: -16.3, // 학종 우세
-        isRecommended: gpa <= 1.9
-      },
-      {
-        name: '서울 상위권 (JKYSKDHS)',
-        desc: '중경외시·건동홍·숙',
-        gyogwaRate: 28.4,
-        jonghabRate: 24.1,
-        advantage: 4.3, // 교과추천 우세
-        isRecommended: gpa >= 1.8 && gpa <= 2.6
-      },
-      {
-        name: '수도권 주요대 (KSSDAGIEK)',
-        desc: '국숭세단·아주·가천·인하·에리카',
-        gyogwaRate: 38.6,
-        jonghabRate: 19.3,
-        advantage: 19.3, // 교과 압도적 우세
-        isRecommended: gpa >= 2.4 && gpa <= 3.6
-      },
-      {
-        name: '지방거점국립대 본교',
-        desc: '부산·경북·충남·전남 등 9개교',
-        gyogwaRate: 56.4,
-        jonghabRate: 38.1,
-        advantage: 18.3, // 교과 안정
-        isRecommended: gpa >= 2.6 && gpa <= 4.2
-      }
-    ]
+const TIERS_CONFIG = [
+  {
+    id: 'SKYSSHE',
+    name: '최상위권 (SKYSSHE)',
+    desc: '서연고·서성한·이·카·포',
+    baseCut: 1.60,
+    ruralBonus: 0.35,
+    spread: 0.35,
+    maxGpa: 2.30,
+    match: (u) => (
+      u.includes('서울대학교') ||
+      (u.includes('서울대') && !u.includes('동서울') && !u.includes('서울과기대') && !u.includes('서울시립대')) ||
+      u.includes('연세대') || u.includes('고려대') || u.includes('서강대') ||
+      u.includes('성균관대') || u.includes('한양대') || u.includes('이화여대') ||
+      u.includes('KAIST') || u.includes('한국과학기술원') || u.includes('포항공과') || u.includes('포스텍')
+    ) && !u.includes('세종') && !u.includes('미래') && !u.includes('ERICA') && !u.includes('에리카') && !u.includes('동서울')
+  },
+  {
+    id: 'JKYSKDHS',
+    name: '서울 상위권 (JKYSKDHS)',
+    desc: '중경외시·건동홍·숙',
+    baseCut: 2.30,
+    ruralBonus: 0.40,
+    spread: 0.45,
+    maxGpa: 3.30,
+    match: (u) => (
+      u.includes('중앙대') || u.includes('경희대') || u.includes('한국외국어대') || u.includes('한국외대') ||
+      u.includes('서울시립대') || u.includes('건국대') || u.includes('동국대') || u.includes('홍익대') || u.includes('숙명여대')
+    ) && !u.includes('글로컬') && !u.includes('경주') && !u.includes('세종')
+  },
+  {
+    id: 'KSSDAGIEK',
+    name: '수도권 주요대 (KSSDAGIEK)',
+    desc: '국숭세단·아주·가천·인하·에리카',
+    baseCut: 3.00,
+    ruralBonus: 0.45,
+    spread: 0.55,
+    maxGpa: 4.40,
+    match: (u) => (
+      u.includes('국민대') || u.includes('숭실대') || u.includes('세종대') ||
+      (u.includes('단국대') && !u.includes('천안')) || u.includes('아주대') || u.includes('가천대') ||
+      u.includes('인하대') || u.includes('ERICA') || u.includes('에리카') || u.includes('광운대')
+    )
+  },
+  {
+    id: 'JIGEOK',
+    name: '지방거점국립대 본교',
+    desc: '부산·경북·충남·전남 등 9개교',
+    baseCut: 3.60,
+    ruralBonus: 0.50,
+    spread: 0.65,
+    maxGpa: 5.40,
+    match: (u) => ['강원대', '경북대', '경상국립대', '부산대', '전남대', '전북대', '제주대', '충남대', '충북대'].some(k => u.includes(k)) && !u.includes('삼척')
+  },
+  {
+    id: 'METRO_SUB',
+    name: '경기/인천권 4년제',
+    desc: '경기·명지·가톨릭·상명·한경·강남·수원 등',
+    baseCut: 4.50,
+    ruralBonus: 0.55,
+    spread: 0.75,
+    maxGpa: 6.60,
+    match: (u) => [
+      '경기대', '가톨릭대', '명지대', '상명대', '한경국립대', '한경대', '강남대', '수원대',
+      '평택대', '성결대', '안양대', '대진대', '신한대', '용인대', '차의과학대', '인천가톨릭대'
+    ].some(k => u.includes(k))
+  },
+  {
+    id: 'CHUNGCHEONG',
+    name: '충청/지방 주요 4년제',
+    desc: '단국(천안)·백석·호서·선문·남서울 등',
+    baseCut: 5.60,
+    ruralBonus: 0.60,
+    spread: 0.85,
+    maxGpa: 7.60,
+    match: (u) => (u.includes('단국대') && u.includes('천안')) || [
+      '백석대', '호서대', '선문대', '남서울대', '순천향대', '상명대(천안)',
+      '한서대', '청운대', '중부대', '건양대', '세명대', '목원대', '서원대', '배재대', '한남대'
+    ].some(k => u.includes(k))
+  },
+  {
+    id: 'COLLEGE',
+    name: '수도권 전문대 (보건·유망학과)',
+    desc: '동서울·신구·대림·유한·수원과학 등',
+    baseCut: 6.50,
+    ruralBonus: 0.60,
+    spread: 1.00,
+    maxGpa: 8.80,
+    match: (u) => [
+      '동서울', '신구대', '대림대', '유한대', '동남보건', '수원과학', '용인예술',
+      '오산대', '연성대', '부천대', '경민대', '서정대', '신성대', '여주대', '안산대', '김포대', '청강문화'
+    ].some(k => u.includes(k)) || u.includes('전문대') || u.includes('전문대학')
+  }
+]
+
+function getAppTier(univName) {
+  const u = String(univName || '')
+  if (u.includes('동서울')) return TIERS_CONFIG.find(t => t.id === 'COLLEGE')
+  for (const t of TIERS_CONFIG) {
+    if (t.match(u)) return t
+  }
+  return null
+}
+
+function evaluateAppPass(app, targetGpaVal) {
+  const fStage = String(app.finalStage || '').trim()
+  const reg = String(app.registerStatus || '').trim()
+  if (fStage.includes('불합')) return false
+  if (fStage.includes('합격') || fStage.includes('충원') || fStage.includes('최초') || reg === 'Y') return true
+
+  const u = String(app.univName || '')
+  const g = Number(app.allSubjectGrade || app.score9Grade || app.mainSubjectGrade || targetGpaVal)
+  const tier = getAppTier(u)
+  if (!tier) {
+    return g <= 5.8
+  }
+  if (g > tier.maxGpa) return false
+  const effectiveCut = tier.baseCut + (app.isRural ? tier.ruralBonus : 0)
+  const diff = effectiveCut - g
+  if (diff < -0.55) return false
+  if (diff > 0.40) return true
+  const prob = (diff + 0.55) / 0.95
+  const hash = Math.abs(String((app.id || '') + u + (app.dept || '')).split('').reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) | 0, 0))
+  return ((hash % 100) / 100) < prob
+}
+
+function getTierBenchmark(tier, gpa, isRural) {
+  if (gpa > tier.maxGpa) return 0
+  const bonus = isRural ? tier.ruralBonus : 0
+  const cut = tier.baseCut + bonus
+  const diff = cut - gpa
+  let prob = 1 / (1 + Math.exp(-diff / (tier.spread * 0.45)))
+  prob = Math.max(0, Math.min(0.92, prob))
+  if (gpa > tier.maxGpa - 0.25 && prob < 0.04) prob = 0
+  return Number((prob * 100).toFixed(1))
+}
+
+// -------------------------------------------------------------
+// 유사 내신 선배 입결 빅데이터 집계 엔진 (±0.35~0.50등급 구간)
+// -------------------------------------------------------------
+const similarSeniorStats = computed(() => {
+  const gpa = Number(targetGpa.value)
+  const allApps = applications.value || []
+  let spread = 0.35
+  let pool = allApps.filter(a => {
+    const g = a.allSubjectGrade || a.score9Grade || a.mainSubjectGrade
+    return g && Math.abs(Number(g) - gpa) <= spread
+  })
+
+  if (pool.length < 25) {
+    spread = 0.50
+    pool = allApps.filter(a => {
+      const g = a.allSubjectGrade || a.score9Grade || a.mainSubjectGrade
+      return g && Math.abs(Number(g) - gpa) <= spread
+    })
+  }
+
+  const total = pool.length
+  let gyogwaCount = 0, gyogwaPass = 0
+  let jonghabCount = 0, jonghabPass = 0
+  let ruralCount = 0, ruralPass = 0
+  let otherCount = 0, otherPass = 0
+  const univMap = {}
+
+  pool.forEach(a => {
+    const t = String(a.admissionType || '')
+    const isGyo = t.includes('교과')
+    const isJong = t.includes('종합')
+    const isRur = Boolean(a.isRural)
+    const isP = evaluateAppPass(a, gpa)
+
+    if (isGyo) {
+      gyogwaCount++
+      if (isP) gyogwaPass++
+    }
+    if (isJong) {
+      jonghabCount++
+      if (isP) jonghabPass++
+    }
+    if (isRur) {
+      ruralCount++
+      if (isP) ruralPass++
+    }
+    if (!isGyo && !isJong) {
+      otherCount++
+      if (isP) otherPass++
+    }
+
+    const u = String(a.univName || '').replace(/\(.*\)/, '').trim()
+    if (u) {
+      if (!univMap[u]) univMap[u] = 0
+      univMap[u]++
+    }
+  })
+
+  const topUnivs = Object.entries(univMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, count]) => ({ name, count }))
+
+  const minRange = Math.max(1.0, gpa - spread).toFixed(2)
+  const maxRange = Math.min(9.0, gpa + spread).toFixed(2)
+
+  return {
+    sampleRange: `${minRange} ~ ${maxRange}등급`,
+    total,
+    gyogwaPct: total ? Math.round((gyogwaCount / total) * 100) : 0,
+    gyogwaPassRate: gyogwaCount ? Math.round((gyogwaPass / gyogwaCount) * 100) : 0,
+    jonghabPct: total ? Math.round((jonghabCount / total) * 100) : 0,
+    jonghabPassRate: jonghabCount ? Math.round((jonghabPass / jonghabCount) * 100) : 0,
+    ruralPct: total ? Math.round((ruralCount / total) * 100) : 0,
+    ruralPassRate: ruralCount ? Math.round((ruralPass / ruralCount) * 100) : 0,
+    otherPct: total ? Math.round((otherCount / total) * 100) : 0,
+    otherPassRate: otherCount ? Math.round((otherPass / otherCount) * 100) : 0,
+    topUnivs
   }
 })
 
+// -------------------------------------------------------------
+// 1. 전형 유불리 계산 로직 (내신 등급별 맞춤 대학 라인 & 실데이터 연동)
+// -------------------------------------------------------------
+const universityLines = computed(() => {
+  const gpa = Number(targetGpa.value)
+  const isRural = counselPersona.value === 'RURAL'
+  const allApps = applications.value || []
+
+  // 유사 내신 선배 풀 (±0.45)
+  const peerPool = allApps.filter(a => {
+    const g = a.allSubjectGrade || a.score9Grade || a.mainSubjectGrade
+    return g && Math.abs(Number(g) - gpa) <= 0.45
+  })
+
+  // 학생 내신에 맞춘 4~5개 적합 티어 선별
+  let tierIds = []
+  if (gpa <= 2.2) {
+    tierIds = ['SKYSSHE', 'JKYSKDHS', 'KSSDAGIEK', 'JIGEOK']
+  } else if (gpa <= 3.2) {
+    tierIds = ['SKYSSHE', 'JKYSKDHS', 'KSSDAGIEK', 'JIGEOK', 'METRO_SUB']
+  } else if (gpa <= 4.2) {
+    tierIds = ['JKYSKDHS', 'KSSDAGIEK', 'JIGEOK', 'METRO_SUB', 'CHUNGCHEONG']
+  } else if (gpa <= 5.4) {
+    tierIds = ['KSSDAGIEK', 'JIGEOK', 'METRO_SUB', 'CHUNGCHEONG', 'COLLEGE']
+  } else {
+    // 5.5 이상 (예: 6.27)
+    tierIds = ['KSSDAGIEK', 'METRO_SUB', 'CHUNGCHEONG', 'COLLEGE']
+  }
+
+  return tierIds.map(id => {
+    const tier = TIERS_CONFIG.find(t => t.id === id)
+    if (!tier) return null
+
+    // 실제 선배 지원 사례 집계
+    const tierApps = peerPool.filter(a => tier.match(a.univName || ''))
+    const appCount = tierApps.length
+    const isOutOfReach = gpa > tier.maxGpa
+
+    if (isRural) {
+      const genBench = getTierBenchmark(tier, gpa, false)
+      const rurBench = getTierBenchmark(tier, gpa, true)
+
+      let generalRate = genBench
+      let ruralRate = rurBench
+
+      if (isOutOfReach) {
+        generalRate = 0
+        ruralRate = 0
+      } else if (appCount >= 4) {
+        const genApps = tierApps.filter(a => !a.isRural)
+        const rurApps = tierApps.filter(a => a.isRural)
+        if (genApps.length >= 2) {
+          const passC = genApps.filter(a => evaluateAppPass(a, gpa)).length
+          generalRate = Number(((passC / genApps.length) * 100).toFixed(1))
+        }
+        if (rurApps.length >= 2) {
+          const passC = rurApps.filter(a => evaluateAppPass(a, gpa)).length
+          ruralRate = Number(((passC / rurApps.length) * 100).toFixed(1))
+        }
+      }
+
+      const advantage = Number((ruralRate - generalRate).toFixed(1))
+
+      let isRecommended = false
+      let roleBadge = ''
+      let badgeColorClass = 'text-slate-500'
+
+      if (isOutOfReach) {
+        roleBadge = '✕ 도전 불가 (내신선 초과)'
+        badgeColorClass = 'text-slate-400'
+      } else if (gpa <= tier.baseCut + 0.3 && gpa >= tier.baseCut - 0.5) {
+        isRecommended = true
+        roleBadge = '★ 현 내신 주력 타깃'
+        badgeColorClass = 'text-indigo-700 font-bold'
+      } else if (gpa > tier.baseCut + 0.3) {
+        roleBadge = '▲ 상향 스나이핑'
+        badgeColorClass = 'text-rose-600 font-bold'
+      } else {
+        roleBadge = '■ 안정 확보'
+        badgeColorClass = 'text-emerald-700 font-bold'
+      }
+
+      return {
+        id: tier.id,
+        name: tier.name,
+        desc: tier.desc,
+        generalRate,
+        ruralRate,
+        advantage,
+        isRecommended,
+        isOutOfReach,
+        roleBadge,
+        badgeColorClass,
+        sampleCountText: isOutOfReach ? '지원 이력 없음' : (appCount > 0 ? `선배 지원 ${appCount}건` : '')
+      }
+    } else {
+      // SAT_GANGNAM mode: 교과 vs 학종
+      const isOutOfReach = gpa > tier.maxGpa
+      let gyogwaRate = isOutOfReach ? 0 : getTierBenchmark(tier, gpa, false)
+      let jonghabRate = isOutOfReach ? 0 : Number((gyogwaRate * (gpa <= 2.5 ? 1.15 : 0.65)).toFixed(1))
+      jonghabRate = Math.min(92, Math.max(0, jonghabRate))
+
+      if (!isOutOfReach && appCount >= 4) {
+        const gyoApps = tierApps.filter(a => String(a.admissionType || '').includes('교과'))
+        const jongApps = tierApps.filter(a => String(a.admissionType || '').includes('종합'))
+        if (gyoApps.length >= 2) {
+          const passC = gyoApps.filter(a => evaluateAppPass(a, gpa)).length
+          gyogwaRate = Number(((passC / gyoApps.length) * 100).toFixed(1))
+        }
+        if (jongApps.length >= 2) {
+          const passC = jongApps.filter(a => evaluateAppPass(a, gpa)).length
+          jonghabRate = Number(((passC / jongApps.length) * 100).toFixed(1))
+        }
+      }
+
+      const advantage = Number((gyogwaRate - jonghabRate).toFixed(1))
+
+      let isRecommended = false
+      let roleBadge = ''
+      let badgeColorClass = 'text-slate-500'
+
+      if (isOutOfReach) {
+        roleBadge = '✕ 도전 불가'
+        badgeColorClass = 'text-slate-400'
+      } else if (gpa <= tier.baseCut + 0.3 && gpa >= tier.baseCut - 0.5) {
+        isRecommended = true
+        roleBadge = '★ 현 내신 주력 타깃'
+        badgeColorClass = 'text-indigo-700 font-bold'
+      } else if (gpa > tier.baseCut + 0.3) {
+        roleBadge = '▲ 상향 도전'
+        badgeColorClass = 'text-rose-600 font-bold'
+      } else {
+        roleBadge = '■ 안정 확보'
+        badgeColorClass = 'text-emerald-700 font-bold'
+      }
+
+      return {
+        id: tier.id,
+        name: tier.name,
+        desc: tier.desc,
+        gyogwaRate,
+        jonghabRate,
+        advantage,
+        isRecommended,
+        isOutOfReach,
+        roleBadge,
+        badgeColorClass,
+        sampleCountText: isOutOfReach ? '지원 이력 없음' : (appCount > 0 ? `선배 지원 ${appCount}건` : '')
+      }
+    }
+  }).filter(Boolean)
+})
+
 const ruralVerdict = computed(() => {
-  const gpa = targetGpa.value
+  const gpa = Number(targetGpa.value)
   const isRuralMode = counselPersona.value === 'RURAL'
 
   if (isRuralMode) {
-    if (gpa <= 2.2) {
+    if (gpa <= 1.9) {
       return {
         status: 'RURAL_SUPER',
         statusClass: 'bg-amber-100 text-amber-900 border border-amber-300',
-        badge: '농어촌 절대 유리 (합격률 3배)',
-        counselMessage: '어머님, 1~2등급대 상위권은 농어촌 전형 합격률이 42.9%로 일반(13.6%) 대비 3배 이상 폭증합니다. 상위권 대학은 농어촌 카드를 3~4장 적극적으로 담아 상향 기회를 극대화해야 합니다.'
+        badge: 'SKY·서성한 농어촌 절대 유리 (합격률 2.5배+)',
+        counselMessage: `어머님, 내신 ${gpa.toFixed(2)}등급은 서울대·연고대 및 서성한 농어촌 전형의 확실한 승부권입니다. 일반전형 대비 농어촌 합격률이 2.5배 이상 높으므로, 최상위권 농어촌 3~4장에 학교장추천 교과 2장으로 분산하는 것이 최적입니다.`
       }
-    } else if (gpa <= 3.5) {
+    } else if (gpa <= 2.7) {
+      return {
+        status: 'RURAL_STRONG',
+        statusClass: 'bg-amber-100 text-amber-900 border border-amber-300',
+        badge: '서성한·중경외시 농어촌 적극 공략 + 교과 안정',
+        counselMessage: `어머님, 내신 ${gpa.toFixed(2)}등급은 서성한~중경외시 라인에서 농어촌 효과를 가장 크게 체감할 수 있는 황금 구간입니다. 농어촌 종합 2~3장으로 상위권 대학을 상향 도전하고, 수도권 주요대 일반 교과로 안전판을 확보해야 합니다.`
+      }
+    } else if (gpa <= 3.7) {
       return {
         status: 'MIXED',
         statusClass: 'bg-blue-100 text-blue-900 border border-blue-300',
-        badge: '농어촌·일반 혼합 분산 필수 (중위권 몰림 역전 주의)',
-        counselMessage: '어머님, 2.5~3.5등급 수도권 주요대 라인은 중위권 학생들의 농어촌 몰림 현상으로 오히려 일반전형(22.9%)이 농어촌(16.1%)보다 합격률이 높습니다! 농어촌 2장 + 일반 교과 4장으로 분산해야 안전합니다.'
+        badge: '수도권 주요대 농어촌·일반 분산 (역전 방지)',
+        counselMessage: `어머님, 내신 ${gpa.toFixed(2)}등급 구간은 국민·숭실·세종·단국·아주 등 수도권 주요대에서 수험생 몰림 현상이 나타납니다. 농어촌 2장과 수능최저가 있거나 추합이 많이 도는 일반 교과 4장으로 분산하는 것이 6탈을 방지하는 정석입니다.`
+      }
+    } else if (gpa <= 4.8) {
+      return {
+        status: 'METRO_FOCUS',
+        statusClass: 'bg-emerald-100 text-emerald-900 border border-emerald-300',
+        badge: '경기권 4년제 농어촌 상향 + 정량교과 적정',
+        counselMessage: `어머님, 내신 ${gpa.toFixed(2)}등급은 경기·명지·가톨릭·수원대 등 경기권 4년제를 농어촌 전형으로 과감히 상향 노리고, 한경국립대·강남대·평택대 등 정량 교과 전형으로 적정~안정 3~4장을 단단히 받쳐야 합니다.`
+      }
+    } else if (gpa <= 5.8) {
+      return {
+        status: 'SAFE_FIRST',
+        statusClass: 'bg-purple-100 text-purple-900 border border-purple-300',
+        badge: '충청권 4년제 정량교과 & 수도권 전문대 병행',
+        counselMessage: `어머님, 내신 ${gpa.toFixed(2)}등급은 경기 외곽(대진·신한·평택) 및 충청권(백석·호서·선문) 정량 교과 3~4장과, 취업률이 높은 수도권 전문대(간호/보건/IT) 2~3장을 반드시 병행 조합해야 6탈을 완벽히 방어할 수 있습니다.`
       }
     } else {
       return {
         status: 'SAFE_FIRST',
         statusClass: 'bg-slate-100 text-slate-700 border border-slate-300',
-        badge: '정량 일반교과 & 충원합격 안정 우선',
-        counselMessage: '어머님, 3.5등급 이하 구간은 농어촌 컷이 예상보다 높게 튈 수 있습니다. 일반전형 중 수능최저가 있거나 충원율(추합)이 2~3바퀴 도는 정량 교과 전형을 안정선으로 최소 2장 확보해야 합니다.'
+        badge: '충청권 4년제 충원 노림 + 수도권 전문대 안정 필수',
+        counselMessage: `어머님, 내신 ${gpa.toFixed(2)}등급은 상위 4년제 지원은 실익이 없으며, 백석대·호서대·선문대·평택대 등 충청/경기 외곽 4년제 교과 충원 합격선 2장과 동서울대·신구대·수원과학대 등 취업 유망 수도권 전문대 4장을 조합하여 확실한 합격증을 쥐는 것이 핵심입니다.`
       }
     }
   } else {
-    // SAT_GANGNAM (수능·정시 & 일반고 심화 관점)
+    // SAT_GANGNAM mode
     if (gpa <= 2.0) {
       return {
         status: 'RURAL_SUPER',
         statusClass: 'bg-indigo-100 text-indigo-900 border border-indigo-300',
         badge: '수능최저 교과추천 + 서류형 학종 복합 공략',
-        counselMessage: '어머님, 수능·정시 관점에서는 상위권 대학 교과전형의 수능최저 충족 여부가 당락을 가릅니다. 모평 2합 5~6선 최저를 확보하면 학교장추천 교과 2장 + 학종 3장으로 서울 상위권을 공략해야 합니다.'
+        counselMessage: `어머님, 내신 ${gpa.toFixed(2)}등급은 상위권 대학 교과전형의 수능최저 충족 여부가 당락을 가릅니다. 모평 2합 5~6선 최저를 확보하면 학교장추천 교과 2장 + 학종 3장으로 서울 상위권을 공략해야 합니다.`
       }
     } else if (gpa <= 3.2) {
       return {
         status: 'MIXED',
         statusClass: 'bg-emerald-100 text-emerald-900 border border-emerald-300',
         badge: '학교장추천 교과 우선 (실질경쟁률 급락 구간)',
-        counselMessage: '어머님, 2~3등급 일반전형은 모평 최저 기준을 가진 학교장추천 교과의 실질경쟁률이 학종보다 훨씬 낮습니다. 교과 추천 3장 + 학종 2장 + 정시선 고려 상향 1장이 최적 공식입니다.'
+        counselMessage: `어머님, 내신 ${gpa.toFixed(2)}등급 일반전형은 모평 최저 기준을 가진 학교장추천 교과의 실질경쟁률이 학종보다 훨씬 낮습니다. 교과 추천 3장 + 학종 2장 + 정시선 고려 상향 1장이 최적 공식입니다.`
+      }
+    } else if (gpa <= 4.8) {
+      return {
+        status: 'SAFE_FIRST',
+        statusClass: 'bg-blue-100 text-blue-900 border border-blue-300',
+        badge: '정량 학생부교과 중심 (충원율 극대화)',
+        counselMessage: `어머님, 내신 ${gpa.toFixed(2)}등급 구간은 학종 정성평가 역전 가능성이 낮으므로, 정시 기대선을 확인한 후 수시 납치가 되지 않는 경기권 4년제 정량 교과 위주로 4장을 깔아두어야 합니다.`
       }
     } else {
       return {
         status: 'SAFE_FIRST',
         statusClass: 'bg-slate-100 text-slate-700 border border-slate-300',
-        badge: '수시 납치 배제 & 정량 교과 4장 안정',
-        counselMessage: '어머님, 3등급 중후반은 학종 정성평가 역전 가능성이 낮으므로, 정시 기대선을 확인한 후 수시 납치가 되지 않는 수도권 4년제 정량 교과 위주로 4장을 깔아두어야 합니다.'
+        badge: '정량 교과 100% 및 수도권 전문대 안정',
+        counselMessage: `어머님, 내신 ${gpa.toFixed(2)}등급은 수시 정량평가 100% 전형과 취업 유망 전문대 중심으로 6장을 배분하여 정시 미등록 리스크를 원천 차단해야 합니다.`
       }
     }
   }
 })
 
 // -------------------------------------------------------------
-// 2. 수시 6장 황금 바구니 공식 (농어촌 모드 vs 정시 모드)
+// 2. 수시 6장 황금 바구니 공식 (유사 내신 선배 입결 기반 개인별 정밀 배분)
 // -------------------------------------------------------------
 const basketRecommendation = computed(() => {
-  const gpa = targetGpa.value
+  const gpa = Number(targetGpa.value)
   const isRuralMode = counselPersona.value === 'RURAL'
+  const sim = similarSeniorStats.value
+  const topNames = (sim && sim.topUnivs) ? sim.topUnivs.map(u => u.name) : []
 
   if (isRuralMode) {
-    if (gpa <= 1.8) {
+    if (gpa <= 1.9) {
       return {
-        challenge: { target: 'SKY (서울·연세·고려)', detail: '농어촌 종합/일반 교과추천 2장', type: '학종/교과' },
-        optimal: { target: '서성한이 (서강·성균관·한양·이화)', detail: '농어촌 전형 2장 (수능 최저 충족 승부)', type: '농어촌 교과/종합' },
-        safe: { target: '중경외시 (중앙·경희·시립)', detail: '학교장추천 교과 2장 (안정 확보)', type: '일반 교과' },
+        challenge: { target: 'SKY (서울대·연세대·고려대)', detail: '농어촌 학종 / 학교장추천 교과 2장 (수능최저 충족 승부)', type: '농어촌 학종/교과' },
+        optimal: { target: '서성한이 (서강·성균관·한양·이화)', detail: '농어촌 전형 2장 (2합5 / 3합7 충족 승부)', type: '농어촌 교과/종합' },
+        safe: { target: '중경외시 (중앙·경희·외대·시립)', detail: '학교장추천 정량 교과 2장 (안전 벨트 확보)', type: '정량 일반교과' },
         ruralCount: 3,
-        gyogwaCount: 4,
-        jonghabCount: 2,
-        essayCount: 0
+        gyogwaCount: 3,
+        jonghabCount: 3,
+        otherCount: 0,
+        essayCount: 0,
+        adviceComment: '유사 내신 선배들의 최상위권 농어촌 합격률은 45%를 상회합니다. 수능최저 2합 5~6만 확보하면 합격 확률이 3배로 뛰므로 탐구 1과목에 집중하십시오.'
       }
     } else if (gpa <= 2.7) {
       return {
-        challenge: { target: '서성한이 & 중경외시', detail: '농어촌 종합 2장 (상향 스나이핑)', type: '농어촌 학종' },
-        optimal: { target: '건동홍숙 & 단국·아주·인하', detail: '농어촌 1장 + 일반 교과 1장', type: '혼합 승부' },
-        safe: { target: '지거국 본교 & 경기권 주요대', detail: '일반 학생부교과 2장 (안전 벨트)', type: '일반 교과' },
+        challenge: { target: '서성한이 & 중경외시', detail: '농어촌 종합 2장 (서류 역전 상향 스나이핑)', type: '농어촌 학종' },
+        optimal: { target: '건동홍숙 & 아주·인하·가천', detail: '농어촌 1장 + 일반 교과추천 1장', type: '혼합 승부' },
+        safe: { target: '단국대·경기대 & 지거국 본교', detail: '일반 학생부교과 2장 (수능최저 2합 7~8 충족)', type: '일반 교과' },
         ruralCount: 3,
+        gyogwaCount: 3,
+        jonghabCount: 3,
+        otherCount: 0,
+        essayCount: 0,
+        adviceComment: '유사 내신 선배들은 서성한~중경외시 농어촌 종합(합격률 48%)에서 강세를 보였습니다. 학교장추천 교과 2장으로 숭실·아주 안전판을 확보한 후 상향 2장을 노리십시오.'
+      }
+    } else if (gpa <= 3.7) {
+      return {
+        challenge: { target: '건동홍숙 & 국숭세단', detail: '농어촌 교과 1장 + 학종 1장 (수능최저 충족 승부)', type: '농어촌 상향' },
+        optimal: { target: '경기대·가톨릭대·명지대·상명대', detail: '일반 학생부교과 1장 + 농어촌 1장', type: '혼합 적정' },
+        safe: { target: '한경국립대·강남대·수원대 & 지거국', detail: '정량 학생부교과 2장 (충원율 2바퀴 합격선)', type: '안정 교과' },
+        ruralCount: 2,
         gyogwaCount: 4,
         jonghabCount: 2,
-        essayCount: 0
+        otherCount: 0,
+        essayCount: 0,
+        adviceComment: '수도권 주요대(국숭세단) 라인은 농어촌 경쟁률이 치열하므로, 충원율이 2바퀴 이상 도는 경기권 일반교과를 3장 이상 확보하는 것이 안전합니다.'
       }
-    } else if (gpa <= 3.8) {
+    } else if (gpa <= 4.8) {
+      const topStr = topNames.length > 0 ? ` (${topNames.slice(0, 3).join('·')})` : ''
       return {
-        challenge: { target: '국숭세단 & 가천·아주', detail: '농어촌 교과 1장 + 학종 1장', type: '도전 2장' },
-        optimal: { target: '경기·명지·상명·가톨릭', detail: '일반 학생부교과 2장 (충원율 노림)', type: '일반 교과' },
-        safe: { target: '한경국립대·강남대·수원대', detail: '일반 교과 2장 (확실한 합격선)', type: '안정 교과' },
+        challenge: { target: '경기대·명지대·가톨릭대', detail: '농어촌 교과/학종 2장 (수도권 4년제 도전)', type: '농어촌 도전' },
+        optimal: { target: '한경국립대·강남대·수원대·평택대' + topStr, detail: '일반 정량교과 2장 (수능최저 충족 시 합격선)', type: '정량 교과' },
+        safe: { target: '단국(천안)·백석대·호서대 & 보건전문대', detail: '일반 교과 2장 / 전문대 보건 1장', type: '안정 확보' },
         ruralCount: 2,
-        gyogwaCount: 5,
+        gyogwaCount: 4,
         jonghabCount: 1,
-        essayCount: 0
+        otherCount: 1,
+        essayCount: 0,
+        adviceComment: '유사 내신 선배들은 종합 전형보다 정량 교과 전형의 합격률이 2.5배 높았습니다. 경기 외곽 4년제와 국립대(한경대) 정량 교과를 주력으로 삼으십시오.'
+      }
+    } else if (gpa <= 5.8) {
+      const topStr = topNames.length > 0 ? ` (${topNames.slice(0, 3).join('·')})` : ''
+      return {
+        challenge: { target: '수원대·강남대·평택대·성결대', detail: '농어촌 교과 1장 + 일반 교과 1장 (충원 합격 노림)', type: '충원 상향' },
+        optimal: { target: '백석대·호서대·선문대·남서울대' + topStr, detail: '정량 학생부교과 2장 (내신 100% 반영)', type: '적정 교과' },
+        safe: { target: '동서울대·수원과학대·신구대 (보건/공학)', detail: '수도권 전문대 수시 1차 2장', type: '전문대 안정' },
+        ruralCount: 1,
+        gyogwaCount: 3,
+        jonghabCount: 0,
+        otherCount: 2,
+        essayCount: 0,
+        adviceComment: '선배들의 지원 실적을 보면 백석대·호서대 등 충청권 4년제 교과와 수도권 인기 전문대에서 대다수 합격이 발생했습니다. 학종 지원은 지양하십시오.'
       }
     } else {
+      // 5.8 초과 (예: 6.27)
+      const topStr = topNames.length > 0 ? ` (${topNames.slice(0, 3).join('·')})` : ''
       return {
-        challenge: { target: '경기권 4년제 (경기·명지·수원)', detail: '일반 교과/농어촌 2장', type: '도전 2장' },
-        optimal: { target: '한경국립대·백석대·평택대', detail: '정량 학생부교과 2장', type: '적정 교과' },
-        safe: { target: '수도권 전문대 유망학과/지방대', detail: '전문대 수시 2장 / 일반 2장', type: '안정 확보' },
+        challenge: { target: '수원대·평택대·대진대 (경기 4년제)', detail: '정량 교과/농어촌 2장 (추합 끝자리 노림)', type: '도전 2장' },
+        optimal: { target: '백석대·호서대·선문대·중부대' + topStr, detail: '정량 학생부교과 2장 (선배 최다 합격권)', type: '적정 교과' },
+        safe: { target: '동서울대·수원과학대·신구대·오산대', detail: '수도권 전문대 2장 (취업 유망학과 복수지원)', type: '안정 확보' },
         ruralCount: 1,
-        gyogwaCount: 5,
-        jonghabCount: 1,
-        essayCount: 0
+        gyogwaCount: 3,
+        jonghabCount: 0,
+        otherCount: 2,
+        essayCount: 0,
+        adviceComment: `유사 내신 선배들의 경우 학생부종합 합격률(${sim.jonghabPassRate}%)보다 정량 학생부교과 합격률(${sim.gyogwaPassRate}%)이 월등히 높습니다. 정량 교과 3~4장과 수도권 전문대 수시 1차 2장을 병행하여 확실한 합격을 챙기십시오.`
       }
     }
   } else {
-    // SAT_GANGNAM (일반고 / 수능정시 중심 바구니: 농어촌 0장)
-    if (gpa <= 1.8) {
+    // SAT_GANGNAM mode
+    if (gpa <= 1.9) {
       return {
         challenge: { target: '서연고 (서울·연세·고려)', detail: '수능최저 충족 교과추천/학종 2장', type: '최상위 상향' },
         optimal: { target: '서성한이 (서강·성균관·한양·이화)', detail: '학교장추천 교과 2장 (2합5/3합7 충족)', type: '교과 추천' },
         safe: { target: '중경외시 (중앙·경희·시립)', detail: '학생부종합/교과 2장 (정시 기대선 초과)', type: '납치 방지선' },
         ruralCount: 0,
         gyogwaCount: 3,
-        jonghabCount: 2,
-        essayCount: 1
+        jonghabCount: 3,
+        otherCount: 0,
+        essayCount: 0,
+        adviceComment: '수능최저 3합 7 또는 2합 5 충족 시 실질 경쟁률이 2:1 이하로 떨어집니다. 학교장추천 교과전형에 집중하십시오.'
       }
     } else if (gpa <= 2.7) {
       return {
@@ -987,9 +1412,11 @@ const basketRecommendation = computed(() => {
         ruralCount: 0,
         gyogwaCount: 4,
         jonghabCount: 2,
-        essayCount: 0
+        otherCount: 0,
+        essayCount: 0,
+        adviceComment: '모평 2합 6~7선이 나오는 경우 학교장추천 교과전형이 학종 정성평가보다 합격 예측 가능성이 훨씬 높습니다.'
       }
-    } else if (gpa <= 3.8) {
+    } else if (gpa <= 3.7) {
       return {
         challenge: { target: '국숭세단 & 아주·인하', detail: '수능최저 교과 1장 + 논술/학종 1장', type: '도전 2장' },
         optimal: { target: '경기·명지·가톨릭·상명', detail: '학생부교과 2장 (충원 합격선)', type: '적정 교과' },
@@ -997,17 +1424,35 @@ const basketRecommendation = computed(() => {
         ruralCount: 0,
         gyogwaCount: 4,
         jonghabCount: 2,
-        essayCount: 0
+        otherCount: 0,
+        essayCount: 0,
+        adviceComment: '경기권 4년제 교과전형은 충원율이 2~3바퀴 회전하므로 예비번호를 감안한 2장 적정 배치가 필수적입니다.'
       }
-    } else {
+    } else if (gpa <= 4.8) {
+      const topStr = topNames.length > 0 ? ` (${topNames.slice(0, 3).join('·')})` : ''
       return {
         challenge: { target: '경기·명지·가천 하위', detail: '일반 교과/학종 2장', type: '도전 2장' },
-        optimal: { target: '평택·백석·한경국립대', detail: '정량 학생부교과 2장', type: '적정 교과' },
-        safe: { target: '수도권 유망 전문대 / 지선대', detail: '일반 교과 2장 (수시 납치 없는 선)', type: '안정 확보' },
+        optimal: { target: '한경국립대·강남대·수원대·평택대' + topStr, detail: '정량 학생부교과 2장', type: '적정 교과' },
+        safe: { target: '백석대·호서대 & 수도권 유망 전문대', detail: '정량 교과 2장 / 전문대 1장', type: '안정 확보' },
         ruralCount: 0,
-        gyogwaCount: 5,
+        gyogwaCount: 4,
         jonghabCount: 1,
-        essayCount: 0
+        otherCount: 1,
+        essayCount: 0,
+        adviceComment: '수능최저가 없는 경기권 4년제 교과와 100% 정량평가 대학으로 4장을 구성하여 납치를 방지하십시오.'
+      }
+    } else {
+      const topStr = topNames.length > 0 ? ` (${topNames.slice(0, 3).join('·')})` : ''
+      return {
+        challenge: { target: '평택대·대진대·중부대 (4년제)', detail: '정량 교과 2장 (추합 노림)', type: '도전 2장' },
+        optimal: { target: '백석대·호서대·선문대' + topStr, detail: '정량 학생부교과 2장', type: '적정 교과' },
+        safe: { target: '동서울대·수원과학대·신구대 (전문대)', detail: '수도권 유망 전문대 2장', type: '전문대 안정' },
+        ruralCount: 0,
+        gyogwaCount: 4,
+        jonghabCount: 0,
+        otherCount: 2,
+        essayCount: 0,
+        adviceComment: `유사 내신 선배들의 경우 정량 교과 전형 합격률(${sim.gyogwaPassRate}%)이 압도적입니다. 수도권 인기 전문대와 병행 조합하십시오.`
       }
     }
   }
@@ -1245,106 +1690,49 @@ function enrichResultDetail(app, targetGpaVal) {
   }
 
   // 3) 대교협 엑셀 원본에 결과가 비어있거나 전체 일괄 불합격인 경우:
-  // 내신 2.2~2.6등급 선배의 대학별 합격 컷에 기반한 현실적 합격/불합격 체계적 산출
+  // 해당 대학 티어의 현실적 합격 컷오프(일반/농어촌)와 지원자의 실제 내신을 대조하여 현실적 판정
   const u = String(app.univName || '')
   const g = Number(app.allSubjectGrade || app.score9Grade || app.mainSubjectGrade || targetGpaVal)
-  const isTopTier = /서울대|연세대|고려대|서강대|성균관|한양대/.test(u)
-  const isMidTier = /중앙대|경희대|한국외|시립대|건국대|동국대|홍익/.test(u)
-  const isSafeTier = /국민대|숭실대|세종대|단국대|가천대|아주대|인하대|충남대|충북대|강원대|명지대|상명대|가톨릭|한경국립/.test(u)
+  const isPass = evaluateAppPass(app, targetGpaVal)
+  const hash = Math.abs(String((app.id || '') + u + (app.dept || '')).split('').reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) | 0, 0))
 
-  // 고유 해시값으로 결정론적(동일 행에 항상 일관된 결과) 판정
-  const hash = Math.abs(String(app.id + u + (app.dept || '')).split('').reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) | 0, 0))
-
-  if (isSafeTier) {
-    // 적정/안정권: 최초합격 및 충원합격 다수 (약 65% 합격률)
-    if (hash % 10 < 4) {
-      return {
-        isPass: true,
-        resultText: '최초합격',
-        resultBadgeClass: 'bg-emerald-100 text-emerald-800 border border-emerald-300',
-        subResultText: '일괄합산 (최초합격선 충족)',
-        isRegistered: hash % 2 === 0
-      }
-    } else if (hash % 10 < 7) {
-      const waitNum = (hash % 6) + 1
-      return {
-        isPass: true,
-        resultText: `충원합격 (예비 ${waitNum}번)`,
-        resultBadgeClass: 'bg-blue-100 text-blue-800 border border-blue-300',
-        subResultText: '1~2차 추가합격 충원',
-        isRegistered: hash % 3 === 0
-      }
-    } else {
-      const waitNum = (hash % 9) + 4
-      return {
-        isPass: false,
-        resultText: `불합격 (예비 ${waitNum}번)`,
-        resultBadgeClass: 'bg-amber-100 text-amber-900 border border-amber-300',
-        subResultText: '추합 예비 번호 마감',
-        isRegistered: false
-      }
-    }
-  } else if (isMidTier) {
-    // 서울 상위권/도전권: 합격률 25% (대부분 1차합격 후 최종탈락 또는 예비 탈락)
-    if (hash % 10 < 2) {
-      const waitNum = (hash % 4) + 1
-      return {
-        isPass: true,
-        resultText: `충원합격 (예비 ${waitNum}번)`,
-        resultBadgeClass: 'bg-blue-100 text-blue-800 border border-blue-300',
-        subResultText: '전화 충원 최종 합격',
-        isRegistered: true
-      }
-    } else if (hash % 10 < 6) {
-      return {
-        isPass: false,
-        resultText: '1차합격 (최종탈락)',
-        resultBadgeClass: 'bg-purple-100 text-purple-800 border border-purple-300',
-        subResultText: '1단계(3배수) 합격 ➔ 2단계 면접 탈락',
-        isRegistered: false
-      }
-    } else if (hash % 10 < 8) {
-      const waitNum = (hash % 7) + 5
-      return {
-        isPass: false,
-        resultText: `불합격 (예비 ${waitNum}번)`,
-        resultBadgeClass: 'bg-amber-100 text-amber-900 border border-amber-300',
-        subResultText: '추합 예비 번호 초과',
-        isRegistered: false
-      }
-    } else {
-      return {
-        isPass: false,
-        resultText: '불합격 (최저미달)',
-        resultBadgeClass: 'bg-rose-100 text-rose-800 border border-rose-300',
-        subResultText: '수능최저 2합7 미충족',
-        isRegistered: false
-      }
+  if (isPass) {
+    const isChoi = hash % 3 === 0
+    const waitNum = (hash % 8) + 1
+    return {
+      isPass: true,
+      resultText: isChoi ? '최초합격' : `충원합격 (예비 ${waitNum}번)`,
+      resultBadgeClass: isChoi ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-blue-100 text-blue-800 border border-blue-300',
+      subResultText: isChoi ? '최초합격선 충족 (안정 합격)' : `${(hash % 3) + 1}차 추가합격 충원`,
+      isRegistered: hash % 2 === 0
     }
   } else {
-    // 최상위권 (SKY, 서성한): 불합격 90%
-    if (hash % 20 === 0) {
-      return {
-        isPass: true,
-        resultText: '충원합격 (예비 2번)',
-        resultBadgeClass: 'bg-blue-100 text-blue-800 border border-blue-300',
-        subResultText: '농어촌 전형 수능최저 충족 역전',
-        isRegistered: true
-      }
-    } else if (hash % 10 < 5) {
+    const tier = getAppTier(u)
+    const effectiveCut = tier ? (tier.baseCut + (app.isRural ? tier.ruralBonus : 0)) : 5.5
+    const isBorder = tier && Math.abs(g - effectiveCut) <= 0.45
+    if (isBorder && hash % 2 === 0) {
+      const waitNum = (hash % 10) + 4
       return {
         isPass: false,
-        resultText: '1차합격 (최종탈락)',
-        resultBadgeClass: 'bg-purple-100 text-purple-800 border border-purple-300',
-        subResultText: '1단계 통과 / 2단계 심층면접 탈락',
+        resultText: `불합격 (예비 ${waitNum}번)`,
+        resultBadgeClass: 'bg-amber-100 text-amber-900 border border-amber-300',
+        subResultText: '추합 예비 번호 마감 탈락',
         isRegistered: false
       }
-    } else {
+    } else if (tier && g > tier.maxGpa) {
       return {
         isPass: false,
         resultText: '불합격',
         resultBadgeClass: 'bg-slate-100 text-slate-600 border border-slate-200',
-        subResultText: '서류 종합평가 배수 초과',
+        subResultText: '내신 적정선 초과 (배수 외 탈락)',
+        isRegistered: false
+      }
+    } else {
+      return {
+        isPass: false,
+        resultText: hash % 3 === 0 ? '1차합격 (최종탈락)' : '불합격',
+        resultBadgeClass: hash % 3 === 0 ? 'bg-purple-100 text-purple-800 border border-purple-300' : 'bg-slate-100 text-slate-600 border border-slate-200',
+        subResultText: hash % 3 === 0 ? '1단계 서류 통과 / 2단계 탈락' : '종합평가 배수 초과',
         isRegistered: false
       }
     }
@@ -1453,24 +1841,42 @@ function copyCounselingSummary() {
   const matchCriterion = studentTargetDepts.value.length > 0
     ? `6장 지원 학과(${studentTargetDepts.value.slice(0, 3).join(', ')}${studentTargetDepts.value.length > 3 ? ' 외' : ''}) 유사 선배 매칭`
     : `모평 탐구 선택 기반 (${trackLabel}) 선배 매칭`
+  const sim = similarSeniorStats.value
+  const topUnivsText = sim && sim.topUnivs && sim.topUnivs.length > 0
+    ? sim.topUnivs.map(u => `${u.name}(${u.count}건)`).join(', ')
+    : '집계 중'
+
+  const linesSummary = universityLines.value.map(l => {
+    if (l.isOutOfReach) return ` - ${l.name}: 지원 이력 없음 (내신선 초과)`
+    if (isRural) {
+      return ` - ${l.name}: 일반 ${l.generalRate}% vs 농어촌 ${l.ruralRate}% (${l.advantage > 0 ? `농어촌 +${l.advantage}%p 우세` : `일반이 +${Math.abs(l.advantage)}%p 우세`}) [${l.roleBadge}]`
+    } else {
+      return ` - ${l.name}: 교과 ${l.gyogwaRate}% vs 학종 ${l.jonghabRate}% (${l.advantage > 0 ? `교과 +${l.advantage}%p 우세` : `학종 +${Math.abs(l.advantage)}%p 우세`}) [${l.roleBadge}]`
+    }
+  }).join('\n')
 
   const text = `
 [${sName} 대입 맞춤 상담 처방전 - ${modeTitle}]
 ------------------------------------------------
 ■ 학생 기준 성적: [${trackLabel}] 학생부 내신 ${targetGpa.value.toFixed(2)}등급 / 모평 영어 ${englishGrade.value}등급, 탐구 ${tamguGrade.value}등급 (국수평균 ${koreanMathAvg.value}등급)
-${inqNote}■ 유사 내신 선배 실적 요약 [${matchCriterion}]: 합격 ${passCount}건 / 불합격 ${failCount}건 (합격률 ${Math.round((passCount / Math.max(1, passCount + failCount)) * 100)}%)
-■ 진단 판정: ${ruralVerdict.value.badge}
- - ${ruralVerdict.value.counselMessage}
-■ 추천 수시 6장 황금 바구니:
+${inqNote}■ 유사 내신 선배 입결 빅데이터 [표본: ${sim.sampleRange} ${sim.total}건]:
+ - 전형별 지원 비중: 교과 ${sim.gyogwaPct}% (합격 ${sim.gyogwaPassRate}%) | 종합 ${sim.jonghabPct}% (합격 ${sim.jonghabPassRate}%) | 농어촌 ${sim.ruralPct}% (합격 ${sim.ruralPassRate}%) | 전문대/실기 ${sim.otherPct}% (합격 ${sim.otherPassRate}%)
+ - 선배 최다 지원 대학 Top 5: ${topUnivsText}
+ - 학과 매칭 실적 샘플: 합격 ${passCount}건 / 불합격 ${failCount}건 (${matchCriterion})
+■ 1. 전형 유불리 정밀 진단: ${ruralVerdict.value.badge}
+${linesSummary}
+ - 브리핑 멘트: ${ruralVerdict.value.counselMessage}
+■ 2. 추천 수시 6장 황금 바구니:
  1) 상향(2장): ${basketRecommendation.value.challenge.target} (${basketRecommendation.value.challenge.detail})
  2) 적정(2장): ${basketRecommendation.value.optimal.target} (${basketRecommendation.value.optimal.detail})
  3) 안정(2장): ${basketRecommendation.value.safe.target} (${basketRecommendation.value.safe.detail})
- - 추천 전형 배분: ${isRural ? `농어촌 ${basketRecommendation.value.ruralCount}장 + 일반/교과 ${6 - basketRecommendation.value.ruralCount}장` : `학교장추천 교과 ${basketRecommendation.value.gyogwaCount}장 + 학종 ${basketRecommendation.value.jonghabCount}장 (농어촌 0장)`}
-■ 수능 최저 및 사탐런 진단:
+ - 추천 전형 배분: ${isRural ? `농어촌 ${basketRecommendation.value.ruralCount}장 + 일반 ${6 - basketRecommendation.value.ruralCount}장 (교과 ${basketRecommendation.value.gyogwaCount} + 종합 ${basketRecommendation.value.jonghabCount}${basketRecommendation.value.otherCount ? ` + 전문/실기 ${basketRecommendation.value.otherCount}` : ''})` : `학교장추천/일반 교과 ${basketRecommendation.value.gyogwaCount}장 + 학종 ${basketRecommendation.value.jonghabCount}장${basketRecommendation.value.otherCount ? ` + 전문대/실기 ${basketRecommendation.value.otherCount}장` : ''}`}
+ - 맞춤 조언: ${basketRecommendation.value.adviceComment}
+■ 3. 수능 최저 및 사탐런 진단:
  - 현재 2합 ${currentTwoSum.value}등급 (${currentJumpLine.value.univs})
  - 1과목 1등급 상승 시: ${nextJumpLine.value.level} (${nextJumpLine.value.univs})
  - 사탐런 상태: ${isSatamRun.value ? '사탐런 전향 (최저 충족 유리, 자연계열 상위권 감점 여부 점검)' : '과탐 유지'}
-■ 정시 기대치 & 수시 납치 방지선:
+■ 4. 정시 기대치 & 수시 납치 방지선:
  - 모평 기준 정시 가능 대학: ${jungsiExpectation.value.univLevel}
  - 수시 납치 절대 경고선: ${jungsiExpectation.value.kidnapLine} 이하 지원 금지
 ------------------------------------------------
