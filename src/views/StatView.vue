@@ -302,6 +302,7 @@ import HighSchoolAdmissionTab from '../stat/components/tabs/HighSchoolAdmissionT
 import CsatTargetSimulatorTab from '../stat/components/tabs/CsatTargetSimulatorTab.vue'
 import LowerGradeMockAnalysisTab from '../stat/components/tabs/LowerGradeMockAnalysisTab.vue'
 import PreExamineeStrategyTab from '../stat/components/tabs/PreExamineeStrategyTab.vue'
+import GradeLevelComparisonTab from '../stat/components/tabs/GradeLevelComparisonTab.vue'
 import { useStatData } from '../stat/composables/useStatData'
 import { schoolName } from '../utils/schoolConfig'
 import {
@@ -395,6 +396,7 @@ const menuGroups = computed(() => [
       { id: 'preExamineeStrategy', name: '예비 수험생 전략', iconComponent: Compass, badge: '2028특화' },
       { id: 'grade2Analysis', name: '고2 성적분석', iconComponent: Award, badge: '고2' },
       { id: 'grade1Analysis', name: '고1 성적분석', iconComponent: BookOpen, badge: '고1' },
+      { id: 'gradeComparison', name: '학년별 성적비교', iconComponent: BarChart3, badge: '비교' },
       { id: 'admission', name: '고입 설명회 특화', iconComponent: GraduationCap, badge: '중3' }
     ]
   },
@@ -435,6 +437,7 @@ const activeTabComponent = computed(() => {
     case 'calendar': return CalendarTab
     case 'student': return StudentTab
     case 'preExamineeStrategy': return PreExamineeStrategyTab
+    case 'gradeComparison': return GradeLevelComparisonTab
     case 'grade2Analysis':
     case 'grade1Analysis': return LowerGradeMockAnalysisTab
     case 'data': return DataExplorerTab
