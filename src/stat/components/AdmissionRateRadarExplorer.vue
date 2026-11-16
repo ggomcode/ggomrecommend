@@ -231,14 +231,20 @@
             </div>
           </div>
 
-          <!-- Dynamic Insight Comment -->
+          <!-- Dynamic Insight Comment (AI 심층 분석 우선, 미생성 시 실데이터 기반 알고리즘) -->
           <div class="p-3 bg-indigo-50/70 border border-indigo-100 rounded-2xl text-xs text-slate-700 leading-relaxed">
-            <div class="font-extrabold text-indigo-900 flex items-center gap-1.5 mb-1">
-              <span>💡</span>
-              <span>2026학년도 입결 핵심 인사이트</span>
+            <div class="font-extrabold text-indigo-900 flex items-center justify-between mb-1">
+              <span class="flex items-center gap-1.5">
+                <span>💡</span>
+                <span>{{ selectedAcademicYear || '대입' }}학년도 입결 핵심 인사이트</span>
+              </span>
+              <span v-if="aiBandInsight" class="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200 flex items-center gap-1">
+                <span>✨</span>
+                <span>Gemini AI 분석</span>
+              </span>
             </div>
-            <p class="m-0 text-[11px] text-slate-600">
-              {{ bandInsightComment }}
+            <p class="m-0 text-[11px] text-slate-700 leading-relaxed whitespace-pre-line">
+              {{ displayBandInsightComment }}
             </p>
           </div>
         </div>
@@ -312,7 +318,7 @@ ChartJS.register(
   Legend
 )
 
-const { filteredApplications } = useData()
+const { filteredApplications, selectedAcademicYear, comprehensiveAiReport } = useData()
 
 // Display modes
 const chartMode = ref('subType') // 'subType' (교과vs종합 5축) | 'majorType' (4대전형 4축)
@@ -582,6 +588,15 @@ const bandInsightComment = computed(() => {
   return sentences.length > 0
     ? `${band.label}(${band.rangeText}) 분석: ${sentences.join(' ')}`
     : `${band.label} 수시 지원 ${stats.total}건 중 ${stats.passed}건 합격(합격률 ${overallRate}%)입니다.`
+})
+
+// Gemini AI 심층 분석 인사이트 (전체 대입통계 AI 분석 연동)
+const aiBandInsight = computed(() => {
+  return comprehensiveAiReport?.value?.bandInsights?.[activeBandId.value] || null
+})
+
+const displayBandInsightComment = computed(() => {
+  return aiBandInsight.value || bandInsightComment.value
 })
 
 // -------------------------------------------------------------

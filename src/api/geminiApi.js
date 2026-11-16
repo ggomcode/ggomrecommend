@@ -5,6 +5,7 @@ export const GEMINI_LOCAL_KEY = 'pcm_gemini_api_key'
 export const GEMINI_PRIMARY_MODEL = 'gemini-2.5-flash'
 export const GEMINI_FALLBACK_MODEL = 'gemini-1.5-flash'
 export const AI_GRADE_REPORT_PREFIX = 'ai_report_grade_comparison_'
+export const COMPREHENSIVE_AI_REPORT_PREFIX = 'ai_report_stat_comprehensive_'
 
 /**
  * 1. Gemini API Key 조회 (Supabase config 우선 -> localStorage -> .env)
@@ -344,5 +345,351 @@ ${JSON.stringify(statsPayload, null, 2)}
     success: true,
     model: targetModel,
     data: parsed
+  }
+}
+
+/**
+ * 7. Supabase DB에서 대입통계시스템 전체 AI 심층 분석 리포트 조회
+ */
+export async function fetchComprehensiveAiReport(academicYear) {
+  const yr = String(academicYear || '2027')
+  const storageKey = `${COMPREHENSIVE_AI_REPORT_PREFIX}${yr}`
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('config')
+        .select('value')
+        .eq('key', storageKey)
+        .maybeSingle()
+
+      if (!error && data && data.value) {
+        const parsed = JSON.parse(data.value)
+        if (parsed && typeof parsed === 'object') {
+          try {
+            localStorage.setItem(`pcm_${storageKey}`, data.value)
+          } catch {}
+          return parsed
+        }
+      }
+    } catch (e) {
+      console.warn(`[geminiApi] Supabase에서 전체 AI 분석 리포트(${yr}) 조회 실패:`, e)
+    }
+  }
+
+  // 로컬 스토리지 백업 조회
+  try {
+    const localVal = localStorage.getItem(`pcm_${storageKey}`)
+    if (localVal) {
+      return JSON.parse(localVal)
+    }
+  } catch {}
+
+  return null
+}
+
+/**
+ * 8. Supabase DB에 대입통계시스템 전체 AI 심층 분석 리포트 영구 저장 (덮어쓰기)
+ */
+export async function saveComprehensiveAiReport(academicYear, reportData) {
+  const yr = String(academicYear || '2027')
+  const storageKey = `${COMPREHENSIVE_AI_REPORT_PREFIX}${yr}`
+  const jsonStr = JSON.stringify(reportData)
+
+  if (supabase) {
+    const { error } = await supabase
+      .from('config')
+      .upsert(
+        { key: storageKey, value: jsonStr },
+        { onConflict: 'key' }
+      )
+
+    if (error) {
+      console.error(`[geminiApi] Supabase 전체 AI 분석 리포트(${yr}) 저장 실패:`, error)
+      throw error
+    }
+
+    // 학년별 성적 비교 탭 호환성을 위해 ai_report_grade_comparison_10_11_${yr} 에도 동시 반영
+    if (reportData.gradeComparison) {
+      const legacyPayload = {
+        analyzedAt: reportData.analyzedAt,
+        analyzedBy: '시스템 관리자 (전체 대입통계 AI 분석 연동)',
+        model: reportData.model,
+        round: '10_11',
+        academicYear: yr,
+        gradeCards: reportData.gradeComparison.gradeCards || {},
+        roadmap: reportData.gradeComparison.roadmap || {}
+      }
+      try {
+        await supabase
+          .from('config')
+          .upsert(
+            { key: `${AI_GRADE_REPORT_PREFIX}10_11_${yr}`, value: JSON.stringify(legacyPayload) },
+            { onConflict: 'key' }
+          )
+      } catch (err) {
+        console.warn('[geminiApi] 하위 호환 학년별 AI 분석 키 저장 실패:', err)
+      }
+    }
+  }
+
+  // 로컬 스토리지 백업 저장
+  try {
+    localStorage.setItem(`pcm_${storageKey}`, jsonStr)
+  } catch {}
+
+  return true
+}
+
+/**
+ * 9. Gemini API를 호출하여 대입통계시스템 전체 심층 분석 리포트 일괄 생성
+ */
+export async function generateComprehensiveAiStatReport(apiKey, academicYear, statsPayload) {
+  const key = apiKey || await getGeminiApiKey()
+  if (!key) {
+    throw new Error('Google Gemini API Key가 설정되어 있지 않습니다. 관리자 환경설정을 확인해 주세요.')
+  }
+
+  const yr = String(academicYear || '2027')
+  const sName = statsPayload.schoolName || '우리고등학교'
+
+  const systemInstruction = `
+당신은 대한민국 고등학교 대입 진학 지도 20년 경력의 진학지도 전문 수석교사이자 대입 통계 분석 최고 권위자입니다.
+제공된 대입 수시 지원 실제 결과 데이터와 전국연합학력평가/모의평가 성적 데이터를 종합 진단하여, 학교 전체 구성원(교사, 학생, 학부모)이 공유할 수 있는 권위 있고 신뢰도 높은 '대입 통계 시스템 전체 심층 분석 리포트'를 작성해야 합니다.
+
+[절대 불변의 분석 원칙 - 엄격 준수]
+1. 한국 고등학교 내신 및 수능 등급 체계: 1등급이 최상위(최우수), 9등급이 최하위(가장 취약)입니다.
+   - 숫자가 작을수록 성적이 우수합니다 (예: 2.15등급은 3.40등급보다 우수).
+   - 등급 숫자가 크다고 우수하다고 해석하는 환각을 절대 일으키지 마십시오.
+2. 사실 일치성 및 수치 검증:
+   - 절대로 없는 가짜 합격 건수나 지어낸 수치를 인용하지 마십시오.
+   - 전달받은 JSON의 실제 지원 건수, 합격률, 등급 수치만을 정확히 인용하십시오.
+   - 데이터가 없는 항목은 "데이터 미등록/추후 분석 필요"로 솔직하게 표기하십시오.
+3. 실질적이고 실행 가능한 진학 지도 처방:
+   - 비현실적인 희망고문 대신, 학생부교과/종합/농어촌/기회균형 전형의 실증적 유불리와 수능최저 충족 전략(영어·탐구 2합 중심)을 현실적으로 처방하십시오.
+   - 고3의 입결 성과를 토대로 고2·고1의 학력 보강 로드맵을 구체적으로 제시하십시오.
+
+[출력 형식 - 순수 JSON만 반환, 마크다운 코드블록 없이 순수 JSON 문자열만 출력]
+{
+  "overallSummary": "대입 수시 지원 및 전국연합/모의평가 성적 종합 총평 (3~4문장으로 우리 학교의 전체 합격률, 전형별 우위, 과목별 학력 지형을 명확하고 힘있게 요약)",
+  "strategyCards": [
+    {
+      "num": 1,
+      "badge": "내신 중심 교과 우세",
+      "title": "등급에 관계없이 학생부교과 전형이 일관되게 유리합니다",
+      "summary": "우리 학교의 실제 수시 결과에 비추어 볼 때 주요 등급대에서 교과 전형 합격률이 종합 전형을 앞섭니다.",
+      "details": [
+        "1.0 ~ 1.9등급: 서울권 대학 주요 타깃 (교과 추천 적극 활용)",
+        "2.0 ~ 2.9등급: 서울 하위권 대학 & 지거국 본교 & 수도권 주요대학",
+        "3.0 ~ 3.9등급: 수도권 대학 & 지방 중위권 대학 (정량 교과 중심 안정 지원)",
+        "충실한 학생부 관리 시 종합 전형으로 0.5등급 내외 보완 합격 가능"
+      ]
+    },
+    {
+      "num": 2,
+      "badge": "농어촌·기회균형 양면성",
+      "title": "상위권은 농어촌이 절대 유리, 중하위권은 경쟁 치열성을 경계",
+      "summary": "1~2등급대 상위권은 농어촌 전형 합격률이 일반전형 대비 확연히 우세하나, 중하위권은 지원 몰림 현상으로 역전이 발생할 수 있습니다.",
+      "details": [
+        "상위권(내신 1~2등급대): 상위권 대학 농어촌+기회균형 전형 적극 추천 (일반전형 대비 뚜렷한 합격률 우위)",
+        "중하위권(내신 3등급 이하): 중위권 학생들의 농어촌 집중 몰림 현상으로 컷이 비정상적으로 상승할 위험 상존",
+        "수도권 주요대의 경우 일반 교과 전형의 충원 합격률이 더 유리할 수 있으므로 병행 지원이 안전"
+      ]
+    },
+    {
+      "num": 3,
+      "badge": "수능최저 마법",
+      "title": "수능 최저학력기준을 맞추면 실질 경쟁률이 급락하는 마법",
+      "summary": "겉보기 경쟁률이 높아 보여도 수능최저를 충족하는 순간 실질 경쟁률이 대폭 낮아집니다.",
+      "details": [
+        "최초 외형 경쟁률 대비 최저 충족 실질 경쟁률의 급락 실증",
+        "수능최저 충족 시 경쟁자의 50~60% 이상이 자동 탈락하므로 내신 0.5~1.0등급을 극복하는 강력한 역전 발판",
+        "충원합격까지 감안하면 3~4등급대 학생도 수도권 및 거점 국립대 실질 합격선에 진입"
+      ]
+    },
+    {
+      "num": 4,
+      "badge": "수능의 진짜 목적",
+      "title": "수능은 정시 파이터를 위한 것이 아니라, 수시 최저를 위한 전략 무기",
+      "summary": "고3 재학생의 정시 합격권 진입은 제한적이므로, 수능 공부의 실질 목표는 수시 최저 충족이어야 합니다.",
+      "details": [
+        "수능 4영역 정시 올인이 아닌 영어(절대평가) 및 전략 탐구 1과목 등 2합/3합 집중 타겟팅",
+        "사탐런(과탐→사탐) 및 전략 과목 조기 완성의 중요성",
+        "수능 당일까지 학습 집중력 유지 처방"
+      ]
+    },
+    {
+      "num": 5,
+      "badge": "정시 지원 기준선",
+      "title": "수시 원서 접수 전까지 정시로 갈 수 있는 대학 라인을 확정하십시오",
+      "summary": "모평 백분위 기준으로 정시 진학 가능선을 냉정하게 알고 수시 6장을 써야 납치를 막을 수 있습니다.",
+      "details": [
+        "6월/9월 모평 백분위 기준으로 정시 지원 가능 대학을 객관적으로 산출",
+        "정시 가능권 미만 대학의 수시 지원을 차단하는 수시 납치 방지선 설정",
+        "상향/적정/안정 6장 카드의 전략적 배분"
+      ]
+    }
+  ],
+  "groupInsights": {
+    "ALL": "전체 주요대 통합 합격률 및 전형별 종합 패턴 분석",
+    "SKYSSHE": "SKY 및 서성한 라인 입결 분석 코멘트 (실제 합격률, 교과vs종합, 농어촌, 최저 영향 등 실제 수치 인용)",
+    "JKYSKDHS": "중경외시 및 건동홍숙 라인 입결 분석 코멘트",
+    "KSSDAGIEK": "국숭세단/아주/인하/경기/가천 라인 입결 분석 코멘트",
+    "JIGEOK_EDU": "거점국립대 및 교대 라인 입결 분석 코멘트",
+    "SPECIAL": "특수목적대 및 이공계특성화대 입결 분석 코멘트"
+  },
+  "bandInsights": {
+    "ALL": "수시 전체 지원자의 등급 분포 및 전형 선택 총평",
+    "1": "1등급대 (1.0~1.9등급) 입결 핵심 인사이트 (서울 주요대 및 교과/종합/최저 합격 패턴)",
+    "2": "2등급대 (2.0~2.9등급) 입결 핵심 인사이트 (수도권 상위권 및 지거국 합격 분석)",
+    "3": "3등급대 (3.0~3.9등급) 입결 핵심 인사이트 (수도권 4년제 교과 안정 지원 및 종합 보완)",
+    "4": "4등급대 (4.0~4.9등급) 입결 핵심 인사이트 (수능최저 충족 및 틈새 전형 도약 분석)",
+    "5": "5등급대 (5.0~5.9등급) 입결 핵심 인사이트 (정량 교과 및 전문대 유망학과 전략)",
+    "6": "6등급대 (6.0~6.9등급) 입결 핵심 인사이트 (적성 및 실기/전문대 맞춤형 전략)",
+    "7_9": "7~9등급대 입결 핵심 인사이트 (전문대 및 진로 맞춤형 학과 진학 지도)"
+  },
+  "gradeComparison": {
+    "radarBalanceCommentary": "고3 대비 고2·고1의 국수영탐 5개 영역 방사형 학력 밸런스 총평",
+    "gradeCards": {
+      "3": {
+        "statusTitle": "고3 종합 위상 요약 (예: 전체 학력 압도적 1위 👑)",
+        "statusDesc": "고3 종합 성적 및 저학년 대비 우위 요약 (실제 등급 수치 인용)",
+        "strengthTitle": "최우수 강세 영역명",
+        "strengthDesc": "해당 영역 우수성 및 수능최저 기여도",
+        "weaknessTitle": "보완 필요 영역명",
+        "weaknessDesc": "실전 수능 대비 보완점",
+        "actionDesc": "고3 수시/수능최저 최종 지도 처방"
+      },
+      "2": {
+        "statusTitle": "고2 종합 위상 요약 (예: 종합 2위 🥈 (고3 대비 격차 분석))",
+        "statusDesc": "고2 종합 성적 및 고3 대비 격차 진단",
+        "strengthTitle": "상대적 선방 영역명",
+        "strengthDesc": "해당 영역 설명",
+        "weaknessTitle": "고3 대비 최대 격차 취약 영역명",
+        "weaknessDesc": "고3 대비 격차 및 위기 요인",
+        "actionDesc": "고2 집중 학습 처방"
+      },
+      "1": {
+        "statusTitle": "고1 종합 위상 요약 (예: 종합 3위 🥉 (고3 대비 격차 분석))",
+        "statusDesc": "고1 종합 성적 및 기초 학력 진단",
+        "strengthTitle": "자체 선방 영역명",
+        "strengthDesc": "기초가 잡힌 영역 설명",
+        "weaknessTitle": "고3 대비 최대 격차 취약 영역명",
+        "weaknessDesc": "기초 학력 격차가 큰 영역 설명",
+        "actionDesc": "고1 기초 클리닉 처방"
+      }
+    },
+    "roadmap": {
+      "g1": {
+        "title": "1학년: 기초 학력 보강 & 핵심 역량 확립",
+        "bullets": [
+          "첫 번째 실행 전략 (실제 취약 영역 격차 극복)",
+          "두 번째 실행 전략 (문해력 및 기초 다지기)",
+          "세 번째 실행 전략 (향후 수능 체제 대비)"
+        ]
+      },
+      "g2": {
+        "title": "2학년: 고3 수준 도약 & 전략 과목 완성",
+        "bullets": [
+          "첫 번째 실행 전략 (고3 대비 최대 격차 과목 집중 보강)",
+          "두 번째 실행 전략 (수능최저 충족 전략 과목 조기 완성)",
+          "세 번째 실행 전략 (교과 내신 및 수시 포트폴리오 관리)"
+        ]
+      },
+      "g3": {
+        "title": "3학년: 수능최저 충족률 극대화 & 수시 6장 전략",
+        "bullets": [
+          "첫 번째 실행 전략 (전 영역 우위 유지 및 실전 감각 완성)",
+          "두 번째 실행 전략 (전략적 수능최저 2합/3합 타겟팅)",
+          "세 번째 실행 전략 (수시 6장 지원 포트폴리오 최적화)"
+        ]
+      }
+    }
+  }
+}
+`
+
+  const userPrompt = `
+다음은 ${sName}의 ${yr}학년도 대입 수시 지원 결과 빅데이터 및 전국연합학력평가/모의평가 성적 집계 데이터입니다.
+
+[대입 통계 전체 집계 데이터]
+${JSON.stringify(statsPayload, null, 2)}
+
+위 데이터를 바탕으로 수석교사의 관점에서 ${sName} 학생들의 실제 수시 지원 성과, 등급대별 유불리, 대학 그룹별 분석, 고3 대비 고2·고1의 학력 격차를 총망라한 구조화된 전체 AI 심층 분석 리포트 JSON을 작성해 주십시오.
+`
+
+  const requestBody = {
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: `${systemInstruction}\n\n${userPrompt}` }]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.2,
+      topP: 0.8,
+      responseMimeType: 'application/json'
+    }
+  }
+
+  // 1차 시도: 2.5 Flash
+  let targetModel = GEMINI_PRIMARY_MODEL
+  let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(requestBody)
+  })
+
+  // 404 모델 미지원 시 fallback 시도
+  if (response.status === 404) {
+    targetModel = GEMINI_FALLBACK_MODEL
+    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
+    })
+  }
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}))
+    throw new Error(errData?.error?.message || `Gemini API 호출 실패 (HTTP ${response.status})`)
+  }
+
+  const result = await response.json()
+  const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text
+  if (!rawText) {
+    throw new Error('Gemini API로부터 응답 텍스트를 수신하지 못했습니다.')
+  }
+
+  let cleanedText = rawText.trim()
+  if (cleanedText.startsWith('```json')) {
+    cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+  } else if (cleanedText.startsWith('```')) {
+    cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '')
+  }
+
+  const parsed = JSON.parse(cleanedText)
+  if (!parsed.overallSummary || !parsed.strategyCards || !parsed.groupInsights || !parsed.bandInsights) {
+    throw new Error('Gemini 응답 구조가 불완전합니다 (overallSummary, strategyCards, groupInsights, bandInsights 중 일부 누락).')
+  }
+
+  const nowStr = new Date().toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+
+  return {
+    success: true,
+    model: targetModel,
+    data: {
+      academicYear: yr,
+      analyzedAt: nowStr,
+      schoolName: sName,
+      model: targetModel,
+      ...parsed
+    }
   }
 }

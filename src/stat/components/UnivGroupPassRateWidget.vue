@@ -274,14 +274,20 @@
             </div>
           </div>
 
-          <!-- Dynamic Group Insight Box -->
+          <!-- Dynamic Group Insight Box (AI 심층 분석 우선, 미생성 시 실데이터 기반 알고리즘) -->
           <div class="p-3 bg-blue-50/70 border border-blue-100 rounded-2xl text-xs text-slate-700 leading-relaxed">
-            <div class="font-extrabold text-blue-900 flex items-center gap-1 mb-1">
-              <span>💡</span>
-              <span>입결 분석 코멘트</span>
+            <div class="flex items-center justify-between font-extrabold text-blue-900 mb-1">
+              <span class="flex items-center gap-1">
+                <span>💡</span>
+                <span>입결 분석 코멘트</span>
+              </span>
+              <span v-if="aiGroupInsight" class="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200 flex items-center gap-1">
+                <span>✨</span>
+                <span>Gemini AI 분석</span>
+              </span>
             </div>
-            <p class="m-0 text-[11px] text-slate-600 leading-normal">
-              {{ groupInsightComment }}
+            <p class="m-0 text-[11px] text-slate-700 leading-relaxed whitespace-pre-line">
+              {{ displayGroupInsightComment }}
             </p>
           </div>
         </div>
@@ -342,7 +348,7 @@ ChartJS.register(
   Legend
 )
 
-const { filteredApplications } = useData()
+const { filteredApplications, comprehensiveAiReport } = useData()
 
 // -------------------------------------------------------------
 // University Group Definitions (보고서 페이지 1, 5, 6 기준)
@@ -692,6 +698,15 @@ const groupInsightComment = computed(() => {
   return parts.length > 0
     ? `${groupTitle} 분석: ${parts.join(' ')}`
     : `${groupTitle} 전체 합격률은 ${stats.overallRate}%(지원 ${stats.total}건 중 ${stats.passed}건 합격)입니다.`
+})
+
+// Gemini AI 심층 분석 인사이트 (전체 대입통계 AI 분석 연동)
+const aiGroupInsight = computed(() => {
+  return comprehensiveAiReport?.value?.groupInsights?.[activeGroupId.value] || null
+})
+
+const displayGroupInsightComment = computed(() => {
+  return aiGroupInsight.value || groupInsightComment.value
 })
 
 // -------------------------------------------------------------

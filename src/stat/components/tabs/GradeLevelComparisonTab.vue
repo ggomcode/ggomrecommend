@@ -418,18 +418,16 @@
         </div>
 
         <div class="flex flex-col sm:flex-row items-end sm:items-center gap-2">
-          <!-- 관리자 전용 AI 심층 분석 / 갱신 버튼 -->
+          <!-- 관리자 전용 AI 심층 분석 갱신 바로가기 안내 -->
           <div v-if="auth.isAdmin" class="no-print">
-            <button
-              @click="handleGenerateAiAnalysis"
-              :disabled="isAiGenerating || isLoadingData"
-              class="px-3.5 py-2 rounded-xl text-xs font-extrabold text-white bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all cursor-pointer border-none flex items-center gap-2 disabled:opacity-50"
-              title="현재 회차 성적 데이터를 Gemini AI로 심층 분석하고 DB에 영구 저장합니다."
+            <router-link
+              to="/admin?tab=settings"
+              class="px-3 py-1.5 rounded-xl text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 transition-colors no-underline flex items-center gap-1.5 shadow-2xs"
+              title="관리자 환경설정에서 전체 대입통계 AI 분석을 일괄 갱신합니다."
             >
-              <Loader2 v-if="isAiGenerating" class="w-4 h-4 animate-spin" />
-              <Sparkles v-else class="w-4 h-4 text-amber-300" />
-              <span>{{ isAiGenerating ? 'AI 심층 분석 생성 및 DB 저장 중…' : (savedAiReport ? '✨ Gemini AI 분석 재갱신' : '✨ Gemini AI 실시간 심층 분석') }}</span>
-            </button>
+              <Sparkles class="w-3.5 h-3.5 text-purple-600" />
+              <span>전체 AI 분석 갱신 (환경설정)</span>
+            </router-link>
           </div>
           <div class="text-xs text-slate-500">
             기준: <strong>{{ currentRoundLabel }}</strong>
@@ -971,7 +969,7 @@ ChartJS.register(
 
 const displaySchoolName = computed(() => (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리고등학교')
 
-const { selectedAcademicYear, auth } = useStatData()
+const { selectedAcademicYear, auth, comprehensiveAiReport } = useStatData()
 
 // 회차 선택 필터 (3개 학년이 동일 시점에 응시한 유일한 시험인 10월 학평을 기본값으로 설정)
 const examRounds = [
@@ -990,121 +988,38 @@ const currentRoundLabel = computed(() => {
 // AI 심층 분석 상태 관리
 const savedAiReport = ref(null)
 const isLoadingAiReport = ref(false)
-const isAiGenerating = ref(false)
-const aiToastMessage = ref('')
-const aiToastType = ref('success')
 
 async function loadSavedAiReport() {
   isLoadingAiReport.value = true
   try {
     const res = await fetchSavedGradeAnalysis(selectedRound.value, selectedAcademicYear.value)
-    savedAiReport.value = res
+    if (res && res.gradeCards) {
+      savedAiReport.value = res
+      return
+    }
   } catch (e) {
     console.warn('저장된 AI 분석 조회 실패:', e)
-    savedAiReport.value = null
   } finally {
     isLoadingAiReport.value = false
   }
+
+  // Supabase 전체 대입통계 AI 심층 분석 리포트 폴백 연동
+  if (comprehensiveAiReport.value?.gradeComparison?.gradeCards) {
+    savedAiReport.value = {
+      analyzedAt: comprehensiveAiReport.value.analyzedAt,
+      model: comprehensiveAiReport.value.model,
+      gradeCards: comprehensiveAiReport.value.gradeComparison.gradeCards,
+      roadmap: comprehensiveAiReport.value.gradeComparison.roadmap,
+      radarBalanceCommentary: comprehensiveAiReport.value.gradeComparison.radarBalanceCommentary
+    }
+  } else {
+    savedAiReport.value = null
+  }
 }
 
-watch([selectedRound, selectedAcademicYear], () => {
+watch([selectedRound, selectedAcademicYear, comprehensiveAiReport], () => {
   loadSavedAiReport()
 })
-
-async function handleGenerateAiAnalysis() {
-  if (!auth.isAdmin) {
-    alert('AI 실시간 심층 분석 생성 및 갱신 권한은 관리자 전용입니다.')
-    return
-  }
-
-  const key = await getGeminiApiKey()
-  if (!key) {
-    alert('Gemini API Key가 등록되어 있지 않습니다. 관리자 환경설정에서 API Key를 먼저 저장해 주세요.')
-    return
-  }
-
-  // 등록된 실제 데이터 검증
-  const hasAnyData = [1, 2, 3].some(g => gradeData.value[g].hasData && gradeData.value[g].overallAvg !== '-')
-  if (!hasAnyData) {
-    alert('선택한 회차에 등록된 성적 데이터가 없어 AI 분석을 실행할 수 없습니다.')
-    return
-  }
-
-  isAiGenerating.value = true
-  aiToastMessage.value = ''
-
-  try {
-    const statsPayload = {
-      roundLabel: currentRoundLabel.value,
-      academicYear: selectedAcademicYear.value,
-      round: selectedRound.value,
-      grades: {
-        3: {
-          hasData: gradeData.value[3].hasData,
-          sampleCount: gradeData.value[3].sampleCount,
-          overallAvg: gradeData.value[3].overallAvg,
-          korAvg: gradeData.value[3].korAvg,
-          mathAvg: gradeData.value[3].mathAvg,
-          engAvg: gradeData.value[3].engAvg,
-          inqAvg: gradeData.value[3].inqAvg,
-          histAvg: gradeData.value[3].histAvg
-        },
-        2: {
-          hasData: gradeData.value[2].hasData,
-          sampleCount: gradeData.value[2].sampleCount,
-          overallAvg: gradeData.value[2].overallAvg,
-          korAvg: gradeData.value[2].korAvg,
-          mathAvg: gradeData.value[2].mathAvg,
-          engAvg: gradeData.value[2].engAvg,
-          inqAvg: gradeData.value[2].inqAvg,
-          histAvg: gradeData.value[2].histAvg
-        },
-        1: {
-          hasData: gradeData.value[1].hasData,
-          sampleCount: gradeData.value[1].sampleCount,
-          overallAvg: gradeData.value[1].overallAvg,
-          korAvg: gradeData.value[1].korAvg,
-          mathAvg: gradeData.value[1].mathAvg,
-          engAvg: gradeData.value[1].engAvg,
-          inqAvg: gradeData.value[1].inqAvg,
-          histAvg: gradeData.value[1].histAvg
-        }
-      }
-    }
-
-    const res = await generateGradeLevelAiAnalysis(statsPayload, key)
-    if (res.success && res.data) {
-      const newReport = {
-        analyzedAt: new Date().toLocaleString('ko-KR', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit'
-        }),
-        analyzedBy: '시스템 관리자',
-        model: res.model,
-        round: selectedRound.value,
-        academicYear: selectedAcademicYear.value,
-        gradeCards: res.data.gradeCards,
-        roadmap: res.data.roadmap
-      }
-
-      await saveGradeAnalysis(selectedRound.value, selectedAcademicYear.value, newReport)
-      savedAiReport.value = newReport
-      aiToastMessage.value = `✨ ${currentRoundLabel.value} Gemini AI 심층 분석이 생성 및 DB에 영구 저장되었습니다!`
-      aiToastType.value = 'success'
-      setTimeout(() => { aiToastMessage.value = '' }, 6000)
-    }
-  } catch (err) {
-    console.error('AI 분석 실패:', err)
-    aiToastMessage.value = `AI 분석 생성 실패: ${err.message || '네트워크 통신 오류'}`
-    aiToastType.value = 'error'
-    setTimeout(() => { aiToastMessage.value = '' }, 8000)
-  } finally {
-    isAiGenerating.value = false
-  }
-}
 
 // 데이터 로딩 상태 및 학년별 원시 레코드
 const isLoadingData = ref(false)
@@ -1718,8 +1633,11 @@ const subjectBarChartOptions = computed(() => {
   }
 })
 
-// 레이더 차트 기반 학력 밸런스 동적 총평 (100% 데이터 기반)
+// 레이더 차트 기반 학력 밸런스 동적 총평 (AI 심층 분석 우선, 미생성 시 실데이터 기반 알고리즘)
 const radarBalanceCommentary = computed(() => {
+  if (savedAiReport.value?.radarBalanceCommentary) {
+    return savedAiReport.value.radarBalanceCommentary
+  }
   const g3 = gradeData.value[3]
   const g2 = gradeData.value[2]
   const g1 = gradeData.value[1]

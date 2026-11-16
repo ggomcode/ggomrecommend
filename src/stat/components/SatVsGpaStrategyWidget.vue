@@ -43,7 +43,11 @@
           <span>💡</span>
           <span>{{ academicYearLabel }}학년도 5대 대입 핵심 전략</span>
           <span class="text-amber-300">|</span>
-          <span class="text-slate-500 font-semibold">학부모 & 수험생 필승 가이드</span>
+          <span v-if="comprehensiveAiReport?.strategyCards" class="text-purple-700 font-bold flex items-center gap-1">
+            <span>✨</span>
+            <span>Gemini AI 분석</span>
+          </span>
+          <span v-else class="text-slate-500 font-semibold">학부모 & 수험생 필승 가이드</span>
         </div>
         <h3 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight m-0">
           {{ academicYearLabel }}학년도 대입 성공을 위한 5대 핵심 전략
@@ -2374,6 +2378,10 @@
           <span>💡</span>
           <span>{{ academicYearLabel }}학년도 수시·정시 대비 5대 핵심 지침</span>
         </span>
+        <span v-if="comprehensiveAiReport?.strategyCards" class="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200 flex items-center gap-1">
+          <span>✨</span>
+          <span>Gemini AI 심층 분석 전략</span>
+        </span>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2597,7 +2605,8 @@ const {
   csatPassRateTable,
   loadCsatPassRateData,
   isLoadingCsatPassRate,
-  schoolMinScoreStats
+  schoolMinScoreStats,
+  comprehensiveAiReport
 } = useStatData()
 
 const localCustomMockRecords = ref([])
@@ -4655,6 +4664,9 @@ function toggleCard(num) {
 }
 
 const STRATEGY_CARDS = computed(() => {
+  if (comprehensiveAiReport.value?.strategyCards && Array.isArray(comprehensiveAiReport.value.strategyCards) && comprehensiveAiReport.value.strategyCards.length >= 3) {
+    return comprehensiveAiReport.value.strategyCards
+  }
   const currentSchool = currentSchoolName.value
   const satamSummary = effectiveSatamStats.value?.totalRunRate
     ? `사탐런(과탐→사탐 ${effectiveSatamStats.value.totalRunRate}%)을 통해 최저 충족 전략 과목을 조기에 확정하는 것이 성공의 열쇠`

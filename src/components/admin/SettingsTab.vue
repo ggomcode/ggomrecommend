@@ -684,6 +684,80 @@
         </form>
       </div>
 
+      <!-- 3-7. 대입통계시스템 전체 AI 심층 분석 일괄 생성·갱신 (Gemini AI Engine) -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+          <h2 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 m-0">
+            <span class="w-1 h-3 bg-linear-to-b from-purple-600 to-indigo-600 rounded-full"></span>
+            <span>✨ 대입통계시스템 전체 AI 심층 분석 일괄 생성·갱신</span>
+          </h2>
+          <div class="flex items-center gap-2">
+            <span v-if="comprehensiveAiReportState?.analyzedAt" class="text-[11px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 px-2.5 py-0.5 rounded-full border border-purple-200 dark:border-purple-800 flex items-center gap-1">
+              <span>✨</span>
+              <span>AI 분석 완료 ({{ comprehensiveAiReportState.analyzedAt }} 갱신)</span>
+            </span>
+            <span v-else class="text-[11px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
+              미생성 (동적 알고리즘 진단 모드)
+            </span>
+          </div>
+        </div>
+        <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+          Google Gemini AI 엔진을 통해 대입통계시스템 전체의 <strong>수시 지원 및 합격 빅데이터, 5개 주요 대학 그룹(SKY/중경외시/수도권/지거국/특수목적대), 내신 1~9등급대별 합격 패턴, 고3 vs 저학년(고1·고2) 학력 비교 진단, 5대 대입 성공 전략</strong>을 일괄 심층 분석하여 Supabase DB에 영구 저장합니다.<br>
+          ※ 여기서 실행하면 대입 통계, 대학 그룹별 분석, 성적대별 경향, 학년별 성적비교, 학부모 상담 등 <strong>시스템 전체 화면에 일괄 자동 적용</strong>됩니다.
+        </p>
+
+        <!-- 분석 대상 대입 학년도 선택 & 실행 버튼 영역 -->
+        <div class="bg-slate-50 dark:bg-slate-900/60 rounded-xl p-4 border border-slate-200 dark:border-slate-700 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">분석 대상 학년도:</label>
+              <select
+                v-model="aiTargetAcademicYear"
+                @change="handleAiTargetYearChange"
+                class="text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+              >
+                <option v-for="yr in aiAvailableYears" :key="yr" :value="yr">
+                  {{ yr }}학년도 대입
+                </option>
+              </select>
+              <span class="text-[11px] text-slate-400">
+                (권장 모델: <code>gemini-2.5-flash</code>)
+              </span>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                @click="handleGenerateAllStatAiReport"
+                :disabled="isGeneratingAllAi || !hasGeminiKey"
+                class="text-xs font-bold text-white bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 border-none rounded-lg px-4 py-2 cursor-pointer transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"
+                :title="!hasGeminiKey ? '위에서 Gemini API Key를 먼저 저장해 주세요.' : '선택 학년도 전체 대입 통계 AI 심층 분석 일괄 생성'"
+              >
+                <span v-if="isGeneratingAllAi" class="animate-spin text-sm">🔄</span>
+                <span v-else>✨</span>
+                <span>{{ isGeneratingAllAi ? '전체 통계 AI 심층 분석 중… (약 5~10초 소요)' : (comprehensiveAiReportState ? '✨ 전체 대입통계 AI 분석 재갱신' : '✨ 전체 대입통계 AI 심층 분석 실행 및 DB 저장') }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 현재 저장된 리포트 요약 프리뷰 -->
+          <div v-if="comprehensiveAiReportState?.overallSummary" class="pt-3 border-t border-slate-200 dark:border-slate-700 text-xs">
+            <div class="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <span class="flex items-center gap-1.5">
+                <span>📋</span>
+                <span>{{ aiTargetAcademicYear }}학년도 AI 종합 총평 미리보기</span>
+              </span>
+              <span class="text-[10px] text-slate-400 font-mono">
+                모델: {{ comprehensiveAiReportState.model || 'gemini-2.5-flash' }}
+              </span>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed m-0 bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200/80 dark:border-slate-700">
+              {{ comprehensiveAiReportState.overallSummary }}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- 4. 전형요소 등록 후 세부 수정 허용 (테스트/수정 모드) -->
       <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
         <div class="flex items-center justify-between gap-4">
@@ -1092,7 +1166,8 @@ import { supabase } from '../../utils/supabaseClient'
 import { fetchSchoolName, setSchoolNameConfig } from '../../utils/schoolConfig'
 import { getDisclosureCount, setDisclosureCount, syncRegionalToUniversities, syncPrincipalUnivsFromGoogleSheet } from '../../api/admin.js'
 import { syncRuralTracksFromGoogleSheet } from '../../api/ruralApi.js'
-import { getGeminiApiKey, saveGeminiApiKey, testGeminiApiKey } from '../../api/geminiApi.js'
+import { getGeminiApiKey, saveGeminiApiKey, testGeminiApiKey, fetchComprehensiveAiReport, saveComprehensiveAiReport, generateComprehensiveAiStatReport } from '../../api/geminiApi.js'
+import { getCurrentAcademicYear, compileComprehensiveStatPayload, loadComprehensiveAiReport } from '../../stat/composables/useStatData.js'
 import { getKcueSheetId, extractSheetId, saveKcueSheetId, KCUE_SHEET_KEY } from '../../api/statApi.js'
 import { getAdmissionSheetId, saveAdmissionSheetId, fetchAdmissionCalendarData } from '../../services/admissionCalendarService.js'
 import { dialog } from '../common/dialog.js'
@@ -1207,6 +1282,11 @@ const geminiLoading = ref(false)
 const geminiTestLoading = ref(false)
 const geminiTestResult = ref(null)
 const showGeminiKey = ref(false)
+
+const aiTargetAcademicYear = ref(getCurrentAcademicYear())
+const aiAvailableYears = ref(['2027', '2026', '2025', '2024'])
+const comprehensiveAiReportState = ref(null)
+const isGeneratingAllAi = ref(false)
 
 const hasGoogleSheetPrincipalId = ref(false)
 const hasGoogleSheetRuralId = ref(false)
@@ -1625,6 +1705,7 @@ async function loadConfig() {
     const dbGeminiKey = configMap['gemini_api_key'] || localStorage.getItem('pcm_gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY || ''
     hasGeminiKey.value = !!(dbGeminiKey && String(dbGeminiKey).trim())
     geminiKeyInput.value = ''
+    loadComprehensiveReportForTargetYear()
 
 
 
@@ -2290,12 +2371,57 @@ async function handleSaveGeminiKey() {
     await saveGeminiApiKey(val)
     hasGeminiKey.value = !!val
     geminiKeyInput.value = ''
+    loadComprehensiveReportForTargetYear()
     alert(val ? 'Google Gemini API Key가 저장되었습니다.' : 'Gemini API Key가 삭제되었습니다.')
   } catch (e) {
     console.error(e)
     alert('Gemini API Key 저장 중 오류가 발생했습니다: ' + (e.message || ''))
   } finally {
     geminiLoading.value = false
+  }
+}
+
+async function loadComprehensiveReportForTargetYear() {
+  try {
+    const report = await fetchComprehensiveAiReport(aiTargetAcademicYear.value)
+    comprehensiveAiReportState.value = report
+  } catch (e) {
+    comprehensiveAiReportState.value = null
+  }
+}
+
+function handleAiTargetYearChange() {
+  loadComprehensiveReportForTargetYear()
+}
+
+async function handleGenerateAllStatAiReport() {
+  const key = await getGeminiApiKey()
+  if (!key) {
+    alert('Google Gemini API Key가 등록되어 있지 않습니다. 위 카드에서 API Key를 먼저 저장해 주세요.')
+    return
+  }
+
+  isGeneratingAllAi.value = true
+  try {
+    const payload = await compileComprehensiveStatPayload(aiTargetAcademicYear.value)
+    const res = await generateComprehensiveAiStatReport(key, aiTargetAcademicYear.value, payload)
+    await saveComprehensiveAiReport(aiTargetAcademicYear.value, res.data)
+    comprehensiveAiReportState.value = res.data
+    await loadComprehensiveAiReport(aiTargetAcademicYear.value, true)
+
+    await dialog.alert({
+      title: '✨ 대입통계 전체 AI 심층 분석 완료',
+      message: `${aiTargetAcademicYear.value}학년도 대입 수시 지원 결과 및 학력 비교에 대한 전체 AI 심층 분석이 생성되어 Supabase DB에 영구 저장되었습니다!\n\n이제 '대입 통계 시스템'의 모든 탭(대학 그룹별 분석, 성적대별 경향, 학년별 성적비교, 학부모 상담 등)에 즉시 일괄 반영됩니다.`
+    })
+  } catch (err) {
+    console.error('전체 AI 분석 실패:', err)
+    await dialog.alert({
+      title: 'AI 심층 분석 생성 실패',
+      message: err.message || 'Gemini API 호출 중 오류가 발생했습니다.',
+      level: 'error'
+    })
+  } finally {
+    isGeneratingAllAi.value = false
   }
 }
 
@@ -2336,6 +2462,7 @@ async function handleDeleteGeminiKey() {
     await saveGeminiApiKey('')
     hasGeminiKey.value = false
     geminiKeyInput.value = ''
+    loadComprehensiveReportForTargetYear()
     alert('Gemini API Key가 삭제되었습니다.')
   } catch (e) {
     console.error(e)

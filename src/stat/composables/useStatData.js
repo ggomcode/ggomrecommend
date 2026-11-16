@@ -91,6 +91,33 @@ export const loadedCsatMinScoreYear = ref('')
 export const csatPassRateTable = ref([])
 export const isLoadingCsatPassRate = ref(false)
 
+// [신규] 대입통계시스템 전체 AI 심층 분석 리포트 전역 상태
+export const comprehensiveAiReport = ref(null)
+export const isLoadingComprehensiveAiReport = ref(false)
+
+/**
+ * Supabase DB에서 대입통계시스템 전체 AI 심층 분석 리포트를 비동기 로드
+ */
+export async function loadComprehensiveAiReport(academicYear, forceReload = false) {
+  const yr = String(academicYear || selectedAcademicYear?.value || '2027')
+  if (!forceReload && comprehensiveAiReport.value && comprehensiveAiReport.value.academicYear === yr) {
+    return comprehensiveAiReport.value
+  }
+  isLoadingComprehensiveAiReport.value = true
+  try {
+    const { fetchComprehensiveAiReport } = await import('../../api/geminiApi.js')
+    const report = await fetchComprehensiveAiReport(yr)
+    comprehensiveAiReport.value = report
+    return report
+  } catch (err) {
+    console.warn(`[useStatData] 전체 AI 분석 리포트(${yr}) 로드 실패:`, err)
+    comprehensiveAiReport.value = null
+    return null
+  } finally {
+    isLoadingComprehensiveAiReport.value = false
+  }
+}
+
 /**
  * 구글 시트 '수능최저충족률' 탭의 실제 통계 데이터를 비동기 로드
  */
@@ -720,12 +747,206 @@ export async function getApplicationsForAcademicYear(targetYear = '2027', forceR
   return []
 }
 
+/**
+ * 대입통계시스템 전체 AI 심층 분석을 위한 원시 집계 데이터 컴파일
+ */
+export async function compileComprehensiveStatPayload(academicYear) {
+  const yr = String(academicYear || selectedAcademicYear?.value || '2027')
+  const sName = (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리고등학교'
+
+  // 1. 해당 학년도 applications 데이터 가져오기
+  const apps = await getApplicationsForAcademicYear(yr)
+
+  // 2. 수시 지원 통계 요약 집계
+  const totalApps = apps.length
+  const isPass = (a) => String(a.result || a.passStatus || '').includes('합격')
+  const passedApps = apps.filter(isPass)
+  const totalPassed = passedApps.length
+  const overallPassRate = totalApps > 0 ? Number(((totalPassed / totalApps) * 100).toFixed(1)) : 0
+
+  // 전형유형별 (교과 vs 종합)
+  const gyogwaApps = apps.filter(a => String(a.admissionType || '').includes('교과'))
+  const gyogwaPassed = gyogwaApps.filter(isPass).length
+  const gyogwaRate = gyogwaApps.length > 0 ? Number(((gyogwaPassed / gyogwaApps.length) * 100).toFixed(1)) : 0
+
+  const jonghapApps = apps.filter(a => String(a.admissionType || '').includes('종합'))
+  const jonghapPassed = jonghapApps.filter(isPass).length
+  const jonghapRate = jonghapApps.length > 0 ? Number(((jonghapPassed / jonghapApps.length) * 100).toFixed(1)) : 0
+
+  // 일반 vs 농어촌/기회균형
+  const generalApps = apps.filter(a => !a.isRural && !a.isOpportunity)
+  const generalPassed = generalApps.filter(isPass).length
+  const generalRate = generalApps.length > 0 ? Number(((generalPassed / generalApps.length) * 100).toFixed(1)) : 0
+
+  const ruralApps = apps.filter(a => a.isRural || a.isOpportunity)
+  const ruralPassed = ruralApps.filter(isPass).length
+  const ruralRate = ruralApps.length > 0 ? Number(((ruralPassed / ruralApps.length) * 100).toFixed(1)) : 0
+
+  // 수능최저 유무
+  const hasMinApps = apps.filter(a => a.hasMinScore || a.csatMinCriteria)
+  const hasMinPassed = hasMinApps.filter(isPass).length
+  const hasMinRate = hasMinApps.length > 0 ? Number(((hasMinPassed / hasMinApps.length) * 100).toFixed(1)) : 0
+
+  const noMinApps = apps.filter(a => !a.hasMinScore && !a.csatMinCriteria)
+  const noMinPassed = noMinApps.filter(isPass).length
+  const noMinRate = noMinApps.length > 0 ? Number(((noMinPassed / noMinApps.length) * 100).toFixed(1)) : 0
+
+  // 3. 대학 그룹별 집계 (UnivGroupPassRateWidget과 동일 매처)
+  const univGroupMatchers = {
+    SKYSSHE: (u) => (u.includes('서울대') || u.includes('연세대') || u.includes('고려대') || u.includes('서강대') || u.includes('성균관대') || u.includes('한양대') || u.includes('이화여대') || u.includes('KAIST') || u.includes('포스텍')) && !u.includes('세종') && !u.includes('미래') && !u.includes('ERICA'),
+    JKYSKDHS: (u) => (u.includes('중앙대') || u.includes('경희대') || u.includes('한국외국어대') || u.includes('한국외대') || u.includes('서울시립대') || u.includes('건국대') || u.includes('동국대') || u.includes('홍익대') || u.includes('숙명여대')) && !u.includes('글로컬') && !u.includes('WISE'),
+    KSSDAGIEK: (u) => (u.includes('국민대') || u.includes('숭실대') || u.includes('세종대') || u.includes('단국대') || u.includes('아주대') || u.includes('인하대') || u.includes('경기대') || u.includes('가천대')),
+    JIGEOK_EDU: (u) => (u.includes('강원대') || u.includes('충북대') || u.includes('충남대') || u.includes('전북대') || u.includes('전남대') || u.includes('경북대') || u.includes('부산대') || u.includes('경상국립대') || u.includes('제주대') || u.includes('교육대') || u.includes('교대')),
+    SPECIAL: (u) => (u.includes('사관학교') || u.includes('경찰대') || u.includes('GIST') || u.includes('DGIST') || u.includes('UNIST') || u.includes('KENTECH'))
+  }
+
+  const groupStats = {
+    ALL: {
+      total: totalApps,
+      passed: totalPassed,
+      passRate: overallPassRate,
+      gyogwaRate,
+      jonghapRate,
+      ruralRate,
+      minScoreRate: hasMinRate
+    }
+  }
+
+  for (const [gId, matcher] of Object.entries(univGroupMatchers)) {
+    const gApps = apps.filter(a => matcher(String(a.univName || '')))
+    const gPassed = gApps.filter(isPass).length
+    const gRate = gApps.length > 0 ? Number(((gPassed / gApps.length) * 100).toFixed(1)) : 0
+    const gGyogwa = gApps.filter(a => String(a.admissionType || '').includes('교과'))
+    const gGyogwaRate = gGyogwa.length > 0 ? Number(((gGyogwa.filter(isPass).length / gGyogwa.length) * 100).toFixed(1)) : 0
+    const gJonghap = gApps.filter(a => String(a.admissionType || '').includes('종합'))
+    const gJonghapRate = gJonghap.length > 0 ? Number(((gJonghap.filter(isPass).length / gJonghap.length) * 100).toFixed(1)) : 0
+    const gRural = gApps.filter(a => a.isRural || a.isOpportunity)
+    const gRuralRate = gRural.length > 0 ? Number(((gRural.filter(isPass).length / gRural.length) * 100).toFixed(1)) : 0
+    const gMin = gApps.filter(a => a.hasMinScore || a.csatMinCriteria)
+    const gMinRate = gMin.length > 0 ? Number(((gMin.filter(isPass).length / gMin.length) * 100).toFixed(1)) : 0
+
+    groupStats[gId] = {
+      total: gApps.length,
+      passed: gPassed,
+      passRate: gRate,
+      gyogwaRate: gGyogwaRate,
+      jonghapRate: gJonghapRate,
+      ruralRate: gRuralRate,
+      minScoreRate: gMinRate
+    }
+  }
+
+  // 4. 내신 등급대별 집계
+  const bandConfigs = [
+    { id: '1', min: 1.0, max: 1.99 },
+    { id: '2', min: 2.0, max: 2.99 },
+    { id: '3', min: 3.0, max: 3.99 },
+    { id: '4', min: 4.0, max: 4.99 },
+    { id: '5', min: 5.0, max: 5.99 },
+    { id: '6', min: 6.0, max: 6.99 },
+    { id: '7_9', min: 7.0, max: 9.99 }
+  ]
+  const bandStats = {
+    ALL: {
+      total: totalApps,
+      passed: totalPassed,
+      passRate: overallPassRate,
+      gyogwaRate,
+      jonghapRate
+    }
+  }
+
+  bandConfigs.forEach(b => {
+    const bApps = apps.filter(a => {
+      const g = a.allSubjectGrade ?? a.score9Grade
+      return g !== null && g !== undefined && g >= b.min && g <= b.max
+    })
+    const bPassed = bApps.filter(isPass).length
+    const bRate = bApps.length > 0 ? Number(((bPassed / bApps.length) * 100).toFixed(1)) : 0
+    const bGyogwa = bApps.filter(a => String(a.admissionType || '').includes('교과'))
+    const bGyogwaRate = bGyogwa.length > 0 ? Number(((bGyogwa.filter(isPass).length / bGyogwa.length) * 100).toFixed(1)) : 0
+    const bJonghap = bApps.filter(a => String(a.admissionType || '').includes('종합'))
+    const bJonghapRate = bJonghap.length > 0 ? Number(((bJonghap.filter(isPass).length / bJonghap.length) * 100).toFixed(1)) : 0
+
+    bandStats[b.id] = {
+      total: bApps.length,
+      passed: bPassed,
+      passRate: bRate,
+      gyogwaRate: bGyogwaRate,
+      jonghapRate: bJonghapRate
+    }
+  })
+
+  // 5. 모의고사 성적 집계 (고3, 고2, 고1)
+  let mockGradesData = { 3: { hasData: false }, 2: { hasData: false }, 1: { hasData: false } }
+  try {
+    const sheetId = await getKcueSheetId()
+    const baseRecords = await loadMockExamData(false, yr).catch(() => [])
+    const [rec2028, rec2026] = await Promise.all([
+      fetchAndParseKcueMockData(sheetId, null, null, false, '2028').catch(() => []),
+      fetchAndParseKcueMockData(sheetId, null, null, false, '2026').catch(() => [])
+    ])
+    const allRecords = [...(baseRecords || []), ...(rec2028 || []), ...(rec2026 || [])]
+
+    const computeSubjAvg = (recs, getter) => {
+      const v = recs.map(getter).filter(n => n && !isNaN(n) && Number(n) > 0)
+      return v.length > 0 ? (v.reduce((a, b) => a + Number(b), 0) / v.length).toFixed(2) : '-'
+    }
+
+    [1, 2, 3].forEach(gNum => {
+      const gradeRecs = allRecords.filter(r => Number(r.grade) === gNum)
+      if (gradeRecs.length > 0) {
+        const kor = computeSubjAvg(gradeRecs, r => r.korGrade)
+        const math = computeSubjAvg(gradeRecs, r => r.mathGrade)
+        const eng = computeSubjAvg(gradeRecs, r => r.engGrade)
+        const inq1 = computeSubjAvg(gradeRecs, r => r.inq1Grade)
+        const inq2 = computeSubjAvg(gradeRecs, r => r.inq2Grade)
+        const inq = (inq1 !== '-' && inq2 !== '-') ? (((Number(inq1) + Number(inq2)) / 2)).toFixed(2) : (inq1 !== '-' ? inq1 : inq2)
+        const valid = [kor, math, eng, inq].filter(x => x !== '-').map(Number)
+        const overall = valid.length > 0 ? (valid.reduce((a, b) => a + b, 0) / valid.length).toFixed(2) : '-'
+        mockGradesData[gNum] = {
+          hasData: true,
+          sampleCount: gradeRecs.length,
+          overallAvg: overall,
+          korAvg: kor,
+          mathAvg: math,
+          engAvg: eng,
+          inqAvg: inq
+        }
+      }
+    })
+  } catch (e) {
+    console.warn('모의고사 데이터 집계 중 오류:', e)
+  }
+
+  return {
+    academicYear: yr,
+    schoolName: sName,
+    summary: {
+      totalApps,
+      totalPassed,
+      overallPassRate,
+      gyogwa: { total: gyogwaApps.length, passed: gyogwaPassed, passRate: gyogwaRate },
+      jonghap: { total: jonghapApps.length, passed: jonghapPassed, passRate: jonghapRate },
+      general: { total: generalApps.length, passed: generalPassed, passRate: generalRate },
+      rural: { total: ruralApps.length, passed: ruralPassed, passRate: ruralRate },
+      hasMinScore: { total: hasMinApps.length, passed: hasMinPassed, passRate: hasMinRate },
+      noMinScore: { total: noMinApps.length, passed: noMinPassed, passRate: noMinRate }
+    },
+    groupStats,
+    bandStats,
+    mockGradesData
+  }
+}
+
 async function applyYearAndScope(year, scope, forceReload = false) {
   const strYear = String(year)
   selectedAcademicYear.value = strYear
   selectedScope.value = scope
   localStorage.setItem('pcm_stat_selected_year', strYear)
   localStorage.setItem('pcm_stat_selected_scope', scope)
+  // 대입통계시스템 전체 AI 분석 리포트 비동기 동반 로드
+  loadComprehensiveAiReport(strYear)
   yearDataError.value = null
 
   isLoadingYearData.value = true
@@ -1602,7 +1823,11 @@ export function useStatData() {
     loadCsatPassRateData,
     cohortTrackingData,
     isLoadingCohortTracking,
-    loadCohortMockTracking
+    loadCohortMockTracking,
+    comprehensiveAiReport,
+    isLoadingComprehensiveAiReport,
+    loadComprehensiveAiReport,
+    compileComprehensiveStatPayload
   }
 }
 

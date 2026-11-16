@@ -3,6 +3,26 @@
     <!-- 📊 상단 7대 대입 지원 핵심 KPI 카드 (3학년 총원, 지원자, 접수건수, 수도권, 학추, 농어촌, 주요대) -->
     <StatOverviewKpiGrid />
 
+    <!-- ✨ 전체 대입통계 AI 심층 총평 배너 (Gemini AI 연계) -->
+    <div v-if="comprehensiveAiReport?.overallSummary" class="bg-linear-to-r from-purple-900 via-indigo-900 to-slate-900 rounded-3xl p-6 sm:p-7 text-white shadow-md relative overflow-hidden border border-purple-800/40 no-print">
+      <div class="relative z-10 space-y-2">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-purple-500/30 text-purple-200 border border-purple-400/30">
+            <span>✨</span>
+            <span>Gemini AI 대입통계 심층 종합 총평</span>
+            <span class="text-purple-300">|</span>
+            <span class="text-slate-300 font-mono">{{ selectedAcademicYear }}학년도 대입</span>
+          </div>
+          <span class="text-[11px] text-slate-300 font-mono">
+            {{ comprehensiveAiReport.analyzedAt }} 분석 갱신
+          </span>
+        </div>
+        <p class="text-xs sm:text-sm text-slate-100 m-0 mt-2 leading-relaxed whitespace-pre-line">
+          {{ comprehensiveAiReport.overallSummary }}
+        </p>
+      </div>
+    </div>
+
     <!-- 📈 대입 지원 개요 4대 분석 지표 (전형유형, 지역분포, 학급별, 계열별) -->
     <StatOverviewCharts class="no-print" />
 
@@ -209,7 +229,7 @@ import UnivPassCountTableWidget from '../UnivPassCountTableWidget.vue'
 import UnivGroupPassRateWidget from '../UnivGroupPassRateWidget.vue'
 import UnivPassRateRankingWidget from '../UnivPassRateRankingWidget.vue'
 
-const { filteredApplications } = useData()
+const { filteredApplications, selectedAcademicYear, comprehensiveAiReport } = useData()
 
 const displaySchoolName = computed(() => (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리 학교')
 
