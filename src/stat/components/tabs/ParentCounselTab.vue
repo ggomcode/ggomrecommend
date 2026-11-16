@@ -15,7 +15,7 @@
             학부모 맞춤 대입 진단 & 수시 6장 황금 나침반
           </h2>
           <p class="text-xs sm:text-sm text-slate-300 mt-2 max-w-2xl leading-relaxed m-0" v-if="counselPersona === 'RURAL'">
-            포곡고 실제 입결 기반 <strong>'내신 등급대별 농어촌 vs 일반전형 유불리 실증 및 선배 합격 복기'</strong> 관점입니다. 
+            {{ displaySchoolName }} 실제 입결 기반 <strong>'내신 등급대별 농어촌 vs 일반전형 유불리 실증 및 선배 합격 복기'</strong> 관점입니다. 
             농어촌 쿼터를 극대화하고 영어/사탐 1과목 최저 충족으로 역전을 노리는 최적의 6장 수시 바구니를 설계합니다.
           </p>
           <p class="text-xs sm:text-sm text-slate-300 mt-2 max-w-2xl leading-relaxed m-0" v-else>
@@ -219,7 +219,7 @@
           <div class="flex items-center justify-between mb-3">
             <h4 class="text-sm sm:text-base font-black text-slate-900 m-0 flex items-center gap-2">
               <span>🧭</span>
-              <span v-if="counselPersona === 'RURAL'">1. 농어촌 vs 일반전형 유불리 판정 (포곡고 농어촌 특화)</span>
+              <span v-if="counselPersona === 'RURAL'">1. 농어촌 vs 일반전형 유불리 판정 ({{ displaySchoolName }} 농어촌 특화)</span>
               <span v-else>1. 학생부교과(학교장추천) vs 학생부종합 유불리 판정</span>
             </h4>
             <span
@@ -235,7 +235,7 @@
           <!-- Academic Line Comparisons -->
           <p class="text-xs text-slate-600 mb-4 leading-relaxed">
             현재 <strong>내신 {{ targetGpa.toFixed(2) }}등급</strong> 기준으로 
-            <span v-if="counselPersona === 'RURAL'">포곡고 실제 입결 데이터를 매핑한 대학 라인별 <strong>농어촌 vs 일반전형</strong> 승산 분석입니다.</span>
+            <span v-if="counselPersona === 'RURAL'">{{ displaySchoolName }} 실제 입결 데이터를 매핑한 대학 라인별 <strong>농어촌 vs 일반전형</strong> 승산 분석입니다.</span>
             <span v-else>수능최저 충족 여부에 따른 <strong>학교장추천 교과 vs 학생부종합</strong> 합격 승산 분석입니다.</span>
           </p>
 
@@ -410,7 +410,7 @@
               <span>📊</span>
               <span>유사 내신 선배 입결 빅데이터 (표본: {{ similarSeniorStats.sampleRange }} 선배 지원 {{ similarSeniorStats.total }}건 분석)</span>
             </span>
-            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">포곡고 누적 실데이터</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">{{ displaySchoolName }} 누적 실데이터</span>
           </div>
 
           <!-- Type Distribution Pills -->
@@ -475,7 +475,7 @@
           <div class="flex items-center justify-between mb-3">
             <h4 class="text-sm sm:text-base font-black text-slate-900 m-0 flex items-center gap-2">
               <span>🚀</span>
-              <span v-if="counselPersona === 'RURAL'">3. 영어·사탐 '1과목 기적' 최저 점프업 (농어촌 2합)</span>
+              <span v-if="counselPersona === 'RURAL'">3. 영어·사탐 전략 1과목 집중 최저 점프업 (농어촌 2합)</span>
               <span v-else>3. 수능 등급 밸런스 & 사탐런 손익 정밀 판정</span>
             </h4>
             <span class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg">
@@ -705,6 +705,8 @@ import { useData, maskName, formatGrade, studentMockExamsMap, loadMockExamData }
 import { schoolName } from '../../../utils/schoolConfig'
 import { onMounted } from 'vue'
 import SatVsGpaStrategyWidget from '../SatVsGpaStrategyWidget.vue'
+
+const displaySchoolName = computed(() => (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리 학교')
 
 const { applications } = useData()
 
@@ -1950,7 +1952,7 @@ function copyCounselingSummary() {
   const passCount = peerApplications.value.filter(a => a.isPass).length
   const failCount = peerApplications.value.length - passCount
   const inqNote = detectedInquiryNotice.value ? ` - 탐구 과목 분석: ${detectedInquiryNotice.value}\n` : ''
-  const sName = schoolName.value || '포곡고등학교'
+  const sName = schoolName.value || '우리고등학교'
   const matchCriterion = studentTargetDepts.value.length > 0
     ? `6장 지원 학과(${studentTargetDepts.value.slice(0, 3).join(', ')}${studentTargetDepts.value.length > 3 ? ' 외' : ''}) 유사 선배 매칭`
     : `모평 탐구 선택 기반 (${trackLabel}) 선배 매칭`

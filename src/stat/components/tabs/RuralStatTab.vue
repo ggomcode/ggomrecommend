@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6 select-none">
     <!-- Top Banner & Academic Year Alert -->
-    <div class="bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 rounded-3xl p-6 text-white shadow-md relative overflow-hidden">
+    <div class="bg-linear-to-r from-emerald-950 via-teal-900 to-slate-900 rounded-3xl p-6 text-white shadow-md relative overflow-hidden">
       <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
       <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -24,7 +24,7 @@
             농어촌 학생 특별전형 심층 분석
           </h1>
           <p class="text-xs sm:text-sm text-slate-300 mt-2 max-w-3xl leading-relaxed m-0">
-            포곡고의 읍·면 지역 입지 이점을 극대화하는 농어촌 정원외/정원내 특별전형 지원자 성적대, 경쟁률, 
+            {{ schoolName }}의 읍·면 지역 입지 이점을 극대화하는 농어촌 정원외/정원내 특별전형 지원자 성적대, 경쟁률, 
             <span v-if="!is2027Mode" class="text-amber-300 font-bold">최종 합불 결과 및 합격 커트라인(컷선)</span>
             <span v-else class="text-emerald-300 font-bold">1~6지망 농어촌 신청 현황 및 대학별 수요</span>를 다각도로 분석합니다.
           </p>
@@ -34,7 +34,7 @@
         <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 flex flex-col items-end shrink-0 text-right">
           <span class="text-[11px] text-slate-300 font-medium">분석 데이터 출처</span>
           <span class="text-sm font-black text-emerald-300 mt-0.5">
-            {{ is2027Mode ? '포곡고 농어촌 통합 시스템 (DB)' : `구글 스프레드시트 (${selectedAcademicYear}수시)` }}
+            {{ is2027Mode ? `${schoolName} 농어촌 통합 시스템 (DB)` : `구글 스프레드시트 (${selectedAcademicYear}수시)` }}
           </span>
           <span v-if="is2027Mode" class="text-[10px] text-emerald-300 mt-1 font-semibold">
             💡 2027 대입은 지망 접수 진행 중 (합불 결과는 추후 반영)
@@ -191,7 +191,7 @@
         </div>
 
         <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-          <span>* 포곡고 농어촌 특별전형 선호도 및 집중 대학 분석</span>
+          <span>* {{ schoolName }} 농어촌 특별전형 선호도 및 집중 대학 분석</span>
           <span class="font-semibold text-slate-600">{{ schoolName }}</span>
         </div>
       </div>
@@ -249,8 +249,8 @@
           </div>
         </div>
 
-        <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-600 bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-100 leading-relaxed">
-          🌲 <strong>농어촌 전형 특화 전략:</strong> 포곡고 학생들은 일반전형 대비 약 0.5~1.2등급 내신의 보정 효과(커트라인 완화)를 누리며 경기·인천 거점 대학(가천대, 경기대, 강남대, 단국대 등) 및 충청권 국공립대에 적극 도전하고 있습니다.
+        <div class="mt-4 p-2.5 rounded-xl border border-emerald-100 bg-emerald-50/60 text-[11px] text-slate-600 leading-relaxed">
+          🌲 <strong>농어촌 전형 특화 전략:</strong> {{ schoolName }} 학생들은 일반전형 대비 내신의 보정 효과(커트라인 완화)를 누리며 거점 국공립대 및 수도권 주요 대학에 적극 도전하고 있습니다.
         </div>
       </div>
     </div>
@@ -468,7 +468,7 @@
         </div>
       </div>
 
-      <div class="overflow-x-auto max-h-[460px] overflow-y-auto">
+      <div class="overflow-x-auto max-h-115 overflow-y-auto">
         <table class="w-full text-left text-xs border-collapse">
           <thead class="sticky top-0 bg-slate-50 z-10 border-b border-slate-200">
             <tr class="text-slate-600 font-bold">

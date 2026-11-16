@@ -629,9 +629,11 @@
 
     <!-- 하단 푸터 (라이선스 표기) -->
     <footer class="w-full py-4 text-center text-xs text-slate-500 shrink-0">
-      <div class="max-w-6xl mx-auto px-4 flex items-center justify-center gap-2">
-        <span>License:</span>
+      <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-3">
+        <p class="m-0 text-slate-600 font-medium">© 2026 꼼스위트 by murmurgene</p>
+        <span class="hidden sm:inline text-slate-300">•</span>
         <div class="relative group inline-flex items-center">
+          <span class="text-slate-400 mr-1">License:</span>
           <a
             href="https://polyformproject.org/licenses/noncommercial/1.0.0/"
             target="_blank"

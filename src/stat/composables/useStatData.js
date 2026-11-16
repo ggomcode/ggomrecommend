@@ -20,6 +20,7 @@ import {
   DEFAULT_CSAT_PASS_RATE_BENCHMARK
 } from '../../api/statApi.js'
 import { supabase } from '../../utils/supabaseClient'
+import { schoolName } from '../../utils/schoolConfig'
 import officialStatsData from '../data/officialStats.json'
 import * as XLSX from 'xlsx'
 import {
@@ -1183,14 +1184,15 @@ export function useStatData() {
   // Dynamic subtitle for enrolled card
   const enrolledSubText = computed(() => {
     if (!applications.value || applications.value.length === 0) return '데이터 미등록'
+    const sName = (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리고'
     const cls = Number(selectedClass.value)
     if (!isNaN(cls) && cls >= 1 && cls <= 11) {
-      return `포곡고 3학년 ${cls}반 총원`
+      return `${sName} 3학년 ${cls}반 총원`
     }
     if (selectedClass.value === '졸업생' || selectedClass.value === 'GRADUATE') {
       return '수시 지원 졸업생 총원'
     }
-    return '포곡고 3학년 총원'
+    return `${sName} 3학년 총원`
   })
 
   // Dynamic applicant rate (based on current target students)
@@ -1344,7 +1346,9 @@ export function useStatData() {
   })
 
   // Export filtered applications to Excel
-  const exportToExcel = (customList = null, filename = '포곡고_2027수시지원통계') => {
+  const exportToExcel = (customList = null, filename = null) => {
+    const sName = (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리학교'
+    const actualFilename = filename || `${sName}_${selectedAcademicYear.value}수시지원통계`
     const list = customList || filteredApplications.value
     const exportData = list.map(app => ({
       '학년': app.grade,

@@ -338,7 +338,7 @@
       <div
         v-if="hoveredUnivData && hoveredUnivData.stats"
         :style="univTooltipStyle"
-        class="fixed z-50 pointer-events-none bg-slate-950/95 backdrop-blur-md text-white rounded-2xl p-4 shadow-2xl border border-slate-700/80 w-[310px] text-xs space-y-3 transition-opacity duration-150 animate-in fade-in select-none"
+        class="fixed z-50 pointer-events-none bg-slate-950/95 backdrop-blur-md text-white rounded-2xl p-4 shadow-2xl border border-slate-700/80 w-77.5 text-xs space-y-3 transition-opacity duration-150 animate-in fade-in select-none"
       >
         <!-- Top: University Name & Academic Year -->
         <div class="flex items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
@@ -461,7 +461,7 @@ const {
 } = useData()
 
 const displaySchoolName = computed(() => {
-  return (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '포곡고'
+  return (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리고등학교'
 })
 
 // View Mode: 'paginated' (20 per page) vs 'all' (continuous view)

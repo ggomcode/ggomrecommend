@@ -68,7 +68,7 @@
       <div class="flex items-center justify-between mb-4">
         <div>
           <h2 class="text-sm font-bold text-slate-800">최다 지원 TOP 15 대학교</h2>
-          <p class="text-xs text-slate-400">포곡고 학생들이 가장 많이 지원한 상위 15개 대학</p>
+          <p class="text-xs text-slate-400">{{ displaySchoolName }} 학생들이 가장 많이 지원한 상위 15개 대학</p>
         </div>
         <span v-if="top1" class="text-xs font-medium text-slate-500">
           1위 {{ top1.name }} ({{ top1.count }}건)
@@ -201,6 +201,7 @@
 import { ref, computed } from 'vue'
 import { Bar } from 'vue-chartjs'
 import { useData, formatGrade } from '../../composables/useStatData'
+import { schoolName } from '../../../utils/schoolConfig'
 import StatOverviewKpiGrid from '../StatOverviewKpiGrid.vue'
 import StatOverviewCharts from '../StatOverviewCharts.vue'
 import UnivDetailModal from '../StatUnivModal.vue'
@@ -209,6 +210,8 @@ import UnivGroupPassRateWidget from '../UnivGroupPassRateWidget.vue'
 import UnivPassRateRankingWidget from '../UnivPassRateRankingWidget.vue'
 
 const { filteredApplications } = useData()
+
+const displaySchoolName = computed(() => (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리 학교')
 
 const activePreset = ref('all')
 const univSearch = ref('')

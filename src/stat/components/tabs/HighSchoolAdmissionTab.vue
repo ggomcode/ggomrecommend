@@ -35,7 +35,7 @@
     <!-- ========================================================================================= -->
     <!-- [SLIDE 1] 대문 & 인트로: 2028 대입 대격변, 왜 지금 '포곡고'인가? -->
     <!-- ========================================================================================= -->
-    <section id="slide-1" class="presentation-slide a4-landscape-page bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden flex flex-col justify-between">
+    <section id="slide-1" class="presentation-slide a4-landscape-page bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden flex flex-col justify-between">
       <div class="absolute -top-32 -right-32 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
       <div class="absolute -bottom-32 -left-32 w-96 h-96 bg-sky-500/15 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -51,7 +51,7 @@
         </div>
         <h1 class="text-2xl sm:text-4xl font-black tracking-tight text-white m-0 leading-tight">
           2028 대입 대격변의 시대,<br />
-          <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-sky-300 to-indigo-300">
+          <span class="text-transparent bg-clip-text bg-linear-to-r from-amber-300 via-sky-300 to-indigo-300">
             왜 가장 확실한 해답은 포곡고등학교인가?
           </span>
         </h1>
@@ -362,7 +362,7 @@
           </div>
 
           <!-- Right (lg:col-span-5): 인터랙티브 등급 유불리 심층 분석 카드 (그래프와 나란히 좌우 배치) -->
-          <div class="lg:col-span-5 bg-gradient-to-br from-indigo-50/70 via-white to-sky-50/70 rounded-2xl p-4 sm:p-5 border border-indigo-200/80 flex flex-col justify-between shadow-xs">
+          <div class="lg:col-span-5 bg-linear-to-br from-indigo-50/70 via-white to-sky-50/70 rounded-2xl p-4 sm:p-5 border border-indigo-200/80 flex flex-col justify-between shadow-xs">
             <div>
               <!-- Section Title & Live Indicator -->
               <div class="flex items-center justify-between pb-2 mb-3 border-b border-indigo-100">
@@ -491,7 +491,7 @@
         </p>
 
         <!-- Top: Interactive Simulator Panel -->
-        <div class="mt-4 bg-gradient-to-r from-indigo-50/70 via-white to-sky-50/70 rounded-2xl p-4 sm:p-5 border border-indigo-200/80 shadow-2xs">
+        <div class="mt-4 bg-linear-to-r from-indigo-50/70 via-white to-sky-50/70 rounded-2xl p-4 sm:p-5 border border-indigo-200/80 shadow-2xs">
           <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div class="flex items-center gap-2">
               <span class="text-xs font-black text-indigo-950">
@@ -692,7 +692,7 @@
         <!-- 2 Big Engines Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
           <!-- Engine 1: 과학중점학교 -->
-          <div class="bg-gradient-to-br from-sky-50/50 via-white to-blue-50/40 rounded-2xl p-4 sm:p-5 border border-sky-200/90 shadow-2xs flex flex-col justify-between">
+          <div class="bg-linear-to-br from-sky-50/50 via-white to-blue-50/40 rounded-2xl p-4 sm:p-5 border border-sky-200/90 shadow-2xs flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between mb-2">
                 <span class="px-2.5 py-0.5 rounded-md text-xs font-black bg-sky-600 text-white">
@@ -739,7 +739,7 @@
           </div>
 
           <!-- Engine 2: 혁신자치예비학교 -->
-          <div class="bg-gradient-to-br from-emerald-50/50 via-white to-teal-50/40 rounded-2xl p-4 sm:p-5 border border-emerald-200/90 shadow-2xs flex flex-col justify-between">
+          <div class="bg-linear-to-br from-emerald-50/50 via-white to-teal-50/40 rounded-2xl p-4 sm:p-5 border border-emerald-200/90 shadow-2xs flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between mb-2">
                 <span class="px-2.5 py-0.5 rounded-md text-xs font-black bg-emerald-600 text-white">
@@ -787,7 +787,7 @@
         </div>
 
         <!-- Synergy Highlight Banner (하단 로드맵 대신 두 혁신 트랙 시너지 안내로 인쇄 여백 완벽 확보) -->
-        <div class="mt-5 p-4 rounded-2xl bg-gradient-to-r from-sky-50 via-indigo-50 to-emerald-50 border border-indigo-200/80 flex items-center justify-between gap-4">
+        <div class="mt-5 p-4 rounded-2xl bg-linear-to-r from-sky-50 via-indigo-50 to-emerald-50 border border-indigo-200/80 flex items-center justify-between gap-4">
           <div class="flex items-center gap-3">
             <span class="text-2xl">✨</span>
             <div>
@@ -1161,7 +1161,7 @@
         </div>
 
         <!-- Track 1: Non-Rural Strategy (농어촌 비대상자 30~40% 전략) -->
-        <div v-show="activeTrackTab === 'nonRural' || isPrinting" class="mt-4 p-5 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/60 border border-indigo-200 print-show-all">
+        <div v-show="activeTrackTab === 'nonRural' || isPrinting" class="mt-4 p-5 rounded-2xl bg-linear-to-br from-indigo-50/80 via-white to-purple-50/60 border border-indigo-200 print-show-all">
           <div class="flex items-center justify-between mb-3">
             <h3 class="text-sm font-black text-indigo-950 flex items-center gap-2 m-0">
               <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
@@ -1200,7 +1200,7 @@
         </div>
 
         <!-- Track 2: Rural Benefit (농어촌 대상자 혜택) -->
-        <div v-show="activeTrackTab === 'rural' || isPrinting" class="mt-4 p-5 rounded-2xl bg-gradient-to-br from-amber-50/80 via-white to-orange-50/60 border border-amber-200 print-show-all">
+        <div v-show="activeTrackTab === 'rural' || isPrinting" class="mt-4 p-5 rounded-2xl bg-linear-to-br from-amber-50/80 via-white to-orange-50/60 border border-amber-200 print-show-all">
           <div class="flex items-center justify-between mb-3">
             <h3 class="text-sm font-black text-amber-950 flex items-center gap-2 m-0">
               <span class="w-2.5 h-2.5 rounded-full bg-amber-600"></span>

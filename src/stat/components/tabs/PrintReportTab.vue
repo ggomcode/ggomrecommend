@@ -258,7 +258,7 @@
           </div>
           <div class="border border-slate-300 p-2 rounded bg-slate-50/50">
             <strong class="text-slate-900 block mb-0.5">② 농어촌+기회균형 전형의 양면성</strong>
-            상위권(1~2등급)은 농어촌 합격률 42.9%로 압도적이나, 중하위권은 몰림 현상 발생하므로 일반교과 병행 필수.
+            상위권(1~2등급)은 농어촌·기회균형 전형의 실질 합격률 우위가 뚜렷하나, 중하위권은 지원 몰림을 감안하여 일반교과 병행 필수.
           </div>
           <div class="border border-slate-300 p-2 rounded bg-slate-50/50">
             <strong class="text-slate-900 block mb-0.5">③ 수능최저 충족 시 경쟁률 마법</strong>
@@ -538,7 +538,7 @@ const targetGroupStats = computed(() => {
 const window = globalThis.window
 
 const displaySchoolName = computed(() => {
-  return (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '포곡고등학교'
+  return (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리고등학교'
 })
 
 // 오늘 날짜 기준 대입 학년도 계산 규칙

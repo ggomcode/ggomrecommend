@@ -90,7 +90,7 @@
           :class="[
             'px-2.5 py-2.5 rounded-2xl text-xs font-bold transition-all duration-200 text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer border',
             activeBandId === band.id
-              ? 'bg-gradient-to-b from-indigo-600 to-indigo-700 text-white border-indigo-700 shadow-md scale-[1.03] ring-2 ring-indigo-300'
+              ? 'bg-linear-to-b from-indigo-600 to-indigo-700 text-white border-indigo-700 shadow-md scale-[1.03] ring-2 ring-indigo-300'
               : 'bg-slate-50 hover:bg-indigo-50/70 text-slate-700 border-slate-200/90 hover:border-indigo-300'
           ]"
         >
@@ -142,7 +142,7 @@
         </div>
 
         <!-- Radar Canvas -->
-        <div class="relative w-full h-[320px] sm:h-[360px] my-auto flex items-center justify-center">
+        <div class="relative w-full h-80 sm:h-90 my-auto flex items-center justify-center">
           <Radar :data="radarChartData" :options="radarChartOptions" />
         </div>
 
@@ -537,26 +537,51 @@ const subTypeTableRows = computed(() => {
   ]
 })
 
-// Dynamic Insight Comment per Band
+// Dynamic Insight Comment per Band (실제 통계 기반 100% 동적 산출)
 const bandInsightComment = computed(() => {
-  const id = activeBand.value.id
-  switch (id) {
-    case '1':
-      return '1등급대는 서울 주요 상위권 대학 중심 출원으로 경쟁이 치열하나, 농어촌 및 고른기회 전형에서 교과/종합 모두 압도적인 80% 이상의 높은 합격률을 나타냅니다.'
-    case '2':
-      return '2등급대는 서울 중하위권 및 수도권 선호 대학에서 교과 전형의 합격 안정성이 종합 전형보다 약 15%p 이상 높게 형성되는 핵심 전략 구간입니다.'
-    case '3':
-      return '3등급대는 수도권 및 지방거점국립대 타겟 구간으로, 일반 전형 대비 농어촌/기회균형 전형에서 교과 합격률이 가장 극적으로 상승하는 특징이 있습니다.'
-    case '4':
-      return '4등급대는 일반전형 교과의 경우 수도권 진입이 어려워지나, 교과 전형의 충원 합격률과 지방 국립대 및 수도권 외곽 대학에서 높은 반등률을 보입니다.'
-    case '5':
-      return '5등급대는 학생부종합 전형의 실효성이 크게 감소하며, 정량평가 중심의 전문대 교과 및 충청권 4년제 특성화 전형이 주효합니다.'
-    case '6':
-    case '7_9':
-      return '6~9등급대는 실기위주 전형 및 전문대 유망 학과 위주의 출원이 두드러지며, 일반 4년제 종합전형보다는 교과 및 실기 전형이 유리합니다.'
-    default:
-      return '과거 입결 통계에 비추어 볼 때, 전 등급대에 걸쳐 학생부종합보다 학생부교과 전형의 실질 합격률이 전반적으로 높게 나타납니다.'
+  const band = activeBand.value
+  const stats = band.stats
+  if (!stats || stats.total === 0) {
+    return `${band.label}에 대한 수시 지원 데이터가 집계되지 않았습니다.`
   }
+
+  const gyoRate = stats.gyogwa?.rate || 0
+  const jongRate = stats.jonghap?.rate || 0
+  const metroRate = stats.metroRate || 0
+  const ruralGyogwaRate = stats.radar5?.details?.rural?.g?.rate || 0
+  const generalGyogwaRate = stats.radar5?.details?.general?.g?.rate || 0
+  const overallRate = stats.overallRate || 0
+
+  const sentences = []
+
+  // 1. 교과 vs 종합 합격률 유불리 비교
+  if (stats.gyogwa?.total > 0 && stats.jonghap?.total > 0) {
+    const gyoDiff = Number((gyoRate - jongRate).toFixed(1))
+    if (gyoDiff > 3) {
+      sentences.push(`교과 전형 합격률(${gyoRate}%)이 종합 전형(${jongRate}%)보다 +${gyoDiff}%p 높아 정량적 내신 반영 전형이 유리하게 작용했습니다.`)
+    } else if (gyoDiff < -3) {
+      sentences.push(`종합 전형 합격률(${jongRate}%)이 교과 전형(${gyoRate}%)보다 +${Math.abs(gyoDiff)}%p 높아 서류 정성평가 강점을 살린 종합 지원이 주효했습니다.`)
+    } else {
+      sentences.push(`교과(${gyoRate}%)와 종합(${jongRate}%) 전형의 합격률이 대등하여 학생부 서류 경쟁력에 따른 선택이 권장됩니다.`)
+    }
+  }
+
+  // 2. 농어촌 교과 vs 일반 교과 비교
+  if (stats.radar5?.details?.rural?.g?.total > 0 && stats.radar5?.details?.general?.g?.total > 0) {
+    const rDiff = Number((ruralGyogwaRate - generalGyogwaRate).toFixed(1))
+    if (rDiff > 3) {
+      sentences.push(`농어촌 교과 합격률(${ruralGyogwaRate}%)이 일반 교과(${generalGyogwaRate}%) 대비 +${rDiff}%p 높아 특별전형 수혜 효과가 뚜렷했습니다.`)
+    }
+  }
+
+  // 3. 수도권 합격 비중
+  if (metroRate > 0) {
+    sentences.push(`합격 사례의 ${metroRate}%가 수도권 소재 대학으로 나타났습니다.`)
+  }
+
+  return sentences.length > 0
+    ? `${band.label}(${band.rangeText}) 분석: ${sentences.join(' ')}`
+    : `${band.label} 수시 지원 ${stats.total}건 중 ${stats.passed}건 합격(합격률 ${overallRate}%)입니다.`
 })
 
 // -------------------------------------------------------------

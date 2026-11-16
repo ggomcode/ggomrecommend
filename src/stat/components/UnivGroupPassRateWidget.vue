@@ -59,7 +59,7 @@
           :class="[
             'p-3 rounded-2xl text-left transition-all duration-200 flex flex-col justify-between cursor-pointer border',
             activeGroupId === group.id
-              ? 'bg-gradient-to-b from-blue-600 to-indigo-700 text-white border-blue-700 shadow-md scale-[1.02] ring-2 ring-blue-300'
+              ? 'bg-linear-to-b from-blue-600 to-indigo-700 text-white border-blue-700 shadow-md scale-[1.02] ring-2 ring-blue-300'
               : 'bg-slate-50 hover:bg-blue-50/70 text-slate-800 border-slate-200/90 hover:border-blue-300'
           ]"
         >
@@ -634,22 +634,64 @@ const minScoreRateDelta = computed(() => {
   return '동일'
 })
 
-// Dynamic Group Insights Comment (보고서 5~6페이지 분석 내용 매핑)
+// Dynamic Group Insights Comment (선택 그룹 실데이터 기반 100% 동적 산출)
 const groupInsightComment = computed(() => {
-  switch (activeGroupId.value) {
-    case 'SKYSSHE':
-      return '최상위권 SKYSSHE 라인은 일반전형(13.6%) 대비 농어촌+기회균형 전형(42.9%)의 합격률이 3배 이상 폭증합니다. 특히 교과 전형(38.5%)이 종합(23.8%)보다 약 15%p 높아 수능 최저 충족이 가능한 교과 추천 전형이 핵심 승부처입니다.'
-    case 'JKYSKDHS':
-      return '서울 상위권 JKYSKDHS 라인 역시 농어촌+기회(26.9%)가 일반(15.1%)보다 우세하며, 교과 전형 합격률(40.9%)이 종합(16.9%)보다 무려 24%p 높아 충원합격을 노린 교과 전형의 공격적 지원이 주효했습니다.'
-    case 'KSSDAGIEK':
-      return '수도권 주요대 KSSDAGIEK 라인은 일반전형(22.9%) 합격률이 농어촌+기회(16.1%)보다 오히려 소폭 높은 역전 현상이 나타납니다. 중위권 학생들의 농어촌 경쟁이 치열해지므로 정량 교과 전형(34.3%)을 우선 검토해야 합니다.'
-    case 'JIGEOK_EDU':
-      return '지방거점국립대 및 교대는 지역인재 및 일반 교과 전형의 안정 합격률이 50%를 상회합니다. 면접 및 수능최저 충족 시 실질 합격률이 대폭 상승합니다.'
-    case 'SPECIAL':
-      return '의치한약수 및 과기원은 극상위권 성적과 높은 수능 최저학력기준이 필수입니다. 수능 최저를 충족한 소수 정예 학생들의 충원 합격 비중이 매우 높습니다.'
-    default:
-      return '대학 라인이 올라갈수록 농어촌+기회균형 전형의 혜택이 극대화되며, 모든 대학군에서 학생부교과 전형의 합격률이 학생부종합 전형을 일관되게 앞서는 경향을 보입니다.'
+  const stats = activeGroupStats.value
+  if (!stats || stats.total === 0) {
+    return '선택된 대학 그룹에 대한 수시 지원 데이터가 집계되지 않았습니다.'
   }
+
+  const groupTitle = activeGroup.value?.title || '해당 대학 그룹'
+  const genRate = stats.general?.rate || 0
+  const ruralRate = stats.ruralOrOpp?.rate || 0
+  const gyoRate = stats.gyogwa?.rate || 0
+  const jongRate = stats.jonghap?.rate || 0
+  const candRate = stats.candidateRate || 0
+  const hasMinRate = stats.hasMinScore?.rate || 0
+  const noMinRate = stats.noMinScore?.rate || 0
+
+  const parts = []
+
+  // 1. 농어촌/특별전형 vs 일반전형 비교
+  if (stats.ruralOrOpp?.total > 0 && stats.general?.total > 0) {
+    const diff = Number((ruralRate - genRate).toFixed(1))
+    if (diff > 5) {
+      parts.push(`일반전형(${genRate}%) 대비 농어촌·기회균형 전형(${ruralRate}%)의 합격률이 +${diff}%p 높아 특별전형 활용 시 합격 가능성이 크게 상승했습니다.`)
+    } else if (diff < -5) {
+      parts.push(`일반전형(${genRate}%) 합격률이 특별전형(${ruralRate}%)보다 +${Math.abs(diff)}%p 높아 지원자 몰림 시 일반전형 분산 지원도 효과적입니다.`)
+    } else {
+      parts.push(`일반전형(${genRate}%)과 특별전형(${ruralRate}%)의 합격률이 유사한 수준을 보였습니다.`)
+    }
+  }
+
+  // 2. 학생부교과 vs 학생부종합 비교
+  if (stats.gyogwa?.total > 0 && stats.jonghap?.total > 0) {
+    const diff = Number((gyoRate - jongRate).toFixed(1))
+    if (diff > 3) {
+      parts.push(`교과 전형 합격률(${gyoRate}%)이 종합 전형(${jongRate}%)보다 +${diff}%p 높아 수능최저 충족을 전제로 한 교과 전형 지원이 주요 승부처입니다.`)
+    } else if (diff < -3) {
+      parts.push(`종합 전형 합격률(${jongRate}%)이 교과 전형(${gyoRate}%)보다 +${Math.abs(diff)}%p 높아 서류 정성평가 강점을 살린 종합 지원이 주효했습니다.`)
+    } else {
+      parts.push(`교과(${gyoRate}%)와 종합(${jongRate}%) 전형의 합격률 격차가 크지 않아 학생 개인의 생기부 완성도에 따른 분산 지원이 권장됩니다.`)
+    }
+  }
+
+  // 3. 충원 합격 비중
+  if (candRate > 30) {
+    parts.push(`합격 사례 중 충원합격(추합) 비중이 ${candRate}%에 달해 예비번호 회전을 고려한 적극적 지원이 유효했습니다.`)
+  }
+
+  // 4. 수능최저 영향도
+  if (stats.hasMinScore?.total > 0 && stats.noMinScore?.total > 0) {
+    const minDiff = Number((hasMinRate - noMinRate).toFixed(1))
+    if (minDiff > 5) {
+      parts.push(`수능최저 충족 전형의 합격률(${hasMinRate}%)이 미반영 전형(${noMinRate}%)보다 높아 최저 충족이 결정적 열쇠입니다.`)
+    }
+  }
+
+  return parts.length > 0
+    ? `${groupTitle} 분석: ${parts.join(' ')}`
+    : `${groupTitle} 전체 합격률은 ${stats.overallRate}%(지원 ${stats.total}건 중 ${stats.passed}건 합격)입니다.`
 })
 
 // -------------------------------------------------------------

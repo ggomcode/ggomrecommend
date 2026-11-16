@@ -62,7 +62,7 @@
       </div>
     </div>
 
-    <!-- 2. 핵심 분석: 사탐런(71.9%)이 2028 대입에 던지는 4대 심층 시사점 -->
+    <!-- 2. 핵심 분석: 사탐런 현상이 2028 대입에 던지는 4대 심층 시사점 -->
     <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-xs space-y-6">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
         <div>
@@ -851,7 +851,7 @@
       <div id="counsel-preview-card" class="bg-white text-slate-900 p-5 rounded-2xl shadow-inner text-xs space-y-3 font-sans">
         <div class="flex items-center justify-between border-b pb-2.5 border-slate-200">
           <div class="font-black text-sm text-indigo-950">
-            [포곡고등학교] {{ currentTargetData.gradeTitle }} 진학 지도 상담 핵심 전략 요약지
+            [{{ displaySchoolName }}] {{ currentTargetData.gradeTitle }} 진학 지도 상담 핵심 전략 요약지
           </div>
           <span class="text-[11px] text-slate-500 font-mono">{{ new Date().toLocaleDateString('ko-KR') }} 발행</span>
         </div>
@@ -874,6 +874,9 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { schoolName } from '../../../utils/schoolConfig'
+
+const displaySchoolName = computed(() => (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리고등학교')
 
 const activeGrade = ref('grade2') // 'grade2' (2028 개편 첫세대) | 'grade1' (2029) | 'middle3' (2030)
 const openedFaqIndex = ref(0)
@@ -1051,7 +1054,7 @@ const targetDetails = {
     counselStrategy: [
       {
         title: '고입 설명회 활용',
-        desc: '학부모님들께 "포곡고등학교는 2028 개편 체제에 맞춘 다양한 탐구·심화 교과목이 탄탄하게 개설되어 있어 학생부 경쟁력에서 압도적으로 유리하다"는 점을 강조합니다.'
+        desc: `학부모님들께 "${displaySchoolName.value}는 2028 개편 체제에 맞춘 다양한 탐구·심화 교과목이 탄탄하게 개설되어 있어 학생부 경쟁력에서 압도적으로 유리하다"는 점을 강조합니다.`
       }
     ]
   }

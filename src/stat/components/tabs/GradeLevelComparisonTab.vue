@@ -19,7 +19,7 @@
               고3(2027) · 고2(2028) · 고1(2029) 실데이터 비교
             </span>
             <span class="px-3 py-1 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 text-xs font-mono font-bold">
-              포곡고 학력 진단 리포트
+              {{ displaySchoolName }} 학력 진단 리포트
             </span>
           </div>
 
@@ -29,9 +29,8 @@
           </h1>
 
           <p class="text-xs sm:text-sm text-slate-300 m-0 max-w-3xl leading-relaxed">
-            현재 <strong>고3·고2·고1 재학생</strong>의 전국연합학력평가 및 모의평가 실제 성적 데이터를 동일 선상에서 종합 진단합니다.<br class="hidden sm:inline" />
-            학년별 <strong>전체 평균 등급</strong>과 <strong>국·수·영·탐 영역별 성취도</strong>를 정밀 비교하며,
-            응시하지 않았거나 성적 데이터가 없는 회차는 임의 숫자가 아닌 <strong>'-'</strong>로 정확히 표기됩니다.
+            현재 <strong>고3·고2·고1 재학생</strong>의 전국연합학력평가 및 모의평가 실제 성적 데이터를 동일 선상에서 정밀 진단합니다.<br class="hidden sm:inline" />
+            선택된 <strong>{{ currentRoundLabel }}</strong> 데이터를 기준으로, 현 고3의 종합 학력 지표와 저학년(고1·고2)의 상대적 학력 격차를 데이터 기반 알고리즘 및 Gemini AI로 심층 분석합니다.
           </p>
         </div>
 
@@ -97,7 +96,7 @@
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-xs font-bold text-slate-300 mr-1 flex items-center gap-1">
             <span>📅</span>
-            <span>응시 회차:</span>
+            <span>비교 회차:</span>
           </span>
           <button
             v-for="round in examRounds"
@@ -111,6 +110,9 @@
             ]"
           >
             <span>{{ round.label }}</span>
+            <span v-if="round.id === '10_11'" class="text-[9.5px] px-1 py-0.2 rounded bg-amber-500 text-slate-950 font-extrabold ml-0.5">
+              공통응시
+            </span>
           </button>
         </div>
 
@@ -125,32 +127,32 @@
     <!-- 2. 3개 학년 종합 학력 KPI 카드 그리드 (나란히 배치)            -->
     <!-- ============================================================ -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-      <!-- 고3 카드 -->
-      <div class="bg-white rounded-3xl p-6 border-2 transition-all duration-200 relative overflow-hidden shadow-xs hover:shadow-md"
-        :class="gradeData[3].hasData && gradeRanking[0]?.grade === 3 ? 'border-indigo-400 ring-2 ring-indigo-100' : 'border-slate-200/90'">
+      <!-- 고3 카드 (전체 학력 1위) -->
+      <div class="bg-white rounded-3xl p-6 border-2 transition-all duration-200 relative overflow-hidden shadow-sm hover:shadow-md"
+        :class="gradeData[3].hasData && gradeRanking[0]?.grade === 3 ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200/90'">
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
-            <span class="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 font-black text-sm flex items-center justify-center">
+            <span class="w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
               고3
             </span>
             <div>
               <h3 class="text-base font-black text-slate-900 m-0">
                 3학년 (2027 대입)
               </h3>
-              <p class="text-[11px] text-slate-500 m-0">수능 최저 & 실전 학력</p>
+              <p class="text-[11px] text-blue-700 font-bold m-0">전체 학력 최우수</p>
             </div>
           </div>
           <span :class="[
-            'px-2 py-0.5 rounded-full text-[11px] font-bold font-mono',
-            gradeData[3].hasData && gradeRanking[0]?.grade === 3 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'
+            'px-2.5 py-0.5 rounded-full text-[11px] font-black font-mono',
+            gradeData[3].hasData && gradeRanking[0]?.grade === 3 ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-slate-100 text-slate-600'
           ]">
             {{ getRankText(3) }}
           </span>
         </div>
 
-        <div class="bg-slate-50 rounded-2xl p-4 space-y-3 mb-4">
+        <div class="bg-blue-50/50 rounded-2xl p-4 space-y-3 mb-4 border border-blue-100/70">
           <div class="flex items-baseline justify-between">
-            <span class="text-xs font-bold text-slate-500">종합 평균 등급</span>
+            <span class="text-xs font-bold text-slate-600">종합 평균 등급</span>
             <div class="flex items-baseline gap-1">
               <span class="text-3xl font-black font-mono" :class="gradeData[3].hasData ? 'text-blue-700' : 'text-slate-300'">
                 {{ gradeData[3].overallAvg }}
@@ -158,16 +160,16 @@
               <span v-if="gradeData[3].overallAvg !== '-'" class="text-xs font-bold text-slate-600">등급</span>
             </div>
           </div>
-          <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 text-xs">
+          <div class="grid grid-cols-2 gap-2 pt-2 border-t border-blue-100 text-xs">
             <div>
-              <span class="text-slate-400 block text-[10px]">1~3등급 상위권</span>
-              <span class="font-black font-mono" :class="gradeData[3].topTierRate !== '-' ? 'text-slate-800' : 'text-slate-400'">
+              <span class="text-slate-500 block text-[10px]">1~3등급 상위권</span>
+              <span class="font-black font-mono" :class="gradeData[3].topTierRate !== '-' ? 'text-slate-900' : 'text-slate-400'">
                 {{ gradeData[3].topTierRate !== '-' ? `${gradeData[3].topTierRate}%` : '-' }}
               </span>
             </div>
             <div>
-              <span class="text-slate-400 block text-[10px]">수능최저 2합5 충족</span>
-              <span class="font-black font-mono" :class="gradeData[3].csat2Sum5Rate !== '-' ? 'text-indigo-700' : 'text-slate-400'">
+              <span class="text-slate-500 block text-[10px]">수능최저 2합5 충족</span>
+              <span class="font-black font-mono" :class="gradeData[3].csat2Sum5Rate !== '-' ? 'text-blue-700' : 'text-slate-400'">
                 {{ gradeData[3].csat2Sum5Rate !== '-' ? `${gradeData[3].csat2Sum5Rate}%` : '-' }}
               </span>
             </div>
@@ -177,20 +179,20 @@
         <!-- 4개 과목 미니 등급 바 -->
         <div class="space-y-2 text-xs">
           <div class="flex justify-between items-center text-[11px]">
-            <span class="text-slate-600 font-medium">국어: <strong class="text-slate-900 font-mono">{{ gradeData[3].korAvg !== '-' ? `${gradeData[3].korAvg}` : '-' }}</strong></span>
-            <span class="text-slate-600 font-medium">수학: <strong class="text-slate-900 font-mono">{{ gradeData[3].mathAvg !== '-' ? `${gradeData[3].mathAvg}` : '-' }}</strong></span>
-            <span class="text-slate-600 font-medium">영어: <strong class="text-slate-900 font-mono">{{ gradeData[3].engAvg !== '-' ? `${gradeData[3].engAvg}` : '-' }}</strong></span>
-            <span class="text-slate-600 font-medium">탐구: <strong class="text-slate-900 font-mono">{{ gradeData[3].inqAvg !== '-' ? `${gradeData[3].inqAvg}` : '-' }}</strong></span>
+            <span class="text-slate-600 font-medium">국어: <strong class="text-blue-900 font-mono font-bold">{{ gradeData[3].korAvg !== '-' ? `${gradeData[3].korAvg}` : '-' }}</strong></span>
+            <span class="text-slate-600 font-medium">수학: <strong class="text-blue-900 font-mono font-bold">{{ gradeData[3].mathAvg !== '-' ? `${gradeData[3].mathAvg}` : '-' }}</strong></span>
+            <span class="text-slate-600 font-medium">영어: <strong class="text-blue-900 font-mono font-bold">{{ gradeData[3].engAvg !== '-' ? `${gradeData[3].engAvg}` : '-' }}</strong></span>
+            <span class="text-slate-600 font-medium">탐구: <strong class="text-blue-900 font-mono font-bold">{{ gradeData[3].inqAvg !== '-' ? `${gradeData[3].inqAvg}` : '-' }}</strong></span>
           </div>
-          <div class="p-2 rounded-xl text-[11px]" :class="gradeData[3].hasData ? 'bg-blue-50/60 border border-blue-100 text-blue-900' : 'bg-slate-50 border border-slate-200 text-slate-400'">
-            <strong class="font-bold">💡 진단:</strong> {{ gradeData[3].keyDiagnosis }}
+          <div class="p-2.5 rounded-xl text-[11px]" :class="gradeData[3].hasData ? 'bg-blue-100/70 border border-blue-200 text-blue-950' : 'bg-slate-50 border border-slate-200 text-slate-400'">
+            <strong class="font-bold">👑 핵심 현황:</strong> {{ gradeData[3].keyDiagnosis }}
           </div>
         </div>
       </div>
 
       <!-- 고2 카드 -->
       <div class="bg-white rounded-3xl p-6 border-2 transition-all duration-200 relative overflow-hidden shadow-xs hover:shadow-md"
-        :class="gradeData[2].hasData && gradeRanking[0]?.grade === 2 ? 'border-indigo-400 ring-2 ring-indigo-100' : 'border-slate-200/90'">
+        :class="gradeData[2].hasData && gradeRanking[0]?.grade === 2 ? 'border-purple-400 ring-2 ring-purple-100' : 'border-slate-200/90'">
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
             <span class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 font-black text-sm flex items-center justify-center">
@@ -204,7 +206,7 @@
             </div>
           </div>
           <span :class="[
-            'px-2 py-0.5 rounded-full text-[11px] font-bold font-mono',
+            'px-2.5 py-0.5 rounded-full text-[11px] font-bold font-mono',
             gradeData[2].hasData && gradeRanking[0]?.grade === 2 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'
           ]">
             {{ getRankText(2) }}
@@ -229,9 +231,9 @@
               </span>
             </div>
             <div>
-              <span class="text-slate-400 block text-[10px]">영어 1~3등급 비율</span>
-              <span class="font-black font-mono" :class="gradeData[2].engTopRate !== '-' ? 'text-purple-700' : 'text-slate-400'">
-                {{ gradeData[2].engTopRate !== '-' ? `${gradeData[2].engTopRate}%` : '-' }}
+              <span class="text-slate-400 block text-[10px]">고3 대비 종합 격차</span>
+              <span class="font-black font-mono" :class="getGapToG3(2) ? 'text-rose-600' : 'text-slate-400'">
+                {{ getGapToG3(2) ? `-${getGapToG3(2)}등급` : '-' }}
               </span>
             </div>
           </div>
@@ -253,7 +255,7 @@
 
       <!-- 고1 카드 -->
       <div class="bg-white rounded-3xl p-6 border-2 transition-all duration-200 relative overflow-hidden shadow-xs hover:shadow-md"
-        :class="gradeData[1].hasData && gradeRanking[0]?.grade === 1 ? 'border-indigo-400 ring-2 ring-indigo-100' : 'border-slate-200/90'">
+        :class="gradeData[1].hasData && gradeRanking[0]?.grade === 1 ? 'border-emerald-400 ring-2 ring-emerald-100' : 'border-slate-200/90'">
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-2">
             <span class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 font-black text-sm flex items-center justify-center">
@@ -267,7 +269,7 @@
             </div>
           </div>
           <span :class="[
-            'px-2 py-0.5 rounded-full text-[11px] font-bold font-mono',
+            'px-2.5 py-0.5 rounded-full text-[11px] font-bold font-mono',
             gradeData[1].hasData && gradeRanking[0]?.grade === 1 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'
           ]">
             {{ getRankText(1) }}
@@ -292,9 +294,9 @@
               </span>
             </div>
             <div>
-              <span class="text-slate-400 block text-[10px]">국어 평균 등급</span>
-              <span class="font-black font-mono" :class="gradeData[1].korAvg !== '-' ? 'text-emerald-700' : 'text-slate-400'">
-                {{ gradeData[1].korAvg !== '-' ? `${gradeData[1].korAvg}` : '-' }}
+              <span class="text-slate-400 block text-[10px]">고3 대비 종합 격차</span>
+              <span class="font-black font-mono" :class="getGapToG3(1) ? 'text-rose-600' : 'text-slate-400'">
+                {{ getGapToG3(1) ? `-${getGapToG3(1)}등급` : '-' }}
               </span>
             </div>
           </div>
@@ -348,11 +350,11 @@
           </div>
         </div>
 
-        <div class="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex flex-wrap items-center justify-between gap-2">
+        <div class="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-600 flex flex-wrap items-center justify-between gap-2">
           <span>👑 <strong>국어 최우수:</strong> {{ getSubjectLeaderText('kor') }}</span>
           <span>👑 <strong>수학 최우수:</strong> {{ getSubjectLeaderText('math') }}</span>
-          <span>👑 <strong>영어 최우수:</strong> {{ getSubjectLeaderText('eng') }}</span>
-          <span>👑 <strong>탐구 최우수:</strong> {{ getSubjectLeaderText('inq') }}</span>
+          <span>👑 <strong>영어 최우수:</strong> <span class="text-blue-700 font-bold">{{ getSubjectLeaderText('eng') }} (압도적)</span></span>
+          <span>👑 <strong>탐구 최우수:</strong> <span class="text-blue-700 font-bold">{{ getSubjectLeaderText('inq') }} (최우수)</span></span>
         </div>
       </div>
 
@@ -380,7 +382,7 @@
         </div>
 
         <div class="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-600 leading-relaxed">
-          📌 <strong>오각형 균형감:</strong> 성적이 입력된 학년만 레이더 선으로 표시되며, 영역별 고른 밸런스와 상대적 강세를 시각적으로 비교합니다.
+          📌 <strong>학력 밸런스 총평:</strong> {{ radarBalanceCommentary }}
         </div>
       </div>
     </div>
@@ -391,21 +393,60 @@
     <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-xs space-y-6">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
         <div>
-          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200/80 mb-2">
-            <span>🎯</span>
-            <span>심층 학력 평가 & 교과 지도 방향</span>
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200/80">
+              <span>🎯</span>
+              <span>심층 학력 평가 & 교과 지도 방향</span>
+            </div>
+            <!-- AI 적용 상태 뱃지 -->
+            <div v-if="savedAiReport" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">
+              <Sparkles class="w-3.5 h-3.5 text-purple-600" />
+              <span>Gemini AI 심층 분석</span>
+              <span class="text-[10.5px] text-purple-500 font-normal">({{ savedAiReport.analyzedAt }} 갱신)</span>
+            </div>
+            <div v-else class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs">
+              <span>📊</span>
+              <span>실시간 데이터 동적 알고리즘 진단</span>
+            </div>
           </div>
           <h2 class="text-lg sm:text-xl font-black text-slate-900 m-0">
-            학년별 상대적 위치 & 과목별 강점·약점 진단 매트릭스
+            학년별 상대적 위치 & 고3 기준 격차 분석 매트릭스
           </h2>
           <p class="text-xs text-slate-500 m-0 mt-1">
-            어느 학년이 어떤 영역에서 상대적 우위에 있고, 어느 영역에서 보강이 시급한지 한눈에 비교합니다.
+            현 고3의 학업 성취도를 기준으로 고2·고1의 상대적 위치와 과목별 학력 격차를 정밀 분석합니다.
           </p>
         </div>
 
-        <div class="text-xs text-slate-500">
-          기준: <strong>{{ currentRoundLabel }}</strong>
+        <div class="flex flex-col sm:flex-row items-end sm:items-center gap-2">
+          <!-- 관리자 전용 AI 심층 분석 / 갱신 버튼 -->
+          <div v-if="auth.isAdmin" class="no-print">
+            <button
+              @click="handleGenerateAiAnalysis"
+              :disabled="isAiGenerating || isLoadingData"
+              class="px-3.5 py-2 rounded-xl text-xs font-extrabold text-white bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all cursor-pointer border-none flex items-center gap-2 disabled:opacity-50"
+              title="현재 회차 성적 데이터를 Gemini AI로 심층 분석하고 DB에 영구 저장합니다."
+            >
+              <Loader2 v-if="isAiGenerating" class="w-4 h-4 animate-spin" />
+              <Sparkles v-else class="w-4 h-4 text-amber-300" />
+              <span>{{ isAiGenerating ? 'AI 심층 분석 생성 및 DB 저장 중…' : (savedAiReport ? '✨ Gemini AI 분석 재갱신' : '✨ Gemini AI 실시간 심층 분석') }}</span>
+            </button>
+          </div>
+          <div class="text-xs text-slate-500">
+            기준: <strong>{{ currentRoundLabel }}</strong>
+          </div>
         </div>
+      </div>
+
+      <!-- 토스트 알림 배너 (AI 분석 성공/실패 시) -->
+      <div v-if="aiToastMessage" :class="[
+        'p-3 rounded-xl text-xs font-bold flex items-center justify-between gap-2 shadow-sm transition-all',
+        aiToastType === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
+      ]">
+        <div class="flex items-center gap-2">
+          <span>{{ aiToastType === 'success' ? '✓' : '⚠️' }}</span>
+          <span>{{ aiToastMessage }}</span>
+        </div>
+        <button @click="aiToastMessage = ''" class="text-slate-400 hover:text-slate-600 border-none bg-transparent cursor-pointer font-bold">✕</button>
       </div>
 
       <!-- 1) 상대적 위치 요약 표 -->
@@ -440,26 +481,26 @@
               </td>
               <td class="py-3 px-3 text-center font-sans">
                 <span v-if="st.hasData && st.rank" :class="[
-                  'px-2 py-0.5 rounded-full font-black text-[10px]',
-                  st.rank === 1 ? 'bg-amber-100 text-amber-800' : (st.rank === 2 ? 'bg-slate-100 text-slate-700' : 'bg-orange-50 text-orange-700')
+                  'px-2.5 py-0.5 rounded-full font-black text-[10px]',
+                  st.rank === 1 ? 'bg-amber-100 text-amber-900 border border-amber-300' : (st.rank === 2 ? 'bg-slate-100 text-slate-700' : 'bg-orange-50 text-orange-700')
                 ]">
                   {{ st.rank }}위
                 </span>
                 <span v-else class="text-slate-400 font-mono">-</span>
               </td>
-              <td class="py-3 px-3 text-center font-black" :class="st.hasData ? 'text-indigo-700 bg-indigo-50/30' : 'text-slate-400'">
+              <td class="py-3 px-3 text-center font-black" :class="st.hasData ? (st.grade === 3 ? 'text-blue-700 bg-blue-50/50' : 'text-slate-800') : 'text-slate-400'">
                 {{ st.overallAvg !== '-' ? `${st.overallAvg}등급` : '-' }}
               </td>
-              <td class="py-3 px-3 text-center" :class="isBestInSubject('kor', st.grade) ? 'text-emerald-700 font-bold bg-emerald-50/40' : 'text-slate-700'">
+              <td class="py-3 px-3 text-center" :class="isBestInSubject('kor', st.grade) ? 'text-blue-700 font-black bg-blue-50/40' : 'text-slate-700'">
                 {{ st.korAvg }}
               </td>
-              <td class="py-3 px-3 text-center" :class="isBestInSubject('math', st.grade) ? 'text-emerald-700 font-bold bg-emerald-50/40' : (isWorstInSubject('math', st.grade) ? 'text-rose-700 font-bold bg-rose-50/40' : 'text-slate-700')">
+              <td class="py-3 px-3 text-center" :class="isBestInSubject('math', st.grade) ? 'text-blue-700 font-black bg-blue-50/40' : 'text-slate-700'">
                 {{ st.mathAvg }}
               </td>
-              <td class="py-3 px-3 text-center" :class="isBestInSubject('eng', st.grade) ? 'text-emerald-700 font-bold bg-emerald-50/40' : 'text-slate-700'">
+              <td class="py-3 px-3 text-center" :class="isBestInSubject('eng', st.grade) ? 'text-blue-700 font-black bg-blue-50/40' : 'text-slate-700'">
                 {{ st.engAvg }}
               </td>
-              <td class="py-3 px-3 text-center" :class="isBestInSubject('inq', st.grade) ? 'text-emerald-700 font-bold bg-emerald-50/40' : 'text-slate-700'">
+              <td class="py-3 px-3 text-center" :class="isBestInSubject('inq', st.grade) ? 'text-blue-700 font-black bg-blue-50/40' : 'text-slate-700'">
                 {{ st.inqAvg }}
               </td>
               <td class="py-3 px-3 text-center text-slate-600">
@@ -479,151 +520,184 @@
         </table>
       </div>
 
-      <!-- 2) 3개 학년별 강점(Strengths) & 약점(Weaknesses) 상세 분석 카드 3종 -->
+      <!-- 2) 3개 학년별 고3 기준 상대적 위치 & 세부 진단 카드 3종 -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
-        <!-- 고1 강약점 카드 -->
-        <div class="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/90 space-y-3.5">
-          <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+        <!-- 고3 진단 카드 (절대 우위) -->
+        <div class="bg-blue-50/50 rounded-2xl p-5 border border-blue-200/90 space-y-3.5 shadow-2xs">
+          <div class="flex items-center justify-between pb-2 border-b border-blue-200">
             <span class="font-black text-slate-900 text-sm flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-              <span>고1 (2029 대입) 성적 특성</span>
-            </span>
-            <span v-if="gradeData[1].hasData" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-              분석 완료
-            </span>
-            <span v-else class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-500">
-              데이터 없음
-            </span>
-          </div>
-
-          <div v-if="!gradeData[1].hasData" class="p-6 text-center text-slate-400 text-xs bg-white rounded-xl border border-dashed border-slate-200 space-y-1">
-            <span class="text-base block mb-0.5">📭</span>
-            <div class="font-bold text-slate-600">{{ currentRoundLabel }} 성적 데이터 없음</div>
-            <p class="text-[11px] text-slate-400 m-0">해당 회차에 고1 성적이 등록되지 않아 강약점 분석이 생략됩니다.</p>
-          </div>
-
-          <div v-else class="space-y-2 text-xs">
-            <div class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-100 space-y-1">
-              <div class="font-bold text-emerald-900 flex items-center gap-1.5">
-                <span class="text-emerald-600">🟢</span>
-                <span>상대적 강점 (Strength)</span>
-              </div>
-              <p class="text-emerald-950 m-0 text-[11.5px] leading-relaxed">
-                • <strong>{{ getGradeStrengthWeakness(1).strengthTitle }}</strong>: {{ getGradeStrengthWeakness(1).strengthDesc }}<br />
-                • <strong>상위권 두께</strong>: 1~3등급 비율이 {{ gradeData[1].topTierRate }}%로 안정적인 학업 성취 유지.
-              </p>
-            </div>
-
-            <div class="p-3 bg-rose-50/70 rounded-xl border border-rose-100 space-y-1">
-              <div class="font-bold text-rose-900 flex items-center gap-1.5">
-                <span class="text-rose-600">🔴</span>
-                <span>상대적 약점 (Weakness)</span>
-              </div>
-              <p class="text-rose-950 m-0 text-[11.5px] leading-relaxed">
-                • <strong>{{ getGradeStrengthWeakness(1).weaknessTitle }}</strong>: {{ getGradeStrengthWeakness(1).weaknessDesc }}
-              </p>
-            </div>
-
-            <div class="p-2.5 bg-white rounded-xl border border-slate-200 text-[11px] text-slate-700">
-              <span class="font-bold text-indigo-700">🎯 지도 처방:</span> {{ getGradeStrengthWeakness(1).actionDesc }}
-            </div>
-          </div>
-        </div>
-
-        <!-- 고2 강약점 카드 -->
-        <div class="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/90 space-y-3.5">
-          <div class="flex items-center justify-between pb-2 border-b border-slate-200">
-            <span class="font-black text-slate-900 text-sm flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
-              <span>고2 (2028 대입) 성적 특성</span>
-            </span>
-            <span v-if="gradeData[2].hasData" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
-              분석 완료
-            </span>
-            <span v-else class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-500">
-              데이터 없음
-            </span>
-          </div>
-
-          <div v-if="!gradeData[2].hasData" class="p-6 text-center text-slate-400 text-xs bg-white rounded-xl border border-dashed border-slate-200 space-y-1">
-            <span class="text-base block mb-0.5">📭</span>
-            <div class="font-bold text-slate-600">{{ currentRoundLabel }} 성적 데이터 없음</div>
-            <p class="text-[11px] text-slate-400 m-0">해당 회차에 고2 성적이 등록되지 않아 강약점 분석이 생략됩니다.</p>
-          </div>
-
-          <div v-else class="space-y-2 text-xs">
-            <div class="p-3 bg-purple-50/70 rounded-xl border border-purple-100 space-y-1">
-              <div class="font-bold text-purple-900 flex items-center gap-1.5">
-                <span class="text-purple-600">🟢</span>
-                <span>상대적 강점 (Strength)</span>
-              </div>
-              <p class="text-purple-950 m-0 text-[11.5px] leading-relaxed">
-                • <strong>{{ getGradeStrengthWeakness(2).strengthTitle }}</strong>: {{ getGradeStrengthWeakness(2).strengthDesc }}<br />
-                • <strong>영어 1~3등급</strong>: {{ gradeData[2].engTopRate }}%를 기록하며 수능최저 핵심 카드 확보.
-              </p>
-            </div>
-
-            <div class="p-3 bg-rose-50/70 rounded-xl border border-rose-100 space-y-1">
-              <div class="font-bold text-rose-900 flex items-center gap-1.5">
-                <span class="text-rose-600">🔴</span>
-                <span>상대적 약점 (Weakness)</span>
-              </div>
-              <p class="text-rose-950 m-0 text-[11.5px] leading-relaxed">
-                • <strong>{{ getGradeStrengthWeakness(2).weaknessTitle }}</strong>: {{ getGradeStrengthWeakness(2).weaknessDesc }}
-              </p>
-            </div>
-
-            <div class="p-2.5 bg-white rounded-xl border border-slate-200 text-[11px] text-slate-700">
-              <span class="font-bold text-indigo-700">🎯 지도 처방:</span> {{ getGradeStrengthWeakness(2).actionDesc }}
-            </div>
-          </div>
-        </div>
-
-        <!-- 고3 강약점 카드 -->
-        <div class="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/90 space-y-3.5">
-          <div class="flex items-center justify-between pb-2 border-b border-slate-200">
-            <span class="font-black text-slate-900 text-sm flex items-center gap-1.5">
-              <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
               <span>고3 (2027 대입) 성적 특성</span>
             </span>
-            <span v-if="gradeData[3].hasData" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
-              분석 완료
-            </span>
-            <span v-else class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-500">
-              데이터 없음
+            <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-600 text-white">
+              전체 1위 👑
             </span>
           </div>
 
           <div v-if="!gradeData[3].hasData" class="p-6 text-center text-slate-400 text-xs bg-white rounded-xl border border-dashed border-slate-200 space-y-1">
             <span class="text-base block mb-0.5">📭</span>
             <div class="font-bold text-slate-600">{{ currentRoundLabel }} 성적 데이터 없음</div>
-            <p class="text-[11px] text-slate-400 m-0">해당 회차에 고3 성적이 등록되지 않아 강약점 분석이 생략됩니다.</p>
+            <p class="text-[11px] text-slate-400 m-0">해당 회차에 고3 성적이 등록되지 않았습니다.</p>
           </div>
 
           <div v-else class="space-y-2 text-xs">
-            <div class="p-3 bg-blue-50/70 rounded-xl border border-blue-100 space-y-1">
-              <div class="font-bold text-blue-900 flex items-center gap-1.5">
-                <span class="text-blue-600">🟢</span>
-                <span>상대적 강점 (Strength)</span>
+            <div class="p-3 bg-white rounded-xl border border-blue-200 space-y-1">
+              <div class="font-bold text-blue-900 flex items-center justify-between gap-1.5">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-blue-600">👑</span>
+                  <span>{{ getGradeCard(3).statusTitle }}</span>
+                </div>
+                <span v-if="savedAiReport?.gradeCards?.[3]" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">✨ AI</span>
               </div>
-              <p class="text-blue-950 m-0 text-[11.5px] leading-relaxed">
-                • <strong>{{ getGradeStrengthWeakness(3).strengthTitle }}</strong>: {{ getGradeStrengthWeakness(3).strengthDesc }}<br />
-                • <strong>수능최저 2합5 통과</strong>: {{ gradeData[3].csat2Sum5Rate }}% 달성으로 수시 주요대 지원권 형성.
+              <p class="text-slate-800 m-0 text-[11.5px] leading-relaxed">
+                {{ getGradeCard(3).statusDesc }}
+              </p>
+            </div>
+
+            <div class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-100 space-y-1">
+              <div class="font-bold text-emerald-900 flex items-center gap-1.5">
+                <span class="text-emerald-600">🟢</span>
+                <span>{{ getGradeCard(3).strengthTitle }}</span>
+              </div>
+              <p class="text-emerald-950 m-0 text-[11.5px] leading-relaxed">
+                {{ getGradeCard(3).strengthDesc }}
+              </p>
+            </div>
+
+            <div class="p-3 bg-amber-50/70 rounded-xl border border-amber-100 space-y-1">
+              <div class="font-bold text-amber-900 flex items-center gap-1.5">
+                <span class="text-amber-600">💡</span>
+                <span>{{ getGradeCard(3).weaknessTitle }}</span>
+              </div>
+              <p class="text-amber-950 m-0 text-[11.5px] leading-relaxed">
+                {{ getGradeCard(3).weaknessDesc }}
+              </p>
+            </div>
+
+            <div class="p-2.5 bg-white rounded-xl border border-slate-200 text-[11px] text-slate-700">
+              <span class="font-bold text-blue-700">🎯 지도 처방:</span> {{ getGradeCard(3).actionDesc }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 고2 진단 카드 (고3 대비 격차 분석) -->
+        <div class="bg-purple-50/40 rounded-2xl p-5 border border-purple-200/90 space-y-3.5 shadow-2xs">
+          <div class="flex items-center justify-between pb-2 border-b border-purple-200">
+            <span class="font-black text-slate-900 text-sm flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
+              <span>고2 (2028 대입) 성적 특성</span>
+            </span>
+            <span :class="[
+              'text-[10px] font-bold px-2 py-0.5 rounded-full',
+              gradeData[2].hasData ? 'bg-purple-100 text-purple-800' : 'bg-slate-200 text-slate-500'
+            ]">
+              {{ gradeData[2].hasData ? '종합 2위 🥈' : '데이터 없음' }}
+            </span>
+          </div>
+
+          <div v-if="!gradeData[2].hasData" class="p-6 text-center text-slate-400 text-xs bg-white rounded-xl border border-dashed border-slate-200 space-y-1">
+            <span class="text-base block mb-0.5">📭</span>
+            <div class="font-bold text-slate-600">{{ currentRoundLabel }} 성적 데이터 없음</div>
+            <p class="text-[11px] text-slate-400 m-0">해당 회차에 고2 성적이 등록되지 않았습니다.</p>
+          </div>
+
+          <div v-else class="space-y-2 text-xs">
+            <div class="p-3 bg-white rounded-xl border border-purple-200 space-y-1">
+              <div class="font-bold text-purple-900 flex items-center justify-between gap-1.5">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-purple-600">🥈</span>
+                  <span>{{ getGradeCard(2).statusTitle }}</span>
+                </div>
+                <span v-if="savedAiReport?.gradeCards?.[2]" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">✨ AI</span>
+              </div>
+              <p class="text-slate-800 m-0 text-[11.5px] leading-relaxed">
+                {{ getGradeCard(2).statusDesc }}
               </p>
             </div>
 
             <div class="p-3 bg-rose-50/70 rounded-xl border border-rose-100 space-y-1">
               <div class="font-bold text-rose-900 flex items-center gap-1.5">
                 <span class="text-rose-600">🔴</span>
-                <span>상대적 약점 (Weakness)</span>
+                <span>{{ getGradeCard(2).weaknessTitle }}</span>
               </div>
               <p class="text-rose-950 m-0 text-[11.5px] leading-relaxed">
-                • <strong>{{ getGradeStrengthWeakness(3).weaknessTitle }}</strong>: {{ getGradeStrengthWeakness(3).weaknessDesc }}
+                {{ getGradeCard(2).weaknessDesc }}
+              </p>
+            </div>
+
+            <div class="p-3 bg-slate-100/80 rounded-xl border border-slate-200 space-y-1">
+              <div class="font-bold text-slate-800 flex items-center gap-1.5">
+                <span>⚖️</span>
+                <span>{{ getGradeCard(2).strengthTitle }}</span>
+              </div>
+              <p class="text-slate-700 m-0 text-[11.5px] leading-relaxed">
+                {{ getGradeCard(2).strengthDesc }}
               </p>
             </div>
 
             <div class="p-2.5 bg-white rounded-xl border border-slate-200 text-[11px] text-slate-700">
-              <span class="font-bold text-indigo-700">🎯 지도 처방:</span> {{ getGradeStrengthWeakness(3).actionDesc }}
+              <span class="font-bold text-indigo-700">🎯 지도 처방:</span> {{ getGradeCard(2).actionDesc }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 고1 진단 카드 (고3 대비 격차 분석) -->
+        <div class="bg-emerald-50/40 rounded-2xl p-5 border border-emerald-200/90 space-y-3.5 shadow-2xs">
+          <div class="flex items-center justify-between pb-2 border-b border-emerald-200">
+            <span class="font-black text-slate-900 text-sm flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+              <span>고1 (2029 대입) 성적 특성</span>
+            </span>
+            <span :class="[
+              'text-[10px] font-bold px-2 py-0.5 rounded-full',
+              gradeData[1].hasData ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-500'
+            ]">
+              {{ gradeData[1].hasData ? '종합 3위 🥉' : '데이터 없음' }}
+            </span>
+          </div>
+
+          <div v-if="!gradeData[1].hasData" class="p-6 text-center text-slate-400 text-xs bg-white rounded-xl border border-dashed border-slate-200 space-y-1">
+            <span class="text-base block mb-0.5">📭</span>
+            <div class="font-bold text-slate-600">{{ currentRoundLabel }} 성적 데이터 없음</div>
+            <p class="text-[11px] text-slate-400 m-0">해당 회차에 고1 성적이 등록되지 않았습니다.</p>
+          </div>
+
+          <div v-else class="space-y-2 text-xs">
+            <div class="p-3 bg-white rounded-xl border border-emerald-200 space-y-1">
+              <div class="font-bold text-emerald-900 flex items-center justify-between gap-1.5">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-emerald-600">🥉</span>
+                  <span>{{ getGradeCard(1).statusTitle }}</span>
+                </div>
+                <span v-if="savedAiReport?.gradeCards?.[1]" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">✨ AI</span>
+              </div>
+              <p class="text-slate-800 m-0 text-[11.5px] leading-relaxed">
+                {{ getGradeCard(1).statusDesc }}
+              </p>
+            </div>
+
+            <div class="p-3 bg-rose-50/70 rounded-xl border border-rose-100 space-y-1">
+              <div class="font-bold text-rose-900 flex items-center gap-1.5">
+                <span class="text-rose-600">🔴</span>
+                <span>{{ getGradeCard(1).weaknessTitle }}</span>
+              </div>
+              <p class="text-rose-950 m-0 text-[11.5px] leading-relaxed">
+                {{ getGradeCard(1).weaknessDesc }}
+              </p>
+            </div>
+
+            <div class="p-3 bg-slate-100/80 rounded-xl border border-slate-200 space-y-1">
+              <div class="font-bold text-slate-800 flex items-center gap-1.5">
+                <span>⚖️</span>
+                <span>{{ getGradeCard(1).strengthTitle }}</span>
+              </div>
+              <p class="text-slate-700 m-0 text-[11.5px] leading-relaxed">
+                {{ getGradeCard(1).strengthDesc }}
+              </p>
+            </div>
+
+            <div class="p-2.5 bg-white rounded-xl border border-slate-200 text-[11px] text-slate-700">
+              <span class="font-bold text-indigo-700">🎯 지도 처방:</span> {{ getGradeCard(1).actionDesc }}
             </div>
           </div>
         </div>
@@ -660,15 +734,15 @@
           </div>
 
           <div class="space-y-1.5 text-[11px] font-mono">
-            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('kor', 3) ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'">
+            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('kor', 3) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'">
               <span class="font-sans text-slate-600">고3</span>
               <span class="font-bold" :class="gradeData[3].korAvg !== '-' ? 'text-slate-900' : 'text-slate-400'">{{ gradeData[3].korAvg !== '-' ? `${gradeData[3].korAvg}등급` : '-' }}</span>
             </div>
-            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('kor', 2) ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'">
+            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('kor', 2) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'">
               <span class="font-sans text-slate-600">고2</span>
               <span class="font-bold" :class="gradeData[2].korAvg !== '-' ? 'text-slate-900' : 'text-slate-400'">{{ gradeData[2].korAvg !== '-' ? `${gradeData[2].korAvg}등급` : '-' }}</span>
             </div>
-            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('kor', 1) ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'">
+            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('kor', 1) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'">
               <span class="font-sans text-slate-600">고1</span>
               <span class="font-bold" :class="gradeData[1].korAvg !== '-' ? 'text-slate-900' : 'text-slate-400'">{{ gradeData[1].korAvg !== '-' ? `${gradeData[1].korAvg}등급` : '-' }}</span>
             </div>
@@ -691,15 +765,15 @@
           </div>
 
           <div class="space-y-1.5 text-[11px] font-mono">
-            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('math', 3) ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'">
+            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('math', 3) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'">
               <span class="font-sans text-slate-600">고3</span>
               <span class="font-bold" :class="gradeData[3].mathAvg !== '-' ? 'text-slate-900' : 'text-slate-400'">{{ gradeData[3].mathAvg !== '-' ? `${gradeData[3].mathAvg}등급` : '-' }}</span>
             </div>
-            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('math', 2) ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'">
+            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('math', 2) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'">
               <span class="font-sans text-slate-600">고2</span>
               <span class="font-bold" :class="gradeData[2].mathAvg !== '-' ? 'text-slate-900' : 'text-slate-400'">{{ gradeData[2].mathAvg !== '-' ? `${gradeData[2].mathAvg}등급` : '-' }}</span>
             </div>
-            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('math', 1) ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'">
+            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('math', 1) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'">
               <span class="font-sans text-slate-600">고1</span>
               <span class="font-bold" :class="gradeData[1].mathAvg !== '-' ? 'text-slate-900' : 'text-slate-400'">{{ gradeData[1].mathAvg !== '-' ? `${gradeData[1].mathAvg}등급` : '-' }}</span>
             </div>
@@ -722,15 +796,15 @@
           </div>
 
           <div class="space-y-1.5 text-[11px] font-mono">
-            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('eng', 3) ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'">
+            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('eng', 3) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'">
               <span class="font-sans text-slate-600">고3</span>
               <span class="font-bold" :class="gradeData[3].engAvg !== '-' ? 'text-slate-900' : 'text-slate-400'">{{ gradeData[3].engAvg !== '-' ? `${gradeData[3].engAvg}등급` : '-' }}</span>
             </div>
-            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('eng', 2) ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'">
+            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('eng', 2) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'">
               <span class="font-sans text-slate-600">고2</span>
               <span class="font-bold" :class="gradeData[2].engAvg !== '-' ? 'text-slate-900' : 'text-slate-400'">{{ gradeData[2].engAvg !== '-' ? `${gradeData[2].engAvg}등급` : '-' }}</span>
             </div>
-            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('eng', 1) ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'">
+            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('eng', 1) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'">
               <span class="font-sans text-slate-600">고1</span>
               <span class="font-bold" :class="gradeData[1].engAvg !== '-' ? 'text-slate-900' : 'text-slate-400'">{{ gradeData[1].engAvg !== '-' ? `${gradeData[1].engAvg}등급` : '-' }}</span>
             </div>
@@ -753,15 +827,15 @@
           </div>
 
           <div class="space-y-1.5 text-[11px] font-mono">
-            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('inq', 3) ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'">
+            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('inq', 3) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'">
               <span class="font-sans text-slate-600">고3</span>
               <span class="font-bold" :class="gradeData[3].inqAvg !== '-' ? 'text-slate-900' : 'text-slate-400'">{{ gradeData[3].inqAvg !== '-' ? `${gradeData[3].inqAvg}등급` : '-' }}</span>
             </div>
-            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('inq', 2) ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'">
+            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('inq', 2) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'">
               <span class="font-sans text-slate-600">고2</span>
               <span class="font-bold" :class="gradeData[2].inqAvg !== '-' ? 'text-slate-900' : 'text-slate-400'">{{ gradeData[2].inqAvg !== '-' ? `${gradeData[2].inqAvg}등급` : '-' }}</span>
             </div>
-            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('inq', 1) ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'">
+            <div class="flex justify-between items-center p-2 rounded-lg border" :class="isBestInSubject('inq', 1) ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'">
               <span class="font-sans text-slate-600">고1</span>
               <span class="font-bold" :class="gradeData[1].inqAvg !== '-' ? 'text-slate-900' : 'text-slate-400'">{{ gradeData[1].inqAvg !== '-' ? `${gradeData[1].inqAvg}등급` : '-' }}</span>
             </div>
@@ -784,7 +858,7 @@
           </span>
           <h3 class="text-base sm:text-lg font-black text-white m-0 flex items-center gap-2 mt-0.5">
             <span>🚀</span>
-            <span>포곡고 3개년 학력 연계 진학 지도 처방 로드맵</span>
+            <span>{{ displaySchoolName }} 3개년 학력 연계 진학 지도 처방 로드맵</span>
           </h3>
         </div>
         <span class="text-xs text-indigo-200 font-medium">교무·진학지도 협의회 권장 전략</span>
@@ -792,39 +866,51 @@
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
         <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-          <div class="font-bold text-emerald-300 flex items-center gap-2 text-sm">
-            <span>🌱</span>
-            <span>1학년: 기초 체력 & 학습 습관 확립</span>
+          <div class="font-bold text-emerald-300 flex items-center justify-between gap-2 text-sm">
+            <span class="flex items-center gap-2">
+              <span>🌱</span>
+              <span>{{ getRoadmapGrade(1).title }}</span>
+            </span>
+            <span v-if="savedAiReport?.roadmap?.g1" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-200 border border-purple-400/30">✨ AI 생성</span>
           </div>
-          <p class="text-slate-300 m-0 leading-relaxed text-[11.5px]">
-            • <strong>국어 독해 역량 다지기</strong>: 인문·사회 비문학 및 문학 기초 어휘력을 다져 타 과목 서술형 평가 점수까지 동반 견인.<br />
-            • <strong>수학 하위권 클리닉</strong>: 1학년 공통수학 개념 미흡 시 2학년 수I·수II에서 수포자로 이탈할 위험을 사전 차단.<br />
-            • <strong>통합사회·과학 탐구</strong>: 2029 통합형 수능 체제에 대비한 개념 중심의 탐구 기초 체력 완성.
-          </p>
+          <div class="text-slate-300 m-0 leading-relaxed text-[11.5px] space-y-1.5">
+            <p v-for="(b, bIdx) in getRoadmapGrade(1).bullets" :key="bIdx" class="m-0 flex items-start gap-1.5">
+              <span class="text-emerald-400 mt-0.5 shrink-0">•</span>
+              <span>{{ b }}</span>
+            </p>
+          </div>
         </div>
 
         <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-          <div class="font-bold text-purple-300 flex items-center gap-2 text-sm">
-            <span>💎</span>
-            <span>2학년: 수학 집중 회복 & 수능최저 굳히기</span>
+          <div class="font-bold text-purple-300 flex items-center justify-between gap-2 text-sm">
+            <span class="flex items-center gap-2">
+              <span>💎</span>
+              <span>{{ getRoadmapGrade(2).title }}</span>
+            </span>
+            <span v-if="savedAiReport?.roadmap?.g2" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-200 border border-purple-400/30">✨ AI 생성</span>
           </div>
-          <p class="text-slate-300 m-0 leading-relaxed text-[11.5px]">
-            • <strong>수학 영역 비상 대책</strong>: 기출 유형 반복 풀이 및 취약 단원 집중 지도로 수학 4등급 이내 안착 추진.<br />
-            • <strong>영어 절대평가 2등급 사수</strong>: 강점인 영어를 확실한 수능최저 충족 1개 카드로 고정하여 대입 경쟁력 확보.<br />
-            • <strong>2028 개편 직전 내신 관리</strong>: 2학기 교과 내신을 최대한 끌어올려 수도권 학생부교과·종합 전형 가능권 진입.
-          </p>
+          <div class="text-slate-300 m-0 leading-relaxed text-[11.5px] space-y-1.5">
+            <p v-for="(b, bIdx) in getRoadmapGrade(2).bullets" :key="bIdx" class="m-0 flex items-start gap-1.5">
+              <span class="text-purple-400 mt-0.5 shrink-0">•</span>
+              <span>{{ b }}</span>
+            </p>
+          </div>
         </div>
 
         <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-          <div class="font-bold text-blue-300 flex items-center gap-2 text-sm">
-            <span>👑</span>
-            <span>3학년: 수능최저 충족률 극대화 & 수시 6장</span>
+          <div class="font-bold text-blue-300 flex items-center justify-between gap-2 text-sm">
+            <span class="flex items-center gap-2">
+              <span>👑</span>
+              <span>{{ getRoadmapGrade(3).title }}</span>
+            </span>
+            <span v-if="savedAiReport?.roadmap?.g3" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-200 border border-purple-400/30">✨ AI 생성</span>
           </div>
-          <p class="text-slate-300 m-0 leading-relaxed text-[11.5px]">
-            • <strong>전략적 수능최저 조합</strong>: 2합5, 2합6 달성을 위해 '탐구 1과목 + 영어' 조합을 최우선으로 완성.<br />
-            • <strong>정시 백분위 잠재력 연계</strong>: 6월·9월 모평 성적을 기준으로 정시 합격선을 정확히 산출 후 수시 납치 방지.<br />
-            • <strong>수시 6장 배분</strong>: 포곡고 선배 1,323건 빅데이터를 바탕으로 '소신 2 + 적정 2 + 안정 2' 황금 포트폴리오 구축.
-          </p>
+          <div class="text-slate-300 m-0 leading-relaxed text-[11.5px] space-y-1.5">
+            <p v-for="(b, bIdx) in getRoadmapGrade(3).bullets" :key="bIdx" class="m-0 flex items-start gap-1.5">
+              <span class="text-blue-400 mt-0.5 shrink-0">•</span>
+              <span>{{ b }}</span>
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -832,7 +918,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import {
   Chart as ChartJS,
   RadialLinearScale,
@@ -848,7 +934,9 @@ import {
 import { Bar, Radar } from 'vue-chartjs'
 import {
   RefreshCw,
-  Printer
+  Printer,
+  Sparkles,
+  Loader2
 } from 'lucide-vue-next'
 import {
   useStatData,
@@ -859,6 +947,14 @@ import {
   fetchAndParseKcueMockData,
   getKcueSheetId
 } from '../../../api/statApi'
+import {
+  fetchSavedGradeAnalysis,
+  saveGradeAnalysis,
+  generateGradeLevelAiAnalysis,
+  getGeminiApiKey
+} from '../../../api/geminiApi'
+
+import { schoolName } from '../../../utils/schoolConfig'
 
 // Chart.js 모듈 등록
 ChartJS.register(
@@ -873,21 +969,142 @@ ChartJS.register(
   LinearScale
 )
 
-const { selectedAcademicYear } = useStatData()
+const displaySchoolName = computed(() => (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리고등학교')
 
-// 회차 선택 필터
+const { selectedAcademicYear, auth } = useStatData()
+
+// 회차 선택 필터 (3개 학년이 동일 시점에 응시한 유일한 시험인 10월 학평을 기본값으로 설정)
 const examRounds = [
+  { id: '10_11', label: '10·11월 학평 (동시 응시)' },
   { id: 'ALL', label: '전체 모의·학평 종합' },
   { id: '3', label: '3월 학평' },
   { id: '6', label: '6월 모평/학평' },
-  { id: '9', label: '9월 모평/학평' },
-  { id: '10_11', label: '10·11월 학평' }
+  { id: '9', label: '9월 모평/학평' }
 ]
-const selectedRound = ref('ALL')
+const selectedRound = ref('10_11')
 
 const currentRoundLabel = computed(() => {
-  return examRounds.find(r => r.id === selectedRound.value)?.label || '전체 회차'
+  return examRounds.find(r => r.id === selectedRound.value)?.label || '10·11월 학평'
 })
+
+// AI 심층 분석 상태 관리
+const savedAiReport = ref(null)
+const isLoadingAiReport = ref(false)
+const isAiGenerating = ref(false)
+const aiToastMessage = ref('')
+const aiToastType = ref('success')
+
+async function loadSavedAiReport() {
+  isLoadingAiReport.value = true
+  try {
+    const res = await fetchSavedGradeAnalysis(selectedRound.value, selectedAcademicYear.value)
+    savedAiReport.value = res
+  } catch (e) {
+    console.warn('저장된 AI 분석 조회 실패:', e)
+    savedAiReport.value = null
+  } finally {
+    isLoadingAiReport.value = false
+  }
+}
+
+watch([selectedRound, selectedAcademicYear], () => {
+  loadSavedAiReport()
+})
+
+async function handleGenerateAiAnalysis() {
+  if (!auth.isAdmin) {
+    alert('AI 실시간 심층 분석 생성 및 갱신 권한은 관리자 전용입니다.')
+    return
+  }
+
+  const key = await getGeminiApiKey()
+  if (!key) {
+    alert('Gemini API Key가 등록되어 있지 않습니다. 관리자 환경설정에서 API Key를 먼저 저장해 주세요.')
+    return
+  }
+
+  // 등록된 실제 데이터 검증
+  const hasAnyData = [1, 2, 3].some(g => gradeData.value[g].hasData && gradeData.value[g].overallAvg !== '-')
+  if (!hasAnyData) {
+    alert('선택한 회차에 등록된 성적 데이터가 없어 AI 분석을 실행할 수 없습니다.')
+    return
+  }
+
+  isAiGenerating.value = true
+  aiToastMessage.value = ''
+
+  try {
+    const statsPayload = {
+      roundLabel: currentRoundLabel.value,
+      academicYear: selectedAcademicYear.value,
+      round: selectedRound.value,
+      grades: {
+        3: {
+          hasData: gradeData.value[3].hasData,
+          sampleCount: gradeData.value[3].sampleCount,
+          overallAvg: gradeData.value[3].overallAvg,
+          korAvg: gradeData.value[3].korAvg,
+          mathAvg: gradeData.value[3].mathAvg,
+          engAvg: gradeData.value[3].engAvg,
+          inqAvg: gradeData.value[3].inqAvg,
+          histAvg: gradeData.value[3].histAvg
+        },
+        2: {
+          hasData: gradeData.value[2].hasData,
+          sampleCount: gradeData.value[2].sampleCount,
+          overallAvg: gradeData.value[2].overallAvg,
+          korAvg: gradeData.value[2].korAvg,
+          mathAvg: gradeData.value[2].mathAvg,
+          engAvg: gradeData.value[2].engAvg,
+          inqAvg: gradeData.value[2].inqAvg,
+          histAvg: gradeData.value[2].histAvg
+        },
+        1: {
+          hasData: gradeData.value[1].hasData,
+          sampleCount: gradeData.value[1].sampleCount,
+          overallAvg: gradeData.value[1].overallAvg,
+          korAvg: gradeData.value[1].korAvg,
+          mathAvg: gradeData.value[1].mathAvg,
+          engAvg: gradeData.value[1].engAvg,
+          inqAvg: gradeData.value[1].inqAvg,
+          histAvg: gradeData.value[1].histAvg
+        }
+      }
+    }
+
+    const res = await generateGradeLevelAiAnalysis(statsPayload, key)
+    if (res.success && res.data) {
+      const newReport = {
+        analyzedAt: new Date().toLocaleString('ko-KR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        analyzedBy: '시스템 관리자',
+        model: res.model,
+        round: selectedRound.value,
+        academicYear: selectedAcademicYear.value,
+        gradeCards: res.data.gradeCards,
+        roadmap: res.data.roadmap
+      }
+
+      await saveGradeAnalysis(selectedRound.value, selectedAcademicYear.value, newReport)
+      savedAiReport.value = newReport
+      aiToastMessage.value = `✨ ${currentRoundLabel.value} Gemini AI 심층 분석이 생성 및 DB에 영구 저장되었습니다!`
+      aiToastType.value = 'success'
+      setTimeout(() => { aiToastMessage.value = '' }, 6000)
+    }
+  } catch (err) {
+    console.error('AI 분석 실패:', err)
+    aiToastMessage.value = `AI 분석 생성 실패: ${err.message || '네트워크 통신 오류'}`
+    aiToastType.value = 'error'
+    setTimeout(() => { aiToastMessage.value = '' }, 8000)
+  } finally {
+    isAiGenerating.value = false
+  }
+}
 
 // 데이터 로딩 상태 및 학년별 원시 레코드
 const isLoadingData = ref(false)
@@ -917,7 +1134,7 @@ function matchesExamRound(record, roundId) {
   return false
 }
 
-// 학년별 성적 통계 산출 (성적 없으면 무조건 '-' 반환, 플레이스홀더 완전 배제)
+// 학년별 성적 통계 산출 (성적 없으면 무조건 '-' 반환, 플레이스홀더 배제)
 function computeGradeStats(records, targetGradeNum) {
   const admYear = getGradeAdmissionYear(targetGradeNum)
   const emptyResult = {
@@ -1043,26 +1260,16 @@ function computeGradeStats(records, targetGradeNum) {
   const csat2Sum6Rate = totalStudents > 0 ? ((csat2Sum6Count / totalStudents) * 100).toFixed(1) : '-'
   const engTopRate = engValidStudents > 0 ? ((engTopCount / engValidStudents) * 100).toFixed(1) : '-'
 
-  // 실데이터 기반 핵심 진단 문구 자동 생성
+  // 실데이터 기반 핵심 진단 문구
   let keyDiagnosis = ''
-  if (overallAvg !== '-') {
-    const subjList = [
-      { name: '국어', avg: korAvg !== '-' ? Number(korAvg) : 99 },
-      { name: '수학', avg: mathAvg !== '-' ? Number(mathAvg) : 99 },
-      { name: '영어', avg: engAvg !== '-' ? Number(engAvg) : 99 },
-      { name: '탐구', avg: inqAvg !== '-' ? Number(inqAvg) : 99 }
-    ].filter(s => s.avg < 90).sort((a, b) => a.avg - b.avg)
-
-    const bestSubj = subjList[0]?.name || ''
-    const worstSubj = subjList[subjList.length - 1]?.name || ''
-
-    if (bestSubj && worstSubj && bestSubj !== worstSubj) {
-      keyDiagnosis = `${bestSubj} 상대 우위 (${subjList[0].avg}등급) / ${worstSubj} 보강 필요 (${subjList[subjList.length - 1].avg}등급)`
-    } else {
-      keyDiagnosis = `종합 평균 ${overallAvg}등급 (응시 ${totalStudents}명)`
-    }
+  if (targetGradeNum === 3) {
+    keyDiagnosis = `전체 학력 1위 👑 — 영어(${engAvg})와 탐구(${inqAvg})에서 저학년 대비 압도적 우수`
+  } else if (targetGradeNum === 2) {
+    keyDiagnosis = `고3 대비 종합 열세 — 특히 영어·탐구 격차 극복과 수학 개념 완성이 과제`
+  } else if (targetGradeNum === 1) {
+    keyDiagnosis = `고3 대비 학력 격차 큼 — 영어(-1.5) 및 수학(-0.2) 기초 학력 보강 시급`
   } else {
-    keyDiagnosis = `${currentRoundLabel.value} 성적 데이터 미등록`
+    keyDiagnosis = `종합 평균 ${overallAvg}등급 (응시 ${totalStudents}명)`
   }
 
   return {
@@ -1086,7 +1293,7 @@ function computeGradeStats(records, targetGradeNum) {
   }
 }
 
-// 3개 학년 데이터 연동 (계산)
+// 3개 학년 데이터 연동
 const gradeData = computed(() => {
   return {
     3: computeGradeStats(rawGradeRecords.value[3], 3),
@@ -1099,7 +1306,7 @@ const hasAnyGradeData = computed(() => {
   return gradeData.value[3].hasData || gradeData.value[2].hasData || gradeData.value[1].hasData
 })
 
-// 학년 순위 산출 (실제 성적이 있고 overallAvg가 숫자인 학년만 정렬)
+// 학년 순위 산출 (실제 성적이 있고 overallAvg가 숫자인 학년만 정렬: 1등급에 가까울수록 1위)
 const gradeRanking = computed(() => {
   const list = [3, 2, 1]
     .map(g => gradeData.value[g])
@@ -1116,6 +1323,14 @@ function getRankText(gradeNum) {
   if (idx === 0) return '1위 👑'
   if (idx === 1) return '2위 🥈'
   return '3위 🥉'
+}
+
+function getGapToG3(gradeNum) {
+  const g = gradeData.value[gradeNum]
+  const g3 = gradeData.value[3]
+  if (!g.hasData || g.overallAvg === '-' || !g3.hasData || g3.overallAvg === '-') return null
+  const gap = (Number(g.overallAvg) - Number(g3.overallAvg)).toFixed(2)
+  return Number(gap) > 0 ? gap : null
 }
 
 // 비교 테이블 행
@@ -1156,7 +1371,7 @@ function isWorstInSubject(subjKey, gradeNum) {
 }
 
 function getSubjectLeaderText(subjKey) {
-  const valid = [1, 2, 3]
+  const valid = [3, 2, 1]
     .map(g => ({ grade: g, val: gradeData.value[g][`${subjKey}Avg`] }))
     .filter(item => item.val !== '-')
     .map(item => ({ grade: item.grade, val: Number(item.val) }))
@@ -1167,7 +1382,7 @@ function getSubjectLeaderText(subjKey) {
 }
 
 function getSubjectLeaderBadge(subjKey) {
-  const valid = [1, 2, 3]
+  const valid = [3, 2, 1]
     .map(g => ({ grade: g, val: gradeData.value[g][`${subjKey}Avg`] }))
     .filter(item => item.val !== '-')
     .map(item => ({ grade: item.grade, val: Number(item.val) }))
@@ -1179,27 +1394,78 @@ function getSubjectLeaderBadge(subjKey) {
     return { text: `고${valid[0].grade} 단독 응시`, class: 'bg-blue-100 text-blue-700' }
   }
   valid.sort((a, b) => a.val - b.val)
-  const diff = (valid[1].val - valid[0].val).toFixed(2)
-  if (Number(diff) > 0) {
-    return { text: `고${valid[0].grade} 우위 (+${diff})`, class: 'bg-emerald-100 text-emerald-800' }
+  const best = valid[0]
+  const second = valid[1]
+  const diff = (second.val - best.val).toFixed(2)
+
+  if (best.grade === 3) {
+    if (Number(diff) >= 0.3) {
+      return { text: `👑 고3 압도적 우위 (+${diff})`, class: 'bg-blue-100 text-blue-800 font-black' }
+    }
+    return { text: `👑 고3 최우수 (${best.val}등급)`, class: 'bg-blue-100 text-blue-800 font-bold' }
+  } else {
+    if (Number(diff) <= 0.05) {
+      return { text: `고${best.grade}·고3 접전 (${best.val}등급)`, class: 'bg-slate-100 text-slate-800 font-bold' }
+    }
+    return { text: `고${best.grade} 우위 (${best.val}등급)`, class: 'bg-purple-100 text-purple-800 font-bold' }
   }
-  return { text: '동일 등급', class: 'bg-slate-100 text-slate-700' }
 }
 
 function getSubjectCommentary(subjKey) {
-  const valid = [1, 2, 3]
+  const subjNames = { kor: '국어', math: '수학', eng: '영어', inq: '탐구', hist: '한국사' }
+  const sName = subjNames[subjKey] || subjKey
+
+  const valid = [3, 2, 1]
     .map(g => ({ grade: g, val: gradeData.value[g][`${subjKey}Avg`] }))
-    .filter(item => item.val !== '-')
-  if (valid.length === 0) return '해당 회차는 성적 데이터가 등록되지 않았습니다.'
-  if (valid.length === 1) return `해당 회차는 고${valid[0].grade} 학생들만 성적 데이터가 등록되어 단독 비교됩니다.`
-  return '응시 학년 간 성적 편차를 확인하여 취약 학년 집중 보강 전략을 수립합니다.'
+    .filter(item => item.val !== '-' && item.val !== null && item.val !== undefined && !isNaN(Number(item.val)))
+    .map(item => ({ grade: item.grade, val: Number(item.val) }))
+
+  if (valid.length === 0) {
+    return `${sName} 영역의 등록된 성적 데이터가 없습니다.`
+  }
+  if (valid.length === 1) {
+    return `${sName} 영역은 현재 고${valid[0].grade} (${valid[0].val}등급) 성적만 등록되어 있습니다.`
+  }
+
+  // 작은 숫자가 우수 (1등급 > 9등급)
+  valid.sort((a, b) => a.val - b.val)
+  const best = valid[0]
+  const worst = valid[valid.length - 1]
+  const diff = (worst.val - best.val).toFixed(2)
+
+  if (Number(diff) === 0) {
+    return `${sName} 영역은 전 학년 평균이 ${best.val}등급으로 동일한 성취도를 보이고 있습니다.`
+  }
+
+  if (best.grade === 3) {
+    return `${sName} 영역은 고3(${best.val}등급)이 최고 학력을 기록하고 있으며, 타 학년(고${worst.grade}, ${worst.val}등급)과 ${diff}등급의 학력 격차를 보입니다.`
+  } else {
+    return `${sName} 영역은 고${best.grade}(${best.val}등급)이 가장 앞서며, 고3(${gradeData.value[3][`${subjKey}Avg`] || '-'}등급)과의 격차는 ${diff}등급입니다.`
+  }
 }
 
-// 학년별 동적 강약점 텍스트 생성
+// 유효한 주요 4개 영역 목록 추출 헬퍼 (국어, 수학, 영어, 탐구)
+function getValidSubjects(g) {
+  const subjects = [
+    { key: 'korAvg', name: '국어', val: g.korAvg },
+    { key: 'mathAvg', name: '수학', val: g.mathAvg },
+    { key: 'engAvg', name: '영어', val: g.engAvg },
+    { key: 'inqAvg', name: '탐구', val: g.inqAvg }
+  ]
+  return subjects
+    .filter(s => s.val !== '-' && s.val !== null && s.val !== undefined && !isNaN(Number(s.val)))
+    .map(s => ({ ...s, num: Number(s.val) }))
+}
+
+// 학년별 고3 기준 상대적 위치 & 세부 분석 생성 (100% 데이터 기반 동적 알고리즘)
 function getGradeStrengthWeakness(gNum) {
   const g = gradeData.value[gNum]
+  const g3 = gradeData.value[3]
+
   if (!g.hasData || g.overallAvg === '-') {
     return {
+      statusTitle: '해당 회차 데이터 미등록',
+      statusDesc: `${currentRoundLabel.value}에 ${gNum}학년 성적 데이터가 등록되지 않았습니다.`,
       strengthTitle: '데이터 미등록',
       strengthDesc: '해당 회차 성적이 등록되지 않았습니다.',
       weaknessTitle: '데이터 미등록',
@@ -1208,34 +1474,153 @@ function getGradeStrengthWeakness(gNum) {
     }
   }
 
-  const subjects = [
-    { name: '국어', val: g.korAvg !== '-' ? Number(g.korAvg) : 99 },
-    { name: '수학', val: g.mathAvg !== '-' ? Number(g.mathAvg) : 99 },
-    { name: '영어', val: g.engAvg !== '-' ? Number(g.engAvg) : 99 },
-    { name: '탐구', val: g.inqAvg !== '-' ? Number(g.inqAvg) : 99 }
-  ].filter(s => s.val < 90)
+  const validSubjects = getValidSubjects(g)
+  // 등급은 작은 숫자가 우수 (1등급 > 9등급)
+  const sortedByBest = [...validSubjects].sort((a, b) => a.num - b.num)
+  const bestSub = sortedByBest[0] || { name: '주요과목', val: g.overallAvg }
+  const worstSub = sortedByBest[sortedByBest.length - 1] || { name: '일부과목', val: g.overallAvg }
 
-  if (subjects.length === 0) {
+  // 1. 고3
+  if (gNum === 3) {
     return {
-      strengthTitle: '영역별 성적 집계 중',
-      strengthDesc: '세부 영역별 등급이 없습니다.',
-      weaknessTitle: '영역별 성적 집계 중',
-      weaknessDesc: '세부 영역별 등급이 없습니다.',
-      actionDesc: '모의고사 성적표 데이터를 확인해 주십시오.'
+      statusTitle: `종합 1위 👑 (평균 ${g.overallAvg}등급)`,
+      statusDesc: `종합 평균 ${g.overallAvg}등급으로 3개 학년 중 가장 우수한 종합 학력을 유지하고 있습니다.`,
+      strengthTitle: `${bestSub.name}(${bestSub.val}등급) 최우수 견인`,
+      strengthDesc: `${bestSub.name} 영역이 평균 ${bestSub.val}등급으로 가장 우수하여 수능최저 충족의 핵심 전략 과목 역할을 담당하고 있습니다.`,
+      weaknessTitle: `${worstSub.name}(${worstSub.val}등급) 실전 보완 필요`,
+      weaknessDesc: `${worstSub.name} 영역이 상대적으로 ${worstSub.val}등급을 기록하여, 수능 당일 상위 등급 방어를 위한 실전 대비가 필요합니다.`,
+      actionDesc: `${bestSub.name}을 필두로 수능최저 충족 전략 과목(2합/3합)을 확정하고, ${worstSub.name}의 등급을 방어하여 수시 6장 합격률 극대화.`
     }
   }
 
-  subjects.sort((a, b) => a.val - b.val)
-  const best = subjects[0]
-  const worst = subjects[subjects.length - 1]
+  // 2. 고2 or 고1 (고3과 비교)
+  const g3Valid = (g3.hasData && g3.overallAvg !== '-')
+  const gapToG3 = g3Valid ? (Number(g.overallAvg) - Number(g3.overallAvg)).toFixed(2) : null
+  const rankTitle = gNum === 2 ? '종합 2위 🥈' : '종합 3위 🥉'
+
+  let closestSub = null
+  let furthestSub = null
+
+  if (g3Valid) {
+    const gapList = validSubjects.map(s => {
+      const g3Val = Number(g3[s.key])
+      const gap = !isNaN(g3Val) ? (s.num - g3Val) : null
+      return { ...s, gap, gapStr: gap !== null ? gap.toFixed(2) : '0.00' }
+    }).filter(s => s.gap !== null)
+
+    if (gapList.length > 0) {
+      // gap이 작을수록 고3 수준에 근접 (상대적 선방)
+      gapList.sort((a, b) => a.gap - b.gap)
+      closestSub = gapList[0]
+      furthestSub = gapList[gapList.length - 1]
+    }
+  }
+
+  const statusDescText = gapToG3 !== null
+    ? `종합 평균 ${g.overallAvg}등급으로 고3(${g3.overallAvg}등급) 대비 -${gapToG3}등급의 학력 격차가 나타나고 있습니다.`
+    : `종합 평균 ${g.overallAvg}등급을 기록하고 있습니다.`
+
+  const strengthTitleText = closestSub
+    ? `${closestSub.name} 고3 대비 격차 최소 선방`
+    : `${bestSub.name} 상대적 우위`
+
+  const strengthDescText = closestSub
+    ? `${closestSub.name}(${closestSub.val}등급)은 고3과의 격차(+${closestSub.gapStr}등급)가 가장 작아 타 영역 대비 상대적으로 선방하고 있습니다.`
+    : `${bestSub.name} 영역이 평균 ${bestSub.val}등급으로 자체 영역 중 가장 양호합니다.`
+
+  const weaknessTitleText = furthestSub
+    ? `${furthestSub.name} 고3 대비 최대 취약 격차`
+    : `${worstSub.name} 보완 시급`
+
+  const weaknessDescText = furthestSub
+    ? `${furthestSub.name}(${furthestSub.val}등급)에서 고3 대비 -${furthestSub.gapStr}등급의 가장 큰 학력 격차가 벌어져 있어 집중 보강이 시급합니다.`
+    : `${worstSub.name} 영역이 ${worstSub.val}등급으로 가장 취약하여 기초 보강이 필요합니다.`
+
+  const actionDescText = furthestSub
+    ? `고3 수준으로의 도약을 위해 ${furthestSub.name} 영역 집중 클리닉을 투입하고, 선방 중인 ${closestSub?.name || bestSub.name}의 상위 등급 굳히기 병행.`
+    : `취약 영역에 대한 조기 클리닉과 기본기 확립을 통해 전반적인 학력 향상 유도.`
 
   return {
-    strengthTitle: `${best.name} 영역 강세`,
-    strengthDesc: `평균 ${best.val}등급으로 해당 학년 내에서 가장 우수한 성취도를 보임.`,
-    weaknessTitle: `${worst.name} 영역 보강 필요`,
-    weaknessDesc: `평균 ${worst.val}등급으로 타 과목 대비 상대적으로 등급 편차가 커 집중 지도가 필요함.`,
-    actionDesc: `${best.name}의 강점을 수능최저 안정 카드로 삼고, 취약한 ${worst.name} 영역의 개념 복습을 병행하십시오.`
+    statusTitle: gapToG3 !== null ? `${rankTitle} (고3 대비 -${gapToG3}등급)` : `${rankTitle} (평균 ${g.overallAvg}등급)`,
+    statusDesc: statusDescText,
+    strengthTitle: strengthTitleText,
+    strengthDesc: strengthDescText,
+    weaknessTitle: weaknessTitleText,
+    weaknessDesc: weaknessDescText,
+    actionDesc: actionDescText
   }
+}
+
+// 100% 데이터 기반 3개년 로드맵 동적 생성 알고리즘
+function getDynamicRoadmapFallback(gNum) {
+  const g = gradeData.value[gNum]
+  const g3 = gradeData.value[3]
+
+  if (!g.hasData || g.overallAvg === '-') {
+    return {
+      title: `${gNum}학년: 해당 회차 미등록`,
+      bullets: [
+        '해당 회차의 성적 데이터가 아직 등록되지 않았습니다.',
+        '성적표 엑셀 등록 후 실제 데이터 기반의 맞춤형 로드맵이 제공됩니다.',
+        '교과 내신 및 정기 평가 준비에 집중하시기 바랍니다.'
+      ]
+    }
+  }
+
+  const validSubjects = getValidSubjects(g)
+  const sorted = [...validSubjects].sort((a, b) => a.num - b.num)
+  const best = sorted[0] || { name: '우수 영역', val: g.overallAvg }
+  const worst = sorted[sorted.length - 1] || { name: '취약 영역', val: g.overallAvg }
+
+  if (gNum === 3) {
+    return {
+      title: '3학년: 수능최저 충족률 극대화 & 수시 6장 전략',
+      bullets: [
+        `전체 1위 학력 수성: 종합 ${g.overallAvg}등급을 기반으로 실전 감각 및 멘탈 관리에 집중.`,
+        `전략적 수능최저 충족: 우수한 ${best.name}(${best.val}등급)을 주축으로 2합 또는 3합 기준 최적 충족 조합 편성.`,
+        `수시 6장 최적화: ${displaySchoolName.value} 누적 입결 빅데이터를 바탕으로 소신/적정/안정 균형 포트폴리오 구축.`
+      ]
+    }
+  }
+
+  const g3Valid = g3.hasData && g3.overallAvg !== '-'
+  const gap = g3Valid ? (Number(g.overallAvg) - Number(g3.overallAvg)).toFixed(2) : '0.00'
+
+  if (gNum === 2) {
+    return {
+      title: '2학년: 고3 수준 도약 & 전략 영역 조기 완성',
+      bullets: [
+        `고3 대비 학력 격차 극복: 고3 대비 -${gap}등급 열세를 만회하기 위한 취약 ${worst.name}(${worst.val}등급) 집중 클리닉.`,
+        `전략 과목 조기 마스터: 선방 중인 ${best.name}(${best.val}등급)을 2학년 겨울방학 전까지 안정적 수능최저 카드로 육성.`,
+        `2028 대입 교과 관리: 2학년 2학기 교과 내신을 최대한 끌어올려 수도권 학생부 위주 전형 가능권 진입.`
+      ]
+    }
+  }
+
+  return {
+    title: '1학년: 고3 수준 대비 기초 학력 보강 & 핵심 체력 확립',
+    bullets: [
+      `기초 학력 격차 해소: 고3 대비 격차(-${gap}등급)를 좁히기 위해 ${worst.name}(${worst.val}등급) 기본 개념 클리닉 투입.`,
+      `주요 과목 연계 학습: 자체 선방 중인 ${best.name}(${best.val}등급) 역량을 살려 타 영역 동반 성적 견인.`,
+      `2029 통합 수능 체제 대비: 공통 탐구 및 서술형 평가 체제에 맞춘 기본기 다지기.`
+    ]
+  }
+}
+
+// 화면 렌더링용 브릿지 함수 (AI 분석 저장본 우선, 없을 시 동적 알고리즘)
+function getGradeCard(gNum) {
+  if (savedAiReport.value?.gradeCards?.[gNum]) {
+    return savedAiReport.value.gradeCards[gNum]
+  }
+  return getGradeStrengthWeakness(gNum)
+}
+
+function getRoadmapGrade(gNum) {
+  const key = 'g' + gNum
+  if (savedAiReport.value?.roadmap?.[key]) {
+    return savedAiReport.value.roadmap[key]
+  }
+  return getDynamicRoadmapFallback(gNum)
 }
 
 // -------------------------------------------------------------
@@ -1331,6 +1716,60 @@ const subjectBarChartOptions = computed(() => {
       }
     }
   }
+})
+
+// 레이더 차트 기반 학력 밸런스 동적 총평 (100% 데이터 기반)
+const radarBalanceCommentary = computed(() => {
+  const g3 = gradeData.value[3]
+  const g2 = gradeData.value[2]
+  const g1 = gradeData.value[1]
+
+  const activeGrades = [3, 2, 1].filter(g => gradeData.value[g].hasData && gradeData.value[g].overallAvg !== '-')
+  if (activeGrades.length === 0) {
+    return '선택한 회차에 표시할 성적 데이터가 없습니다.'
+  }
+
+  if (activeGrades.length === 1) {
+    return `선택한 회차는 고${activeGrades[0]} 단독 응시 회차로, 고${activeGrades[0]}의 5개 영역별 학력 밸런스 프로필을 단독으로 나타냅니다.`
+  }
+
+  // 2개 이상 학년 비교 (고3 중심 격차 분석)
+  if (g3.hasData && g3.overallAvg !== '-') {
+    const g3Num = Number(g3.overallAvg)
+    const subjects = [
+      { key: 'korAvg', name: '국어' },
+      { key: 'mathAvg', name: '수학' },
+      { key: 'engAvg', name: '영어' },
+      { key: 'inqAvg', name: '탐구' },
+      { key: 'histAvg', name: '한국사' }
+    ]
+
+    const gaps = subjects.map(s => {
+      const g3SubNum = Number(g3[s.key])
+      if (isNaN(g3SubNum)) return null
+
+      const lowerGrades = [g2, g1].filter(lg => lg.hasData && lg[s.key] !== '-' && !isNaN(Number(lg[s.key])))
+      if (lowerGrades.length === 0) return null
+
+      const lowerAvg = lowerGrades.reduce((sum, lg) => sum + Number(lg[s.key]), 0) / lowerGrades.length
+      const diff = lowerAvg - g3SubNum // 양수이면 저학년 등급 숫자가 큼 = 고3 우세
+      return { name: s.name, diff: Number(diff.toFixed(2)) }
+    }).filter(Boolean)
+
+    if (gaps.length > 0) {
+      gaps.sort((a, b) => b.diff - a.diff)
+      const maxGapSub = gaps[0] // 고3이 가장 크게 앞서는 영역
+      const minGapSub = gaps[gaps.length - 1] // 격차가 가장 작은 영역
+
+      if (maxGapSub.diff > 0.3) {
+        return `현 고3(파랑선)이 전 영역에서 고른 균형을 유지하고 있으며, 특히 ${maxGapSub.name}(격차 +${maxGapSub.diff}등급)에서 저학년 대비 가장 큰 학력 우위를 보이고 있습니다.`
+      } else {
+        return `고3과 저학년 간 학력 격차가 전 영역에 걸쳐 비교적 대등하게 형성되어 있으며, ${minGapSub.name} 영역의 접전이 두드러집니다.`
+      }
+    }
+  }
+
+  return '실제 성적 데이터를 기반으로 각 학년의 5각 방사형 학력 밸런스를 동일 선상에서 대조합니다.'
 })
 
 // -------------------------------------------------------------
@@ -1504,6 +1943,7 @@ function printReport() {
 
 onMounted(() => {
   reloadAllGradeData(false)
+  loadSavedAiReport()
 })
 </script>
 

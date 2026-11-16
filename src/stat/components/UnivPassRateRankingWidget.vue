@@ -145,9 +145,9 @@
               <div
                 class="h-full rounded-full transition-all duration-500"
                 :class="[
-                  item.passRate >= 70 ? 'bg-gradient-to-r from-emerald-500 to-teal-400' :
-                  item.passRate >= 40 ? 'bg-gradient-to-r from-indigo-500 to-blue-500' :
-                  item.passRate >= 20 ? 'bg-gradient-to-r from-blue-500 to-sky-400' : 'bg-slate-400'
+                  item.passRate >= 70 ? 'bg-linear-to-r from-emerald-500 to-teal-400' :
+                  item.passRate >= 40 ? 'bg-linear-to-r from-indigo-500 to-blue-500' :
+                  item.passRate >= 20 ? 'bg-linear-to-r from-blue-500 to-sky-400' : 'bg-slate-400'
                 ]"
                 :style="{ width: `${Math.min(100, Math.max(4, item.passRate))}%` }"
               ></div>

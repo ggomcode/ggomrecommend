@@ -541,7 +541,7 @@
     <!-- 하단 푸터 -->
     <footer class="py-6 border-t border-slate-200 bg-white text-center text-xs text-slate-500">
       <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
-        <p class="m-0 portal-title-font">© {{ new Date().getFullYear() }} {{ schoolName }} {{ displaySystemName }}</p>
+        <p class="m-0 portal-title-font font-medium text-slate-600">© 2026 꼼스위트 by murmurgene</p>
         <span class="hidden sm:inline text-slate-300">•</span>
         <div class="relative group inline-flex items-center">
           <span class="text-slate-400 mr-1">License:</span>

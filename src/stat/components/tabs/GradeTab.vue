@@ -1,14 +1,14 @@
 <template>
   <div class="space-y-6">
     <!-- Top Summary Banner -->
-    <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-md">
+    <div class="bg-linear-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-md">
       <div class="max-w-3xl">
         <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
           성적대별 수시 지원 경향성 분석
         </span>
         <h2 class="text-xl font-bold mt-2">전교과 내신 등급대별 대학 지원 포트폴리오</h2>
         <p class="text-xs text-slate-300 mt-1 leading-relaxed">
-          포곡고 수시 지원자들의 내신 구간(1등급대 ~ 7등급대 이상)에 따른 선호 대학군, 전형 선택 비율(교과 vs 종합 vs 실기) 및 수도권 출원 비중을 심층 분석합니다.
+          {{ displaySchoolName }} 수시 지원자들의 내신 구간(1등급대 ~ 7등급대 이상)에 따른 선호 대학군, 전형 선택 비율(교과 vs 종합 vs 실기) 및 수도권 출원 비중을 심층 분석합니다.
         </p>
       </div>
 
@@ -176,7 +176,7 @@
               <td class="px-3 py-2 text-indigo-700 font-medium">{{ app.admissionDetailType || app.admissionMajorType }}</td>
               <td class="px-3 py-2 text-center font-bold text-slate-800">{{ formatGrade(app.allSubjectGrade) }}</td>
               <td class="px-3 py-2 text-center text-slate-600">{{ formatGrade(app.mainSubjectGrade) }}</td>
-              <td class="px-3 py-2 text-[11px] text-slate-500 max-w-[250px] truncate" :title="app.minScoreReq">
+              <td class="px-3 py-2 text-[11px] text-slate-500 max-w-62.5 truncate" :title="app.minScoreReq">
                 {{ app.minScoreReq || '-' }}
               </td>
             </tr>
@@ -194,7 +194,10 @@
 import { ref, computed } from 'vue'
 import { Bar } from 'vue-chartjs'
 import { useData, maskName, formatGrade } from '../../composables/useStatData'
+import { schoolName } from '../../../utils/schoolConfig'
 import AdmissionRateRadarExplorer from '../AdmissionRateRadarExplorer.vue'
+
+const displaySchoolName = computed(() => (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리 학교')
 
 const { filteredApplications } = useData()
 

@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6 select-none">
     <!-- Top Banner & Academic Year Alert -->
-    <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-6 text-white shadow-md relative overflow-hidden">
+    <div class="bg-linear-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-6 text-white shadow-md relative overflow-hidden">
       <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
       <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -34,7 +34,7 @@
         <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 flex flex-col items-end shrink-0 text-right">
           <span class="text-[11px] text-slate-300 font-medium">분석 데이터 출처</span>
           <span class="text-sm font-black text-amber-300 mt-0.5">
-            {{ is2027Mode ? '포곡고 추천 배정 시스템 (DB)' : `구글 스프레드시트 (${selectedAcademicYear}수시)` }}
+            {{ is2027Mode ? `${schoolName} 추천 배정 시스템 (DB)` : `구글 스프레드시트 (${selectedAcademicYear}수시)` }}
           </span>
           <span v-if="is2027Mode" class="text-[10px] text-emerald-300 mt-1 font-semibold">
             💡 2027 대입은 선발 진행 중 (합불 결과는 추후 반영)
@@ -255,7 +255,7 @@
           </div>
         </div>
 
-        <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 bg-blue-50/60 p-2.5 rounded-xl border border-blue-100 leading-relaxed">
+        <div class="mt-4 p-2.5 rounded-xl border border-blue-100 bg-blue-50/60 text-[11px] text-slate-500 leading-relaxed">
           💡 <strong>추천 전형 진학 시사점:</strong> 학교장추천 전형은 대부분 교과 평가 비중이 높아 1.5~2.5등급 구간 학생들이 수도권 주요 대학(인서울 15개대 등)을 안정·적정으로 공략하는 핵심 지렛대로 활용됩니다.
         </div>
       </div>
@@ -475,7 +475,7 @@
         </div>
       </div>
 
-      <div class="overflow-x-auto max-h-[460px] overflow-y-auto">
+      <div class="overflow-x-auto max-h-115 overflow-y-auto">
         <table class="w-full text-left text-xs border-collapse">
           <thead class="sticky top-0 bg-slate-50 z-10 border-b border-slate-200">
             <tr class="text-slate-600 font-bold">

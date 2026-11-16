@@ -42,7 +42,7 @@
     <!-- 🖨️ 인쇄 전용 공식 헤더 (화면에서는 숨김, 인쇄 시에만 제목 + 기본 정보 깔끔하게 출력) -->
     <div class="hidden print:block mb-3 border-b-2 border-black pb-2">
       <div class="flex items-center justify-between text-[11px] font-mono text-slate-700 mb-1">
-        <span class="font-bold text-black">포곡고등학교 대입 진학 지도 시스템</span>
+        <span class="font-bold text-black">{{ displaySchoolName }} 대입 진학 지도 시스템</span>
         <span>기준: {{ selectedAcademicYear }}학년도 대입 최종 합격 실적</span>
       </div>
       <div class="flex items-baseline justify-between mt-1">
@@ -318,6 +318,9 @@
 import { ref, computed } from 'vue'
 import { Printer } from 'lucide-vue-next'
 import { useData } from '../composables/useStatData'
+import { schoolName } from '../../utils/schoolConfig'
+
+const displaySchoolName = computed(() => (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리고등학교')
 
 const { filteredApplications, selectedAcademicYear } = useData()
 

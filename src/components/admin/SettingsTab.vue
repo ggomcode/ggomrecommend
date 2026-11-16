@@ -201,33 +201,6 @@
         </form>
       </div>
 
-      <!-- 3. AI OCR API 설정 (OpenAI GPT-4o-mini Vision) -->
-      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
-        <h2 class="text-base font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
-          <span class="w-1 h-3 bg-blue-600 rounded-full"></span>
-          AI OCR 연동 설정 (OpenAI API)
-        </h2>
-        <p class="text-xs text-slate-400 mb-4">제출된 포기원 등 PDF/이미지 양식을 판독할 OpenAI GPT-4o-mini Vision 분석기 API 키를 설정합니다.</p>
-
-        <form @submit.prevent="saveOpenAIKey" class="flex gap-3 w-full">
-          <input
-            v-model="openaiKey"
-            type="password"
-            :placeholder="hasOpenAIKey ? '******************************' : 'sk-...'"
-            class="flex-1 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white font-mono"
-          />
-          <button
-            type="submit"
-            :disabled="openaiLoading"
-            class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border-none rounded-lg px-5 py-2.5 cursor-pointer transition-colors whitespace-nowrap shrink-0"
-          >
-            {{ openaiLoading ? '저장 중…' : '저장 적용' }}
-          </button>
-        </form>
-      </div>
-
-
-
       <!-- 3-3. 수시 원서 접수 마감일 설정 (포기원 제출 마감 기준) -->
       <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
         <h2 class="text-base font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
@@ -640,6 +613,77 @@
         </div>
       </div>
 
+      <!-- 3-6. 성적 분석용 AI 연동 설정 (Google Gemini API) -->
+      <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <h2 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 m-0">
+            <span class="w-1 h-3 bg-purple-600 rounded-full"></span>
+            <span>✨ 성적 분석용 AI 연동 설정 (Gemini API)</span>
+          </h2>
+          <span v-if="hasGeminiKey" class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+            <span>✓</span>
+            <span>API 연동됨</span>
+          </span>
+          <span v-else class="text-[11px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
+            미연동 (동적 알고리즘 모드)
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+          전국연합학력평가 및 모의평가 성적 분석, 학년별 학력 비교 심층 진단을 수행할 <strong>Google Gemini API Key</strong>를 설정합니다.<br>
+          ※ Google AI Studio(<a href="https://aistudio.google.com/" target="_blank" class="text-indigo-500 hover:underline">aistudio.google.com</a>)에서 무료 API 키를 발급받아 입력하시면 즉시 연동됩니다. (권장 모델: <code>gemini-2.5-flash</code>)
+        </p>
+
+        <form @submit.prevent="handleSaveGeminiKey" class="space-y-3">
+          <div class="flex flex-col sm:flex-row gap-2.5 w-full">
+            <input
+              v-model="geminiKeyInput"
+              :type="showGeminiKey ? 'text' : 'password'"
+              :placeholder="hasGeminiKey ? '저장된 API Key (클릭하여 새로 입력 가능)' : 'AIzaSy... (Gemini API Key 입력)'"
+              class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-400 text-slate-800 dark:text-white"
+            />
+            <div class="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                v-if="hasGeminiKey"
+                @click="showGeminiKey = !showGeminiKey"
+                class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer whitespace-nowrap"
+              >
+                {{ showGeminiKey ? '숨김' : '보기' }}
+              </button>
+              <button
+                type="submit"
+                :disabled="geminiLoading"
+                class="text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 border-none rounded-lg px-4 py-2 cursor-pointer transition-colors whitespace-nowrap"
+              >
+                {{ geminiLoading ? '저장 중…' : 'API Key 저장' }}
+              </button>
+              <button
+                type="button"
+                @click="handleTestGeminiKey"
+                :disabled="geminiTestLoading"
+                class="text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800 rounded-lg px-3 py-2 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1"
+              >
+                <span>{{ geminiTestLoading ? '테스트 중…' : '⚡ 연결 테스트' }}</span>
+              </button>
+              <button
+                type="button"
+                v-if="hasGeminiKey"
+                @click="handleDeleteGeminiKey"
+                :disabled="geminiLoading"
+                class="text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg px-3 py-2 cursor-pointer transition-colors whitespace-nowrap"
+                title="API Key 삭제"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+          <div v-if="geminiTestResult" class="text-xs mt-1 font-semibold flex items-center gap-1.5" :class="geminiTestResult.success ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
+            <span>{{ geminiTestResult.success ? '✓' : '⚠️' }}</span>
+            <span>{{ geminiTestResult.message }}</span>
+          </div>
+        </form>
+      </div>
+
       <!-- 4. 전형요소 등록 후 세부 수정 허용 (테스트/수정 모드) -->
       <div class="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-xl p-6 shadow-sm">
         <div class="flex items-center justify-between gap-4">
@@ -1048,6 +1092,7 @@ import { supabase } from '../../utils/supabaseClient'
 import { fetchSchoolName, setSchoolNameConfig } from '../../utils/schoolConfig'
 import { getDisclosureCount, setDisclosureCount, syncRegionalToUniversities, syncPrincipalUnivsFromGoogleSheet } from '../../api/admin.js'
 import { syncRuralTracksFromGoogleSheet } from '../../api/ruralApi.js'
+import { getGeminiApiKey, saveGeminiApiKey, testGeminiApiKey } from '../../api/geminiApi.js'
 import { getKcueSheetId, extractSheetId, saveKcueSheetId, KCUE_SHEET_KEY } from '../../api/statApi.js'
 import { getAdmissionSheetId, saveAdmissionSheetId, fetchAdmissionCalendarData } from '../../services/admissionCalendarService.js'
 import { dialog } from '../common/dialog.js'
@@ -1155,6 +1200,13 @@ const regCodeLoading = ref(false)
 const openaiKey = ref('')
 const openaiLoading = ref(false)
 const hasOpenAIKey = ref(false)
+
+const geminiKeyInput = ref('')
+const hasGeminiKey = ref(false)
+const geminiLoading = ref(false)
+const geminiTestLoading = ref(false)
+const geminiTestResult = ref(null)
+const showGeminiKey = ref(false)
 
 const hasGoogleSheetPrincipalId = ref(false)
 const hasGoogleSheetRuralId = ref(false)
@@ -1569,6 +1621,10 @@ async function loadConfig() {
     const envOpenAIKey = import.meta.env.VITE_OPENAI_API_KEY
     hasOpenAIKey.value = !!(dbOpenAIKey || (envOpenAIKey && String(envOpenAIKey).trim()))
     openaiKey.value = ''
+
+    const dbGeminiKey = configMap['gemini_api_key'] || localStorage.getItem('pcm_gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY || ''
+    hasGeminiKey.value = !!(dbGeminiKey && String(dbGeminiKey).trim())
+    geminiKeyInput.value = ''
 
 
 
@@ -2223,6 +2279,69 @@ async function saveOpenAIKey() {
     alert('OpenAI Key 저장 도중 오류가 발생했습니다.')
   } finally {
     openaiLoading.value = false
+  }
+}
+
+async function handleSaveGeminiKey() {
+  geminiLoading.value = true
+  geminiTestResult.value = null
+  try {
+    const val = geminiKeyInput.value.trim()
+    await saveGeminiApiKey(val)
+    hasGeminiKey.value = !!val
+    geminiKeyInput.value = ''
+    alert(val ? 'Google Gemini API Key가 저장되었습니다.' : 'Gemini API Key가 삭제되었습니다.')
+  } catch (e) {
+    console.error(e)
+    alert('Gemini API Key 저장 중 오류가 발생했습니다: ' + (e.message || ''))
+  } finally {
+    geminiLoading.value = false
+  }
+}
+
+async function handleTestGeminiKey() {
+  geminiTestLoading.value = true
+  geminiTestResult.value = null
+  try {
+    const targetKey = geminiKeyInput.value.trim() || undefined
+    const res = await testGeminiApiKey(targetKey)
+    if (res.success) {
+      geminiTestResult.value = {
+        success: true,
+        message: `연결 성공! Google Gemini API (${res.model}) 정상 응답을 확인했습니다.`
+      }
+    } else {
+      geminiTestResult.value = {
+        success: false,
+        message: `연결 실패: ${res.error}`
+      }
+    }
+  } catch (e) {
+    geminiTestResult.value = {
+      success: false,
+      message: `테스트 오류: ${e.message || '네트워크 오류'}`
+    }
+  } finally {
+    geminiTestLoading.value = false
+  }
+}
+
+async function handleDeleteGeminiKey() {
+  if (!confirm('저장된 Google Gemini API Key를 삭제하시겠습니까? 삭제 시 실시간 AI 심층 분석 대신 동적 알고리즘 진단 모드가 동작합니다.')) {
+    return
+  }
+  geminiLoading.value = true
+  geminiTestResult.value = null
+  try {
+    await saveGeminiApiKey('')
+    hasGeminiKey.value = false
+    geminiKeyInput.value = ''
+    alert('Gemini API Key가 삭제되었습니다.')
+  } catch (e) {
+    console.error(e)
+    alert('삭제 오류: ' + (e.message || ''))
+  } finally {
+    geminiLoading.value = false
   }
 }
 

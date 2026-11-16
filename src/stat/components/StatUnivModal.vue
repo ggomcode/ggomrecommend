@@ -6,7 +6,7 @@
     <div class="flex min-h-full items-center justify-center p-3 text-center sm:p-4">
       <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-6 sm:w-full sm:max-w-5xl lg:max-w-6xl border border-slate-200 flex flex-col max-h-[92vh]">
         <!-- Modal Header -->
-        <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 px-6 py-4.5 text-white flex items-center justify-between shrink-0 border-b border-indigo-900/40">
+        <div class="bg-linear-to-r from-slate-900 via-indigo-950 to-slate-900 px-6 py-4.5 text-white flex items-center justify-between shrink-0 border-b border-indigo-900/40">
           <div class="flex items-center space-x-3.5">
             <div class="w-11 h-11 rounded-xl bg-indigo-500/30 border border-indigo-400/30 flex items-center justify-center text-white font-extrabold text-base shadow-inner shrink-0">
               {{ univ.name.slice(0, 2) }}
@@ -262,7 +262,7 @@
                   </td>
 
                   <!-- 9. 최저학력기준 -->
-                  <td class="px-3 py-2.5 text-[11px] text-slate-600 max-w-[190px] truncate" :title="app.minScoreReq">
+                  <td class="px-3 py-2.5 text-[11px] text-slate-600 max-w-47.5 truncate" :title="app.minScoreReq">
                     <span v-if="app.hasMinScore" class="inline-block px-1 py-0.2 rounded bg-rose-50 text-rose-600 text-[10px] font-medium mr-1">최저</span>
                     {{ app.minScoreReq || '없음' }}
                   </td>

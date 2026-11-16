@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <!-- 1. 상단 안내 및 학년도 컨트롤 배너 -->
-    <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+    <div class="bg-linear-to-r from-slate-900 via-indigo-950 to-blue-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
       <!-- 배경 장식 그래픽 -->
       <div class="absolute -right-8 -bottom-8 w-64 h-64 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
       <div class="absolute right-20 -top-10 w-48 h-48 bg-blue-400/10 rounded-full blur-xl pointer-events-none"></div>

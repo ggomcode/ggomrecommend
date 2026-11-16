@@ -7,7 +7,7 @@
           <span>📉</span>
           <span>수능최저 충족 실질 경쟁률 분석</span>
           <span class="text-blue-300">|</span>
-          <span class="text-slate-500 font-semibold">포곡고 실측 통계</span>
+          <span class="text-slate-500 font-semibold">{{ currentSchoolName }} 실측 통계</span>
         </div>
         <h3 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight m-0">
           수능최저 충족 시 실질 경쟁률 급락 분석 (최저의 마법)
@@ -49,7 +49,7 @@
           {{ academicYearLabel }}학년도 대입 성공을 위한 5대 핵심 전략
         </h3>
         <p class="text-xs text-slate-500 m-0 mt-1 leading-relaxed">
-          포곡고 실제 입결 및 수시 지원 빅데이터를 심층 분석하여 도출한 학부모 및 수험생 필수 5대 대입 전략 카드입니다.
+          {{ currentSchoolName }} 실제 입결 및 수시 지원 빅데이터를 심층 분석하여 도출한 학부모 및 수험생 필수 5대 대입 전략 카드입니다.
         </p>
       </div>
     </div>
@@ -1422,7 +1422,7 @@
             우리 학교 수능최저 지원 <strong>{{ schoolMinScoreStats.totalMinApps }}건</strong> 실측 통계 분석 결과, 
             최초 외형 경쟁률은 평균 <strong>{{ schoolMinScoreStats.avgInitialRate }}:1</strong>(교과 {{ schoolMinScoreStats.gpaInitialRate }}:1)이지만, 
             <strong>수능 최저를 충족하는 순간 실질 경쟁률은 {{ schoolMinScoreStats.avgRealRate }}:1(교과 {{ schoolMinScoreStats.gpaRealRate }}:1, 충원율 반영 시 체감 {{ schoolMinScoreStats.avgEffectiveRate }}:1)</strong>로 대폭 급락합니다. 
-            우리 학교 학생들의 수능최저 충족률({{ schoolMinScoreStats.schoolPassRate }}%)을 감안할 때, 최저만 맞추면 경쟁자의 60% 이상이 자동 탈락하여 수도권 및 거점국립대를 뚫는 가장 확실한 기적의 역전 카드입니다.
+            우리 학교 학생들의 수능최저 충족률({{ schoolMinScoreStats.schoolPassRate }}%)을 감안할 때, 최저만 맞추면 경쟁자의 상당수가 탈락하여 수도권 및 거점국립대를 뚫는 가장 확실한 전략적 도약 카드입니다.
           </p>
         </div>
       </div>
@@ -1512,11 +1512,11 @@
           </div>
         </div>
 
-        <!-- 4대 기적의 실증 팩트 배너 (경희대 한의예, 동국대 WISE 0%, 고대 논술, 한양대 0.18등급 하락) -->
+        <!-- 수능최저 충족 4대 실증 사례 배너 (경희대 한의예, 동국대 WISE, 고대 논술, 한양대 등) -->
         <div class="pt-3 border-t border-slate-100">
           <div class="text-xs font-black text-slate-800 mb-2 flex items-center gap-1.5">
             <span>⚡</span>
-            <span>2025 입결 분석이 증명한 4대 기적의 실증 팩트</span>
+            <span>2025 입결 분석이 증명한 수능최저 충족 4대 실증 사례</span>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
             <div 
@@ -1555,7 +1555,7 @@
             ]"
           >
             <span>🔥</span>
-            <span>4~6등급: 기적의 역전존 (수도권 교과·거점국립대)</span>
+            <span>4~6등급: 수능최저 집중 도약존 (수도권 교과·거점국립대)</span>
           </button>
           <button
             type="button"
@@ -1642,15 +1642,22 @@
         <!-- Metric 2: 4~5등급 선배 실제 합격률 격차 -->
         <div class="bg-linear-to-br from-rose-50 to-orange-50 rounded-3xl p-5 border border-rose-200/80 shadow-2xs">
           <div class="flex items-center justify-between text-xs font-bold text-rose-800 mb-2">
-            <span>🏆 4~5등급 선배 최저 합격 실증</span>
-            <span class="px-2 py-0.5 rounded-full bg-rose-200 text-rose-800 font-bold text-[10px]">+35.3%p 우위</span>
+            <span>🏆 4~5등급 수능최저 합격 실증</span>
+            <span class="px-2 py-0.5 rounded-full bg-rose-200 text-rose-800 font-bold text-[10px]">
+              {{ grade4to5MinVsNoMinPassStats.diff >= 0 ? `+${grade4to5MinVsNoMinPassStats.diff}%p 우위` : `${grade4to5MinVsNoMinPassStats.diff}%p` }}
+            </span>
           </div>
           <div class="flex items-baseline gap-2">
-            <span class="text-3xl font-black text-rose-700 font-mono">58.7%</span>
-            <span class="text-xs text-slate-500 font-medium">(최저 미반영: 23.4%)</span>
+            <span class="text-3xl font-black text-rose-700 font-mono">{{ grade4to5MinVsNoMinPassStats.minRate }}%</span>
+            <span class="text-xs text-slate-500 font-medium">(최저 미반영: {{ grade4to5MinVsNoMinPassStats.noMinRate }}%)</span>
           </div>
           <p class="text-[11px] text-rose-900 mt-2 mb-0 leading-relaxed">
-            과거 2개년 데이터 분석 결과, 4등급대라도 <strong>최저를 충족한 교과 전형의 합격률이 2.5배 높게</strong> 나타났습니다.
+            <template v-if="grade4to5MinVsNoMinPassStats.hasData">
+              수시 지원 통계 분석 결과, 4~5등급대에서도 <strong>최저 반영 전형 합격률이 {{ grade4to5MinVsNoMinPassStats.minRate }}%</strong>로 미반영 전형({{ grade4to5MinVsNoMinPassStats.noMinRate }}%) 대비 확연히 높게 나타납니다.
+            </template>
+            <template v-else>
+              선택된 학년도 수시 지원 데이터 기준 4~5등급대 집계 중입니다.
+            </template>
           </p>
         </div>
 
@@ -1745,7 +1752,7 @@
               <div>
                 <div class="flex items-center justify-between gap-1.5 mb-2">
                   <div class="flex items-center gap-1.5 flex-wrap">
-                    <span v-if="item.targetGradeBand === '4_6'" class="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-black">🔥 4~6등급 기적</span>
+                    <span v-if="item.targetGradeBand === '4_6'" class="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-black">🔥 4~6등급 전략도약</span>
                     <span v-else-if="item.targetGradeBand === '3_4'" class="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[10px] font-bold">🏛️ 3~4등급 안정</span>
                     <span v-else-if="item.targetGradeBand === 'essay'" class="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-[10px] font-black">✍️ 논술 1/11토막</span>
                     <span v-else class="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[10px] font-bold">👑 1~2등급 승부</span>
@@ -1995,7 +2002,7 @@
             <div class="flex items-start justify-between gap-3 pb-4 border-b border-slate-100">
               <div>
                 <div class="flex items-center gap-2 mb-1.5">
-                  <span v-if="selectedModalItem.targetGradeBand === '4_6'" class="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs font-black">🔥 4~6등급 기적의 역전존</span>
+                  <span v-if="selectedModalItem.targetGradeBand === '4_6'" class="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs font-black">🔥 4~6등급 전략 도약존</span>
                   <span v-else-if="selectedModalItem.targetGradeBand === '3_4'" class="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-xs font-bold">🏛️ 3~4등급 안정권</span>
                   <span v-else-if="selectedModalItem.targetGradeBand === 'essay'" class="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs font-black">✍️ 논술 실질경쟁률 급락</span>
                   <span v-else class="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-xs font-bold">👑 1~2등급 최상위</span>
@@ -2345,8 +2352,8 @@
 
           <!-- Bottom Reference Data -->
           <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>2025~2026학년도 실제 수시 통계:</span>
-            <span class="font-semibold text-slate-700">4~5등급 최저 반영 전형 합격률 58.7% vs 미반영 23.4%</span>
+            <span>{{ academicYearLabel }} 실제 수시 통계:</span>
+            <span class="font-semibold text-slate-700">4~5등급 최저 반영 합격률 {{ grade4to5MinVsNoMinPassStats.minRate }}% vs 미반영 {{ grade4to5MinVsNoMinPassStats.noMinRate }}%</span>
           </div>
         </div>
       </div>
@@ -4567,6 +4574,51 @@ const pastSeniorReverseStories = [
   }
 ]
 
+// 학교명 반응형 래퍼
+const currentSchoolName = computed(() => (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리 학교')
+
+// 4~5등급 최저 반영 vs 미반영 합격률 실측 계산
+const grade4to5MinVsNoMinPassStats = computed(() => {
+  const apps = applications.value || []
+  let minTotal = 0, minPassed = 0
+  let noMinTotal = 0, noMinPassed = 0
+
+  apps.forEach(app => {
+    const g = parseFloat(app.gpa || app.gpaScore || app['내신_전과목'] || app['내신등급'] || app['평균등급'] || 0)
+    if (g >= 4.0 && g <= 5.99) {
+      const minText = String(app['수능최저'] || app['수능최저학력기준'] || app['최저기준'] || app.minScoreDesc || '')
+      const isMin = minText && !minText.includes('없음') && !minText.includes('미반영') && minText.length > 2
+
+      const final = String(app.finalStage || app['최종'] || '').trim()
+      const reg = String(app.registerStatus || app['등록'] || '').trim()
+      const isP = !final.includes('불합') && (final.includes('합격') || final.includes('충원') || final.includes('최초') || reg === 'Y')
+
+      if (isMin) {
+        minTotal++
+        if (isP) minPassed++
+      } else {
+        noMinTotal++
+        if (isP) noMinPassed++
+      }
+    }
+  })
+
+  const minRate = minTotal > 0 ? Number(((minPassed / minTotal) * 100).toFixed(1)) : 0
+  const noMinRate = noMinTotal > 0 ? Number(((noMinPassed / noMinTotal) * 100).toFixed(1)) : 0
+  const diff = Number((minRate - noMinRate).toFixed(1))
+
+  return {
+    minTotal,
+    minPassed,
+    minRate,
+    noMinTotal,
+    noMinPassed,
+    noMinRate,
+    diff,
+    hasData: minTotal > 0 || noMinTotal > 0
+  }
+})
+
 // 2027 우리 학교 학생 4등급대 최저 수혜 실태 분석
 const statsForGrade4to6 = computed(() => {
   const apps = applications.value || []
@@ -4584,7 +4636,7 @@ const statsForGrade4to6 = computed(() => {
     }
   })
 
-  const minScoreRatio = totalCards4to6 > 0 ? ((minScoreCards4to6 / totalCards4to6) * 100).toFixed(1) : '34.8'
+  const minScoreRatio = totalCards4to6 > 0 ? ((minScoreCards4to6 / totalCards4to6) * 100).toFixed(1) : '0.0'
 
   return {
     totalCards: totalCards4to6,
@@ -4603,7 +4655,7 @@ function toggleCard(num) {
 }
 
 const STRATEGY_CARDS = computed(() => {
-  const currentSchool = (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리 학교'
+  const currentSchool = currentSchoolName.value
   const satamSummary = effectiveSatamStats.value?.totalRunRate
     ? `사탐런(과탐→사탐 ${effectiveSatamStats.value.totalRunRate}%)을 통해 최저 충족 전략 과목을 조기에 확정하는 것이 성공의 열쇠`
     : '사탐런(과탐→사탐)을 통해 최저 충족 전략 과목을 조기에 확정하는 것이 성공의 열쇠'
@@ -4625,11 +4677,11 @@ const STRATEGY_CARDS = computed(() => {
       num: 2,
       badge: '농어촌·기회균형 양면성',
       title: '상위권은 농어촌이 절대 유리, 중하위권은 경쟁 치열성을 경계',
-      summary: '1~2등급대 상위권은 농어촌 전형 합격률이 일반전형 대비 3배 이상 폭증하나, 중하위권은 오히려 역전 현상이 발생합니다.',
+      summary: '1~2등급대 상위권은 농어촌 전형 합격률이 일반전형 대비 확연히 우세하나, 중하위권은 지원 몰림 현상으로 역전이 발생할 수 있습니다.',
       details: [
-        '상위권(내신 1~2등급대): 농어촌+기회균형 전형 적극 추천 (SKYSSHE 라인 합격률 일반 13.6% vs 농어촌 42.9%)',
+        '상위권(내신 1~2등급대): 상위권 대학 농어촌+기회균형 전형 적극 추천 (일반전형 대비 뚜렷한 합격률 우위)',
         '중하위권(내신 3등급 이하): 중위권 학생들의 농어촌 집중 몰림 현상으로 컷이 비정상적으로 상승할 위험 상존',
-        '수도권 주요대(KSSDAGIEK)의 경우 일반전형 합격률(22.9%)이 농어촌(16.1%)보다 오히려 높아 일반 교과 병행 지원이 안전'
+        '수도권 주요대의 경우 지원 집중도에 따라 일반 교과 전형의 충원 합격률이 더 유리할 수 있으므로 병행 지원이 안전'
       ]
     },
     {

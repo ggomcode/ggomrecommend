@@ -20,7 +20,7 @@
         <span class="text-[8px] text-slate-500 -mt-2 bg-white px-0.5">20:1</span>
       </div>
       <!-- 10:1 Mid Baseline -->
-      <div class="absolute left-2 right-2 top-[52px] border-t border-dashed border-slate-100 pointer-events-none flex justify-end">
+      <div class="absolute left-2 right-2 top-13 border-t border-dashed border-slate-100 pointer-events-none flex justify-end">
         <span class="text-[8px] text-slate-500 -mt-2 bg-white px-0.5">10:1</span>
       </div>
 
@@ -53,7 +53,7 @@
           </div>
 
           <!-- Bar Container (Fixed Height 58px) -->
-          <div class="w-full h-[58px] flex items-end justify-center px-1">
+          <div class="w-full h-14.5 flex items-end justify-center px-1">
             <!-- Case 1: Valid Data -->
             <template v-if="getItem(year).rate !== null">
               <!-- Over 20:1 (Broken axis wave) -->
@@ -63,10 +63,10 @@
                 :title="getTooltipText(year)"
               >
                 <!-- Upper Part -->
-                <div class="w-full bg-gradient-to-t from-purple-500 to-rose-500 rounded-t-sm h-[24px] shadow-xs"></div>
+                <div class="w-full bg-linear-to-t from-purple-500 to-rose-500 rounded-t-sm h-6 shadow-xs"></div>
                 
                 <!-- Squiggly / Wave Break Mark (물결 표시) -->
-                <div class="w-full h-3 my-[-1px] relative flex items-center justify-center z-10 overflow-hidden">
+                <div class="w-full h-3 -my-px relative flex items-center justify-center z-10 overflow-hidden">
                   <svg class="w-full h-3 text-slate-300 drop-shadow-xs" viewBox="0 0 32 10" preserveAspectRatio="none">
                     <path 
                       d="M 0 5 Q 8 0, 16 5 T 32 5" 
@@ -87,7 +87,7 @@
                 </div>
 
                 <!-- Lower Part -->
-                <div class="w-full bg-gradient-to-t from-indigo-600 to-purple-600 h-[22px] rounded-b-2xs"></div>
+                <div class="w-full bg-linear-to-t from-indigo-600 to-purple-600 h-5.5 rounded-b-2xs"></div>
               </div>
 
               <!-- Normal <= 20:1 (Proportional Bar) -->
@@ -97,7 +97,7 @@
                 :style="{ height: getBarHeight(getItem(year).rate) }"
                 :title="getTooltipText(year)"
               >
-                <div class="w-full h-full bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t-sm shadow-2xs hover:brightness-110 transition-all"></div>
+                <div class="w-full h-full bg-linear-to-t from-indigo-600 to-indigo-400 rounded-t-sm shadow-2xs hover:brightness-110 transition-all"></div>
               </div>
             </template>
 
@@ -120,7 +120,7 @@
               {{ year }}
             </span>
             <!-- Quota / Applicants Subtitle -->
-            <span class="text-[8px] text-slate-400 block leading-tight truncate max-w-[64px] mx-auto">
+            <span class="text-[8px] text-slate-400 block leading-tight truncate max-w-16 mx-auto">
               <template v-if="getItem(year).quota || getItem(year).applicants">
                 {{ getItem(year).quota || '-' }}명/{{ getItem(year).applicants || '-' }}명
               </template>
