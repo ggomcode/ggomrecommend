@@ -1995,33 +1995,59 @@ export const OFFICIAL_CSAT_PASS_RATE_SUMMARY = {
   ]
 }
 
+// 대학·학과·전형 기준 현실적 타깃 등급대 자동 판정 함수
+export function determineGradeBand(univName, dept, admissionType, initialRate = 0, passRate = 0) {
+  const u = String(univName || '').trim()
+  const d = String(dept || '').trim()
+  const a = String(admissionType || '').trim()
+
+  // 1) 논술 전형
+  if (a.includes('논술')) return 'essay'
+
+  // 2) 의치한약수 계열은 무조건 1~2등급 최상위권
+  const isMed = ['의예', '의학', '치의', '한의', '약학', '제약', '수의'].some(m => d.includes(m) || u.includes(m))
+  if (isMed) return '1_2'
+
+  // 3) 최상위권 대학 (SKY, 서성한, 이화, 카이스트, 포스텍, 과학기술원)
+  const isSkyTop = [
+    '서울대', '서울대학교', '연세대', '연세대학교', '고려대', '고려대학교',
+    '서강대', '성균관대', '한양대', '이화여대', 'KAIST', '카이스트', '포항공대', 'POSTECH', 'GIST', 'UNIST', 'DGIST', 'KENTECH'
+  ].some(k => u.includes(k) && !u.includes('미래') && !u.includes('세종') && !u.includes('에리카') && !u.includes('ERICA'))
+  if (isSkyTop) return '1_2'
+
+  // 4) 서울 상위권 (중경외시, 건동홍, 숙명, 서울시립대 등)
+  const isTop15 = ['중앙대', '경희대', '한국외대', '서울시립대', '시립대', '건국대', '동국대', '홍익대', '숙명여대'].some(k => u.includes(k) && !u.includes('글로컬') && !u.includes('경주') && !u.includes('세종'))
+  if (isTop15) return '1_2'
+
+  // 5) 수도권 주요대 (국숭세단, 아주, 인하, 가천, 에리카, 광운, 명지, 상명, 가톨릭 등)
+  const isMetroMajor = ['국민대', '숭실대', '세종대', '단국대', '아주대', '인하대', '가천대', '에리카', '광운대', '명지대', '상명대', '가톨릭대'].some(k => u.includes(k))
+  if (isMetroMajor) return '3_4'
+
+  // 6) 거점국립대 본교
+  const isJigeok = ['부산대', '경북대', '충남대', '전남대', '전북대', '충북대', '강원대', '경상국립대', '제주대'].some(k => u.includes(k))
+  if (isJigeok) {
+    if (d.includes('간호') || d.includes('사범') || d.includes('전자') || d.includes('컴퓨터')) return '3_4'
+    return '4_6'
+  }
+
+  // 7) 경기 외곽 / 충청 / 지방 4년제
+  const isRegional = [
+    '경기대', '수원대', '강남대', '평택대', '한경대', '한경국립대', '성결대', '안양대', '대진대', '신한대', '용인대',
+    '백석대', '호서대', '선문대', '남서울대', '순천향대', '건양대', '배재대', '목원대', '서원대', '한남대', '중부대', '청운대'
+  ].some(k => u.includes(k))
+  if (isRegional) return '4_6'
+
+  // 수치 기반 보조 판정
+  if (initialRate >= 9.0 || passRate >= 60) return '1_2'
+  if (initialRate >= 6.5 || passRate >= 45) return '3_4'
+  return '4_6'
+}
+
 // 2025~2026학년도 공식 발표 실측 데이터 및 4~6등급 공교육 특화 벤치마크
 export const DEFAULT_CSAT_PASS_RATE_BENCHMARK = [
   // -------------------------------------------------------------
-  // [1] ★ 4~6등급: 기적의 역전존 & 거점 국립대 & 충족률 0.0% 전원합격
+  // [1] ★ 4~6등급: 기적의 역전존 & 거점 국립대 (실제 4~6등급 진학 가능 대학)
   // -------------------------------------------------------------
-  {
-    univName: '동국대(WISE)',
-    admissionType: '학생부교과(기회균형I 지역인재)',
-    targetGradeBand: '4_6',
-    dept: '한의예과',
-    minScoreText: '3개 영역 등급 합 5 이내',
-    initialRate: 11.0,
-    passRate: 0.0,
-    fillRate: 100,
-    note: '★ [충족률 0.0%] 2025 지원자 전원 최저 미충족 탈락! 최저만 맞췄다면 100% 무조건 전원 합격'
-  },
-  {
-    univName: '가톨릭관동대',
-    admissionType: '학생부교과(지역기회균형)',
-    targetGradeBand: '4_6',
-    dept: '의학과(의예과)',
-    minScoreText: '3개 영역 등급 합 5 이내',
-    initialRate: 14.0,
-    passRate: 0.0,
-    fillRate: 100,
-    note: '★ [충족률 0.0%] 2025 지원자 전원 최저 미충족 탈락! 최저 충족자 전원 합격 실증'
-  },
   {
     univName: '강원대학교',
     admissionType: '학생부종합(일반/지역인재)',
@@ -2195,6 +2221,28 @@ export const DEFAULT_CSAT_PASS_RATE_BENCHMARK = [
   // -------------------------------------------------------------
   // [3] 1~2등급: 인서울 최상위 & 의약학계열 승부 (2025 공식 실측)
   // -------------------------------------------------------------
+  {
+    univName: '동국대(WISE)',
+    admissionType: '학생부교과(기회균형I 지역인재)',
+    targetGradeBand: '1_2',
+    dept: '한의예과',
+    minScoreText: '3개 영역 등급 합 5 이내',
+    initialRate: 11.0,
+    passRate: 0.0,
+    fillRate: 100,
+    note: '★ 2025 지원자 전원 최저 미충족 탈락! 최저만 맞췄다면 합격 가능한 의약학 특수 사례'
+  },
+  {
+    univName: '가톨릭관동대',
+    admissionType: '학생부교과(지역기회균형)',
+    targetGradeBand: '1_2',
+    dept: '의학과(의예과)',
+    minScoreText: '3개 영역 등급 합 5 이내',
+    initialRate: 14.0,
+    passRate: 0.0,
+    fillRate: 100,
+    note: '★ 2025 지원자 전원 최저 미충족 탈락! 최저 충족자 전원 합격 실증 의약학 특수 사례'
+  },
   {
     univName: '고려대학교',
     admissionType: '학생부교과(학교추천)',
@@ -2522,19 +2570,15 @@ export async function fetchCsatPassRateTable(sheetId = null, forceRefresh = fals
       const passRate = parseNum(row[colIdx.passRate !== -1 ? colIdx.passRate : 6], 40.0)
       const fillRate = parseNum(row[colIdx.fillRate !== -1 ? colIdx.fillRate : 7], 120.0)
 
-      // 등급대 자동 분류 판정
-      let targetGradeBand = '4_6'
-      if (initialRate >= 9.0 || passRate >= 55) {
-        targetGradeBand = '1_2'
-      } else if (initialRate >= 7.5 || passRate >= 45) {
-        targetGradeBand = '3_4'
-      }
+      const admissionType = String(row[colIdx.admissionType !== -1 ? colIdx.admissionType : 2] || '학생부교과').trim()
+      const dept = String(row[colIdx.dept !== -1 ? colIdx.dept : 3] || '전체').trim()
+      const targetGradeBand = determineGradeBand(univName, dept, admissionType, initialRate, passRate)
 
       parsedSheetRecords.push({
         univName,
-        admissionType: String(row[colIdx.admissionType !== -1 ? colIdx.admissionType : 2] || '학생부교과').trim(),
+        admissionType,
         targetGradeBand,
-        dept: String(row[colIdx.dept !== -1 ? colIdx.dept : 3] || '전체').trim(),
+        dept,
         minScoreText: String(row[colIdx.minScoreText !== -1 ? colIdx.minScoreText : 4] || '수능최저 반영').trim(),
         initialRate,
         passRate,

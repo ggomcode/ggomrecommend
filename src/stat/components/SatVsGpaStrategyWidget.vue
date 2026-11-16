@@ -61,7 +61,7 @@
           <span>🎯</span>
           <span>내신 vs {{ examTerm }} 성적 비교 & 사탐런 분석</span>
           <span class="text-indigo-300">|</span>
-          <span class="text-slate-500 font-semibold">전국연합/모의평가 정밀 분석</span>
+          <span class="text-slate-500 font-semibold">고3 연합/모의평가 정밀 분석</span>
         </div>
         <h3 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight m-0">
           내신 vs {{ examTerm }} 성적 비교 분석 & 사탐런(탐구) 응시 현황
@@ -1750,8 +1750,8 @@
                     <span v-else-if="item.targetGradeBand === 'essay'" class="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-[10px] font-black">✍️ 논술 1/11토막</span>
                     <span v-else class="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[10px] font-bold">👑 1~2등급 승부</span>
                     
-                    <span v-if="item.isAllPass" class="px-2 py-0.5 rounded-md bg-amber-400 text-amber-950 text-[10px] font-black animate-pulse">
-                      ⚡ 전원합격권
+                    <span v-if="item.isAllPass" :class="['px-2 py-0.5 rounded-md text-[10px] font-black', item.targetGradeBand === '1_2' ? 'bg-indigo-100 text-indigo-900 border border-indigo-200' : 'bg-amber-400 text-amber-950 animate-pulse']">
+                      {{ item.targetGradeBand === '1_2' ? '⚡ 최저통과 시 합격유력' : '⚡ 실질 미달권' }}
                     </span>
                   </div>
                   <span class="text-[10px] font-mono font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
@@ -1999,6 +1999,9 @@
                   <span v-else-if="selectedModalItem.targetGradeBand === '3_4'" class="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-xs font-bold">🏛️ 3~4등급 안정권</span>
                   <span v-else-if="selectedModalItem.targetGradeBand === 'essay'" class="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs font-black">✍️ 논술 실질경쟁률 급락</span>
                   <span v-else class="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-xs font-bold">👑 1~2등급 최상위</span>
+                  <span v-if="selectedModalItem.isAllPass" :class="['px-2 py-0.5 rounded-md text-xs font-black', selectedModalItem.targetGradeBand === '1_2' ? 'bg-indigo-100 text-indigo-900 border border-indigo-200' : 'bg-amber-400 text-amber-950 animate-pulse']">
+                    {{ selectedModalItem.targetGradeBand === '1_2' ? '⚡ 최저 충족 시 합격 유력' : '⚡ 실질 지원자 전원 합격권' }}
+                  </span>
                   <span class="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
                     실질 경쟁률 {{ selectedModalItem.dropTimes }}배 완화
                   </span>

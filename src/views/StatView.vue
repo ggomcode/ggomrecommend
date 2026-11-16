@@ -371,7 +371,7 @@ const menuGroups = computed(() => [
     title: '대입 현황 & 분석',
     items: [
       { id: 'university', name: '대입 통계', iconComponent: Building2 },
-      { id: 'overview', name: '전국연합/모평 분석', iconComponent: BarChart3 },
+      { id: 'overview', name: '고3 연합/모평 분석', iconComponent: BarChart3 },
       { id: 'multiYear', name: '5개년 추이 분석', iconComponent: TrendingUp },
       { id: 'scatter', name: '대입 합불 산점도', iconComponent: ChartScatter, badge: 'NEW' },
       { id: 'grade', name: '성적대별 전형 경향', iconComponent: Target },
