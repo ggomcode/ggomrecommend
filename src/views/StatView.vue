@@ -341,7 +341,7 @@ const {
 } = useStatData()
 
 const collapsed = ref(false)
-const currentTab = ref('overview')
+const currentTab = ref('university')
 
 
 // 관리자 설정에서 '농어촌 및 기회균형 전형 구글 시트 ID' 등록 여부 확인 (미등록 시 메뉴 숨김)
@@ -351,7 +351,7 @@ const hasRuralSheet = ref(!!(initialRuralSheetId && initialRuralSheetId.trim()))
 async function checkRuralSheetConfig() {
   hasRuralSheet.value = await hasRuralSheetConfigured()
   if (!hasRuralSheet.value && currentTab.value === 'ruralStat') {
-    currentTab.value = 'overview'
+    currentTab.value = 'university'
   }
 }
 
@@ -370,8 +370,8 @@ const menuGroups = computed(() => [
     emoji: '📊',
     title: '대입 현황 & 분석',
     items: [
-      { id: 'overview', name: '대입 지원 결과', iconComponent: BarChart3 },
-      { id: 'university', name: '대입 결과', iconComponent: Building2 },
+      { id: 'university', name: '대입 통계', iconComponent: Building2 },
+      { id: 'overview', name: '전국연합/모평 분석', iconComponent: BarChart3 },
       { id: 'multiYear', name: '5개년 추이 분석', iconComponent: TrendingUp },
       { id: 'scatter', name: '대입 합불 산점도', iconComponent: ChartScatter, badge: 'NEW' },
       { id: 'grade', name: '성적대별 전형 경향', iconComponent: Target },
@@ -439,7 +439,7 @@ const activeTabComponent = computed(() => {
     case 'grade1Analysis': return LowerGradeMockAnalysisTab
     case 'data': return DataExplorerTab
     case 'report': return PrintReportTab
-    default: return OverviewTab
+    default: return UniversityTab
   }
 })
 

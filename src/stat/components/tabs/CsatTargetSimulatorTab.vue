@@ -513,6 +513,9 @@
         </button>
       </div>
     </div>
+
+    <!-- 📉 3. 수능최저 충족 실질 경쟁률 분석 위젯 (단독 섹션) -->
+    <SatVsGpaStrategyWidget onlySection="minScoreMagic" />
   </div>
 </template>
 
@@ -528,6 +531,7 @@ import {
 } from '../../composables/useStatData'
 import { getCsatMinScoreFilterOptions } from '../../../api/statApi'
 import { analyzeCsatTargetRequirement } from '../../utils/csatMinScoreEvaluator'
+import SatVsGpaStrategyWidget from '../SatVsGpaStrategyWidget.vue'
 import {
   Sparkles,
   RefreshCw,

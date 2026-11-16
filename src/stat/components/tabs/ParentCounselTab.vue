@@ -681,6 +681,9 @@
         설정한 내신 등급({{ targetGpa.toFixed(2) }}등급) ±0.2 범위 내의 실제 지원 데이터가 없습니다.
       </div>
     </div>
+
+    <!-- 💡 4. 대입 5대 핵심 전략 위젯 (단독 섹션) -->
+    <SatVsGpaStrategyWidget onlySection="strategyCards" />
   </div>
 </template>
 
@@ -689,6 +692,7 @@ import { ref, computed } from 'vue'
 import { useData, maskName, formatGrade, studentMockExamsMap, loadMockExamData } from '../../composables/useStatData'
 import { schoolName } from '../../../utils/schoolConfig'
 import { onMounted } from 'vue'
+import SatVsGpaStrategyWidget from '../SatVsGpaStrategyWidget.vue'
 
 const { applications } = useData()
 

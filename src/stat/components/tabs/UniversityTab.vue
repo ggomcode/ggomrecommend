@@ -1,5 +1,8 @@
 <template>
   <div class="space-y-6">
+    <!-- 📊 상단 7대 대입 지원 핵심 KPI 카드 (3학년 총원, 지원자, 접수건수, 수도권, 학추, 농어촌, 주요대) -->
+    <StatOverviewKpiGrid />
+
     <!-- 🏛️ 1단계: 주요 대학 및 권역별 합격 인원 단순 표 (실적 집계 & 인쇄 최적화) -->
     <UnivPassCountTableWidget />
 
@@ -195,6 +198,7 @@
 import { ref, computed } from 'vue'
 import { Bar } from 'vue-chartjs'
 import { useData, formatGrade } from '../../composables/useStatData'
+import StatOverviewKpiGrid from '../StatOverviewKpiGrid.vue'
 import UnivDetailModal from '../StatUnivModal.vue'
 import UnivPassCountTableWidget from '../UnivPassCountTableWidget.vue'
 import UnivGroupPassRateWidget from '../UnivGroupPassRateWidget.vue'
@@ -207,9 +211,10 @@ const univSearch = ref('')
 const sortBy = ref('count')
 const selectedUniv = ref(null)
 
-function handleSelectRankedUniv(rawApp) {
-  if (!rawApp) return
-  const found = aggregatedUnivs.value.find(u => u.name === rawApp.univName)
+function handleSelectRankedUniv(payload) {
+  if (!payload) return
+  const targetName = typeof payload === 'string' ? payload : (payload.univName || payload.name)
+  const found = aggregatedUnivs.value.find(u => u.name === targetName)
   if (found) {
     selectedUniv.value = found
   }

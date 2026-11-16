@@ -1,7 +1,97 @@
 <template>
   <div ref="widgetRootRef" class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-sm transition-all duration-300">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+    <!-- Header 1: When only minScoreMagic is active (수능최저 & 목표진단 메뉴) -->
+    <div v-if="onlySection === 'minScoreMagic'" class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-extrabold bg-blue-50 text-blue-700 border border-blue-200/80 mb-2">
+          <span>📉</span>
+          <span>수능최저 충족 실질 경쟁률 분석</span>
+          <span class="text-blue-300">|</span>
+          <span class="text-slate-500 font-semibold">포곡고 실측 통계</span>
+        </div>
+        <h3 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight m-0">
+          수능최저 충족 시 실질 경쟁률 급락 분석 (최저의 마법)
+        </h3>
+        <p class="text-xs text-slate-500 m-0 mt-1 leading-relaxed">
+          우리 학교 수시 지원 실측 통계 기반: 최초 외형 경쟁률 대비 수능최저 충족 시 실질 경쟁률 및 충원율 반영 체감 경쟁률을 분석합니다.
+        </p>
+      </div>
+
+      <!-- Quick KPI Badges -->
+      <div class="flex items-center gap-2 shrink-0">
+        <div class="bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl text-right" :title="`우리학교 수능최저 지원 ${schoolMinScoreStats.totalMinApps}건 실측 통계`">
+          <span class="text-[10px] text-blue-800 block font-semibold">최저 실질경쟁률</span>
+          <span class="text-sm font-black text-blue-700 font-mono">
+            <template v-if="isLoadingYearData && (!schoolMinScoreStats.totalMinApps || schoolMinScoreStats.totalMinApps === 0)">
+              <span class="text-xs text-blue-600 font-medium">분석 중...</span>
+            </template>
+            <template v-else-if="schoolMinScoreStats.totalMinApps > 0 && schoolMinScoreStats.avgInitialRate !== '-'">
+              {{ schoolMinScoreStats.avgInitialRate }}:1 ➔ {{ schoolMinScoreStats.avgRealRate }}:1
+            </template>
+            <template v-else>
+              -
+            </template>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header 2: When only strategyCards is active (학부모 맞춤 상담 메뉴) -->
+    <div v-else-if="onlySection === 'strategyCards'" class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-extrabold bg-amber-50 text-amber-800 border border-amber-200/80 mb-2">
+          <span>💡</span>
+          <span>{{ academicYearLabel }}학년도 5대 대입 핵심 전략</span>
+          <span class="text-amber-300">|</span>
+          <span class="text-slate-500 font-semibold">학부모 & 수험생 필승 가이드</span>
+        </div>
+        <h3 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight m-0">
+          {{ academicYearLabel }}학년도 대입 성공을 위한 5대 핵심 전략
+        </h3>
+        <p class="text-xs text-slate-500 m-0 mt-1 leading-relaxed">
+          포곡고 실제 입결 및 수시 지원 빅데이터를 심층 분석하여 도출한 학부모 및 수험생 필수 5대 대입 전략 카드입니다.
+        </p>
+      </div>
+    </div>
+
+    <!-- Header 3: When visibleSections is ['radar', 'satamRun'] (전국연합/모평 분석 메뉴) -->
+    <div v-else-if="visibleSections && visibleSections.length === 2 && visibleSections.includes('radar')" class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200/80 mb-2">
+          <span>🎯</span>
+          <span>내신 vs {{ examTerm }} 성적 비교 & 사탐런 분석</span>
+          <span class="text-indigo-300">|</span>
+          <span class="text-slate-500 font-semibold">전국연합/모의평가 정밀 분석</span>
+        </div>
+        <h3 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight m-0">
+          내신 vs {{ examTerm }} 성적 비교 분석 & 사탐런(탐구) 응시 현황
+        </h3>
+        <p class="text-xs text-slate-500 m-0 mt-1 leading-relaxed">
+          내신 대비 {{ examTerm }} 과목별 등급 격차(5개 영역 방사형), 수시 지원 분포 및 사탐런 현황을 종합 분석합니다.
+        </p>
+      </div>
+
+      <!-- Quick KPI Badges -->
+      <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
+        <div class="bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl text-right">
+          <span class="text-[10px] text-amber-800 block font-semibold">사탐런 전향율</span>
+          <span class="text-sm font-black text-amber-700 font-mono">
+            <template v-if="isLoadingMockExams && (!mockStats || effectiveSatamStats.naturalCohortCount === 0)">
+              <span class="text-xs text-amber-600 font-medium">분석 중...</span>
+            </template>
+            <template v-else-if="effectiveSatamStats.naturalCohortCount > 0">
+              {{ effectiveSatamStats.totalRunRate }}% <span class="text-[11px] font-medium text-amber-600">({{ effectiveSatamStats.totalRunCount }}명)</span>
+            </template>
+            <template v-else>
+              -
+            </template>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header 4: Default Full Header -->
+    <div v-else class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
       <div>
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200/80 mb-2">
           <span>🎯</span>
@@ -50,8 +140,8 @@
       </div>
     </div>
 
-    <!-- Modern Integrated Segmented Control (세련된 세그먼트 탭 점프 내비게이션 바) -->
-    <div ref="stickyNavRef" class="sticky top-0 z-30 bg-white/95 backdrop-blur-md py-3 -mx-6 sm:-mx-7 px-6 sm:px-7 border-b border-slate-100 shadow-2xs">
+    <!-- Modern Integrated Segmented Control (세련된 세그먼트 탭 점프 내비게이션 바: 단독 섹션 표시 시 숨김) -->
+    <div v-if="!onlySection && subTabs.length > 1" ref="stickyNavRef" class="sticky top-0 z-30 bg-white/95 backdrop-blur-md py-3 -mx-6 sm:-mx-7 px-6 sm:px-7 border-b border-slate-100 shadow-2xs">
       <div class="flex items-center justify-between gap-2 overflow-x-auto">
         <div class="inline-flex p-1 rounded-2xl bg-slate-100/90 border border-slate-200/80 shadow-2xs gap-1 max-w-full">
           <button
@@ -84,7 +174,7 @@
     </div>
 
     <!-- Content 1: 내신 vs 수능 레이더 성적 비교 & 선택과목 분석 & 4대 기본 현황 -->
-    <div id="sec-radar" class="mt-4 pt-4 space-y-6 scroll-mt-24">
+    <div v-if="isSectionVisible('radar')" id="sec-radar" class="mt-4 pt-4 space-y-6 scroll-mt-24">
       <!-- Section 1 Header Badge -->
       <div class="flex items-center justify-between pb-1">
         <div class="flex items-center gap-2">
@@ -686,7 +776,7 @@
     </div>
 
     <!-- Content 2: 사탐런 & 사회/과학탐구 응시 상세 현황 -->
-    <div id="sec-satamRun" class="mt-14 pt-8 border-t-2 border-slate-200/90 space-y-6 scroll-mt-24">
+    <div v-if="isSectionVisible('satamRun')" id="sec-satamRun" :class="['space-y-6 scroll-mt-24', isSectionVisible('radar') ? 'mt-14 pt-8 border-t-2 border-slate-200/90' : 'mt-4 pt-4']">
       <!-- Section 2 Header Badge -->
       <div class="flex items-center justify-between pb-1">
         <div class="flex items-center gap-2">
@@ -1299,7 +1389,7 @@
     </div>
 
     <!-- Content 3: 수능 최저 충족 실질 경쟁률 분석 & 공교육 역전 전략 -->
-    <div id="sec-minScoreMagic" class="mt-14 pt-8 border-t-2 border-slate-200/90 space-y-6 scroll-mt-24">
+    <div v-if="isSectionVisible('minScoreMagic')" id="sec-minScoreMagic" :class="['space-y-6 scroll-mt-24', (isSectionVisible('radar') || isSectionVisible('satamRun')) ? 'mt-14 pt-8 border-t-2 border-slate-200/90' : 'mt-4 pt-4']">
       <!-- Section 3 Header Badge -->
       <div class="flex items-center justify-between pb-1">
         <div class="flex items-center gap-2">
@@ -2260,7 +2350,7 @@
     </div>
 
     <!-- Content 4: 2027학년도 5대 대입 핵심 전략 카드 -->
-    <div id="sec-strategyCards" class="mt-14 pt-8 border-t-2 border-slate-200/90 space-y-4 scroll-mt-24">
+    <div v-if="isSectionVisible('strategyCards')" id="sec-strategyCards" :class="['space-y-4 scroll-mt-24', (isSectionVisible('radar') || isSectionVisible('satamRun') || isSectionVisible('minScoreMagic')) ? 'mt-14 pt-8 border-t-2 border-slate-200/90' : 'mt-4 pt-4']">
       <!-- Section 4 Header Badge -->
       <div class="flex items-center justify-between pb-1">
         <div class="flex items-center gap-2">
@@ -2371,9 +2461,30 @@ ChartJS.register(
   Legend
 )
 
+const props = defineProps({
+  onlySection: {
+    type: String,
+    default: null // null | 'radar' | 'satamRun' | 'minScoreMagic' | 'strategyCards'
+  },
+  visibleSections: {
+    type: Array,
+    default: null // e.g. ['radar', 'satamRun']
+  }
+})
+
+function isSectionVisible(sectionId) {
+  if (props.onlySection) {
+    return props.onlySection === sectionId
+  }
+  if (props.visibleSections && Array.isArray(props.visibleSections)) {
+    return props.visibleSections.includes(sectionId)
+  }
+  return true
+}
+
 const widgetRootRef = ref(null)
 const stickyNavRef = ref(null)
-const activeSubTab = ref('radar')
+const activeSubTab = ref(props.onlySection || (props.visibleSections && props.visibleSections[0]) || 'radar')
 let isClickScrolling = false
 let clickScrollTimeout = null
 let scrollContainerEl = null
@@ -2408,11 +2519,15 @@ function handleUserScrollIntent() {
 
 // 스크롤 시 현재 뷰포트에 위치한 섹션 버튼 자동 동기화 (Scroll Spy)
 function updateActiveSection() {
+  if (props.onlySection) return
   if (isClickScrolling) return
 
-  const sectionIds = ['radar', 'satamRun', 'minScoreMagic', 'strategyCards']
+  const sectionIds = subTabs.value.map(t => t.id)
+  if (sectionIds.length === 0) return
 
-  // 1. 실제 부모 스크롤 컨테이너 바닥 도달 판정 (4번 섹션 바닥 도달 시 우선 활성화)
+  const lastId = sectionIds[sectionIds.length - 1]
+
+  // 1. 실제 부모 스크롤 컨테이너 바닥 도달 판정 (마지막 섹션 바닥 도달 시 우선 활성화)
   const scrollContainer = widgetRootRef.value?.closest('.overflow-y-auto') || (document.scrollingElement || document.documentElement)
   if (scrollContainer && scrollContainer !== document.documentElement) {
     const isScrollable = scrollContainer.scrollHeight > scrollContainer.clientHeight + 80
@@ -2420,8 +2535,8 @@ function updateActiveSection() {
       (scrollContainer.scrollTop > 100) && 
       (scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 60)
     if (isAtBottom) {
-      if (activeSubTab.value !== 'strategyCards') {
-        activeSubTab.value = 'strategyCards'
+      if (activeSubTab.value !== lastId) {
+        activeSubTab.value = lastId
       }
       return
     }
@@ -2434,8 +2549,8 @@ function updateActiveSection() {
     targetLine = navRect.bottom + 70
   }
 
-  // 3. 섹션 판정: 기준선(targetLine)보다 위쪽에 위치한 가장 마지막 섹션 선택 (기본값: 'radar')
-  let matchedId = 'radar'
+  // 3. 섹션 판정: 기준선(targetLine)보다 위쪽에 위치한 가장 마지막 섹션 선택
+  let matchedId = sectionIds[0] || 'radar'
   for (const id of sectionIds) {
     const el = document.getElementById(`sec-${id}`)
     if (el) {
@@ -2832,12 +2947,23 @@ const satamAnalysisBadgeTitle = computed(() => {
 })
 
 // Sub Tabs (숫자 기반 명확한 점프 탭)
-const subTabs = computed(() => [
-  { id: 'radar', num: '1', label: `과목별 내신 vs ${examTerm.value} 등급 비교` },
-  { id: 'satamRun', num: '2', label: '사탐런 & 탐구 응시 분석' },
-  { id: 'minScoreMagic', num: '3', label: '수능최저 충족 실질 경쟁률' },
-  { id: 'strategyCards', num: '4', label: `${academicYearLabel.value} 대입 5대 핵심 전략` }
-])
+const subTabs = computed(() => {
+  const allTabs = [
+    { id: 'radar', num: '1', label: `과목별 내신 vs ${examTerm.value} 등급 비교` },
+    { id: 'satamRun', num: '2', label: '사탐런 & 탐구 응시 분석' },
+    { id: 'minScoreMagic', num: '3', label: '수능최저 충족 실질 경쟁률' },
+    { id: 'strategyCards', num: '4', label: `${academicYearLabel.value} 대입 5대 핵심 전략` }
+  ]
+  if (props.onlySection) {
+    return allTabs.filter(t => t.id === props.onlySection)
+  }
+  if (props.visibleSections && Array.isArray(props.visibleSections)) {
+    return allTabs
+      .filter(t => props.visibleSections.includes(t.id))
+      .map((t, idx) => ({ ...t, num: String(idx + 1) }))
+  }
+  return allTabs
+})
 
 const availableExamMonthOptions = computed(() => {
   const records = highSchoolMockRecords.value
