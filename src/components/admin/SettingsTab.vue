@@ -710,7 +710,7 @@
               </button>
               <select
                 v-model="selectedGeminiModel"
-                class="text-xs font-semibold bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded-lg px-2.5 py-2 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer"
+                class="text-xs font-semibold bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded-lg pl-3 pr-8 py-2 min-w-[270px] text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer shadow-2xs"
                 title="사용할 Gemini AI 모델을 선택합니다."
               >
                 <option v-for="m in geminiAvailableModels" :key="m.id" :value="m.id">
@@ -774,14 +774,14 @@
               <select
                 v-model="aiTargetAcademicYear"
                 @change="handleAiTargetYearChange"
-                class="text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+                class="text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg pl-3 pr-8 py-2 min-w-[150px] text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400 cursor-pointer shadow-2xs"
               >
                 <option v-for="yr in aiAvailableYears" :key="yr" :value="yr">
                   {{ yr }}학년도 대입
                 </option>
               </select>
               <span class="text-[11px] text-slate-400 font-mono">
-                (선택 모델: <code>{{ selectedGeminiModel || 'gemini-2.0-flash' }}</code>)
+                (선택 모델: <code>{{ selectedGeminiModel || 'gemini-2.5-flash' }}</code>)
               </span>
             </div>
 
@@ -808,7 +808,7 @@
                 <span>{{ aiTargetAcademicYear }}학년도 AI 종합 총평 미리보기</span>
               </span>
               <span class="text-[10px] text-slate-400 font-mono">
-                모델: {{ comprehensiveAiReportState.model || selectedGeminiModel || 'gemini-2.0-flash' }}
+                모델: {{ comprehensiveAiReportState.model || selectedGeminiModel || 'gemini-2.5-flash' }}
               </span>
             </div>
             <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed m-0 bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200/80 dark:border-slate-700">
@@ -1353,10 +1353,10 @@ const geminiTestLoading = ref(false)
 const geminiTestResult = ref(null)
 const showGeminiKey = ref(false)
 
-const selectedGeminiModel = ref('gemini-2.0-flash')
+const selectedGeminiModel = ref('gemini-2.5-flash')
 const geminiAvailableModels = ref([
-  { role: 'prev_flash', isDefault: true, id: 'gemini-2.0-flash', version: '2.0', label: 'Gemini 2.0 Flash (직전 최신 / 기본 권장)' },
-  { role: 'latest_flash', isDefault: false, id: 'gemini-2.5-flash', version: '2.5', label: 'Gemini 2.5 Flash (최신)' },
+  { role: 'latest_flash', isDefault: true, id: 'gemini-2.5-flash', version: '2.5', label: 'Gemini 2.5 Flash (최신 / 기본 권장)' },
+  { role: 'prev_flash', isDefault: false, id: 'gemini-2.0-flash', version: '2.0', label: 'Gemini 2.0 Flash (직전 최신)' },
   { role: 'latest_lite', isDefault: false, id: 'gemini-2.0-flash-lite', version: '2.0', label: 'Gemini 2.0 Flash-Lite (최신 경량)' }
 ])
 const isFetchingModels = ref(false)
@@ -2584,15 +2584,17 @@ async function handleFetchGeminiModels(isAutoFallback = false) {
     const res = await fetchAvailableGeminiModels(key)
     if (res && res.models && res.models.length > 0) {
       geminiAvailableModels.value = res.models
-      // 현재 선택된 모델이 검색 목록에 없으면 기본 모델(직전 최신 flash)로 자동 설정
-      const exists = res.models.some(m => m.id === selectedGeminiModel.value)
-      if (!exists && res.defaultModel) {
-        selectedGeminiModel.value = res.defaultModel
+      // 사용자가 직접 '모델선택'을 눌렀거나, 현재 선택된 모델이 검색 목록에 없으면 최신 기본 권장 모델로 자동 설정
+      if (!isAutoFallback || !res.models.some(m => m.id === selectedGeminiModel.value)) {
+        if (res.defaultModel) {
+          selectedGeminiModel.value = res.defaultModel
+        }
       }
       if (!isAutoFallback) {
+        const defaultModelObj = res.models.find(m => m.id === res.defaultModel)
         geminiTestResult.value = {
           success: true,
-          message: `사용 가능한 Gemini 모델 ${res.models.length}개를 검색했습니다. (기본 권장: ${selectedGeminiModel.value})`
+          message: `사용 가능한 Gemini 모델 ${res.models.length}개를 검색했습니다. (기본 권장: ${defaultModelObj?.label || selectedGeminiModel.value})`
         }
       }
     }

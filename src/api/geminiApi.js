@@ -4,9 +4,9 @@ export const GEMINI_CONFIG_KEY = 'gemini_api_key'
 export const GEMINI_LOCAL_KEY = 'pcm_gemini_api_key'
 export const GEMINI_MODEL_CONFIG_KEY = 'gemini_selected_model'
 export const GEMINI_MODEL_LOCAL_KEY = 'pcm_gemini_selected_model'
-export const GEMINI_DEFAULT_MODEL = 'gemini-2.0-flash'
-export const GEMINI_PRIMARY_MODEL = 'gemini-2.0-flash'
-export const GEMINI_FALLBACK_MODEL = 'gemini-2.5-flash'
+export const GEMINI_DEFAULT_MODEL = 'gemini-2.5-flash'
+export const GEMINI_PRIMARY_MODEL = 'gemini-2.5-flash'
+export const GEMINI_FALLBACK_MODEL = 'gemini-2.0-flash'
 export const AI_GRADE_REPORT_PREFIX = 'ai_report_grade_comparison_'
 export const COMPREHENSIVE_AI_REPORT_PREFIX = 'ai_report_stat_comprehensive_'
 export const STUDENT_COUNSEL_PREFIX = 'ai_counsel_student_'
@@ -66,10 +66,34 @@ export async function saveSelectedGeminiModel(modelName) {
 }
 
 /**
- * 0-2. Gemini API의 ModelService.ListModels 응답에서 요구조건 3대 모델 필터링
- * 1) 가장 최신버전 직전의 flash버전 (Default, 기본 권장)
- * 2) 가장 최신버전의 flash버전
- * 3) lite중에서 가장 최신버전의 flash-lite버전
+ * 최신 버전 vs 직전 버전 간의 토큰 소비 배율(추정) 산출
+ * - 기본적으로 동일 Flash 제품군은 동일 프롬프트/JSON 규격에 대해 거의 1.0배 (동일 토큰)
+ * - Thinking/Reasoning 등 사고 토큰이 대량 발생하는 특수 모델은 소비 배율을 반영
+ */
+export function estimateTokenConsumptionRatio(latest, prev) {
+  if (!latest || !prev) return 1.0
+
+  // 1. Thinking / Reasoning / CoT 모델 감지 시 (사고 토큰으로 인해 33% 이상 추가 소비 발생)
+  const isLatestThinking = /thinking|reasoning|cot/i.test(latest.id || '')
+  const isPrevThinking = /thinking|reasoning|cot/i.test(prev.id || '')
+  if (isLatestThinking && !isPrevThinking) {
+    return 1.6 // 사고 토큰으로 인해 약 60% 이상 추가 소비
+  }
+
+  // 2. 표준 Flash 세대 간 업그레이드는 동일 프롬프트/JSON 규격에서 토큰 소비량이 동일 (1.0배)
+  return 1.0
+}
+
+/**
+ * 0-2. Gemini API의 ModelService.ListModels 응답에서 요구조건 3대 모델 필터링 및 동적 디폴트 판정
+ * 
+ * [동적 기본 권장(Default) 판정 규칙]
+ * - 최신 버전의 토큰 사용량이 직전 버전보다 33% 이상 높으면 -> 직전 버전(prevFlash)을 기본 권장으로 지정
+ * - 토큰 사용량이 같거나 차이가 33% 이하이면 -> 최신 버전(latestFlash)을 기본 권장으로 지정
+ * 
+ * 1) 최신 Flash 버전
+ * 2) 직전 Flash 버전
+ * 3) 최신 Flash-Lite 버전
  */
 export function parseGeminiModelList(modelsList) {
   const contentModels = (modelsList || []).filter(m => {
@@ -144,23 +168,34 @@ export function parseGeminiModelList(modelsList) {
   // 3. lite중에서 가장 최신버전의 flash-lite버전
   const latestLite = uniqueLiteByVersion[0] || null
 
+  // 4. 최신 vs 직전 버전 동적 디폴트 판정 알고리즘:
+  // - 최신 버전의 토큰 소비량이 직전 버전보다 33% 이상 높으면 -> 직전 버전(prevFlash)을 디폴트로 선택
+  // - 토큰 소비량이 같거나 33% 미만 차이면 -> 최신 버전(latestFlash)을 디폴트로 선택
+  const tokenRatio = estimateTokenConsumptionRatio(latestFlash, prevFlash)
+  const isLatestOver33Percent = tokenRatio >= 1.33
+  const defaultIsPrev = isLatestOver33Percent && prevFlash && prevFlash.id !== latestFlash?.id
+
   const results = []
-  if (prevFlash) {
-    results.push({
-      role: 'prev_flash',
-      isDefault: true,
-      id: prevFlash.id,
-      version: prevFlash.versionStr,
-      label: `Gemini ${prevFlash.versionStr} Flash (직전 최신 / 기본 권장)`
-    })
-  }
-  if (latestFlash && (!prevFlash || latestFlash.id !== prevFlash.id)) {
+  if (latestFlash) {
     results.push({
       role: 'latest_flash',
-      isDefault: false,
+      isDefault: !defaultIsPrev,
       id: latestFlash.id,
       version: latestFlash.versionStr,
-      label: `Gemini ${latestFlash.versionStr} Flash (최신)`
+      label: !defaultIsPrev
+        ? `Gemini ${latestFlash.versionStr} Flash (최신 / 기본 권장)`
+        : `Gemini ${latestFlash.versionStr} Flash (최신)`
+    })
+  }
+  if (prevFlash && (!latestFlash || prevFlash.id !== latestFlash.id)) {
+    results.push({
+      role: 'prev_flash',
+      isDefault: defaultIsPrev,
+      id: prevFlash.id,
+      version: prevFlash.versionStr,
+      label: defaultIsPrev
+        ? `Gemini ${prevFlash.versionStr} Flash (직전 최신 / 기본 권장)`
+        : `Gemini ${prevFlash.versionStr} Flash (직전 최신)`
     })
   }
   if (latestLite) {
@@ -176,16 +211,17 @@ export function parseGeminiModelList(modelsList) {
   // 검색 결과가 비었을 때를 위한 안전 기본값
   if (results.length === 0) {
     results.push(
-      { role: 'prev_flash', isDefault: true, id: 'gemini-2.0-flash', version: '2.0', label: 'Gemini 2.0 Flash (직전 최신 / 기본 권장)' },
-      { role: 'latest_flash', isDefault: false, id: 'gemini-2.5-flash', version: '2.5', label: 'Gemini 2.5 Flash (최신)' },
+      { role: 'latest_flash', isDefault: true, id: 'gemini-2.5-flash', version: '2.5', label: 'Gemini 2.5 Flash (최신 / 기본 권장)' },
+      { role: 'prev_flash', isDefault: false, id: 'gemini-2.0-flash', version: '2.0', label: 'Gemini 2.0 Flash (직전 최신)' },
       { role: 'latest_lite', isDefault: false, id: 'gemini-2.0-flash-lite', version: '2.0', label: 'Gemini 2.0 Flash-Lite (최신 경량)' }
     )
   }
 
-  const defaultId = prevFlash ? prevFlash.id : results[0].id
+  const defaultId = defaultIsPrev ? prevFlash.id : (latestFlash ? latestFlash.id : results[0].id)
   return {
     models: results,
-    defaultModel: defaultId
+    defaultModel: defaultId,
+    tokenRatio
   }
 }
 
@@ -285,18 +321,27 @@ export async function testGeminiApiKey(apiKey, modelName) {
   const testPayload = {
     contents: [
       {
-        parts: [{ text: 'Respond with just "OK" if you can read this.' }]
+        parts: [{ text: 'OK' }]
       }
-    ]
+    ],
+    generationConfig: {
+      maxOutputTokens: 5,
+      temperature: 0.1
+    }
   }
 
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 12000)
+
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(testPayload)
+      body: JSON.stringify(testPayload),
+      signal: controller.signal
     })
+    clearTimeout(timeoutId)
 
     if (res.ok) {
       // 연결 테스트 성공 시 선택된 모델을 기본값으로 영구 저장
@@ -307,7 +352,8 @@ export async function testGeminiApiKey(apiKey, modelName) {
     const errJson = await res.json().catch(() => ({}))
     return { success: false, error: errJson?.error?.message || `HTTP ${res.status}`, model: targetModel }
   } catch (err) {
-    return { success: false, error: err.message || '네트워크 통신 오류', model: targetModel }
+    const errorMsg = err.name === 'AbortError' ? 'Google API 응답 시간 초과 (12초)' : (err.message || '네트워크 통신 오류')
+    return { success: false, error: errorMsg, model: targetModel }
   }
 }
 
