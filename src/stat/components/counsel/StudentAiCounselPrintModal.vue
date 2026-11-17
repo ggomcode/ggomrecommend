@@ -236,10 +236,10 @@
             <span>📝</span>
             <span>담임·진학지도 교사 상담 관찰 메모 및 향후 지도 계획</span>
           </div>
-          <div v-if="teacherMemo && teacherMemo.trim()" class="text-slate-800 text-[11.5px] leading-relaxed whitespace-pre-line min-h-[48px] bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+          <div v-if="teacherMemo && teacherMemo.trim()" class="text-slate-800 text-[11.5px] leading-relaxed whitespace-pre-line min-h-12 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
             {{ teacherMemo }}
           </div>
-          <div v-else class="text-slate-400 italic text-[11px] min-h-[48px] flex items-center justify-center border border-dashed border-slate-200 rounded-lg">
+          <div v-else class="text-slate-400 italic text-[11px] min-h-12 flex items-center justify-center border border-dashed border-slate-200 rounded-lg">
             (상담 시 담임교사 수기 메모 또는 시스템 저장 메모 영역)
           </div>
         </div>
