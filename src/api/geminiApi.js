@@ -12,6 +12,16 @@ export const COMPREHENSIVE_AI_REPORT_PREFIX = 'ai_report_stat_comprehensive_'
 export const STUDENT_COUNSEL_PREFIX = 'ai_counsel_student_'
 
 /**
+ * 404(미지원) 또는 503(High Demand 과부하) 발생 시 안전하게 우회할 직전 안정 모델 탐색
+ */
+export function getFallbackGeminiModel(currentModel) {
+  if (currentModel === 'gemini-3.8-flash') return 'gemini-3.7-flash'
+  if (currentModel === 'gemini-3.7-flash') return 'gemini-2.5-flash'
+  if (currentModel === 'gemini-2.5-flash') return 'gemini-2.0-flash'
+  return 'gemini-3.7-flash'
+}
+
+/**
  * 0. 현재 선택/저장된 Gemini AI 모델 조회 (Supabase config -> localStorage -> 기본값)
  */
 export async function getSelectedGeminiModel() {
@@ -350,7 +360,11 @@ export async function testGeminiApiKey(apiKey, modelName) {
     }
 
     const errJson = await res.json().catch(() => ({}))
-    return { success: false, error: errJson?.error?.message || `HTTP ${res.status}`, model: targetModel }
+    let rawError = errJson?.error?.message || `HTTP ${res.status}`
+    if (rawError.includes('high demand') || res.status === 503) {
+      rawError = `Google 본사 서버 일시적 과부하 (${targetModel} High Demand). 최신 모델에 글로벌 트래픽이 몰려 일시 지연 중입니다. 드롭다운에서 안정적인 'Gemini 3.7 Flash'를 선택하시고 다시 '연결 테스트'를 눌러주세요.`
+    }
+    return { success: false, error: rawError, model: targetModel }
   } catch (err) {
     const errorMsg = err.name === 'AbortError' ? 'Google API 응답 시간 초과 (12초)' : (err.message || '네트워크 통신 오류')
     return { success: false, error: errorMsg, model: targetModel }
@@ -542,15 +556,18 @@ ${JSON.stringify(statsPayload, null, 2)}
     body: JSON.stringify(requestBody)
   })
 
-  // 404 모델 미지원 시 fallback 시도
-  if (response.status === 404) {
-    const fallbackModel = targetModel === 'gemini-2.0-flash' ? 'gemini-2.5-flash' : 'gemini-2.0-flash'
-    targetModel = fallbackModel
-    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
-    })
+  // 404(모델 미지원) 또는 503(Google 서버 과부하/High Demand) 시 직전 안정 모델로 2차 자동 재시도
+  if (response.status === 404 || response.status === 503) {
+    const fallbackModel = getFallbackGeminiModel(targetModel)
+    if (fallbackModel !== targetModel) {
+      console.warn(`[geminiApi] ${targetModel} 호출 실패(HTTP ${response.status}). ${fallbackModel} 모델로 자동 전환 재시도...`)
+      targetModel = fallbackModel
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      })
+    }
   }
 
   if (!response.ok) {
@@ -883,15 +900,18 @@ ${JSON.stringify(statsPayload, null, 2)}
     body: JSON.stringify(requestBody)
   })
 
-  // 404 모델 미지원 시 fallback 시도
-  if (response.status === 404) {
-    const fallbackModel = targetModel === 'gemini-2.0-flash' ? 'gemini-2.5-flash' : 'gemini-2.0-flash'
-    targetModel = fallbackModel
-    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
-    })
+  // 404(모델 미지원) 또는 503(Google 서버 과부하/High Demand) 시 직전 안정 모델로 2차 자동 재시도
+  if (response.status === 404 || response.status === 503) {
+    const fallbackModel = getFallbackGeminiModel(targetModel)
+    if (fallbackModel !== targetModel) {
+      console.warn(`[geminiApi] ${targetModel} 호출 실패(HTTP ${response.status}). ${fallbackModel} 모델로 자동 전환 재시도...`)
+      targetModel = fallbackModel
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      })
+    }
   }
 
   if (!response.ok) {
@@ -1112,15 +1132,18 @@ ${JSON.stringify(anonymizedPayload, null, 2)}
     body: JSON.stringify(requestBody)
   })
 
-  // 404 모델 미지원 시 fallback 시도
-  if (response.status === 404) {
-    const fallbackModel = targetModel === 'gemini-2.0-flash' ? 'gemini-2.5-flash' : 'gemini-2.0-flash'
-    targetModel = fallbackModel
-    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
-    })
+  // 404(모델 미지원) 또는 503(Google 서버 과부하/High Demand) 시 직전 안정 모델로 2차 자동 재시도
+  if (response.status === 404 || response.status === 503) {
+    const fallbackModel = getFallbackGeminiModel(targetModel)
+    if (fallbackModel !== targetModel) {
+      console.warn(`[geminiApi] ${targetModel} 호출 실패(HTTP ${response.status}). ${fallbackModel} 모델로 자동 전환 재시도...`)
+      targetModel = fallbackModel
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      })
+    }
   }
 
   if (!response.ok) {
