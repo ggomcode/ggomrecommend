@@ -6,13 +6,13 @@
         <div>
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-extrabold bg-blue-500/30 text-blue-200 border border-blue-400/30 mb-3">
             <span>🎓</span>
-            <span>학부모 대입 상담 솔루션</span>
+            <span>학생별 1:1 맞춤 대입 심층 상담 솔루션</span>
             <span class="text-blue-300">|</span>
             <span v-if="counselPersona === 'RURAL'" class="text-emerald-300 font-bold">🌲 농어촌 일반고 특화 모드 작동 중</span>
             <span v-else class="text-indigo-300 font-bold">🏢 수능·정시 & 일반고 심화 모드 작동 중</span>
           </div>
           <h2 class="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight m-0 text-white">
-            학부모 맞춤 대입 진단 & 수시 6장 황금 나침반
+            학생별 맞춤 대입 진단 & 수시 6장 황금 나침반 (AI 1:1 심층 상담 솔루션)
           </h2>
           <p class="text-xs sm:text-sm text-slate-300 mt-2 max-w-2xl leading-relaxed m-0" v-if="counselPersona === 'RURAL'">
             {{ displaySchoolName }} 실제 입결 기반 <strong>'내신 등급대별 농어촌 vs 일반전형 유불리 실증 및 선배 합격 복기'</strong> 관점입니다. 
@@ -64,7 +64,7 @@
         <div>
           <h3 class="text-sm sm:text-base font-black text-slate-900 m-0 flex items-center gap-2">
             <span>⚙️</span>
-            <span>상담 대상 학생 성적 조건 설정</span>
+            <span>상담 대상 학생 선택 및 성적 조건 설정</span>
             <span
               :class="[
                 'px-2 py-0.5 rounded-md text-[11px] font-bold',
@@ -75,7 +75,7 @@
             </span>
           </h3>
           <p class="text-xs text-slate-500 m-0 mt-0.5">
-            학생별 실제 성적 연동 및 가상 모의 성적 시뮬레이션
+            학급 및 학생 선택 시 실제 수시 6장 지원 카드와 모평 성적이 연동되며, 미선택 시 가상 시뮬레이션이 동작합니다.
           </p>
         </div>
 
@@ -104,12 +104,23 @@
               @change="loadStudentData"
               class="bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-2xs min-w-56"
             >
-              <option value="">-- 직접 성적 입력 --</option>
+              <option value="">-- 직접 성적 입력 (시뮬레이션) --</option>
               <option v-for="st in filteredStudentOptions" :key="st.key" :value="st.key">
                 {{ st.label }}
               </option>
             </select>
           </div>
+
+          <!-- 3단계: 학급 일괄 AI 사전 분석 버튼 -->
+          <button
+            type="button"
+            @click="isBatchModalOpen = true"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 border-none ml-1"
+            title="선택된 학급 학생 전체의 AI 상담 리포트를 사전 일괄 분석합니다"
+          >
+            <span>⚡</span>
+            <span>{{ selectedClass === 'ALL' ? '전체' : `${selectedClass}반` }} AI 일괄 분석</span>
+          </button>
         </div>
       </div>
 
@@ -206,6 +217,414 @@
               <span :class="['font-bold', hasRuralQual ? 'text-emerald-800' : 'text-slate-400']">농어촌 지원자격</span>
             </label>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 💡 안내 배너 (학생 미선택 시 가상 시뮬레이션 모드 안내) -->
+    <div v-if="!selectedStudentKey" class="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-indigo-900 shadow-2xs">
+      <div class="flex items-center gap-2.5">
+        <span class="text-xl shrink-0">💡</span>
+        <span>
+          상단 드롭다운에서 <strong>학급 및 학생</strong>을 선택하시면, 해당 학생의 실제 내신·모평 성적과 수시 6장 지망 카드가 연동되며 
+          <strong>[Gemini AI 1:1 학생 맞춤 심층 진단 리포트]</strong>를 생성·조회할 수 있습니다.
+        </span>
+      </div>
+      <span class="text-[11px] font-black px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-800 border border-indigo-200 shrink-0 self-start sm:self-auto">
+        현재: 가상 시뮬레이션 모드
+      </span>
+    </div>
+
+    <!-- 👤 학생 실제 대입 프로필 및 수시 6장 지망 카드 (학생 선택 시) -->
+    <div v-if="selectedStudentKey && selectedStudentInfo" class="bg-white rounded-3xl p-6 border border-indigo-100 shadow-sm space-y-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between pb-3 border-b border-slate-100 gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-linear-to-tr from-indigo-600 to-blue-600 flex items-center justify-center text-white text-xl font-black shadow-md shrink-0">
+            <span>👤</span>
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="text-base sm:text-lg font-black text-slate-900 m-0">
+                {{ selectedStudentInfo.maskedName }}
+              </h3>
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                {{ selectedStudentInfo.classStr }}
+              </span>
+              <span v-if="hasRuralQual" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                🌲 농어촌 지원 자격
+              </span>
+              <span v-if="isOpportunityStudent" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-300">
+                🤝 기회균형 자격
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 m-0 mt-0.5">
+              학생부 전과목 내신: <strong class="text-blue-700 font-mono">{{ targetGpa.toFixed(2) }}등급</strong>
+              <span class="text-slate-300 mx-1.5">|</span>
+              모평 환산: <span class="font-mono text-slate-700">국수평균 {{ koreanMathAvg }} / 영어 {{ englishGrade }} / 탐구 {{ tamguGrade }}</span>
+              <span v-if="selectedStudentRecentMock" class="text-slate-400 font-mono text-[11px] ml-1">({{ selectedStudentRecentMock.examName }} 기준)</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold text-slate-500">수시 지망:</span>
+          <span class="px-3 py-1 rounded-xl text-xs font-mono font-black bg-blue-50 text-blue-800 border border-blue-200">
+            총 {{ currentStudentApps.length }}장 등록됨
+          </span>
+          <button
+            type="button"
+            @click="isPrintModalOpen = true"
+            class="px-3 py-1 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+            title="학부모 상담용 A4 규격 1:1 상담 리포트 인쇄 모달을 엽니다"
+          >
+            <span>🖨️</span>
+            <span>A4 인쇄</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 6장의 실제 지망/지원 카드 그리드 -->
+      <div v-if="currentStudentApps.length > 0">
+        <div class="text-xs font-extrabold text-slate-700 mb-2.5 flex items-center gap-1.5">
+          <span>📋</span>
+          <span>학생 실제 수시 6장 지망 포트폴리오</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div
+            v-for="(app, idx) in currentStudentApps.slice(0, 6)"
+            :key="idx"
+            class="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:border-indigo-300 transition-all shadow-2xs flex flex-col justify-between"
+          >
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-black bg-indigo-100 text-indigo-800">
+                  지망 {{ idx + 1 }}
+                </span>
+                <span
+                  v-if="app.finalStage || app.stage1"
+                  :class="[
+                    'px-2 py-0.5 rounded-md text-[10px] font-bold',
+                    isPassApp(app) ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                  ]"
+                >
+                  {{ app.finalStage || app.stage1 }}
+                </span>
+              </div>
+              <div class="font-black text-xs text-slate-900 truncate">
+                {{ app.univName }}
+              </div>
+              <div class="text-[11px] font-bold text-indigo-700 truncate mt-0.5">
+                {{ app.dept }}
+              </div>
+              <div class="text-[10px] text-slate-500 mt-1 flex flex-wrap items-center gap-1">
+                <span class="px-1.5 py-0.2 rounded bg-slate-200/70 font-semibold">{{ app.admissionType }}</span>
+                <span v-if="app.admissionDetailType" class="text-slate-600 truncate">{{ app.admissionDetailType }}</span>
+                <span v-if="app.isRural" class="px-1 py-0.2 rounded bg-amber-100 text-amber-800 font-bold">농어촌</span>
+              </div>
+            </div>
+            <div v-if="app.minScoreReq" class="mt-2 pt-2 border-t border-slate-200/60 text-[10px] text-slate-600 line-clamp-1" :title="app.minScoreReq">
+              ⚖️ {{ app.minScoreReq }}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-else class="text-center py-4 text-xs text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+        등록된 수시 지원 카드 데이터가 없습니다. (직접 성적 입력 모드 시뮬레이션 활용)
+      </div>
+    </div>
+
+    <!-- ✨ Gemini AI 학생 맞춤 대입 심층 진단 리포트 카드 (학생 선택 시) -->
+    <div v-if="selectedStudentKey" class="bg-white rounded-3xl p-6 sm:p-7 border border-indigo-200/90 shadow-md space-y-5 relative overflow-hidden">
+      <!-- Background subtle decorative glow -->
+      <div class="absolute -top-16 -right-16 w-52 h-52 rounded-full bg-linear-to-br from-indigo-200/30 to-blue-200/30 blur-2xl pointer-events-none"></div>
+
+      <!-- Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-indigo-100 gap-3 relative z-10">
+        <div>
+          <div class="flex flex-wrap items-center gap-2 mb-1.5">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-black bg-indigo-600 text-white shadow-2xs flex items-center gap-1">
+              <span>✨</span>
+              <span>Gemini AI 대입 심층 진단</span>
+            </span>
+            <span class="text-xs font-bold text-slate-700">
+              {{ selectedStudentInfo?.maskedName }} 학생 1:1 맞춤 진학 처방
+            </span>
+            <span v-if="studentAiReport?.analyzedAt" class="text-[11px] font-mono text-slate-400">
+              ({{ studentAiReport.analyzedAt }} 분석됨)
+            </span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              🔒 개인식별정보(PII) 100% 비식별화 완료
+            </span>
+          </div>
+          <h3 class="text-base sm:text-lg font-black text-slate-900 m-0">
+            20년 경력 수석교사진 관점 종합 진학 처방 & 수시 6장 나침반
+          </h3>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0">
+          <!-- A4 상담 리포트 인쇄 버튼 -->
+          <button
+            type="button"
+            @click="isPrintModalOpen = true"
+            class="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+            title="학부모 상담용 A4 규격 1:1 상담 리포트 인쇄 모달을 엽니다"
+          >
+            <span>🖨️</span>
+            <span>A4 리포트 인쇄</span>
+          </button>
+
+          <!-- AI 재분석 버튼 -->
+          <button
+            v-if="studentAiReport"
+            type="button"
+            @click="handleGenerateStudentAiCounsel(true)"
+            :disabled="isGeneratingStudentAi"
+            class="px-3.5 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs"
+          >
+            <span v-if="isGeneratingStudentAi" class="animate-spin text-sm">⏳</span>
+            <span v-else>🔄</span>
+            <span>{{ isGeneratingStudentAi ? 'AI 재분석 생성 중...' : 'AI 재분석' }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="isLoadingStudentAi" class="text-center py-10 space-y-3">
+        <div class="animate-spin text-3xl">⏳</div>
+        <p class="text-xs font-bold text-slate-600 m-0">저장된 학생 AI 분석 리포트를 조회 중입니다...</p>
+      </div>
+
+      <!-- Generating State -->
+      <div v-else-if="isGeneratingStudentAi" class="text-center py-12 space-y-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+        <div class="animate-bounce text-4xl">🤖✨</div>
+        <div class="space-y-1">
+          <p class="text-sm font-black text-indigo-950 m-0">
+            Gemini AI가 해당 학생의 내신·모평·수시 6장·수능최저·특별전형을 심층 분석하고 있습니다...
+          </p>
+          <p class="text-xs text-indigo-700 m-0">
+            잠시만 기다려 주십시오 (약 5~10초 소요, 분석 후 Supabase DB에 영구 보존됩니다).
+          </p>
+        </div>
+        <div class="w-48 h-1.5 bg-indigo-200 rounded-full mx-auto overflow-hidden">
+          <div class="w-full h-full bg-indigo-600 rounded-full animate-pulse"></div>
+        </div>
+      </div>
+
+      <!-- Report Content Display -->
+      <div v-else-if="counselReport" class="space-y-5">
+        <!-- 1. 🌟 종합 진단 브리핑 -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-linear-to-r from-blue-50 via-indigo-50 to-slate-50 border border-indigo-100/90 shadow-2xs">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-base">🌟</span>
+            <h4 class="text-sm font-black text-indigo-950 m-0">1. 대입 경쟁력 종합 진단 브리핑</h4>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-800 leading-relaxed m-0 font-medium whitespace-pre-line">
+            {{ counselReport.summary }}
+          </p>
+        </div>
+
+        <!-- 2. 🧺 수시 6장 황금 바구니 진단 -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="text-base">🧺</span>
+              <h4 class="text-sm font-black text-slate-900 m-0">2. 수시 6장 바구니 구성 진단 (상향/적정/안정)</h4>
+            </div>
+            <span v-if="counselReport.basketDiagnosis?.status" class="px-2.5 py-0.5 rounded-full text-xs font-black bg-indigo-100 text-indigo-900 border border-indigo-300 w-fit">
+              진단 판정: {{ counselReport.basketDiagnosis.status }}
+            </span>
+          </div>
+
+          <p v-if="counselReport.basketDiagnosis?.balanceComment" class="text-xs text-slate-700 leading-relaxed m-0">
+            {{ counselReport.basketDiagnosis.balanceComment }}
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+            <!-- Strengths -->
+            <div class="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200/80 space-y-1.5">
+              <div class="text-xs font-black text-emerald-900 flex items-center gap-1.5">
+                <span>💪</span>
+                <span>핵심 강점 및 승부 포인트</span>
+              </div>
+              <ul class="text-xs text-emerald-950 space-y-1 pl-4 list-disc m-0">
+                <li v-for="(s, i) in (counselReport.basketDiagnosis?.strengths || [])" :key="i">
+                  {{ s }}
+                </li>
+              </ul>
+            </div>
+
+            <!-- Risks -->
+            <div class="p-3.5 rounded-xl bg-rose-50/70 border border-rose-200/80 space-y-1.5">
+              <div class="text-xs font-black text-rose-900 flex items-center gap-1.5">
+                <span>⚠️</span>
+                <span>주의점 및 탈락 위험 요소</span>
+              </div>
+              <ul class="text-xs text-rose-950 space-y-1 pl-4 list-disc m-0">
+                <li v-for="(r, i) in (counselReport.basketDiagnosis?.risks || [])" :key="i">
+                  {{ r }}
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 & 4: 수능최저 & 특별전형 (2 Columns) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <!-- 3. 🎯 수능최저 및 전략 과목 -->
+          <div class="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="text-base">🎯</span>
+              <h4 class="text-sm font-black text-slate-900 m-0">3. 수능최저 충족 역량 & 전략 과목 처방</h4>
+            </div>
+            <div v-if="counselReport.csatStrategy?.overallFeasibility" class="text-xs text-slate-700 leading-relaxed">
+              <div class="font-bold text-slate-900 mb-1">■ 종합 평가:</div>
+              {{ counselReport.csatStrategy.overallFeasibility }}
+            </div>
+            <div v-if="counselReport.csatStrategy?.recommendedSubjects?.length" class="space-y-1 pt-2 border-t border-slate-100">
+              <div class="text-xs font-bold text-indigo-900 flex items-center gap-1">
+                <span>⭐</span>
+                <span>집중 공략 추천 과목:</span>
+              </div>
+              <div class="flex flex-wrap gap-1.5">
+                <span
+                  v-for="(sub, i) in counselReport.csatStrategy.recommendedSubjects"
+                  :key="i"
+                  class="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-800 border border-indigo-200"
+                >
+                  {{ sub }}
+                </span>
+              </div>
+            </div>
+            <div v-if="counselReport.csatStrategy?.actionPlan" class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">
+              <span class="font-bold text-slate-800">실행 로드맵:</span> {{ counselReport.csatStrategy.actionPlan }}
+            </div>
+          </div>
+
+          <!-- 4. 🌲 특별전형(농어촌 / 기회균형) -->
+          <div class="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3">
+            <div class="flex items-center gap-2">
+              <span class="text-base">🌲</span>
+              <h4 class="text-sm font-black text-slate-900 m-0">4. 농어촌 및 특별전형 활용 전략</h4>
+            </div>
+            <div class="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200 text-xs space-y-1">
+              <span class="font-bold text-emerald-900 flex items-center gap-1">
+                <span>🌲</span>
+                <span>농어촌 전형 유불리 조언:</span>
+              </span>
+              <p class="text-emerald-950 m-0 leading-relaxed">
+                {{ counselReport.specialTrackAdvice?.ruralAdvice || '해당 없음' }}
+              </p>
+            </div>
+            <div class="p-3 rounded-xl bg-blue-50/60 border border-blue-200 text-xs space-y-1">
+              <span class="font-bold text-blue-900 flex items-center gap-1">
+                <span>🤝</span>
+                <span>기회균형 전형 조언:</span>
+              </span>
+              <p class="text-blue-950 m-0 leading-relaxed">
+                {{ counselReport.specialTrackAdvice?.opportunityAdvice || '해당 없음' }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. 🗣️ 1:1 학생·학부모 상담 스크립트 -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-linear-to-br from-indigo-900 to-slate-900 text-white shadow-lg space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="text-base">🗣️</span>
+              <h4 class="text-sm font-black text-white m-0">5. 1:1 상담용 실전 브리핑 스크립트 (교사용 대본)</h4>
+            </div>
+            <button
+              type="button"
+              @click="copyStudentAiScript"
+              class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-indigo-200 border border-white/20 transition-all cursor-pointer flex items-center gap-1.5 w-fit"
+            >
+              <span>📋</span>
+              <span>{{ copyAiScriptSuccess ? '스크립트 복사 완료!' : '상담 멘트 복사' }}</span>
+            </button>
+          </div>
+          <p class="text-xs text-indigo-200 m-0">
+            학부모 및 학생 상담 시 교사가 바로 활용할 수 있는 핵심 질문과 안내 멘트입니다.
+          </p>
+          <div v-if="counselReport.counselScript?.length" class="space-y-2 pt-1">
+            <div
+              v-for="(ment, i) in counselReport.counselScript"
+              :key="i"
+              class="p-3 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 text-xs text-slate-100 leading-relaxed flex items-start gap-2.5"
+            >
+              <span class="w-5 h-5 rounded-full bg-indigo-500 text-white font-mono font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                {{ i + 1 }}
+              </span>
+              <span class="flex-1">{{ ment }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. 📝 담임·진학지도 교사 상담 관찰 메모 및 특이사항 -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2.5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+            <div class="flex items-center gap-2">
+              <span class="text-base">📝</span>
+              <h4 class="text-sm font-black text-slate-900 m-0">6. 담임·진학지도 교사 상담 관찰 메모 & 추가 지도 계획</h4>
+            </div>
+            <span v-if="studentAiReport?.memoUpdatedAt" class="text-[11px] font-mono text-slate-400">
+              (최근 메모 갱신: {{ studentAiReport.memoUpdatedAt }})
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 m-0">
+            상담 중 파악된 학생 성향, 학부모 희망 대학선, 수시 6장 조정 협의 사항 등을 기록하십시오. DB에 영구 보존되며 A4 인쇄물에도 함께 출력됩니다.
+          </p>
+          <textarea
+            v-model="teacherMemoInput"
+            rows="3"
+            placeholder="예: 학생은 IT 소프트웨어 학과를 강력히 희망하며 지망 변경 의사 없음. 어머님은 경기권 4년제 통학을 희망하여 4지망 수원대/한경대 정량 교과 적극 검토 합의..."
+            class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-y shadow-2xs font-sans leading-relaxed"
+          ></textarea>
+          <div class="flex items-center justify-between pt-1">
+            <span class="text-[11px] text-slate-400">
+              ※ 메모는 AI 호출 없이 Supabase DB 및 로컬에 안전하게 즉시 저장됩니다.
+            </span>
+            <button
+              type="button"
+              @click="handleSaveTeacherMemo"
+              :disabled="isSavingMemo"
+              class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 shadow-2xs transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50 border-none"
+            >
+              <span v-if="isSavingMemo" class="animate-spin text-xs">⏳</span>
+              <span v-else>💾</span>
+              <span>{{ saveMemoSuccess ? '메모 저장 완료!' : (isSavingMemo ? '저장 중...' : '메모 저장') }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- No Report Yet (CTA Banner) -->
+      <div v-else class="text-center py-8 sm:py-10 px-4 bg-linear-to-b from-indigo-50/70 to-slate-50/70 rounded-2xl border border-dashed border-indigo-200 space-y-4">
+        <div class="text-4xl">🤖 ✨</div>
+        <div class="max-w-xl mx-auto space-y-1.5">
+          <h4 class="text-base font-black text-slate-900 m-0">
+            {{ selectedStudentInfo?.maskedName }} 학생의 AI 심층 상담 리포트 생성
+          </h4>
+          <p class="text-xs text-slate-600 leading-relaxed m-0">
+            학생의 실제 학생부 내신, 모평 성적 추이, 6장 지망 카드, 수능최저 충족 역량 및 특별전형 자격을 20년 경력 수석교사 관점에서 분석합니다.
+          </p>
+        </div>
+
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+          <span>🔒</span>
+          <span>개인정보보호: 학생 실명, 주민등록번호 등 민감정보는 100% 제거 후 안전하게 분석됩니다.</span>
+        </div>
+
+        <div>
+          <button
+            type="button"
+            @click="handleGenerateStudentAiCounsel(false)"
+            :disabled="isGeneratingStudentAi"
+            class="px-6 py-3 rounded-2xl text-xs sm:text-sm font-black text-white bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 shadow-md transition-all cursor-pointer flex items-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span>✨</span>
+            <span>이 학생 AI 심층 상담 리포트 생성 및 DB 저장</span>
+          </button>
         </div>
       </div>
     </div>
@@ -696,19 +1115,53 @@
 
     <!-- 💡 4. 대입 5대 핵심 전략 위젯 (단독 섹션) -->
     <SatVsGpaStrategyWidget onlySection="strategyCards" />
+
+    <!-- 🖨️ 학부모 상담용 A4 1장 인쇄 모달 -->
+    <StudentAiCounselPrintModal
+      :isOpen="isPrintModalOpen"
+      :academicYear="selectedAcademicYear"
+      :student="selectedStudentInfo"
+      :applications="currentStudentApps"
+      :latestMock="selectedStudentRecentMock"
+      :report="counselReport"
+      :teacherMemo="teacherMemoInput"
+      :analyzedAt="studentAiReport?.analyzedAt"
+      @close="isPrintModalOpen = false"
+    />
+
+    <!-- ⚡ 학급 일괄 AI 심층 분석 모달 -->
+    <StudentAiBatchModal
+      :isOpen="isBatchModalOpen"
+      :classLabel="selectedClass === 'ALL' ? '전체 학급' : `${selectedClass}반`"
+      :students="filteredStudentRawList"
+      :academicYear="selectedAcademicYear"
+      :allApplications="applications"
+      :getStudentMockExams="getStudentMockExams"
+      @student-analyzed="onBatchStudentAnalyzed"
+      @batch-complete="onBatchComplete"
+      @close="isBatchModalOpen = false"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useData, maskName, formatGrade, studentMockExamsMap, loadMockExamData } from '../../composables/useStatData'
 import { schoolName } from '../../../utils/schoolConfig'
-import { onMounted } from 'vue'
+import { 
+  getGeminiApiKey, 
+  fetchStudentAiCounsel, 
+  saveStudentAiCounsel, 
+  saveStudentTeacherMemo,
+  generateStudentIndividualAiCounsel 
+} from '../../../api/geminiApi.js'
 import SatVsGpaStrategyWidget from '../SatVsGpaStrategyWidget.vue'
+import StudentAiCounselPrintModal from '../counsel/StudentAiCounselPrintModal.vue'
+import StudentAiBatchModal from '../counsel/StudentAiBatchModal.vue'
 
 const displaySchoolName = computed(() => (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리 학교')
 
-const { applications } = useData()
+const { applications, selectedAcademicYear } = useData()
 
 // Persona Mode: 'RURAL' (농어촌 일반고 중심) vs 'SAT_GANGNAM' (수능·정시 관점)
 const counselPersona = ref('RURAL')
@@ -729,6 +1182,22 @@ const hasRuralQual = ref(true)
 const selectedClass = ref('ALL')
 const selectedStudentKey = ref('')
 const copySuccess = ref(false)
+
+// 학생별 맞춤 AI 진단 상태
+const studentAiReport = ref(null)
+const isLoadingStudentAi = ref(false)
+const isGeneratingStudentAi = ref(false)
+const studentAiError = ref('')
+const copyAiScriptSuccess = ref(false)
+
+// A4 인쇄 모달 및 학급 일괄 분석 모달 상태
+const isPrintModalOpen = ref(false)
+const isBatchModalOpen = ref(false)
+
+// 담임·교사 상담 메모 상태
+const teacherMemoInput = ref('')
+const isSavingMemo = ref(false)
+const saveMemoSuccess = ref(false)
 
 function setPersona(persona) {
   counselPersona.value = persona
@@ -832,12 +1301,99 @@ const filteredStudentOptions = computed(() => {
   })
 })
 
-function onClassChange() {
-  selectedStudentKey.value = ''
+// 현재 학생의 6장 지원 카드 목록
+const currentStudentApps = computed(() => {
+  if (!selectedStudentKey.value || !applications.value) return []
+  return applications.value.filter(a => a.studentKey === selectedStudentKey.value)
+})
+
+const selectedStudentInfo = computed(() => {
+  if (!selectedStudentKey.value) return null
+  const found = allStudentsList.value.find(s => s.key === selectedStudentKey.value)
+  if (!found) return null
+  const classStr = found.isGraduate ? '졸업생' : `${found.classNum}반 ${found.studentNum}번`
+  return {
+    ...found,
+    classStr,
+    maskedName: maskName(found.name)
+  }
+})
+
+const isOpportunityStudent = computed(() => {
+  return currentStudentApps.value.some(a => a.isOpportunity)
+})
+
+const selectedStudentRecentMock = computed(() => {
+  if (!selectedStudentKey.value) return null
+  const exams = getStudentMockExams(selectedStudentKey.value)
+  if (!exams || exams.length === 0) return null
+  return exams[exams.length - 1]
+})
+
+/**
+ * 학생별 모의고사 응시 이력 안전 조회 (키 불일치 및 다단계 매칭 폴백 지원)
+ */
+function getStudentMockExams(studentKey) {
+  if (!studentKey || !studentMockExamsMap.value) return []
+  if (studentMockExamsMap.value.has(studentKey)) {
+    return studentMockExamsMap.value.get(studentKey) || []
+  }
+  const student = allStudentsList.value.find(s => s.key === studentKey)
+  if (!student) return []
+  const normName = String(student.name || '').trim()
+  const classStr = String(student.classNum || '').trim()
+  const numStr = String(student.studentNum || '').trim()
+
+  for (const [mapKey, records] of studentMockExamsMap.value.entries()) {
+    if (mapKey.includes(normName)) {
+      if (classStr && numStr && (mapKey.includes(`${classStr}-${numStr}`) || mapKey.includes(`${classStr}반`))) {
+        return records
+      }
+    }
+  }
+
+  if (normName) {
+    const candidates = []
+    for (const [mapKey, records] of studentMockExamsMap.value.entries()) {
+      if (mapKey.includes(normName)) {
+        candidates.push(records)
+      }
+    }
+    if (candidates.length === 1) {
+      return candidates[0]
+    }
+  }
+  return []
 }
 
-function loadStudentData() {
-  if (!selectedStudentKey.value) return
+const counselReport = computed(() => {
+  if (!studentAiReport.value) return null
+  return studentAiReport.value.report || studentAiReport.value
+})
+
+function onClassChange() {
+  selectedStudentKey.value = ''
+  studentAiReport.value = null
+  teacherMemoInput.value = ''
+}
+
+const filteredStudentRawList = computed(() => {
+  let list = allStudentsList.value
+  if (selectedClass.value !== 'ALL') {
+    if (selectedClass.value === '졸업생') {
+      list = list.filter(s => s.isGraduate || s.classNum === '졸업생')
+    } else {
+      list = list.filter(s => !s.isGraduate && String(s.classNum) === String(selectedClass.value))
+    }
+  }
+  return list
+})
+
+async function loadStudentData() {
+  if (!selectedStudentKey.value) {
+    studentAiReport.value = null
+    return
+  }
   const found = allStudentsList.value.find(s => s.key === selectedStudentKey.value)
   if (found) {
     targetGpa.value = Number(found.gpa.toFixed(2))
@@ -848,7 +1404,200 @@ function loadStudentData() {
     const tGrade = found.socGrade || found.sciGrade
     if (tGrade) tamguGrade.value = Math.min(9, Math.max(1, Math.round(tGrade)))
   }
+
+  // Load existing AI counsel report from Supabase / localStorage
+  await loadStudentAiReport(selectedStudentKey.value)
 }
+
+/**
+ * 엄격한 개인정보보호 비식별화 페이로드 생성
+ * ※ 학생 실명, 주민등록번호, 학번 등 개인식별정보(PII)는 100% 제거하고 오직 학업·통계 정보만 전송
+ */
+function buildAnonymizedStudentPayload(studentKey) {
+  const student = allStudentsList.value.find(s => s.key === studentKey)
+  const apps = currentStudentApps.value || []
+
+  // 1. 모의고사 이력 (이름/학번 제외, 순수 과목/등급/백분위만 포함)
+  const studentExams = getStudentMockExams(studentKey)
+
+  const cleanedExams = studentExams.map(ex => ({
+    examName: ex.examName || `${ex.monthOrder || ''}월 학평`,
+    korGrade: ex.korGrade ?? null,
+    korPercentile: ex.korPercentile ?? null,
+    mathGrade: ex.mathGrade ?? null,
+    mathPercentile: ex.mathPercentile ?? null,
+    engGrade: ex.engGrade ?? null,
+    histGrade: ex.histGrade ?? null,
+    inq1Subject: ex.inquiry1 || null,
+    inq1Grade: ex.inq1Grade ?? null,
+    inq1Percentile: ex.inq1Percentile ?? null,
+    inq2Subject: ex.inquiry2 || null,
+    inq2Grade: ex.inq2Grade ?? null,
+    inq2Percentile: ex.inq2Percentile ?? null
+  }))
+
+  // 2. 수시 6장 지망 카드 (개인정보 일체 제외)
+  const cleanedApps = apps.slice(0, 6).map((app, idx) => ({
+    choiceOrder: idx + 1,
+    univName: app.univName || '',
+    dept: app.dept || '',
+    admissionType: app.admissionType || '',
+    trackName: app.admissionDetailType || app.admissionMajorType || '',
+    csatMinCriteria: app.minScoreReq || '',
+    isRuralTrack: Boolean(app.isRural),
+    isOpportunityTrack: Boolean(app.isOpportunity),
+    result: app.finalStage || app.stage1 || ''
+  }))
+
+  // 3. 내신 및 자격 요건
+  const isRuralEligible = Boolean(student?.isRural || hasRuralQual.value)
+  const isOppEligible = Boolean(apps.some(a => a.isOpportunity))
+  const studentType = student?.isGraduate ? '졸업생(N수)' : `${student?.classNum || 3}학년 재학생`
+
+  return {
+    academicYear: selectedAcademicYear.value || '2027',
+    studentType,
+    gpa: {
+      allSubject: Number((student?.gpa || targetGpa.value).toFixed(2)),
+      korGrade: student?.korGrade || koreanGrade.value,
+      mathGrade: student?.mathGrade || mathGrade.value,
+      engGrade: student?.engGrade || englishGrade.value,
+      tamguGrade: student?.socGrade || student?.sciGrade || tamguGrade.value
+    },
+    specialQualifications: {
+      isRuralEligible,
+      isOpportunityEligible: isOppEligible
+    },
+    applications: cleanedApps,
+    mockExams: cleanedExams
+  }
+}
+
+async function loadStudentAiReport(studentKey) {
+  if (!studentKey) {
+    studentAiReport.value = null
+    teacherMemoInput.value = ''
+    return
+  }
+  isLoadingStudentAi.value = true
+  studentAiError.value = ''
+  try {
+    const cached = await fetchStudentAiCounsel(selectedAcademicYear.value, studentKey)
+    studentAiReport.value = cached
+    teacherMemoInput.value = cached?.teacherMemo || ''
+  } catch (err) {
+    console.warn('[ParentCounselTab] 학생 AI 리포트 로드 실패:', err)
+  } finally {
+    isLoadingStudentAi.value = false
+  }
+}
+
+async function handleSaveTeacherMemo() {
+  if (!selectedStudentKey.value) {
+    alert('상담 대상 학생을 먼저 선택해 주세요.')
+    return
+  }
+  isSavingMemo.value = true
+  try {
+    const updated = await saveStudentTeacherMemo(
+      selectedAcademicYear.value,
+      selectedStudentKey.value,
+      teacherMemoInput.value
+    )
+    if (updated) {
+      if (!studentAiReport.value) {
+        studentAiReport.value = updated
+      } else {
+        studentAiReport.value.teacherMemo = teacherMemoInput.value
+        studentAiReport.value.memoUpdatedAt = updated.memoUpdatedAt
+      }
+    }
+    saveMemoSuccess.value = true
+    setTimeout(() => { saveMemoSuccess.value = false }, 2500)
+  } catch (err) {
+    console.error('교사 메모 저장 오류:', err)
+    alert('메모 저장 도중 오류가 발생했습니다.')
+  } finally {
+    isSavingMemo.value = false
+  }
+}
+
+function onBatchStudentAnalyzed({ studentKey, reportData }) {
+  if (selectedStudentKey.value === studentKey) {
+    studentAiReport.value = reportData
+    teacherMemoInput.value = reportData?.teacherMemo || teacherMemoInput.value
+  }
+}
+
+function onBatchComplete({ successCount, skippedCount, failCount }) {
+  if (selectedStudentKey.value) {
+    loadStudentAiReport(selectedStudentKey.value)
+  }
+}
+
+async function handleGenerateStudentAiCounsel(force = false) {
+  if (!selectedStudentKey.value) {
+    alert('상담 대상 학생을 먼저 선택해 주세요.')
+    return
+  }
+
+  const apiKey = await getGeminiApiKey()
+  if (!apiKey) {
+    alert('Google Gemini API Key가 등록되지 않았습니다. 관리자 [환경 설정] > [Gemini AI 환경 설정]에서 키를 먼저 등록해 주세요.')
+    return
+  }
+
+  isGeneratingStudentAi.value = true
+  studentAiError.value = ''
+
+  try {
+    // 1. 개인식별정보(PII) 100% 제거 비식별화 페이로드 생성
+    const payload = buildAnonymizedStudentPayload(selectedStudentKey.value)
+
+    // 2. Gemini 호출
+    const res = await generateStudentIndividualAiCounsel(apiKey, selectedAcademicYear.value, payload)
+
+    if (res.success && res.data) {
+      // 3. Supabase config 테이블 및 localStorage 영구 저장
+      await saveStudentAiCounsel(selectedAcademicYear.value, selectedStudentKey.value, res.data)
+      studentAiReport.value = res.data
+    } else {
+      throw new Error('AI 분석 결과 데이터가 올바르지 않습니다.')
+    }
+  } catch (err) {
+    console.error('학생 AI 상담 생성 오류:', err)
+    studentAiError.value = err.message || 'AI 분석 도중 오류가 발생했습니다.'
+    alert(`AI 분석 실패: ${studentAiError.value}`)
+  } finally {
+    isGeneratingStudentAi.value = false
+  }
+}
+
+function copyStudentAiScript() {
+  if (!counselReport.value?.counselScript) return
+  const lines = counselReport.value.counselScript
+  const text = lines.map((l, i) => `${i + 1}. ${l}`).join('\n\n')
+  navigator.clipboard.writeText(text).then(() => {
+    copyAiScriptSuccess.value = true
+    setTimeout(() => { copyAiScriptSuccess.value = false }, 2500)
+  })
+}
+
+watch(selectedAcademicYear, async () => {
+  if (selectedStudentKey.value) {
+    await loadStudentAiReport(selectedStudentKey.value)
+  }
+})
+
+onMounted(async () => {
+  if (studentMockExamsMap.value.size === 0) {
+    try {
+      await loadMockExamData(false, selectedAcademicYear.value)
+    } catch (e) {
+      console.warn('모의고사 성적 로드 에러:', e)
+    }
+  }
+})
 
 const koreanMathAvg = computed(() => {
   return ((koreanGrade.value + mathGrade.value) / 2).toFixed(1)
@@ -1704,12 +2453,6 @@ function getDeptSimilarityScore(seniorDept, studentTargetDepts) {
 
   return maxScore
 }
-
-// 현재 학생의 6장 지원 카드 목록
-const currentStudentApps = computed(() => {
-  if (!selectedStudentKey.value || !applications.value) return []
-  return applications.value.filter(a => a.studentKey === selectedStudentKey.value)
-})
 
 // 현재 학생이 지원한 6장 학과 목록
 const studentTargetDepts = computed(() => {

@@ -418,15 +418,24 @@
         </div>
 
         <div class="flex flex-col sm:flex-row items-end sm:items-center gap-2">
-          <!-- 관리자 전용 AI 심층 분석 갱신 바로가기 안내 -->
-          <div v-if="auth.isAdmin" class="no-print">
+          <!-- 관리자 전용 현재 회차 단독 AI 재분석 & 환경설정 바로가기 -->
+          <div v-if="auth.isAdmin" class="no-print flex items-center gap-1.5">
+            <button
+              @click="handleGenerateSingleRoundAiAnalysis"
+              :disabled="isAiGenerating || isLoadingData"
+              class="px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-2xs transition-all cursor-pointer border-none flex items-center gap-1.5 disabled:opacity-50"
+              :title="`선택된 ${currentRoundLabel} 성적 데이터를 기반으로 단독 심층 AI 분석을 재실행합니다.`"
+            >
+              <Loader2 v-if="isAiGenerating" class="w-3.5 h-3.5 animate-spin" />
+              <Sparkles v-else class="w-3.5 h-3.5 text-amber-300" />
+              <span>{{ isAiGenerating ? '분석 중…' : `✨ ${currentRoundLabel} 단독 AI 재분석` }}</span>
+            </button>
             <router-link
               to="/admin?tab=settings"
-              class="px-3 py-1.5 rounded-xl text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 transition-colors no-underline flex items-center gap-1.5 shadow-2xs"
+              class="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-purple-600 bg-white hover:bg-slate-50 border border-slate-200 transition-colors no-underline flex items-center gap-1"
               title="관리자 환경설정에서 전체 대입통계 AI 분석을 일괄 갱신합니다."
             >
-              <Sparkles class="w-3.5 h-3.5 text-purple-600" />
-              <span>전체 AI 분석 갱신 (환경설정)</span>
+              <span>⚙️ 환경설정</span>
             </router-link>
           </div>
           <div class="text-xs text-slate-500">
@@ -988,6 +997,103 @@ const currentRoundLabel = computed(() => {
 // AI 심층 분석 상태 관리
 const savedAiReport = ref(null)
 const isLoadingAiReport = ref(false)
+const isAiGenerating = ref(false)
+const aiToastMessage = ref('')
+const aiToastType = ref('success')
+
+async function handleGenerateSingleRoundAiAnalysis() {
+  if (!auth.isAdmin) {
+    alert('AI 실시간 심층 분석 생성 및 갱신 권한은 관리자 전용입니다.')
+    return
+  }
+
+  const key = await getGeminiApiKey()
+  if (!key) {
+    alert('Gemini API Key가 등록되어 있지 않습니다. 관리자 환경설정에서 API Key를 먼저 저장해 주세요.')
+    return
+  }
+
+  const hasAnyData = [1, 2, 3].some(g => gradeData.value[g].hasData && gradeData.value[g].overallAvg !== '-')
+  if (!hasAnyData) {
+    alert('선택한 회차에 등록된 성적 데이터가 없어 AI 분석을 실행할 수 없습니다.')
+    return
+  }
+
+  isAiGenerating.value = true
+  aiToastMessage.value = ''
+
+  try {
+    const statsPayload = {
+      roundLabel: currentRoundLabel.value,
+      academicYear: selectedAcademicYear.value,
+      round: selectedRound.value,
+      grades: {
+        3: {
+          hasData: gradeData.value[3].hasData,
+          sampleCount: gradeData.value[3].sampleCount,
+          overallAvg: gradeData.value[3].overallAvg,
+          korAvg: gradeData.value[3].korAvg,
+          mathAvg: gradeData.value[3].mathAvg,
+          engAvg: gradeData.value[3].engAvg,
+          inqAvg: gradeData.value[3].inqAvg,
+          histAvg: gradeData.value[3].histAvg
+        },
+        2: {
+          hasData: gradeData.value[2].hasData,
+          sampleCount: gradeData.value[2].sampleCount,
+          overallAvg: gradeData.value[2].overallAvg,
+          korAvg: gradeData.value[2].korAvg,
+          mathAvg: gradeData.value[2].mathAvg,
+          engAvg: gradeData.value[2].engAvg,
+          inqAvg: gradeData.value[2].inqAvg,
+          histAvg: gradeData.value[2].histAvg
+        },
+        1: {
+          hasData: gradeData.value[1].hasData,
+          sampleCount: gradeData.value[1].sampleCount,
+          overallAvg: gradeData.value[1].overallAvg,
+          korAvg: gradeData.value[1].korAvg,
+          mathAvg: gradeData.value[1].mathAvg,
+          engAvg: gradeData.value[1].engAvg,
+          inqAvg: gradeData.value[1].inqAvg,
+          histAvg: gradeData.value[1].histAvg
+        }
+      }
+    }
+
+    const res = await generateGradeLevelAiAnalysis(statsPayload, key)
+    if (res.success && res.data) {
+      const newReport = {
+        analyzedAt: new Date().toLocaleString('ko-KR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        analyzedBy: '시스템 관리자 (회차 단독 분석)',
+        model: res.model,
+        round: selectedRound.value,
+        academicYear: selectedAcademicYear.value,
+        gradeCards: res.data.gradeCards,
+        roadmap: res.data.roadmap
+      }
+
+      await saveGradeAnalysis(selectedRound.value, selectedAcademicYear.value, newReport)
+      savedAiReport.value = newReport
+      aiToastMessage.value = `✨ ${currentRoundLabel.value} 단독 AI 심층 분석이 생성 및 DB에 영구 저장되었습니다!`
+      aiToastType.value = 'success'
+      setTimeout(() => { aiToastMessage.value = '' }, 6000)
+    }
+  } catch (err) {
+    console.error('회차 단독 AI 분석 실패:', err)
+    aiToastMessage.value = `AI 분석 실패: ${err.message || '오류 발생'}`
+    aiToastType.value = 'error'
+    setTimeout(() => { aiToastMessage.value = '' }, 8000)
+  } finally {
+    isAiGenerating.value = false
+  }
+}
 
 async function loadSavedAiReport() {
   isLoadingAiReport.value = true

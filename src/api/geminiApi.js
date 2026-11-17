@@ -6,6 +6,7 @@ export const GEMINI_PRIMARY_MODEL = 'gemini-2.5-flash'
 export const GEMINI_FALLBACK_MODEL = 'gemini-1.5-flash'
 export const AI_GRADE_REPORT_PREFIX = 'ai_report_grade_comparison_'
 export const COMPREHENSIVE_AI_REPORT_PREFIX = 'ai_report_stat_comprehensive_'
+export const STUDENT_COUNSEL_PREFIX = 'ai_counsel_student_'
 
 /**
  * 1. Gemini API Key 조회 (Supabase config 우선 -> localStorage -> .env)
@@ -319,6 +320,13 @@ ${JSON.stringify(statsPayload, null, 2)}
 
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}))
+    const status = response.status
+    if (status === 429) {
+      throw new Error('Google Gemini API 호출 한도(분당 요청 수 제한)를 초과했습니다. 약 30초~1분 후 다시 시도해 주세요.')
+    }
+    if (status === 400 && String(errData?.error?.message || '').includes('API_KEY_INVALID')) {
+      throw new Error('등록된 Gemini API Key가 유효하지 않습니다. 관리자 환경설정에서 API 키를 다시 확인해 주세요.')
+    }
     throw new Error(errData?.error?.message || `Gemini API 호출 실패 (HTTP ${response.status})`)
   }
 
@@ -652,6 +660,13 @@ ${JSON.stringify(statsPayload, null, 2)}
 
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}))
+    const status = response.status
+    if (status === 429) {
+      throw new Error('Google Gemini API 호출 한도(분당 요청 수 제한)를 초과했습니다. 약 30초~1분 후 다시 시도해 주세요.')
+    }
+    if (status === 400 && String(errData?.error?.message || '').includes('API_KEY_INVALID')) {
+      throw new Error('등록된 Gemini API Key가 유효하지 않습니다. 관리자 환경설정에서 API 키를 다시 확인해 주세요.')
+    }
     throw new Error(errData?.error?.message || `Gemini API 호출 실패 (HTTP ${response.status})`)
   }
 
@@ -692,4 +707,267 @@ ${JSON.stringify(statsPayload, null, 2)}
       ...parsed
     }
   }
+}
+
+/**
+ * 10. Supabase DB에서 특정 학생의 맞춤형 AI 상담 리포트 조회
+ */
+export async function fetchStudentAiCounsel(academicYear, studentKey) {
+  if (!studentKey) return null
+  const yr = String(academicYear || '2027')
+  const storageKey = `${STUDENT_COUNSEL_PREFIX}${yr}_${studentKey}`
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('config')
+        .select('value')
+        .eq('key', storageKey)
+        .maybeSingle()
+
+      if (!error && data && data.value) {
+        const parsed = JSON.parse(data.value)
+        if (parsed && typeof parsed === 'object') {
+          try {
+            localStorage.setItem(`pcm_${storageKey}`, data.value)
+          } catch {}
+          return parsed
+        }
+      }
+    } catch (e) {
+      console.warn(`[geminiApi] Supabase 학생 AI 상담 리포트(${storageKey}) 조회 실패:`, e)
+    }
+  }
+
+  // 로컬 스토리지 백업 조회
+  try {
+    const localVal = localStorage.getItem(`pcm_${storageKey}`)
+    if (localVal) {
+      return JSON.parse(localVal)
+    }
+  } catch {}
+
+  return null
+}
+
+/**
+ * 11. Supabase DB에 특정 학생의 맞춤형 AI 상담 리포트 영구 저장 (덮어쓰기)
+ */
+export async function saveStudentAiCounsel(academicYear, studentKey, reportData) {
+  if (!studentKey) return false
+  const yr = String(academicYear || '2027')
+  const storageKey = `${STUDENT_COUNSEL_PREFIX}${yr}_${studentKey}`
+  const jsonStr = JSON.stringify(reportData)
+
+  // 1. 로컬 스토리지에 무조건 먼저 안전 저장 (DB/네트워크 오류 시에도 생성된 결과 보존)
+  try {
+    localStorage.setItem(`pcm_${storageKey}`, jsonStr)
+  } catch (e) {
+    console.warn('[geminiApi] localStorage 백업 저장 실패:', e)
+  }
+
+  // 2. Supabase DB 영구 저장
+  if (supabase) {
+    try {
+      const { error } = await supabase
+        .from('config')
+        .upsert(
+          { key: storageKey, value: jsonStr },
+          { onConflict: 'key' }
+        )
+
+      if (error) {
+        console.warn(`[geminiApi] Supabase 학생 AI 상담 리포트(${storageKey}) 저장 경고:`, error)
+      }
+    } catch (dbErr) {
+      console.warn(`[geminiApi] Supabase 연결 예외:`, dbErr)
+    }
+  }
+
+  return true
+}
+
+/**
+ * 12. Gemini API를 호출하여 특정 학생 1:1 맞춤 대입 심층 상담 리포트 생성
+ * ※ 엄격한 개인정보보호: 학생 실명, 주민번호, 학번 등 개인식별정보(PII)는 절대 전달되지 않음
+ */
+export async function generateStudentIndividualAiCounsel(apiKey, academicYear, anonymizedPayload) {
+  const key = apiKey || await getGeminiApiKey()
+  if (!key) {
+    throw new Error('Google Gemini API Key가 설정되어 있지 않습니다. 관리자 환경설정을 확인해 주세요.')
+  }
+
+  const yr = String(academicYear || '2027')
+
+  const systemInstruction = `
+당신은 대한민국 일반계 고등학교 대입 진학 지도 20년 경력의 진학지도 전문 수석교사입니다.
+제공된 학생의 내신 성적, 모의고사 성적 추이, 수시 6장 지망/지원 현황, 특별전형(농어촌/기회균형) 자격 요건을 정밀 진단하여, 학생과 학부모에게 실질적인 합격 가능성을 극대화할 수 있는 심층 맞춤 진학 상담 리포트를 작성해야 합니다.
+
+[절대 불변의 분석 원칙 - 엄격 준수]
+1. 등급 해석: 1등급이 최상위(최우수), 9등급이 최하위(가장 취약)입니다. 숫자가 작을수록 우수합니다 (예: 2.15등급은 3.40등급보다 우수).
+2. 사실 일치성: 제공된 실제 내신과 모의고사 성적, 지망 대학 목록만을 바탕으로 냉정하고 객관적으로 분석하십시오. 절대로 지어낸 가짜 대학이나 허위 합격선을 언급하지 마십시오.
+3. 현실적 지도: 비현실적인 희망고문을 배제하고, 수시 납치 방지선(정시 기대선 대비 수시 하향 지원 경계), 수능최저 충족을 위한 전략 과목(영어, 탐구 등) 집중 처방, 6장 수시 바구니의 안정/적정/상향 밸런스를 구체적으로 제시하십시오.
+4. 개인정보 보호: 전달받은 데이터에는 어떠한 개인 식별자(실명 등)도 포함되어 있지 않으며, 출력 리포트에서도 학생을 지칭할 때 '학생' 또는 '해당 학생'으로 표현하십시오.
+5. 수시 지망 미등록 대응: 수시 지망 카드(applications)가 비어있는 경우, 학생의 내신과 모평 성적 추이를 바탕으로 추천하는 현실적인 대학 라인 및 수시 6장 바구니 권장 조합(상향 2장, 적정 2장, 안정 2장)을 직접 구체적으로 설계해 주십시오.
+
+[출력 형식 - 순수 JSON만 반환, 마크다운 코드블록 없이 순수 JSON 문자열만 출력]
+{
+  "summary": "학생의 전반적인 대입 경쟁력 및 현재 위치 종합 요약 (2~3문장으로 내신, 모평, 수시 조합의 핵심을 힘있게 브리핑)",
+  "basketDiagnosis": {
+    "status": "적정 분산형 | 상향 집중형 | 안정 편중형 | 재조정 필요형 중 택1",
+    "balanceComment": "지원 대학 6장의 상향/적정/안정 밸런스 및 정시 기대선 대비 수시 납치 위험도 진단",
+    "strengths": [
+      "1번째 강점 (예: 내신 대비 교과 추천 적극 활용, 특정 학과 정량 우위 등)",
+      "2번째 강점"
+    ],
+    "risks": [
+      "1번째 주의점 또는 위험요소 (예: 수능최저 미충족 시 전원 탈락 위험, 상향 편중에 따른 올킬 위험 등)",
+      "2번째 주의점"
+    ]
+  },
+  "csatStrategy": {
+    "overallFeasibility": "수능최저 충족 가능성 평가 및 정시 기대선 종합 진단",
+    "recommendedSubjects": [
+      "1순위 전략 과목 (예: 영어 2등급 절대 사수)",
+      "2순위 전략 과목 (예: 탐구 사회문화 2등급 완성)"
+    ],
+    "actionPlan": "수능 당일까지의 과목별 구체적 등급 방어 및 집중 처방"
+  },
+  "specialTrackAdvice": {
+    "ruralAdvice": "농어촌 전형 활용 조언 (해당자: 일반전형 대비 유불리 및 중위권 컷 상승 주의점 / 비해당자: 해당 없음 기재)",
+    "opportunityAdvice": "기회균형 전형 활용 조언 (해당자: 기균 전형 실익 / 비해당자: 해당 없음 기재)"
+  },
+  "counselScript": [
+    "상담 시 교사가 학생 및 학부모에게 직접 전달할 1번째 핵심 조언 멘트",
+    "2번째 구체적 지원 전략 및 수능최저 준비 멘트",
+    "3번째 수시 6장 최종 조합 및 멘탈 관리 당부 멘트"
+  ]
+}
+`
+
+  const userPrompt = `
+다음은 ${yr}학년도 대입을 준비하는 학생의 가명화된 실제 성적 및 수시 지원 현황 데이터입니다.
+
+[학생 학업 및 수시 지원 데이터]
+${JSON.stringify(anonymizedPayload, null, 2)}
+
+위 데이터를 바탕으로 수석교사의 관점에서 학생의 합격률을 극대화하고 실질적인 나침반이 될 수 있는 1:1 맞춤 심층 진학 상담 리포트 JSON을 작성해 주십시오.
+`
+
+  const requestBody = {
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: `${systemInstruction}\n\n${userPrompt}` }]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.2,
+      topP: 0.8,
+      responseMimeType: 'application/json'
+    }
+  }
+
+  // 1차 시도: 2.5 Flash
+  let targetModel = GEMINI_PRIMARY_MODEL
+  let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(requestBody)
+  })
+
+  // 404 모델 미지원 시 fallback 시도
+  if (response.status === 404) {
+    targetModel = GEMINI_FALLBACK_MODEL
+    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
+    })
+  }
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}))
+    const status = response.status
+    if (status === 429) {
+      throw new Error('Google Gemini API 호출 한도(분당 요청 수 제한)를 초과했습니다. 약 30초~1분 후 다시 시도해 주세요.')
+    }
+    if (status === 400 && String(errData?.error?.message || '').includes('API_KEY_INVALID')) {
+      throw new Error('등록된 Gemini API Key가 유효하지 않습니다. 관리자 환경설정에서 API 키를 다시 확인해 주세요.')
+    }
+    throw new Error(errData?.error?.message || `Gemini API 호출 실패 (HTTP ${response.status})`)
+  }
+
+  const result = await response.json()
+  const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text
+  if (!rawText) {
+    throw new Error('Gemini API로부터 응답 텍스트를 수신하지 못했습니다.')
+  }
+
+  let cleanedText = rawText.trim()
+  if (cleanedText.startsWith('```json')) {
+    cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+  } else if (cleanedText.startsWith('```')) {
+    cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '')
+  }
+
+  const parsed = JSON.parse(cleanedText)
+  if (!parsed.summary || !parsed.basketDiagnosis || !parsed.csatStrategy || !parsed.counselScript) {
+    throw new Error('Gemini 응답 구조가 불완전합니다 (summary, basketDiagnosis, csatStrategy, counselScript 중 일부 누락).')
+  }
+
+  const nowStr = new Date().toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+
+  return {
+    success: true,
+    model: targetModel,
+    data: {
+      academicYear: yr,
+      analyzedAt: nowStr,
+      model: targetModel,
+      report: parsed
+    }
+  }
+}
+
+/**
+ * 13. 특정 학생의 교사 상담 메모 저장 (Supabase config + localStorage)
+ * AI 리포트 재호출 없이 기존 리포트 객체에 teacherMemo만 안전하게 병합/갱신
+ */
+export async function saveStudentTeacherMemo(academicYear, studentKey, memoText) {
+  if (!studentKey) return false
+  const yr = String(academicYear || '2027')
+
+  // 기존 리포트 조회
+  const existing = await fetchStudentAiCounsel(yr, studentKey)
+  const toSave = existing || {
+    academicYear: yr,
+    analyzedAt: new Date().toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }),
+    model: 'Gemini',
+    report: null
+  }
+
+  toSave.teacherMemo = String(memoText || '')
+  toSave.memoUpdatedAt = new Date().toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+
+  await saveStudentAiCounsel(yr, studentKey, toSave)
+  return toSave
 }

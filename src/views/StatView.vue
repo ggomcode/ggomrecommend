@@ -388,7 +388,7 @@ const menuGroups = computed(() => [
     items: [
       { id: 'student', name: '학생별 6장 카드', iconComponent: Users },
       { id: 'csatTarget', name: '수능최저 & 목표진단', iconComponent: Compass },
-      { id: 'counsel', name: '학부모 맞춤 상담', iconComponent: Sparkles, badge: 'HOT' }
+      { id: 'counsel', name: '학생별 맞춤 상담', iconComponent: Sparkles, badge: 'AI' }
     ]
   },
   {
