@@ -334,6 +334,14 @@
                 class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-slate-800 dark:text-white"
               />
               <button
+                type="button"
+                v-if="hasGoogleSheetPrincipalId || realGoogleSheetPrincipalId"
+                @click="toggleShowPrincipalId"
+                class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer whitespace-nowrap"
+              >
+                {{ showPrincipalId ? '숨김' : '보기' }}
+              </button>
+              <button
                 @click="saveGoogleSheetPrincipalId"
                 :disabled="googleSheetPrincipalLoading"
                 class="text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg px-3.5 cursor-pointer transition-colors whitespace-nowrap"
@@ -363,6 +371,14 @@
                 :placeholder="hasGoogleSheetRuralId ? '저장된 ID (마스킹됨)' : 'ID 입력 (예: 1CyiNWs...)'"
                 class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-slate-800 dark:text-white"
               />
+              <button
+                type="button"
+                v-if="hasGoogleSheetRuralId || realGoogleSheetRuralId"
+                @click="toggleShowRuralId"
+                class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer whitespace-nowrap"
+              >
+                {{ showRuralId ? '숨김' : '보기' }}
+              </button>
               <button
                 @click="saveGoogleSheetRuralId"
                 :disabled="googleSheetRuralLoading"
@@ -423,6 +439,14 @@
                 :placeholder="hasGoogleSheetKcueId ? '저장된 ID (마스킹됨)' : 'ID 또는 전체 시트 URL 입력 (예: 1hkgi-WKdbh...)'"
                 class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-slate-800 dark:text-white"
               />
+              <button
+                type="button"
+                v-if="hasGoogleSheetKcueId || realGoogleSheetKcueId"
+                @click="toggleShowKcueId"
+                class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer whitespace-nowrap"
+              >
+                {{ showKcueId ? '숨김' : '보기' }}
+              </button>
               <button
                 @click="saveGoogleSheetKcueId"
                 :disabled="googleSheetKcueLoading"
@@ -512,6 +536,14 @@
                 class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 text-slate-800 dark:text-white"
               />
               <button
+                type="button"
+                v-if="hasAdmissionSheetId || realAdmissionSheetId"
+                @click="toggleShowAdmissionSheetId"
+                class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer whitespace-nowrap"
+              >
+                {{ showAdmissionSheetId ? '숨김' : '보기' }}
+              </button>
+              <button
                 @click="handleSaveAdmissionSheetId"
                 :disabled="admissionSheetLoading"
                 class="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 border-none rounded-lg px-4 cursor-pointer transition-colors whitespace-nowrap"
@@ -554,6 +586,14 @@
                 :placeholder="hasGoogleSheetRollbookId ? '저장된 ID (마스킹됨)' : 'ID 또는 전체 시트 URL 입력 (필수)'"
                 class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-slate-800 dark:text-white"
               />
+              <button
+                type="button"
+                v-if="hasGoogleSheetRollbookId || realGoogleSheetRollbookId"
+                @click="toggleShowRollbookId"
+                class="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer whitespace-nowrap"
+              >
+                {{ showRollbookId ? '숨김' : '보기' }}
+              </button>
               <button
                 @click="saveGoogleSheetRollbookId"
                 :disabled="googleSheetRollbookLoading"
@@ -630,18 +670,18 @@
         </div>
         <p class="text-xs text-slate-400 mb-4 leading-relaxed">
           전국연합학력평가 및 모의평가 성적 분석, 학년별 학력 비교 심층 진단을 수행할 <strong>Google Gemini API Key</strong>를 설정합니다.<br>
-          ※ Google AI Studio(<a href="https://aistudio.google.com/" target="_blank" class="text-indigo-500 hover:underline">aistudio.google.com</a>)에서 무료 API 키를 발급받아 입력하시면 즉시 연동됩니다. (권장 모델: <code>gemini-2.5-flash</code>)
+          ※ Google AI Studio(<a href="https://aistudio.google.com/" target="_blank" class="text-indigo-500 hover:underline">aistudio.google.com</a>)에서 무료 API 키를 발급받아 입력하시면 즉시 연동됩니다.
         </p>
 
         <form @submit.prevent="handleSaveGeminiKey" class="space-y-3">
-          <div class="flex flex-col sm:flex-row gap-2.5 w-full">
+          <div class="flex flex-col lg:flex-row gap-2.5 w-full">
             <input
               v-model="geminiKeyInput"
               :type="showGeminiKey ? 'text' : 'password'"
               :placeholder="hasGeminiKey ? '저장된 API Key (클릭하여 새로 입력 가능)' : 'AIzaSy... (Gemini API Key 입력)'"
               class="flex-1 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-400 text-slate-800 dark:text-white"
             />
-            <div class="flex items-center gap-2 shrink-0">
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
               <button
                 type="button"
                 v-if="hasGeminiKey"
@@ -657,6 +697,26 @@
               >
                 {{ geminiLoading ? '저장 중…' : 'API Key 저장' }}
               </button>
+              <button
+                type="button"
+                @click="handleFetchGeminiModels(false)"
+                :disabled="isFetchingModels || (!hasGeminiKey && !geminiKeyInput.trim())"
+                class="text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg px-3 py-2 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1"
+                title="API 키로 사용 가능한 최신 Gemini 모델 목록을 자동 검색하여 드롭다운을 갱신합니다."
+              >
+                <span v-if="isFetchingModels" class="animate-spin text-xs">🔄</span>
+                <span v-else>🔍</span>
+                <span>{{ isFetchingModels ? '모델 검색 중…' : '모델선택' }}</span>
+              </button>
+              <select
+                v-model="selectedGeminiModel"
+                class="text-xs font-semibold bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded-lg px-2.5 py-2 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer"
+                title="사용할 Gemini AI 모델을 선택합니다."
+              >
+                <option v-for="m in geminiAvailableModels" :key="m.id" :value="m.id">
+                  {{ m.label }}
+                </option>
+              </select>
               <button
                 type="button"
                 @click="handleTestGeminiKey"
@@ -720,8 +780,8 @@
                   {{ yr }}학년도 대입
                 </option>
               </select>
-              <span class="text-[11px] text-slate-400">
-                (권장 모델: <code>gemini-2.5-flash</code>)
+              <span class="text-[11px] text-slate-400 font-mono">
+                (선택 모델: <code>{{ selectedGeminiModel || 'gemini-2.0-flash' }}</code>)
               </span>
             </div>
 
@@ -748,7 +808,7 @@
                 <span>{{ aiTargetAcademicYear }}학년도 AI 종합 총평 미리보기</span>
               </span>
               <span class="text-[10px] text-slate-400 font-mono">
-                모델: {{ comprehensiveAiReportState.model || 'gemini-2.5-flash' }}
+                모델: {{ comprehensiveAiReportState.model || selectedGeminiModel || 'gemini-2.0-flash' }}
               </span>
             </div>
             <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed m-0 bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200/80 dark:border-slate-700">
@@ -1166,7 +1226,17 @@ import { supabase } from '../../utils/supabaseClient'
 import { fetchSchoolName, setSchoolNameConfig } from '../../utils/schoolConfig'
 import { getDisclosureCount, setDisclosureCount, syncRegionalToUniversities, syncPrincipalUnivsFromGoogleSheet } from '../../api/admin.js'
 import { syncRuralTracksFromGoogleSheet } from '../../api/ruralApi.js'
-import { getGeminiApiKey, saveGeminiApiKey, testGeminiApiKey, fetchComprehensiveAiReport, saveComprehensiveAiReport, generateComprehensiveAiStatReport } from '../../api/geminiApi.js'
+import { 
+  getGeminiApiKey, 
+  saveGeminiApiKey, 
+  testGeminiApiKey, 
+  fetchComprehensiveAiReport, 
+  saveComprehensiveAiReport, 
+  generateComprehensiveAiStatReport,
+  getSelectedGeminiModel,
+  saveSelectedGeminiModel,
+  fetchAvailableGeminiModels
+} from '../../api/geminiApi.js'
 import { getCurrentAcademicYear, compileComprehensiveStatPayload, loadComprehensiveAiReport } from '../../stat/composables/useStatData.js'
 import { getKcueSheetId, extractSheetId, saveKcueSheetId, KCUE_SHEET_KEY } from '../../api/statApi.js'
 import { getAdmissionSheetId, saveAdmissionSheetId, fetchAdmissionCalendarData } from '../../services/admissionCalendarService.js'
@@ -1283,17 +1353,28 @@ const geminiTestLoading = ref(false)
 const geminiTestResult = ref(null)
 const showGeminiKey = ref(false)
 
+const selectedGeminiModel = ref('gemini-2.0-flash')
+const geminiAvailableModels = ref([
+  { role: 'prev_flash', isDefault: true, id: 'gemini-2.0-flash', version: '2.0', label: 'Gemini 2.0 Flash (직전 최신 / 기본 권장)' },
+  { role: 'latest_flash', isDefault: false, id: 'gemini-2.5-flash', version: '2.5', label: 'Gemini 2.5 Flash (최신)' },
+  { role: 'latest_lite', isDefault: false, id: 'gemini-2.0-flash-lite', version: '2.0', label: 'Gemini 2.0 Flash-Lite (최신 경량)' }
+])
+const isFetchingModels = ref(false)
+
 const aiTargetAcademicYear = ref(getCurrentAcademicYear())
 const aiAvailableYears = ref(['2027', '2026', '2025', '2024'])
 const comprehensiveAiReportState = ref(null)
 const isGeneratingAllAi = ref(false)
 
 const hasGoogleSheetPrincipalId = ref(false)
+const showPrincipalId = ref(false)
 const hasGoogleSheetRuralId = ref(false)
+const showRuralId = ref(false)
 const googleSheetKcueId = ref('')
 const realGoogleSheetKcueId = ref('')
 const googleSheetKcueLoading = ref(false)
 const hasGoogleSheetKcueId = ref(false)
+const showKcueId = ref(false)
 
 const googleSheetKcueGasUrl = ref('')
 const realGoogleSheetKcueGasUrl = ref('')
@@ -1304,12 +1385,14 @@ const showKcueGasUrl = ref(false)
 const admissionSheetIdInput = ref('')
 const realAdmissionSheetId = ref('')
 const hasAdmissionSheetId = ref(false)
+const showAdmissionSheetId = ref(false)
 const admissionSheetLoading = ref(false)
 const admissionRefreshLoading = ref(false)
 
 const googleSheetRollbookId = ref('')
 const realGoogleSheetRollbookId = ref('')
 const hasGoogleSheetRollbookId = ref(false)
+const showRollbookId = ref(false)
 const googleSheetRollbookLoading = ref(false)
 
 const googleSheetRollbookGasUrl = ref('')
@@ -1707,6 +1790,23 @@ async function loadConfig() {
     geminiKeyInput.value = ''
     loadComprehensiveReportForTargetYear()
 
+    const savedModel = configMap['gemini_selected_model'] || localStorage.getItem('pcm_gemini_selected_model') || ''
+    if (savedModel) {
+      selectedGeminiModel.value = savedModel
+      if (!geminiAvailableModels.value.some(m => m.id === savedModel)) {
+        geminiAvailableModels.value.unshift({
+          role: 'saved',
+          isDefault: true,
+          id: savedModel,
+          version: savedModel.replace(/[^0-9.]/g, '') || '',
+          label: `${savedModel} (저장된 모델)`
+        })
+      }
+    }
+    if (hasGeminiKey.value) {
+      handleFetchGeminiModels(true).catch(() => {})
+    }
+
 
 
     const dbPrincipalId = configMap['google_sheet_principal_id'] || ''
@@ -1787,6 +1887,15 @@ async function loadConfig() {
   }
 }
 
+function toggleShowPrincipalId() {
+  showPrincipalId.value = !showPrincipalId.value
+  if (showPrincipalId.value) {
+    googleSheetPrincipalId.value = realGoogleSheetPrincipalId.value
+  } else {
+    googleSheetPrincipalId.value = maskGoogleSheetId(realGoogleSheetPrincipalId.value)
+  }
+}
+
 async function saveGoogleSheetPrincipalId() {
   googleSheetPrincipalLoading.value = true
   try {
@@ -1803,7 +1912,7 @@ async function saveGoogleSheetPrincipalId() {
       if (error) throw error
 
       hasGoogleSheetPrincipalId.value = !!targetVal
-      googleSheetPrincipalId.value = targetVal ? maskGoogleSheetId(targetVal) : ''
+      googleSheetPrincipalId.value = targetVal ? (showPrincipalId.value ? targetVal : maskGoogleSheetId(targetVal)) : ''
       alert('학교장 추천전형 구글 스프레드시트 ID가 저장되었습니다.')
     }
   } catch (e) {
@@ -1811,6 +1920,15 @@ async function saveGoogleSheetPrincipalId() {
     alert('구글 시트 ID 저장 중 오류가 발생했습니다.')
   } finally {
     googleSheetPrincipalLoading.value = false
+  }
+}
+
+function toggleShowRuralId() {
+  showRuralId.value = !showRuralId.value
+  if (showRuralId.value) {
+    googleSheetRuralId.value = realGoogleSheetRuralId.value
+  } else {
+    googleSheetRuralId.value = maskGoogleSheetId(realGoogleSheetRuralId.value)
   }
 }
 
@@ -1836,7 +1954,7 @@ async function saveGoogleSheetRuralId() {
       }
 
       hasGoogleSheetRuralId.value = !!targetVal
-      googleSheetRuralId.value = targetVal ? maskGoogleSheetId(targetVal) : ''
+      googleSheetRuralId.value = targetVal ? (showRuralId.value ? targetVal : maskGoogleSheetId(targetVal)) : ''
       alert('농어촌 전형 구글 스프레드시트 ID가 저장되었습니다.')
     }
   } catch (e) {
@@ -1870,6 +1988,15 @@ async function syncGoogleSheetPrincipal() {
   }
 }
 
+function toggleShowKcueId() {
+  showKcueId.value = !showKcueId.value
+  if (showKcueId.value) {
+    googleSheetKcueId.value = realGoogleSheetKcueId.value
+  } else {
+    googleSheetKcueId.value = maskGoogleSheetId(realGoogleSheetKcueId.value)
+  }
+}
+
 async function saveGoogleSheetKcueId() {
   googleSheetKcueLoading.value = true
   try {
@@ -1885,7 +2012,7 @@ async function saveGoogleSheetKcueId() {
     await saveKcueSheetId(targetVal)
 
     hasGoogleSheetKcueId.value = !!targetVal
-    googleSheetKcueId.value = targetVal ? maskGoogleSheetId(targetVal) : ''
+    googleSheetKcueId.value = targetVal ? (showKcueId.value ? targetVal : maskGoogleSheetId(targetVal)) : ''
     alert(targetVal ? '대교협 수시 지원 원자료 구글 스프레드시트 ID가 저장되었습니다.' : '대교협 시트 ID가 삭제되었습니다.')
   } catch (e) {
     console.error(e)
@@ -1953,6 +2080,15 @@ function handleKcueGasBlur() {
   }
 }
 
+function toggleShowAdmissionSheetId() {
+  showAdmissionSheetId.value = !showAdmissionSheetId.value
+  if (showAdmissionSheetId.value) {
+    admissionSheetIdInput.value = realAdmissionSheetId.value
+  } else {
+    admissionSheetIdInput.value = maskGoogleSheetId(realAdmissionSheetId.value)
+  }
+}
+
 async function handleSaveAdmissionSheetId() {
   admissionSheetLoading.value = true
   try {
@@ -1973,7 +2109,7 @@ async function handleSaveAdmissionSheetId() {
 
     await saveAdmissionSheetId(targetVal)
     hasAdmissionSheetId.value = !!targetVal
-    admissionSheetIdInput.value = targetVal ? maskGoogleSheetId(targetVal) : ''
+    admissionSheetIdInput.value = targetVal ? (showAdmissionSheetId.value ? targetVal : maskGoogleSheetId(targetVal)) : ''
     alert('2027 대입 일정 구글 스프레드시트 ID가 저장되었습니다.')
   } catch (e) {
     console.error(e)
@@ -1993,6 +2129,15 @@ async function handleRefreshAdmissionData() {
     alert(`동기화 실패: ${e.message}`)
   } finally {
     admissionRefreshLoading.value = false
+  }
+}
+
+function toggleShowRollbookId() {
+  showRollbookId.value = !showRollbookId.value
+  if (showRollbookId.value) {
+    googleSheetRollbookId.value = realGoogleSheetRollbookId.value
+  } else {
+    googleSheetRollbookId.value = maskGoogleSheetId(realGoogleSheetRollbookId.value)
   }
 }
 
@@ -2026,7 +2171,7 @@ async function saveGoogleSheetRollbookId() {
     }
 
     hasGoogleSheetRollbookId.value = !!targetVal
-    googleSheetRollbookId.value = targetVal ? maskGoogleSheetId(targetVal) : ''
+    googleSheetRollbookId.value = targetVal ? (showRollbookId.value ? targetVal : maskGoogleSheetId(targetVal)) : ''
     alert('선택교과 출석관리 구글 스프레드시트 ID가 저장되었습니다.')
   } catch (e) {
     console.error(e)
@@ -2425,28 +2570,73 @@ async function handleGenerateAllStatAiReport() {
   }
 }
 
+async function handleFetchGeminiModels(isAutoFallback = false) {
+  const key = geminiKeyInput.value.trim() || await getGeminiApiKey()
+  if (!key) {
+    if (!isAutoFallback) {
+      alert('API Key를 먼저 입력하시거나 저장해 주세요.')
+    }
+    return
+  }
+
+  isFetchingModels.value = true
+  try {
+    const res = await fetchAvailableGeminiModels(key)
+    if (res && res.models && res.models.length > 0) {
+      geminiAvailableModels.value = res.models
+      // 현재 선택된 모델이 검색 목록에 없으면 기본 모델(직전 최신 flash)로 자동 설정
+      const exists = res.models.some(m => m.id === selectedGeminiModel.value)
+      if (!exists && res.defaultModel) {
+        selectedGeminiModel.value = res.defaultModel
+      }
+      if (!isAutoFallback) {
+        geminiTestResult.value = {
+          success: true,
+          message: `사용 가능한 Gemini 모델 ${res.models.length}개를 검색했습니다. (기본 권장: ${selectedGeminiModel.value})`
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Gemini 모델 목록 검색 실패:', err)
+    if (!isAutoFallback) {
+      geminiTestResult.value = {
+        success: false,
+        message: `모델 검색 실패: ${err.message || '사용 가능한 모델 목록을 가져올 수 없습니다.'}`
+      }
+    }
+  } finally {
+    isFetchingModels.value = false
+  }
+}
+
 async function handleTestGeminiKey() {
   geminiTestLoading.value = true
   geminiTestResult.value = null
   try {
     const targetKey = geminiKeyInput.value.trim() || undefined
-    const res = await testGeminiApiKey(targetKey)
+    const chosenModel = selectedGeminiModel.value || 'gemini-2.0-flash'
+    const res = await testGeminiApiKey(targetKey, chosenModel)
     if (res.success) {
+      await saveSelectedGeminiModel(chosenModel)
       geminiTestResult.value = {
         success: true,
-        message: `연결 성공! Google Gemini API (${res.model}) 정상 응답을 확인했습니다.`
+        message: `연결 성공! Google Gemini API (${chosenModel}) 정상 응답을 확인하여 기본 모델로 저장되었습니다.`
       }
     } else {
       geminiTestResult.value = {
         success: false,
         message: `연결 실패: ${res.error}`
       }
+      // 연결 테스트 실패 시, 사용 가능한 모델을 다시 검색해서 드롭다운 자동 갱신
+      handleFetchGeminiModels(true)
     }
   } catch (e) {
     geminiTestResult.value = {
       success: false,
       message: `테스트 오류: ${e.message || '네트워크 오류'}`
     }
+    // 연결 테스트 실패 시, 사용 가능한 모델을 다시 검색해서 드롭다운 자동 갱신
+    handleFetchGeminiModels(true)
   } finally {
     geminiTestLoading.value = false
   }

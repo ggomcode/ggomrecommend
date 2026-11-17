@@ -2,11 +2,212 @@ import { supabase } from '../utils/supabaseClient'
 
 export const GEMINI_CONFIG_KEY = 'gemini_api_key'
 export const GEMINI_LOCAL_KEY = 'pcm_gemini_api_key'
-export const GEMINI_PRIMARY_MODEL = 'gemini-2.5-flash'
-export const GEMINI_FALLBACK_MODEL = 'gemini-1.5-flash'
+export const GEMINI_MODEL_CONFIG_KEY = 'gemini_selected_model'
+export const GEMINI_MODEL_LOCAL_KEY = 'pcm_gemini_selected_model'
+export const GEMINI_DEFAULT_MODEL = 'gemini-2.0-flash'
+export const GEMINI_PRIMARY_MODEL = 'gemini-2.0-flash'
+export const GEMINI_FALLBACK_MODEL = 'gemini-2.5-flash'
 export const AI_GRADE_REPORT_PREFIX = 'ai_report_grade_comparison_'
 export const COMPREHENSIVE_AI_REPORT_PREFIX = 'ai_report_stat_comprehensive_'
 export const STUDENT_COUNSEL_PREFIX = 'ai_counsel_student_'
+
+/**
+ * 0. 현재 선택/저장된 Gemini AI 모델 조회 (Supabase config -> localStorage -> 기본값)
+ */
+export async function getSelectedGeminiModel() {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('config')
+        .select('value')
+        .eq('key', GEMINI_MODEL_CONFIG_KEY)
+        .maybeSingle()
+
+      if (!error && data && data.value && String(data.value).trim()) {
+        const val = String(data.value).trim()
+        localStorage.setItem(GEMINI_MODEL_LOCAL_KEY, val)
+        return val
+      }
+    } catch (e) {
+      console.warn('Supabase config에서 Gemini 모델 조회 실패 (로컬 스토리지 확인 중):', e)
+    }
+  }
+
+  const localVal = localStorage.getItem(GEMINI_MODEL_LOCAL_KEY)
+  if (localVal && localVal.trim()) {
+    return localVal.trim()
+  }
+
+  return GEMINI_DEFAULT_MODEL
+}
+
+/**
+ * 0-1. 선택된 Gemini AI 모델 저장 (Supabase config + localStorage)
+ */
+export async function saveSelectedGeminiModel(modelName) {
+  const cleanModel = modelName ? String(modelName).trim() : GEMINI_DEFAULT_MODEL
+
+  if (supabase) {
+    try {
+      const { error } = await supabase
+        .from('config')
+        .upsert({ key: GEMINI_MODEL_CONFIG_KEY, value: cleanModel }, { onConflict: 'key' })
+
+      if (error) {
+        console.error('Supabase Gemini 모델 저장 오류:', error)
+      }
+    } catch (e) {
+      console.warn('Supabase Gemini 모델 저장 실패:', e)
+    }
+  }
+
+  localStorage.setItem(GEMINI_MODEL_LOCAL_KEY, cleanModel)
+  return cleanModel
+}
+
+/**
+ * 0-2. Gemini API의 ModelService.ListModels 응답에서 요구조건 3대 모델 필터링
+ * 1) 가장 최신버전 직전의 flash버전 (Default, 기본 권장)
+ * 2) 가장 최신버전의 flash버전
+ * 3) lite중에서 가장 최신버전의 flash-lite버전
+ */
+export function parseGeminiModelList(modelsList) {
+  const contentModels = (modelsList || []).filter(m => {
+    const methods = m.supportedGenerationMethods || []
+    return methods.includes('generateContent')
+  })
+
+  const flashModels = []
+  const liteModels = []
+
+  for (const m of contentModels) {
+    const rawId = (m.name || '').replace(/^models\//, '')
+    const isLite = /lite|8b/i.test(rawId)
+    const verMatch = rawId.match(/gemini-(\d+(?:\.\d+)?)/i)
+    if (!verMatch) continue
+
+    const verStr = verMatch[1] // '2.0', '2.5', '1.5' 등
+    const verNum = parseFloat(verStr)
+    const isCanonical = !/-exp|-preview|-001/i.test(rawId)
+
+    const item = {
+      id: rawId,
+      versionStr: verStr,
+      versionNum: verNum,
+      displayName: m.displayName || rawId,
+      isCanonical
+    }
+
+    if (isLite) {
+      liteModels.push(item)
+    } else if (/flash/i.test(rawId)) {
+      flashModels.push(item)
+    }
+  }
+
+  // 버전 내림차순 정렬 (정식 릴리스 우선, 짧은 ID 우선)
+  const sortFn = (a, b) => {
+    if (b.versionNum !== a.versionNum) return b.versionNum - a.versionNum
+    if (a.isCanonical && !b.isCanonical) return -1
+    if (!a.isCanonical && b.isCanonical) return 1
+    return a.id.length - b.id.length
+  }
+
+  flashModels.sort(sortFn)
+  liteModels.sort(sortFn)
+
+  // 버전별 중복 제거
+  const uniqueFlashByVersion = []
+  const seenFlashVer = new Set()
+  for (const fm of flashModels) {
+    if (!seenFlashVer.has(fm.versionStr)) {
+      seenFlashVer.add(fm.versionStr)
+      uniqueFlashByVersion.push(fm)
+    }
+  }
+
+  const uniqueLiteByVersion = []
+  const seenLiteVer = new Set()
+  for (const lm of liteModels) {
+    if (!seenLiteVer.has(lm.versionStr)) {
+      seenLiteVer.add(lm.versionStr)
+      uniqueLiteByVersion.push(lm)
+    }
+  }
+
+  // 1. 가장 최신버전의 flash버전
+  const latestFlash = uniqueFlashByVersion[0] || null
+
+  // 2. 가장 최신버전 직전의 flash버전 (2개 이상이면 index 1, 1개뿐이면 latestFlash)
+  const prevFlash = uniqueFlashByVersion.length > 1 ? uniqueFlashByVersion[1] : latestFlash
+
+  // 3. lite중에서 가장 최신버전의 flash-lite버전
+  const latestLite = uniqueLiteByVersion[0] || null
+
+  const results = []
+  if (prevFlash) {
+    results.push({
+      role: 'prev_flash',
+      isDefault: true,
+      id: prevFlash.id,
+      version: prevFlash.versionStr,
+      label: `Gemini ${prevFlash.versionStr} Flash (직전 최신 / 기본 권장)`
+    })
+  }
+  if (latestFlash && (!prevFlash || latestFlash.id !== prevFlash.id)) {
+    results.push({
+      role: 'latest_flash',
+      isDefault: false,
+      id: latestFlash.id,
+      version: latestFlash.versionStr,
+      label: `Gemini ${latestFlash.versionStr} Flash (최신)`
+    })
+  }
+  if (latestLite) {
+    results.push({
+      role: 'latest_lite',
+      isDefault: false,
+      id: latestLite.id,
+      version: latestLite.versionStr,
+      label: `Gemini ${latestLite.versionStr} Flash-Lite (최신 경량)`
+    })
+  }
+
+  // 검색 결과가 비었을 때를 위한 안전 기본값
+  if (results.length === 0) {
+    results.push(
+      { role: 'prev_flash', isDefault: true, id: 'gemini-2.0-flash', version: '2.0', label: 'Gemini 2.0 Flash (직전 최신 / 기본 권장)' },
+      { role: 'latest_flash', isDefault: false, id: 'gemini-2.5-flash', version: '2.5', label: 'Gemini 2.5 Flash (최신)' },
+      { role: 'latest_lite', isDefault: false, id: 'gemini-2.0-flash-lite', version: '2.0', label: 'Gemini 2.0 Flash-Lite (최신 경량)' }
+    )
+  }
+
+  const defaultId = prevFlash ? prevFlash.id : results[0].id
+  return {
+    models: results,
+    defaultModel: defaultId
+  }
+}
+
+/**
+ * 0-3. 사용자의 API Key로 Google Generative Language API의 ModelService.ListModels 호출
+ */
+export async function fetchAvailableGeminiModels(apiKey) {
+  const key = apiKey || await getGeminiApiKey()
+  if (!key) {
+    throw new Error('API Key가 입력되지 않았습니다.')
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`
+  const res = await fetch(url)
+  if (!res.ok) {
+    const errJson = await res.json().catch(() => ({}))
+    throw new Error(errJson?.error?.message || `HTTP ${res.status}: 모델 목록 조회 실패`)
+  }
+
+  const data = await res.json()
+  return parseGeminiModelList(data.models || [])
+}
 
 /**
  * 1. Gemini API Key 조회 (Supabase config 우선 -> localStorage -> .env)
@@ -74,12 +275,13 @@ export async function saveGeminiApiKey(rawKey) {
 /**
  * 3. Gemini API Key 연결 테스트 (Ping)
  */
-export async function testGeminiApiKey(apiKey) {
+export async function testGeminiApiKey(apiKey, modelName) {
   const key = apiKey || await getGeminiApiKey()
   if (!key) {
     return { success: false, error: 'API 키가 입력되지 않았습니다.' }
   }
 
+  const targetModel = modelName || await getSelectedGeminiModel() || GEMINI_DEFAULT_MODEL
   const testPayload = {
     contents: [
       {
@@ -88,9 +290,8 @@ export async function testGeminiApiKey(apiKey) {
     ]
   }
 
-  // 1차 시도: 2.5 Flash
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_PRIMARY_MODEL}:generateContent?key=${encodeURIComponent(key)}`
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -98,28 +299,15 @@ export async function testGeminiApiKey(apiKey) {
     })
 
     if (res.ok) {
-      return { success: true, model: GEMINI_PRIMARY_MODEL }
-    }
-
-    // 404 모델 미지원 등의 경우 fallback 시도
-    if (res.status === 404) {
-      const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_FALLBACK_MODEL}:generateContent?key=${encodeURIComponent(key)}`
-      const fbRes = await fetch(fallbackUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(testPayload)
-      })
-      if (fbRes.ok) {
-        return { success: true, model: GEMINI_FALLBACK_MODEL }
-      }
-      const fbErr = await fbRes.json().catch(() => ({}))
-      return { success: false, error: fbErr?.error?.message || `HTTP ${fbRes.status}` }
+      // 연결 테스트 성공 시 선택된 모델을 기본값으로 영구 저장
+      await saveSelectedGeminiModel(targetModel).catch(e => console.warn(e))
+      return { success: true, model: targetModel }
     }
 
     const errJson = await res.json().catch(() => ({}))
-    return { success: false, error: errJson?.error?.message || `HTTP ${res.status}` }
+    return { success: false, error: errJson?.error?.message || `HTTP ${res.status}`, model: targetModel }
   } catch (err) {
-    return { success: false, error: err.message || '네트워크 통신 오류' }
+    return { success: false, error: err.message || '네트워크 통신 오류', model: targetModel }
   }
 }
 
@@ -300,8 +488,8 @@ ${JSON.stringify(statsPayload, null, 2)}
     }
   }
 
-  // 1차 시도: 2.5 Flash
-  let targetModel = GEMINI_PRIMARY_MODEL
+  // 선택된 모델로 1차 시도 (실패 시 안전 폴백)
+  let targetModel = await getSelectedGeminiModel() || GEMINI_DEFAULT_MODEL
   let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -310,7 +498,8 @@ ${JSON.stringify(statsPayload, null, 2)}
 
   // 404 모델 미지원 시 fallback 시도
   if (response.status === 404) {
-    targetModel = GEMINI_FALLBACK_MODEL
+    const fallbackModel = targetModel === 'gemini-2.0-flash' ? 'gemini-2.5-flash' : 'gemini-2.0-flash'
+    targetModel = fallbackModel
     response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -640,8 +829,8 @@ ${JSON.stringify(statsPayload, null, 2)}
     }
   }
 
-  // 1차 시도: 2.5 Flash
-  let targetModel = GEMINI_PRIMARY_MODEL
+  // 선택된 모델로 1차 시도 (실패 시 안전 폴백)
+  let targetModel = await getSelectedGeminiModel() || GEMINI_DEFAULT_MODEL
   let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -650,7 +839,8 @@ ${JSON.stringify(statsPayload, null, 2)}
 
   // 404 모델 미지원 시 fallback 시도
   if (response.status === 404) {
-    targetModel = GEMINI_FALLBACK_MODEL
+    const fallbackModel = targetModel === 'gemini-2.0-flash' ? 'gemini-2.5-flash' : 'gemini-2.0-flash'
+    targetModel = fallbackModel
     response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -868,8 +1058,8 @@ ${JSON.stringify(anonymizedPayload, null, 2)}
     }
   }
 
-  // 1차 시도: 2.5 Flash
-  let targetModel = GEMINI_PRIMARY_MODEL
+  // 선택된 모델로 1차 시도 (실패 시 안전 폴백)
+  let targetModel = await getSelectedGeminiModel() || GEMINI_DEFAULT_MODEL
   let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -878,7 +1068,8 @@ ${JSON.stringify(anonymizedPayload, null, 2)}
 
   // 404 모델 미지원 시 fallback 시도
   if (response.status === 404) {
-    targetModel = GEMINI_FALLBACK_MODEL
+    const fallbackModel = targetModel === 'gemini-2.0-flash' ? 'gemini-2.5-flash' : 'gemini-2.0-flash'
+    targetModel = fallbackModel
     response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -473,13 +473,36 @@ export function parseKcueRows(csvText, customPassword = null) {
     }
   }
 
-  // 2. 일반 텍스트 모드 컬럼 맵
+  // 2. 일반 텍스트 모드 컬럼 맵 (Row 0 단독 매핑 + Row 1 복합 헤더 매핑)
   const colMap = {}
+  const cleanStr = (s) => String(s || '').replace(/[\r\n\s]+/g, '').trim()
+
+  // 1차: Row 0 헤더 등록 (이미 등록된 헤더는 덮어쓰지 않음으로써 앞쪽 내신 과목 열(국어/영어/수학 등) 보존)
   rawHeaders.forEach((h, idx) => {
     if (!h) return
-    const clean = String(h).replace(/[\r\n\s]+/g, '').trim()
-    colMap[clean] = idx
+    const clean = cleanStr(h)
+    if (colMap[clean] === undefined) {
+      colMap[clean] = idx
+    }
   })
+
+  // 2차: Row 0 + Row 1 복합 헤더 등록 (예: 대교협 모의고사/수능 과목 영역: 국어(과목), 국어(등급), 수학(등급), 영어(등급) 등)
+  const subHeaders = rows[1] || []
+  let currentArea = ''
+  const maxCols = Math.max(rawHeaders.length, subHeaders.length)
+  for (let c = 0; c < maxCols; c++) {
+    const top = cleanStr(rawHeaders[c])
+    if (top) currentArea = top
+    const sub = cleanStr(subHeaders[c])
+    if (currentArea && sub) {
+      const j1 = `${currentArea}(${sub})`
+      const j2 = `${currentArea}_${sub}`
+      const j3 = `${currentArea}${sub}`
+      if (colMap[j1] === undefined) colMap[j1] = c
+      if (colMap[j2] === undefined) colMap[j2] = c
+      if (colMap[j3] === undefined) colMap[j3] = c
+    }
+  }
 
   // 3. CE:DR 매칭 열(2027: CM=90, 2026: CW=100, 2025: DC=106) 동적 인덱스 탐색
   const findMatchingColIdx = (yr, typePattern, fallbackIdx) => {
@@ -761,28 +784,28 @@ export function parseKcueRows(csvText, customPassword = null) {
       practicalDate: String(getVal('실기일자')).trim(),
       essayDate: String(getVal('논술일자')).trim(),
       finalAnnounceDate: String(getVal('최종발표일')).trim(),
-      korGrade: getNum('국어'),
-      engGrade: getNum('영어'),
-      mathGrade: getNum('수학'),
-      socGrade: getNum('사회'),
-      sciGrade: getNum('과학'),
-      allSubjectGrade: getNum('전교과(100)', '전교과'),
-      mainSubjectGrade: getNum('국영수사/과(100)', '국영수사/과'),
-      koreanMathEnglish: getNum('국영수'),
+      korGrade: getNum('국어', 'korGrade', '국어등급', '내신국어', '교과국어', '국어(100)', '국어(교과)'),
+      engGrade: getNum('영어', 'engGrade', '영어등급', '내신영어', '교과영어', '영어(100)', '영어(교과)'),
+      mathGrade: getNum('수학', 'mathGrade', '수학등급', '내신수학', '교과수학', '수학(100)', '수학(교과)'),
+      socGrade: getNum('사회', 'socGrade', '사회등급', '내신사회', '교과사회', '사회(100)', '사회(교과)'),
+      sciGrade: getNum('과학', 'sciGrade', '과학등급', '내신과학', '교과과학', '과학(100)', '과학(교과)'),
+      allSubjectGrade: getNum('전교과(100)', '전교과', 'allSubjectGrade', '전교과등급'),
+      mainSubjectGrade: getNum('국영수사/과(100)', '국영수사/과', 'mainSubjectGrade', '국영수사과(100)', '국영수사과', '주요교과'),
+      koreanMathEnglish: getNum('국영수(100)', '국영수', 'koreanMathEnglish', '국영수등급'),
       isRecommendation,
       isRural,
       isOpportunity,
       isMetro,
       competitionRates,
-      csatKorSubject: String(getVal('국어(과목)', '국어 (과목)')).trim(),
-      csatKorGrade: getNum('국어(등급)', '국어 (등급)'),
-      csatMathSubject: String(getVal('수학(과목)', '수학 (과목)')).trim(),
-      csatMathGrade: getNum('수학(등급)', '수학 (등급)'),
-      csatEngGrade: getNum('영어(등급)', '영어 (등급)', '수능영어', '수능 영어'),
-      csatInq1Subject: String(getVal('탐구1(과목)', '탐구1 (과목)')).trim(),
-      csatInq1Grade: getNum('탐구1(등급)', '탐구1 (등급)'),
-      csatInq2Subject: String(getVal('탐구2(과목)', '탐구2 (과목)')).trim(),
-      csatInq2Grade: getNum('탐구2(등급)', '탐구2 (등급)'),
+      csatKorSubject: String(getVal('국어(과목)', '국어 (과목)', '국어_과목', '국어과목', '수능국어과목', 'csatKorSubject')).trim(),
+      csatKorGrade: getNum('국어(등급)', '국어 (등급)', '국어_등급', '국어등급', '수능국어등급', '수능국어', 'csatKorGrade'),
+      csatMathSubject: String(getVal('수학(과목)', '수학 (과목)', '수학_과목', '수학과목', '수능수학과목', 'csatMathSubject')).trim(),
+      csatMathGrade: getNum('수학(등급)', '수학 (등급)', '수학_등급', '수학등급', '수능수학등급', '수능수학', 'csatMathGrade'),
+      csatEngGrade: getNum('영어(등급)', '영어 (등급)', '영어_등급', '영어등급', '수능영어등급', '수능영어', '수능 영어', 'csatEngGrade'),
+      csatInq1Subject: String(getVal('탐구1(과목)', '탐구1 (과목)', '탐구1_과목', '탐구1과목', 'csatInq1Subject')).trim(),
+      csatInq1Grade: getNum('탐구1(등급)', '탐구1 (등급)', '탐구1_등급', '탐구1등급', 'csatInq1Grade'),
+      csatInq2Subject: String(getVal('탐구2(과목)', '탐구2 (과목)', '탐구2_과목', '탐구2과목', 'csatInq2Subject')).trim(),
+      csatInq2Grade: getNum('탐구2(등급)', '탐구2 (등급)', '탐구2_등급', '탐구2등급', 'csatInq2Grade'),
       rawRow: rowData || {}
     })
   }

@@ -1281,6 +1281,16 @@ const studentsMap = computed(() => {
     st.apps.push(app)
     if (app.isRecommendation) st.hasRec = true
     if (app.isRural) st.hasRural = true
+
+    // 학생의 다른 지원 건에서 성적 데이터 백필 (누락 방지)
+    if ((st.korGrade === null || st.korGrade === undefined) && app.korGrade != null) st.korGrade = app.korGrade
+    if ((st.engGrade === null || st.engGrade === undefined) && app.engGrade != null) st.engGrade = app.engGrade
+    if ((st.mathGrade === null || st.mathGrade === undefined) && app.mathGrade != null) st.mathGrade = app.mathGrade
+    if ((st.socGrade === null || st.socGrade === undefined) && app.socGrade != null) st.socGrade = app.socGrade
+    if ((st.sciGrade === null || st.sciGrade === undefined) && app.sciGrade != null) st.sciGrade = app.sciGrade
+    if ((st.allSubjectGrade === null || st.allSubjectGrade === undefined) && app.allSubjectGrade != null) st.allSubjectGrade = app.allSubjectGrade
+    if ((st.mainSubjectGrade === null || st.mainSubjectGrade === undefined) && app.mainSubjectGrade != null) st.mainSubjectGrade = app.mainSubjectGrade
+    if ((st.koreanMathEnglish === null || st.koreanMathEnglish === undefined) && app.koreanMathEnglish != null) st.koreanMathEnglish = app.koreanMathEnglish
   })
 
   return map
