@@ -169,6 +169,9 @@ export function matchCsatPassRate(app, csatPassRateTable = []) {
   const normAppUniv = String(app.univName || '').replace(/\(.*\)/g, '').trim()
   const normAppDept = String(app.dept || '').trim()
   const normAppType = String(app.admissionDetailType || app.admissionType || '').trim()
+  const isEssay = normAppType.includes('논술')
+  const isGpa = normAppType.includes('교과')
+  const isComprehensive = normAppType.includes('종합')
 
   // 1) 대학명 + 학과명 + 전형명 정밀 매칭
   let found = csatPassRateTable.find(item => {
@@ -180,51 +183,98 @@ export function matchCsatPassRate(app, csatPassRateTable = []) {
            (normAppType.includes(itemType) || itemType.includes(normAppType))
   })
 
-  // 2) 대학명 + 전형유형 매칭 (학과 무관)
+  // 2) 대학명 + 전형유형 매칭 (학과 무관, 단 논술/교과/종합 유형 일치 필수)
   if (!found) {
     found = csatPassRateTable.find(item => {
       const itemUniv = String(item.univName || '').replace(/\(.*\)/g, '').trim()
       const itemType = String(item.admissionType || '').trim()
       const isUnivMatch = normAppUniv.includes(itemUniv) || itemUniv.includes(normAppUniv)
-      const isTypeMatch = (normAppType.includes('논술') && itemType.includes('논술')) ||
-                          (normAppType.includes('교과') && itemType.includes('교과')) ||
-                          (normAppType.includes('종합') && itemType.includes('종합'))
+      const isTypeMatch = (isEssay && itemType.includes('논술')) ||
+                          (isGpa && itemType.includes('교과')) ||
+                          (isComprehensive && itemType.includes('종합'))
       return isUnivMatch && isTypeMatch
     })
   }
 
-  // 3) 대학명 매칭 fallback
+  // 3) 대학명 매칭 fallback: 전형유형(논술 vs 교과/종합)이 완전히 다르면 교차 매칭 금지!
+  // (예: 교과 지원자가 논술 수의예과 222:1 등 엉뚱한 전형과 매칭되어 왜곡되는 현상 방지)
   if (!found) {
     found = csatPassRateTable.find(item => {
       const itemUniv = String(item.univName || '').replace(/\(.*\)/g, '').trim()
-      return normAppUniv.includes(itemUniv) || itemUniv.includes(normAppUniv)
+      const itemType = String(item.admissionType || '').trim()
+      const isUnivMatch = normAppUniv.includes(itemUniv) || itemUniv.includes(normAppUniv)
+      const isCompatible = (isEssay && itemType.includes('논술')) ||
+                           (!isEssay && !itemType.includes('논술'))
+      return isUnivMatch && isCompatible
     })
   }
 
-  if (found) {
-    const initialRate = Number(found.initialRate || found.nominalRate) || 0
-    const passRate = Number(found.passRate || found.csatPassRate) || 50
-    // 실질경쟁률 = 명목경쟁률 * (충족률 / 100)
-    const realRate = initialRate > 0 && passRate > 0 
-      ? Number((initialRate * (passRate / 100)).toFixed(1))
-      : Number((found.realRate || 0).toFixed(1))
-    
-    // 완화 배수 (명목 대비 실질이 몇 배나 떨어지는지)
-    const easeFactor = passRate > 0 ? Number((100 / passRate).toFixed(1)) : 1.0
+  let passRate = 50
+  let fillRate = 100
+  let note = ''
 
-    return {
-      univName: found.univName,
-      admissionType: found.admissionType,
-      dept: found.dept,
-      passRate, // 최저충족률 (%)
-      initialRate, // 명목경쟁률 (:1)
-      realRate, // 실질경쟁률 (:1)
-      easeFactor, // 완화 배수 (예: 3.1배)
-      note: found.note || ''
+  if (found) {
+    passRate = Number(found.passRate || found.csatPassRate) || 50
+    fillRate = Number(found.fillRate) || 100
+    note = found.note || ''
+  } else {
+    // 30개 대학 공인 전형유형별 평균 수능최저 충족률 (학생부교과 58.1%, 학생부종합 47.2%, 논술 34.2%)
+    if (isEssay) {
+      passRate = 34.2
+      note = '전국 18개 대학 논술 평균 충족률 34.2% 벤치마크'
+    } else if (isComprehensive) {
+      passRate = 47.2
+      note = '전국 8개 대학 학종 평균 충족률 47.2% 벤치마크'
+    } else {
+      passRate = 58.1
+      note = '전국 26개 대학 교과 평균 충족률 58.1% 벤치마크'
     }
   }
 
-  return null
+  // ★ 중요: 실질경쟁률 연산의 기준이 되는 명목경쟁률(initialRate)
+  // 지원 카드의 실제 원서 경쟁률(app.competitionRate 또는 최신 연도 실측 경쟁률)을 최우선 적용!
+  let actualRate = 0
+  if (typeof app.competitionRate === 'number' && app.competitionRate > 0) {
+    actualRate = app.competitionRate
+  } else if (app.competitionRates && typeof app.competitionRates === 'object') {
+    const years = ['2027', '2026', '2025', '2024'].filter(y => app.competitionRates[y])
+    for (const yr of years) {
+      const r = app.competitionRates[yr]
+      const rateVal = typeof r === 'object' ? Number(r?.rate) : Number(r)
+      if (rateVal && !isNaN(rateVal) && rateVal > 0) {
+        actualRate = rateVal
+        break
+      }
+    }
+  }
+
+  if (!actualRate) {
+    const q = Number(app.quota)
+    const a = Number(app.applyCount || app.applicants)
+    if (q > 0 && a > 0) {
+      actualRate = Number((a / q).toFixed(2))
+    }
+  }
+
+  const initialRate = actualRate > 0 ? actualRate : (Number(found?.initialRate || found?.nominalRate) || 10.0)
+
+  // 실질경쟁률 = 명목경쟁률 * (수능최저 충족률 / 100)
+  const realRate = Number((initialRate * (passRate / 100)).toFixed(1))
+  
+  // 완화 배수 (명목 대비 실질이 몇 배나 떨어지는지)
+  const easeFactor = passRate > 0 ? Number((100 / passRate).toFixed(1)) : 1.0
+
+  return {
+    univName: found ? found.univName : app.univName,
+    admissionType: found ? found.admissionType : (app.admissionDetailType || app.admissionType),
+    dept: found ? found.dept : (app.dept || ''),
+    passRate, // 최저충족률 (%)
+    initialRate, // 명목경쟁률 (:1)
+    realRate, // 실질경쟁률 (:1)
+    easeFactor, // 완화 배수 (예: 1.7배)
+    fillRate,
+    note
+  }
 }
 
 /**
@@ -465,18 +515,33 @@ export function evaluateCardDiagnosis(app, studentGpa, mockRecord, csatPassRateT
   let csatSatisfied = true
   let csatDetail = '최저기준 없음'
   let ruleParsed = null
+  let hasMinScore = false
 
-  if (app.minScoreReq && app.minScoreReq !== '-' && app.minScoreReq !== '미적용') {
-    ruleParsed = parseCsatRequirement(app.minScoreReq, app.field || '공통')
-    if (ruleParsed && ruleParsed.isValid && mockRecord) {
-      const evalResult = evaluateCsatRequirement(ruleParsed, mockRecord)
-      csatSatisfied = evalResult.isSatisfied
-      csatDetail = evalResult.detailText
+  const minReqClean = String(app.minScoreReq || '').trim()
+  const isNoMinReq = !minReqClean || 
+                     minReqClean === '-' || 
+                     minReqClean === '미적용' || 
+                     minReqClean.includes('최저미적용') || 
+                     minReqClean.includes('기준 없음') || 
+                     minReqClean.includes('최저 없음') ||
+                     minReqClean.includes('미반영')
+
+  if (!isNoMinReq) {
+    ruleParsed = parseCsatRequirement(minReqClean, app.field || '공통')
+    if (ruleParsed && ruleParsed.isValid) {
+      hasMinScore = true
+      if (mockRecord) {
+        const evalResult = evaluateCsatRequirement(ruleParsed, mockRecord)
+        csatSatisfied = evalResult.isSatisfied
+        csatDetail = evalResult.detailText
+      } else {
+        csatDetail = ruleParsed.summary || '수능최저 기준 있음'
+      }
     }
   }
 
-  // 2) 수능최저 충족률 및 실질경쟁률 데이터
-  const passRateInfo = matchCsatPassRate(app, csatPassRateTable)
+  // 2) 수능최저 충족률 및 실질경쟁률 데이터 (수능최저가 있는 전형에 한해 산출)
+  const passRateInfo = hasMinScore ? matchCsatPassRate(app, csatPassRateTable) : null
 
   // 3) 5단계 정밀 판정 로직 (사용자 현장 지침 반영)
   // ⚓ 하향: 학생 내신이 합격컷보다 0.45등급 이상 여유로움 (합격률 95% 이상 최후 안전망)
@@ -539,7 +604,7 @@ export function evaluateCardDiagnosis(app, studentGpa, mockRecord, csatPassRateT
 
   // 실질경쟁률 하락 효과 설명
   let competitionBenefit = ''
-  if (passRateInfo && passRateInfo.passRate < 70) {
+  if (hasMinScore && passRateInfo && passRateInfo.passRate < 70) {
     competitionBenefit = `실질경쟁률: ${passRateInfo.realRate || '5.2'}:1 (충족률 ${passRateInfo.passRate}%로 체감경쟁률 ${passRateInfo.easeFactor}배 급락)`
   }
 
@@ -1185,12 +1250,26 @@ export function calculateJungsiCushionAndConflict(cards = [], jungsiBaseline = n
  */
 export function analyzePortfolio(apps = [], studentGpa = 3.0, mockRecord = null, csatPassRateTable = [], simulationOffset = 0, jungsiBaseline = null, selectedYear = '2027', student = {}, allApplications = []) {
   const cardDiagnoses = apps.map(app => {
-    const diag = evaluateCardDiagnosis(app, studentGpa, mockRecord, csatPassRateTable, simulationOffset, allApplications)
-    const capture = checkSusiCapture(app, jungsiBaseline)
     const enrichedRates = ensureCompetitionRates(app, selectedYear, csatPassRateTable)
-    return {
+    const minReqClean = String(app.minScoreReq || '').trim()
+    const isNoMinReq = !minReqClean || 
+                       minReqClean === '-' || 
+                       minReqClean === '미적용' || 
+                       minReqClean.includes('최저미적용') || 
+                       minReqClean.includes('기준 없음') || 
+                       minReqClean.includes('최저 없음') ||
+                       minReqClean.includes('미반영')
+    const hasMinScore = !isNoMinReq && (app.hasMinScore !== false)
+
+    const appWithRates = {
       ...app,
       competitionRates: enrichedRates,
+      hasMinScore
+    }
+    const diag = evaluateCardDiagnosis(appWithRates, studentGpa, mockRecord, csatPassRateTable, simulationOffset, allApplications)
+    const capture = checkSusiCapture(appWithRates, jungsiBaseline)
+    return {
+      ...appWithRates,
       diagnosis: diag,
       capture
     }

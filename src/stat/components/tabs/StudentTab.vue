@@ -680,14 +680,14 @@
                   />
                 </div>
 
-                <!-- 수능최저 충족률 & 실질경쟁률 급락 완화 박스 -->
-                <div v-if="card.diagnosis.passRateInfo" class="mt-2.5 bg-indigo-50/70 border border-indigo-100 rounded-xl p-2.5 text-xs text-indigo-950">
+                <!-- 수능최저 충족률 & 실질경쟁률 급락 완화 박스 (수능최저 적용 전형에만 표시) -->
+                <div v-if="card.hasMinScore && card.diagnosis?.passRateInfo" class="mt-2.5 bg-indigo-50/70 border border-indigo-100 rounded-xl p-2.5 text-xs text-indigo-950">
                   <div class="flex items-center justify-between font-bold">
                     <span>수능최저 충족률 {{ card.diagnosis.passRateInfo.passRate }}%</span>
                     <span class="text-indigo-600 font-black">실질 {{ card.diagnosis.passRateInfo.realRate }}:1</span>
                   </div>
                   <div class="text-[11px] text-indigo-800 mt-0.5">
-                    원서경쟁률 대비 <strong>{{ card.diagnosis.passRateInfo.easeFactor }}배</strong> 급락! 최저 충족 시 실질 경쟁자 1/3로 축소
+                    원서경쟁률 대비 <strong>{{ card.diagnosis.passRateInfo.easeFactor }}배</strong> 완화 (최저 미충족 허수 제외 실질 경쟁선)
                   </div>
                 </div>
 

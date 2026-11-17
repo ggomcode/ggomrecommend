@@ -270,8 +270,6 @@
               <span>{{ selectedAcademicYear }}학년도 대입 통계 분석 시스템 (꼼스탯)</span>
             </div>
             <div class="text-slate-400 flex items-center gap-2">
-              <span>대교협 대입 원서접수 자료 연계</span>
-              <span class="text-slate-300">•</span>
               <span>© 2026 꼼스위트 by murmurgene</span>
             </div>
           </div>

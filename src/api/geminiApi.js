@@ -16,9 +16,10 @@ export const STUDENT_COUNSEL_PREFIX = 'ai_counsel_student_'
  */
 export function getFallbackGeminiModel(currentModel) {
   if (currentModel === 'gemini-3.8-flash') return 'gemini-3.7-flash'
-  if (currentModel === 'gemini-3.7-flash') return 'gemini-2.5-flash'
+  if (currentModel === 'gemini-3.7-flash') return 'gemini-2.0-flash'
   if (currentModel === 'gemini-2.5-flash') return 'gemini-2.0-flash'
-  return 'gemini-3.7-flash'
+  if (currentModel === 'gemini-2.0-flash') return 'gemini-1.5-flash'
+  return 'gemini-2.0-flash'
 }
 
 /**
@@ -340,34 +341,50 @@ export async function testGeminiApiKey(apiKey, modelName) {
     }
   }
 
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 12000)
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 12000)
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(testPayload),
-      signal: controller.signal
-    })
-    clearTimeout(timeoutId)
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(testPayload),
+        signal: controller.signal
+      })
+      clearTimeout(timeoutId)
 
-    if (res.ok) {
-      // 연결 테스트 성공 시 선택된 모델을 기본값으로 영구 저장
-      await saveSelectedGeminiModel(targetModel).catch(e => console.warn(e))
-      return { success: true, model: targetModel }
+      if (res.ok) {
+        // 연결 테스트 성공 시 선택된 모델을 기본값으로 영구 저장
+        await saveSelectedGeminiModel(targetModel).catch(e => console.warn(e))
+        return { success: true, model: targetModel }
+      }
+
+      const errJson = await res.json().catch(() => ({}))
+      let rawError = errJson?.error?.message || `HTTP ${res.status}`
+      const isHighDemand = res.status === 503 || rawError.includes('high demand') || rawError.includes('overloaded')
+
+      // High Demand 일시 과부하인 경우 1.5초 대기 후 즉시 1회 자동 재시도
+      if (isHighDemand && attempt === 1) {
+        await new Promise(r => setTimeout(r, 1500))
+        continue
+      }
+
+      if (isHighDemand) {
+        rawError = `Google 본사 서버 일시적 과부하 (${targetModel} High Demand). 글로벌 트래픽 급증으로 응답이 일시 지연 중입니다. 보통 1~2분 후 해소되거나, 드롭다운에서 안정적인 'Gemini 3.7 Flash' 모델을 선택해 주세요.`
+      }
+      return { success: false, error: rawError, model: targetModel }
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        return { success: false, error: 'Google API 응답 시간 초과 (12초)', model: targetModel }
+      }
+      if (attempt === 1) {
+        await new Promise(r => setTimeout(r, 1500))
+        continue
+      }
+      return { success: false, error: err.message || '네트워크 통신 오류', model: targetModel }
     }
-
-    const errJson = await res.json().catch(() => ({}))
-    let rawError = errJson?.error?.message || `HTTP ${res.status}`
-    if (rawError.includes('high demand') || res.status === 503) {
-      rawError = `Google 본사 서버 일시적 과부하 (${targetModel} High Demand). 최신 모델에 글로벌 트래픽이 몰려 일시 지연 중입니다. 드롭다운에서 안정적인 'Gemini 3.7 Flash'를 선택하시고 다시 '연결 테스트'를 눌러주세요.`
-    }
-    return { success: false, error: rawError, model: targetModel }
-  } catch (err) {
-    const errorMsg = err.name === 'AbortError' ? 'Google API 응답 시간 초과 (12초)' : (err.message || '네트워크 통신 오류')
-    return { success: false, error: errorMsg, model: targetModel }
   }
 }
 
@@ -438,6 +455,103 @@ export async function saveGradeAnalysis(round, academicYear, reportData) {
   } catch {}
 
   return true
+}
+
+/**
+ * Google Gemini API generateContent 호출 통합 함수 (지능형 재시도 및 다단계 자동 안전 폴백)
+ * 
+ * 1) 1차 시도 (targetModel)
+ * 2) 503(High Demand 과부하) 또는 429(일시 트래픽) 발생 시:
+ *    - 트래픽 스파이크는 일시적이므로 1.5초 대기 후 1회 자동 재시도
+ * 3) 재시도 후에도 503/404 발생 시:
+ *    - 직전 안정 모델(getFallbackGeminiModel)로 자동 전환하여 호출
+ * 4) 2차 모델도 실패 시:
+ *    - 최후 보루 안정 모델('gemini-2.0-flash')로 3차 호출
+ */
+export async function callGeminiGenerateContent(key, initialModel, requestBody) {
+  const modelsToTry = [initialModel]
+
+  const fallback1 = getFallbackGeminiModel(initialModel)
+  if (fallback1 && !modelsToTry.includes(fallback1)) {
+    modelsToTry.push(fallback1)
+  }
+
+  // 최종 안전망 모델
+  if (!modelsToTry.includes('gemini-2.0-flash')) {
+    modelsToTry.push('gemini-2.0-flash')
+  }
+
+  let lastError = null
+
+  for (let i = 0; i < modelsToTry.length; i++) {
+    const currentModel = modelsToTry[i]
+
+    // 모델당 최대 2회 시도 (1차 즉시, 일시 과부하 시 1.5초 대기 후 2차 재시도)
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${encodeURIComponent(key)}`
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        })
+
+        if (res.ok) {
+          const data = await res.json()
+          return { data, usedModel: currentModel }
+        }
+
+        const errData = await res.json().catch(() => ({}))
+        const status = res.status
+        const errMsg = errData?.error?.message || `HTTP ${status}`
+        const isHighDemand = status === 503 || errMsg.includes('high demand') || errMsg.includes('overloaded') || errMsg.includes('spikes in demand')
+        const isRateLimit = status === 429
+        const isNotFound = status === 404
+
+        lastError = new Error(errMsg)
+
+        // 잘못된 API 키인 경우 즉시 중단 (재시도 불필요)
+        if (status === 400 && errMsg.includes('API_KEY_INVALID')) {
+          throw new Error('등록된 Gemini API Key가 유효하지 않습니다. 관리자 환경설정에서 API 키를 다시 확인해 주세요.')
+        }
+
+        // 404 (미지원 모델)인 경우 즉시 다음 폴백 모델로 이동
+        if (isNotFound) {
+          console.warn(`[geminiApi] ${currentModel} 모델 미지원(404). 다음 폴백 모델로 전환합니다.`)
+          break
+        }
+
+        // High Demand(503) 또는 일시적 429인 경우 1회차 실패 시 1.5초 대기 후 1회 재시도
+        if ((isHighDemand || isRateLimit) && attempt === 1) {
+          console.warn(`[geminiApi] ${currentModel} 서버 과부하(${status}: ${errMsg}). 1.5초 후 재시도합니다...`)
+          await new Promise(r => setTimeout(r, 1500))
+          continue
+        }
+
+        console.warn(`[geminiApi] ${currentModel} 호출 실패(${status}: ${errMsg}). 다음 안정 모델로 전환합니다.`)
+        break
+      } catch (networkErr) {
+        if (networkErr.message?.includes('유효하지 않습니다')) {
+          throw networkErr
+        }
+        lastError = networkErr
+        if (attempt === 1) {
+          await new Promise(r => setTimeout(r, 1500))
+          continue
+        }
+        break
+      }
+    }
+  }
+
+  const finalMsg = lastError?.message || '알 수 없는 오류'
+  if (finalMsg.includes('high demand') || finalMsg.includes('503')) {
+    throw new Error('Google 본사 서버 과부하(High Demand)가 지속되고 있습니다. 보통 1~2분 후 정상화되므로 잠시 후 다시 시도해 주시거나, 관리자 환경설정에서 다른 안정적인 모델을 선택해 주세요.')
+  }
+  if (lastError?.message?.includes('429') || lastError?.message?.includes('호출 한도')) {
+    throw new Error('Google Gemini API 호출 한도(분당 요청 수 제한)를 초과했습니다. 약 30초~1분 후 다시 시도해 주세요.')
+  }
+  throw lastError || new Error('Google Gemini API 호출에 실패했습니다.')
 }
 
 /**
@@ -548,41 +662,10 @@ ${JSON.stringify(statsPayload, null, 2)}
     }
   }
 
-  // 선택된 모델로 1차 시도 (실패 시 안전 폴백)
-  let targetModel = await getSelectedGeminiModel() || GEMINI_DEFAULT_MODEL
-  let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestBody)
-  })
+  // 지능형 재시도 및 자동 다단계 폴백 호출
+  const targetModel = await getSelectedGeminiModel() || GEMINI_DEFAULT_MODEL
+  const { data: result } = await callGeminiGenerateContent(key, targetModel, requestBody)
 
-  // 404(모델 미지원) 또는 503(Google 서버 과부하/High Demand) 시 직전 안정 모델로 2차 자동 재시도
-  if (response.status === 404 || response.status === 503) {
-    const fallbackModel = getFallbackGeminiModel(targetModel)
-    if (fallbackModel !== targetModel) {
-      console.warn(`[geminiApi] ${targetModel} 호출 실패(HTTP ${response.status}). ${fallbackModel} 모델로 자동 전환 재시도...`)
-      targetModel = fallbackModel
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      })
-    }
-  }
-
-  if (!response.ok) {
-    const errData = await response.json().catch(() => ({}))
-    const status = response.status
-    if (status === 429) {
-      throw new Error('Google Gemini API 호출 한도(분당 요청 수 제한)를 초과했습니다. 약 30초~1분 후 다시 시도해 주세요.')
-    }
-    if (status === 400 && String(errData?.error?.message || '').includes('API_KEY_INVALID')) {
-      throw new Error('등록된 Gemini API Key가 유효하지 않습니다. 관리자 환경설정에서 API 키를 다시 확인해 주세요.')
-    }
-    throw new Error(errData?.error?.message || `Gemini API 호출 실패 (HTTP ${response.status})`)
-  }
-
-  const result = await response.json()
   const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text
   if (!rawText) {
     throw new Error('Gemini API로부터 응답 텍스트를 수신하지 못했습니다.')
@@ -892,41 +975,10 @@ ${JSON.stringify(statsPayload, null, 2)}
     }
   }
 
-  // 선택된 모델로 1차 시도 (실패 시 안전 폴백)
-  let targetModel = await getSelectedGeminiModel() || GEMINI_DEFAULT_MODEL
-  let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestBody)
-  })
+  // 지능형 재시도 및 자동 다단계 폴백 호출
+  const targetModel = await getSelectedGeminiModel() || GEMINI_DEFAULT_MODEL
+  const { data: result } = await callGeminiGenerateContent(key, targetModel, requestBody)
 
-  // 404(모델 미지원) 또는 503(Google 서버 과부하/High Demand) 시 직전 안정 모델로 2차 자동 재시도
-  if (response.status === 404 || response.status === 503) {
-    const fallbackModel = getFallbackGeminiModel(targetModel)
-    if (fallbackModel !== targetModel) {
-      console.warn(`[geminiApi] ${targetModel} 호출 실패(HTTP ${response.status}). ${fallbackModel} 모델로 자동 전환 재시도...`)
-      targetModel = fallbackModel
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      })
-    }
-  }
-
-  if (!response.ok) {
-    const errData = await response.json().catch(() => ({}))
-    const status = response.status
-    if (status === 429) {
-      throw new Error('Google Gemini API 호출 한도(분당 요청 수 제한)를 초과했습니다. 약 30초~1분 후 다시 시도해 주세요.')
-    }
-    if (status === 400 && String(errData?.error?.message || '').includes('API_KEY_INVALID')) {
-      throw new Error('등록된 Gemini API Key가 유효하지 않습니다. 관리자 환경설정에서 API 키를 다시 확인해 주세요.')
-    }
-    throw new Error(errData?.error?.message || `Gemini API 호출 실패 (HTTP ${response.status})`)
-  }
-
-  const result = await response.json()
   const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text
   if (!rawText) {
     throw new Error('Gemini API로부터 응답 텍스트를 수신하지 못했습니다.')
@@ -1124,41 +1176,10 @@ ${JSON.stringify(anonymizedPayload, null, 2)}
     }
   }
 
-  // 선택된 모델로 1차 시도 (실패 시 안전 폴백)
-  let targetModel = await getSelectedGeminiModel() || GEMINI_DEFAULT_MODEL
-  let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestBody)
-  })
+  // 지능형 재시도 및 자동 다단계 폴백 호출
+  const targetModel = await getSelectedGeminiModel() || GEMINI_DEFAULT_MODEL
+  const { data: result } = await callGeminiGenerateContent(key, targetModel, requestBody)
 
-  // 404(모델 미지원) 또는 503(Google 서버 과부하/High Demand) 시 직전 안정 모델로 2차 자동 재시도
-  if (response.status === 404 || response.status === 503) {
-    const fallbackModel = getFallbackGeminiModel(targetModel)
-    if (fallbackModel !== targetModel) {
-      console.warn(`[geminiApi] ${targetModel} 호출 실패(HTTP ${response.status}). ${fallbackModel} 모델로 자동 전환 재시도...`)
-      targetModel = fallbackModel
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(key)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      })
-    }
-  }
-
-  if (!response.ok) {
-    const errData = await response.json().catch(() => ({}))
-    const status = response.status
-    if (status === 429) {
-      throw new Error('Google Gemini API 호출 한도(분당 요청 수 제한)를 초과했습니다. 약 30초~1분 후 다시 시도해 주세요.')
-    }
-    if (status === 400 && String(errData?.error?.message || '').includes('API_KEY_INVALID')) {
-      throw new Error('등록된 Gemini API Key가 유효하지 않습니다. 관리자 환경설정에서 API 키를 다시 확인해 주세요.')
-    }
-    throw new Error(errData?.error?.message || `Gemini API 호출 실패 (HTTP ${response.status})`)
-  }
-
-  const result = await response.json()
   const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text
   if (!rawText) {
     throw new Error('Gemini API로부터 응답 텍스트를 수신하지 못했습니다.')

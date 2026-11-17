@@ -133,7 +133,7 @@
                   <span v-else class="text-rose-600 font-bold">미달 위험</span>
                 </td>
                 <td class="p-2 text-center text-[10px]">
-                  <span v-if="card.diagnosis.passRateInfo">
+                  <span v-if="card.hasMinScore && card.diagnosis?.passRateInfo">
                     <strong class="text-indigo-700">{{ card.diagnosis.passRateInfo.realRate }}:1</strong>
                     <span class="text-slate-400 block text-[9px]">({{ card.diagnosis.passRateInfo.easeFactor }}배 완화)</span>
                   </span>

@@ -770,7 +770,12 @@ export function parseKcueRows(csvText, customPassword = null) {
       quota: getNum('모집인원'),
       selectionMethod: String(getVal('선발유형')).trim(),
       minScoreReq,
-      hasMinScore: !!minScoreReq,
+      hasMinScore: !!(minScoreReq && 
+        minScoreReq !== '-' && 
+        minScoreReq !== '미적용' && 
+        !minScoreReq.includes('없음') && 
+        !minScoreReq.includes('미반영') && 
+        !minScoreReq.includes('미적용')),
       score9Grade: getNum('(9등급)일반등급', '일반등급'),
       univConvertedScore: getNum('내점수(환산)', '대학환산점수'),
       univConvertedGrade: getNum('내등급(환산)', '대학환산등급'),
@@ -798,14 +803,44 @@ export function parseKcueRows(csvText, customPassword = null) {
       isMetro,
       competitionRates,
       csatKorSubject: String(getVal('국어(과목)', '국어 (과목)', '국어_과목', '국어과목', '수능국어과목', 'csatKorSubject')).trim(),
-      csatKorGrade: getNum('국어(등급)', '국어 (등급)', '국어_등급', '국어등급', '수능국어등급', '수능국어', 'csatKorGrade'),
+      csatKorGrade: (() => {
+        const val = getNum('국어(등급)', '국어 (등급)', '국어_등급', '국어등급', '수능국어등급', '수능국어', 'csatKorGrade')
+        if (val !== null) return val
+        const sh = String(getVal('국수영(탐1탐2)', '국수영(탐1,탐2)', '수능등급', '수능성적') || '').trim()
+        const m = sh.match(/^([1-9])([1-9])([1-9])/)
+        return m ? parseInt(m[1], 10) : null
+      })(),
       csatMathSubject: String(getVal('수학(과목)', '수학 (과목)', '수학_과목', '수학과목', '수능수학과목', 'csatMathSubject')).trim(),
-      csatMathGrade: getNum('수학(등급)', '수학 (등급)', '수학_등급', '수학등급', '수능수학등급', '수능수학', 'csatMathGrade'),
-      csatEngGrade: getNum('영어(등급)', '영어 (등급)', '영어_등급', '영어등급', '수능영어등급', '수능영어', '수능 영어', 'csatEngGrade'),
+      csatMathGrade: (() => {
+        const val = getNum('수학(등급)', '수학 (등급)', '수학_등급', '수학등급', '수능수학등급', '수능수학', 'csatMathGrade')
+        if (val !== null) return val
+        const sh = String(getVal('국수영(탐1탐2)', '국수영(탐1,탐2)', '수능등급', '수능성적') || '').trim()
+        const m = sh.match(/^([1-9])([1-9])([1-9])/)
+        return m ? parseInt(m[2], 10) : null
+      })(),
+      csatEngGrade: (() => {
+        const val = getNum('영어(등급)', '영어 (등급)', '영어_등급', '영어등급', '수능영어등급', '수능영어', '수능 영어', 'csatEngGrade')
+        if (val !== null) return val
+        const sh = String(getVal('국수영(탐1탐2)', '국수영(탐1,탐2)', '수능등급', '수능성적') || '').trim()
+        const m = sh.match(/^([1-9])([1-9])([1-9])/)
+        return m ? parseInt(m[3], 10) : null
+      })(),
       csatInq1Subject: String(getVal('탐구1(과목)', '탐구1 (과목)', '탐구1_과목', '탐구1과목', 'csatInq1Subject')).trim(),
-      csatInq1Grade: getNum('탐구1(등급)', '탐구1 (등급)', '탐구1_등급', '탐구1등급', 'csatInq1Grade'),
+      csatInq1Grade: (() => {
+        const val = getNum('탐구1(등급)', '탐구1 (등급)', '탐구1_등급', '탐구1등급', 'csatInq1Grade')
+        if (val !== null) return val
+        const sh = String(getVal('국수영(탐1탐2)', '국수영(탐1,탐2)', '수능등급', '수능성적') || '').trim()
+        const m = sh.match(/^([1-9])([1-9])([1-9])(?:\(([1-9])([1-9])?\))?/)
+        return (m && m[4]) ? parseInt(m[4], 10) : null
+      })(),
       csatInq2Subject: String(getVal('탐구2(과목)', '탐구2 (과목)', '탐구2_과목', '탐구2과목', 'csatInq2Subject')).trim(),
-      csatInq2Grade: getNum('탐구2(등급)', '탐구2 (등급)', '탐구2_등급', '탐구2등급', 'csatInq2Grade'),
+      csatInq2Grade: (() => {
+        const val = getNum('탐구2(등급)', '탐구2 (등급)', '탐구2_등급', '탐구2등급', 'csatInq2Grade')
+        if (val !== null) return val
+        const sh = String(getVal('국수영(탐1탐2)', '국수영(탐1,탐2)', '수능등급', '수능성적') || '').trim()
+        const m = sh.match(/^([1-9])([1-9])([1-9])(?:\(([1-9])([1-9])?\))?/)
+        return (m && m[5]) ? parseInt(m[5], 10) : null
+      })(),
       rawRow: rowData || {}
     })
   }
