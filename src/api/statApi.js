@@ -526,6 +526,19 @@ export function parseKcueRows(csvText, customPassword = null) {
   const col2025Quota = findMatchingColIdx('2025', /모집|정원/, 104)
   const col2025App = findMatchingColIdx('2025', /지원|접수/, 105)
 
+  // 3-1. 수능 영어 등급 열 동적 탐색 (대교협 시트에서 '영어' 열이 내신과 수능 2개 존재하며, 수능 영어는 수학(등급) 바로 뒤 또는 탐구1 앞에 위치)
+  let csatEngColIdx = -1
+  const mathGradeCol = rawHeaders.findIndex(h => /수학.*등급/.test(cleanStr(h)))
+  if (mathGradeCol !== -1) {
+    for (let c = mathGradeCol + 1; c < Math.min(mathGradeCol + 6, rawHeaders.length); c++) {
+      const hClean = cleanStr(rawHeaders[c])
+      if (hClean === '영어' || hClean.includes('영어등급') || hClean.includes('영어(등급)')) {
+        csatEngColIdx = c
+        break
+      }
+    }
+  }
+
   const result = []
 
   for (let i = 1; i < rows.length; i++) {
@@ -821,6 +834,18 @@ export function parseKcueRows(csvText, customPassword = null) {
       csatEngGrade: (() => {
         const val = getNum('영어(등급)', '영어 (등급)', '영어_등급', '영어등급', '수능영어등급', '수능영어', '수능 영어', 'csatEngGrade')
         if (val !== null) return val
+        if (csatEngColIdx !== -1) {
+          if (r && r[csatEngColIdx] !== undefined) {
+            const rawV = String(r[csatEngColIdx]).trim()
+            const parsedV = parseInt(rawV, 10)
+            if (!isNaN(parsedV) && parsedV >= 1 && parsedV <= 9) return parsedV
+          }
+          const headerName = rawHeaders && rawHeaders[csatEngColIdx]
+          if (rowData && headerName && rowData[headerName] !== undefined) {
+            const parsedV = parseInt(String(rowData[headerName]).trim(), 10)
+            if (!isNaN(parsedV) && parsedV >= 1 && parsedV <= 9) return parsedV
+          }
+        }
         const sh = String(getVal('국수영(탐1탐2)', '국수영(탐1,탐2)', '수능등급', '수능성적') || '').trim()
         const m = sh.match(/^([1-9])([1-9])([1-9])/)
         return m ? parseInt(m[3], 10) : null

@@ -357,7 +357,7 @@
             </span>
           </div>
           <h3 class="text-base sm:text-lg font-black text-slate-900 m-0">
-            20년 경력 수석교사진 관점 종합 진학 처방 & 수시 6장 나침반
+            공교육 대입 리더교사 그룹 관점 종합 진학 처방 & 수시 6장 나침반
           </h3>
         </div>
 
@@ -401,7 +401,13 @@
           <p class="text-sm font-black text-indigo-950 m-0">
             Gemini AI가 해당 학생의 내신·모평·수시 6장·수능최저·특별전형을 심층 분석하고 있습니다...
           </p>
-          <p class="text-xs text-indigo-700 m-0">
+          <div v-if="studentAiProgressStatus" class="inline-block mt-2">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-800 bg-amber-100/90 border border-amber-300 animate-pulse shadow-xs">
+              <span>⚡</span>
+              <span>{{ studentAiProgressStatus }}</span>
+            </span>
+          </div>
+          <p v-else class="text-xs text-indigo-700 m-0">
             잠시만 기다려 주십시오 (약 5~10초 소요, 분석 후 Supabase DB에 영구 보존됩니다).
           </p>
         </div>
@@ -606,7 +612,7 @@
             {{ selectedStudentInfo?.maskedName }} 학생의 AI 심층 상담 리포트 생성
           </h4>
           <p class="text-xs text-slate-600 leading-relaxed m-0">
-            학생의 실제 학생부 내신, 모평 성적 추이, 6장 지망 카드, 수능최저 충족 역량 및 특별전형 자격을 20년 경력 수석교사 관점에서 분석합니다.
+            학생의 실제 학생부 내신, 모평 성적 추이, 6장 지망 카드, 수능최저 충족 역량 및 특별전형 자격을 공교육 대입 리더교사 그룹의 감각적이고 날카로운 입시 분석 관점에서 진단합니다.
           </p>
         </div>
 
@@ -1187,6 +1193,7 @@ const copySuccess = ref(false)
 const studentAiReport = ref(null)
 const isLoadingStudentAi = ref(false)
 const isGeneratingStudentAi = ref(false)
+const studentAiProgressStatus = ref('')
 const studentAiError = ref('')
 const copyAiScriptSuccess = ref(false)
 
@@ -1549,13 +1556,19 @@ async function handleGenerateStudentAiCounsel(force = false) {
 
   isGeneratingStudentAi.value = true
   studentAiError.value = ''
+  studentAiProgressStatus.value = ''
 
   try {
     // 1. 개인식별정보(PII) 100% 제거 비식별화 페이로드 생성
     const payload = buildAnonymizedStudentPayload(selectedStudentKey.value)
 
-    // 2. Gemini 호출
-    const res = await generateStudentIndividualAiCounsel(apiKey, selectedAcademicYear.value, payload)
+    // 2. Gemini 호출 (진행 상태 콜백 연동)
+    const res = await generateStudentIndividualAiCounsel(
+      apiKey, 
+      selectedAcademicYear.value, 
+      payload,
+      (msg) => { studentAiProgressStatus.value = msg }
+    )
 
     if (res.success && res.data) {
       // 3. Supabase config 테이블 및 localStorage 영구 저장
@@ -1567,9 +1580,10 @@ async function handleGenerateStudentAiCounsel(force = false) {
   } catch (err) {
     console.error('학생 AI 상담 생성 오류:', err)
     studentAiError.value = err.message || 'AI 분석 도중 오류가 발생했습니다.'
-    alert(`AI 분석 실패: ${studentAiError.value}`)
+    alert(`AI 분석 실패:\n\n${studentAiError.value}`)
   } finally {
     isGeneratingStudentAi.value = false
+    studentAiProgressStatus.value = ''
   }
 }
 

@@ -362,7 +362,15 @@ async function startBatch() {
       const payload = buildPayloadForStudent(item.raw)
 
       // 3. Gemini API 호출
-      const res = await generateStudentIndividualAiCounsel(apiKey, yr, payload)
+      const res = await generateStudentIndividualAiCounsel(apiKey, yr, payload, (msg) => {
+        if (msg.includes('재시도')) {
+          item.statusText = '1차 자동 재시도 중...'
+        } else if (msg.includes('강등') || msg.includes('낮추어')) {
+          item.statusText = '2차 모델 강등 진행 중...'
+        } else {
+          item.statusText = msg.length > 25 ? msg.substring(0, 23) + '..' : msg
+        }
+      })
 
       if (res.success && res.data) {
         // 4. DB 및 localStorage 저장

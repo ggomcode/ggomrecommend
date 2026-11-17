@@ -44,7 +44,7 @@
               학생 맞춤 대입 진단 & 수시 6장 황금 나침반
             </h1>
             <p class="text-[11px] text-slate-500 m-0 mt-0.5">
-              20년 경력 수석교사진 관점 AI 심층 분석 & 교사 상담 처방전
+              공교육 대입 리더교사 그룹 관점 AI 심층 분석 & 교사 상담 처방전
             </p>
           </div>
           <div class="text-right text-[11px] text-slate-500 shrink-0">

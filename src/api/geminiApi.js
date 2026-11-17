@@ -4,9 +4,9 @@ export const GEMINI_CONFIG_KEY = 'gemini_api_key'
 export const GEMINI_LOCAL_KEY = 'pcm_gemini_api_key'
 export const GEMINI_MODEL_CONFIG_KEY = 'gemini_selected_model'
 export const GEMINI_MODEL_LOCAL_KEY = 'pcm_gemini_selected_model'
-export const GEMINI_DEFAULT_MODEL = 'gemini-2.5-flash'
-export const GEMINI_PRIMARY_MODEL = 'gemini-2.5-flash'
-export const GEMINI_FALLBACK_MODEL = 'gemini-2.0-flash'
+export const GEMINI_DEFAULT_MODEL = 'gemini-3.8-flash'
+export const GEMINI_PRIMARY_MODEL = 'gemini-3.8-flash'
+export const GEMINI_FALLBACK_MODEL = 'gemini-3.7-flash'
 export const AI_GRADE_REPORT_PREFIX = 'ai_report_grade_comparison_'
 export const COMPREHENSIVE_AI_REPORT_PREFIX = 'ai_report_stat_comprehensive_'
 export const STUDENT_COUNSEL_PREFIX = 'ai_counsel_student_'
@@ -16,16 +16,17 @@ export const STUDENT_COUNSEL_PREFIX = 'ai_counsel_student_'
  */
 export function getFallbackGeminiModel(currentModel) {
   if (currentModel === 'gemini-3.8-flash') return 'gemini-3.7-flash'
-  if (currentModel === 'gemini-3.7-flash') return 'gemini-2.0-flash'
-  if (currentModel === 'gemini-2.5-flash') return 'gemini-2.0-flash'
-  if (currentModel === 'gemini-2.0-flash') return 'gemini-1.5-flash'
-  return 'gemini-2.0-flash'
+  if (currentModel === 'gemini-3.7-flash') return 'gemini-3.8-flash-lite'
+  if (currentModel === 'gemini-3.8-flash-lite') return 'gemini-2.5-flash'
+  if (currentModel === 'gemini-2.5-flash') return 'gemini-2.5-flash-lite'
+  return 'gemini-3.8-flash-lite'
 }
 
 /**
  * 0. 현재 선택/저장된 Gemini AI 모델 조회 (Supabase config -> localStorage -> 기본값)
  */
 export async function getSelectedGeminiModel() {
+  let model = ''
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -35,21 +36,27 @@ export async function getSelectedGeminiModel() {
         .maybeSingle()
 
       if (!error && data && data.value && String(data.value).trim()) {
-        const val = String(data.value).trim()
-        localStorage.setItem(GEMINI_MODEL_LOCAL_KEY, val)
-        return val
+        model = String(data.value).trim()
       }
     } catch (e) {
       console.warn('Supabase config에서 Gemini 모델 조회 실패 (로컬 스토리지 확인 중):', e)
     }
   }
 
-  const localVal = localStorage.getItem(GEMINI_MODEL_LOCAL_KEY)
-  if (localVal && localVal.trim()) {
-    return localVal.trim()
+  if (!model) {
+    const localVal = localStorage.getItem(GEMINI_MODEL_LOCAL_KEY)
+    if (localVal && localVal.trim()) {
+      model = localVal.trim()
+    }
   }
 
-  return GEMINI_DEFAULT_MODEL
+  // Google에서 지원 중단된 2.0 모델이 남아있는 경우 자동으로 최신 3.8로 보정
+  if (!model || model.includes('gemini-2.0')) {
+    model = GEMINI_DEFAULT_MODEL
+  }
+
+  localStorage.setItem(GEMINI_MODEL_LOCAL_KEY, model)
+  return model
 }
 
 /**
@@ -222,9 +229,9 @@ export function parseGeminiModelList(modelsList) {
   // 검색 결과가 비었을 때를 위한 안전 기본값
   if (results.length === 0) {
     results.push(
-      { role: 'latest_flash', isDefault: true, id: 'gemini-2.5-flash', version: '2.5', label: 'Gemini 2.5 Flash (최신 / 기본 권장)' },
-      { role: 'prev_flash', isDefault: false, id: 'gemini-2.0-flash', version: '2.0', label: 'Gemini 2.0 Flash (직전 최신)' },
-      { role: 'latest_lite', isDefault: false, id: 'gemini-2.0-flash-lite', version: '2.0', label: 'Gemini 2.0 Flash-Lite (최신 경량)' }
+      { role: 'latest_flash', isDefault: true, id: 'gemini-3.8-flash', version: '3.8', label: 'Gemini 3.8 Flash (최신 / 기본 권장)' },
+      { role: 'prev_flash', isDefault: false, id: 'gemini-3.7-flash', version: '3.7', label: 'Gemini 3.7 Flash (직전 최신)' },
+      { role: 'latest_lite', isDefault: false, id: 'gemini-3.8-flash-lite', version: '3.8', label: 'Gemini 3.8 Flash-Lite (최신 경량)' }
     )
   }
 
@@ -460,34 +467,50 @@ export async function saveGradeAnalysis(round, academicYear, reportData) {
 /**
  * Google Gemini API generateContent 호출 통합 함수 (지능형 재시도 및 다단계 자동 안전 폴백)
  * 
- * 1) 1차 시도 (targetModel)
- * 2) 503(High Demand 과부하) 또는 429(일시 트래픽) 발생 시:
- *    - 트래픽 스파이크는 일시적이므로 1.5초 대기 후 1회 자동 재시도
- * 3) 재시도 후에도 503/404 발생 시:
- *    - 직전 안정 모델(getFallbackGeminiModel)로 자동 전환하여 호출
- * 4) 2차 모델도 실패 시:
- *    - 최후 보루 안정 모델('gemini-2.0-flash')로 3차 호출
+/**
+ * Google Gemini API generateContent 호출 통합 함수 (3단계 지능형 자동 복구 로직)
+ * 
+ * 1) 1차 에러: 사용자에게 묻지 않고 1.5초 대기 후 동일 모델로 즉시 다시 진행 (1차 자동 재시도)
+ * 2) 2차 에러: 묻지 않고 '직전 최신 모델'로 모델을 낮추어 자동 추가 진행 (2차 자동 강등 및 재시도)
+ * 3) 3차 에러: 분석을 안전하게 종료하고, 멈춘 원인 설명 및 과부하 시 잠시 후 재시도/모델 강등 안내
  */
-export async function callGeminiGenerateContent(key, initialModel, requestBody) {
-  const modelsToTry = [initialModel]
+export async function callGeminiGenerateContent(key, initialModel, requestBody, onProgress = null) {
+  // 지원 중단된 구형 2.0 모델이 인입되면 최신 기본 모델로 자동 교체
+  const selectedModel = (!initialModel || initialModel.includes('gemini-2.0')) 
+    ? GEMINI_DEFAULT_MODEL 
+    : initialModel
 
-  const fallback1 = getFallbackGeminiModel(initialModel)
-  if (fallback1 && !modelsToTry.includes(fallback1)) {
-    modelsToTry.push(fallback1)
-  }
+  const prevModel = getFallbackGeminiModel(selectedModel)
 
-  // 최종 안전망 모델
-  if (!modelsToTry.includes('gemini-2.0-flash')) {
-    modelsToTry.push('gemini-2.0-flash')
-  }
+  const stages = [
+    {
+      stageName: '선택 모델',
+      model: selectedModel,
+      maxAttempts: 2,
+      retryMessage: `선택 모델(${selectedModel}) 일시 지연 발생: 묻지 않고 즉시 다시 진행합니다... (1차 자동 재시도)`
+    },
+    {
+      stageName: '직전 최신 모델',
+      model: prevModel,
+      maxAttempts: 2,
+      switchMessage: `선택 모델 일시 과부하: 묻지 않고 직전 최신 모델(${prevModel})로 낮추어 자동 추가 진행합니다... (2차 모델 강등)`,
+      retryMessage: `직전 모델(${prevModel}) 일시 지연: 1.5초 후 재시도합니다...`
+    }
+  ]
 
   let lastError = null
 
-  for (let i = 0; i < modelsToTry.length; i++) {
-    const currentModel = modelsToTry[i]
+  for (let s = 0; s < stages.length; s++) {
+    const stage = stages[s]
+    const currentModel = stage.model
 
-    // 모델당 최대 2회 시도 (1차 즉시, 일시 과부하 시 1.5초 대기 후 2차 재시도)
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    if (s > 0 && stage.switchMessage) {
+      console.warn(`[geminiApi] ${stage.switchMessage}`)
+      onProgress?.(stage.switchMessage)
+      await new Promise(r => setTimeout(r, 1500))
+    }
+
+    for (let attempt = 1; attempt <= stage.maxAttempts; attempt++) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${encodeURIComponent(key)}`
         const res = await fetch(url, {
@@ -507,6 +530,7 @@ export async function callGeminiGenerateContent(key, initialModel, requestBody) 
         const isHighDemand = status === 503 || errMsg.includes('high demand') || errMsg.includes('overloaded') || errMsg.includes('spikes in demand')
         const isRateLimit = status === 429
         const isNotFound = status === 404
+        const isDeprecated = errMsg.includes('no longer available') || errMsg.includes('deprecated')
 
         lastError = new Error(errMsg)
 
@@ -515,20 +539,24 @@ export async function callGeminiGenerateContent(key, initialModel, requestBody) 
           throw new Error('등록된 Gemini API Key가 유효하지 않습니다. 관리자 환경설정에서 API 키를 다시 확인해 주세요.')
         }
 
-        // 404 (미지원 모델)인 경우 즉시 다음 폴백 모델로 이동
-        if (isNotFound) {
-          console.warn(`[geminiApi] ${currentModel} 모델 미지원(404). 다음 폴백 모델로 전환합니다.`)
+        // 미지원(404) 또는 서비스 종료 모델인 경우 즉시 다음 단계(직전 모델)로 이동
+        if (isNotFound || isDeprecated) {
+          console.warn(`[geminiApi] ${currentModel} 모델 미지원 또는 지원종료. 직전 모델로 자동 전환합니다.`)
           break
         }
 
-        // High Demand(503) 또는 일시적 429인 경우 1회차 실패 시 1.5초 대기 후 1회 재시도
-        if ((isHighDemand || isRateLimit) && attempt === 1) {
-          console.warn(`[geminiApi] ${currentModel} 서버 과부하(${status}: ${errMsg}). 1.5초 후 재시도합니다...`)
+        // 1차 실패 시(동일 모델 내 재시도): 묻지 않고 1.5초 대기 후 다시 진행
+        if (attempt === 1) {
+          if (stage.retryMessage) {
+            console.warn(`[geminiApi] ${stage.retryMessage}`)
+            onProgress?.(stage.retryMessage)
+          }
           await new Promise(r => setTimeout(r, 1500))
           continue
         }
 
-        console.warn(`[geminiApi] ${currentModel} 호출 실패(${status}: ${errMsg}). 다음 안정 모델로 전환합니다.`)
+        // 2회차 실패: 다음 단계(직전 모델 강등)로 전환
+        console.warn(`[geminiApi] ${stage.stageName}(${currentModel}) 2회 호출 실패. 다음 단계로 전환합니다.`)
         break
       } catch (networkErr) {
         if (networkErr.message?.includes('유효하지 않습니다')) {
@@ -536,6 +564,9 @@ export async function callGeminiGenerateContent(key, initialModel, requestBody) 
         }
         lastError = networkErr
         if (attempt === 1) {
+          if (stage.retryMessage) {
+            onProgress?.(stage.retryMessage)
+          }
           await new Promise(r => setTimeout(r, 1500))
           continue
         }
@@ -544,27 +575,52 @@ export async function callGeminiGenerateContent(key, initialModel, requestBody) 
     }
   }
 
-  const finalMsg = lastError?.message || '알 수 없는 오류'
-  if (finalMsg.includes('high demand') || finalMsg.includes('503')) {
-    throw new Error('Google 본사 서버 과부하(High Demand)가 지속되고 있습니다. 보통 1~2분 후 정상화되므로 잠시 후 다시 시도해 주시거나, 관리자 환경설정에서 다른 안정적인 모델을 선택해 주세요.')
+  // 3차 에러: 모든 모델(선택 모델 + 직전 최신 모델) 호출 실패 시 분석 종료 및 원인/처방 안내
+  const finalMsg = lastError?.message || '알 수 없는 서버 오류'
+  const isHighDemand = finalMsg.includes('high demand') || 
+                       finalMsg.includes('503') || 
+                       finalMsg.includes('overloaded') || 
+                       finalMsg.includes('spikes in demand')
+
+  if (isHighDemand) {
+    throw new Error(
+      `[AI 분석 일시 중단 안내: Google AI 서버 과부하]\n` +
+      `선택하신 모델(${selectedModel})과 직전 최신 모델(${prevModel})로 자동 재시도 및 모델 강등 호출을 진행하였으나, 현재 Google Gemini 본사 서버에 일시적인 트래픽 과부하(High Demand)가 지속되고 있습니다.\n\n` +
+      `📌 해결 방법 안내:\n` +
+      `1. 일시적 과부하 스파이크는 보통 1~2분 내에 자동 해소되므로, 잠시 후에 다시 분석 버튼을 눌러주시면 정상 처리됩니다.\n` +
+      `2. 즉시 분석이 필요하신 경우, 관리자 [환경설정] > [Gemini AI 설정]에서 모델 버전을 'Gemini 3.7 Flash' 또는 'Gemini 3.8 Flash-Lite' 등 하위/경량 모델로 낮추어 진행해 주시기 바랍니다.`
+    )
   }
-  if (lastError?.message?.includes('429') || lastError?.message?.includes('호출 한도')) {
-    throw new Error('Google Gemini API 호출 한도(분당 요청 수 제한)를 초과했습니다. 약 30초~1분 후 다시 시도해 주세요.')
+
+  if (finalMsg.includes('429') || finalMsg.includes('호출 한도') || finalMsg.includes('quota') || finalMsg.includes('RESOURCE_EXHAUSTED')) {
+    throw new Error(
+      `[AI 분석 일시 중단 안내: 분당 호출 한도 초과]\n` +
+      `Google Gemini API의 무료 분당 요청 한도(15 RPM)를 초과하여 분석이 중단되었습니다.\n\n` +
+      `📌 해결 방법 안내:\n` +
+      `약 30초~1분 정도 대기하신 후 다시 시도해 주시기 바랍니다.`
+    )
   }
-  throw lastError || new Error('Google Gemini API 호출에 실패했습니다.')
+
+  throw new Error(
+    `[AI 분석 중단 안내: 서버 통신 실패]\n` +
+    `선택 모델(${selectedModel}) 및 직전 모델(${prevModel}) 호출 중 오류가 발생하여 분석을 종료했습니다.\n` +
+    `원인: ${finalMsg}\n\n` +
+    `📌 해결 방법 안내:\n` +
+    `잠시 후 다시 시도하시거나, 관리자 환경설정에서 API 키 및 모델 선택 상태를 확인해 주세요.`
+  )
 }
 
 /**
  * 6. Gemini API를 호출하여 학년별 학력 비교 심층 분석 리포트 생성
  */
-export async function generateGradeLevelAiAnalysis(statsPayload, apiKey) {
+export async function generateGradeLevelAiAnalysis(statsPayload, apiKey, onProgress = null) {
   const key = apiKey || await getGeminiApiKey()
   if (!key) {
     throw new Error('Gemini API Key가 설정되어 있지 않습니다. 관리자 환경설정을 확인해 주세요.')
   }
 
   const systemInstruction = `
-당신은 대한민국 경기도 용인시에 위치한 '포곡고등학교'의 20년 경력 진학지도 전문 수석교사입니다.
+당신은 대한민국 경기도 용인시에 위치한 '포곡고등학교'의 공교육 대입 리더교사이자 진학지도 전문 연구위원 교사입니다. 데이터 분석에 기반한 혁신적이고 감각적인 입시 분석력을 갖추고 있습니다.
 제공된 실제 전국연합학력평가/모의평가 성적 데이터를 분석하여 학년별 학력 진단과 진학 지도 처방을 작성해야 합니다.
 
 [절대 불변의 분석 원칙 - 엄격 준수]
@@ -645,7 +701,7 @@ export async function generateGradeLevelAiAnalysis(statsPayload, apiKey) {
 [집계 통계 데이터]
 ${JSON.stringify(statsPayload, null, 2)}
 
-위 데이터를 바탕으로 수석교사의 관점에서 포곡고 학생들의 실제 성적 격차와 수시/수능최저 지도를 위한 구조화된 심층 분석 리포트 JSON을 작성해 주십시오.
+위 데이터를 바탕으로 공교육 대입 리더교사의 관점에서 포곡고 학생들의 실제 성적 격차와 수시/수능최저 지도를 위한 구조화된 심층 분석 리포트 JSON을 작성해 주십시오.
 `
 
   const requestBody = {
@@ -664,7 +720,7 @@ ${JSON.stringify(statsPayload, null, 2)}
 
   // 지능형 재시도 및 자동 다단계 폴백 호출
   const targetModel = await getSelectedGeminiModel() || GEMINI_DEFAULT_MODEL
-  const { data: result } = await callGeminiGenerateContent(key, targetModel, requestBody)
+  const { data: result, usedModel } = await callGeminiGenerateContent(key, targetModel, requestBody, onProgress)
 
   const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text
   if (!rawText) {
@@ -686,7 +742,7 @@ ${JSON.stringify(statsPayload, null, 2)}
 
   return {
     success: true,
-    model: targetModel,
+    model: usedModel || targetModel,
     data: parsed
   }
 }
@@ -787,7 +843,7 @@ export async function saveComprehensiveAiReport(academicYear, reportData) {
 /**
  * 9. Gemini API를 호출하여 대입통계시스템 전체 심층 분석 리포트 일괄 생성
  */
-export async function generateComprehensiveAiStatReport(apiKey, academicYear, statsPayload) {
+export async function generateComprehensiveAiStatReport(apiKey, academicYear, statsPayload, onProgress = null) {
   const key = apiKey || await getGeminiApiKey()
   if (!key) {
     throw new Error('Google Gemini API Key가 설정되어 있지 않습니다. 관리자 환경설정을 확인해 주세요.')
@@ -797,7 +853,7 @@ export async function generateComprehensiveAiStatReport(apiKey, academicYear, st
   const sName = statsPayload.schoolName || '우리고등학교'
 
   const systemInstruction = `
-당신은 대한민국 고등학교 대입 진학 지도 20년 경력의 진학지도 전문 수석교사이자 대입 통계 분석 최고 권위자입니다.
+당신은 대한민국 고등학교 공교육 대입 리더교사 그룹의 진학지도 전문 연구위원이자 대입 통계 분석 최고 권위자입니다. 다년간의 진학 지도 노하우와 함께, 급변하는 최신 입시 트렌드와 복잡한 입시 전형을 데이터에 근거해 예리하고 감각적으로 꿰뚫어 보는 최고의 공교육 입시 분석가입니다.
 제공된 대입 수시 지원 실제 결과 데이터와 전국연합학력평가/모의평가 성적 데이터를 종합 진단하여, 학교 전체 구성원(교사, 학생, 학부모)이 공유할 수 있는 권위 있고 신뢰도 높은 '대입 통계 시스템 전체 심층 분석 리포트'를 작성해야 합니다.
 
 [절대 불변의 분석 원칙 - 엄격 준수]
@@ -958,7 +1014,7 @@ export async function generateComprehensiveAiStatReport(apiKey, academicYear, st
 [대입 통계 전체 집계 데이터]
 ${JSON.stringify(statsPayload, null, 2)}
 
-위 데이터를 바탕으로 수석교사의 관점에서 ${sName} 학생들의 실제 수시 지원 성과, 등급대별 유불리, 대학 그룹별 분석, 고3 대비 고2·고1의 학력 격차를 총망라한 구조화된 전체 AI 심층 분석 리포트 JSON을 작성해 주십시오.
+위 데이터를 바탕으로 공교육 대입 리더교사 그룹의 객관적이고 감각적인 분석 관점에서 ${sName} 학생들의 실제 수시 지원 성과, 등급대별 유불리, 대학 그룹별 분석, 고3 대비 고2·고1의 학력 격차를 총망라한 구조화된 전체 AI 심층 분석 리포트 JSON을 작성해 주십시오.
 `
 
   const requestBody = {
@@ -977,7 +1033,7 @@ ${JSON.stringify(statsPayload, null, 2)}
 
   // 지능형 재시도 및 자동 다단계 폴백 호출
   const targetModel = await getSelectedGeminiModel() || GEMINI_DEFAULT_MODEL
-  const { data: result } = await callGeminiGenerateContent(key, targetModel, requestBody)
+  const { data: result, usedModel } = await callGeminiGenerateContent(key, targetModel, requestBody, onProgress)
 
   const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text
   if (!rawText) {
@@ -1006,12 +1062,12 @@ ${JSON.stringify(statsPayload, null, 2)}
 
   return {
     success: true,
-    model: targetModel,
+    model: usedModel || targetModel,
     data: {
       academicYear: yr,
       analyzedAt: nowStr,
       schoolName: sName,
-      model: targetModel,
+      model: usedModel || targetModel,
       ...parsed
     }
   }
@@ -1099,7 +1155,7 @@ export async function saveStudentAiCounsel(academicYear, studentKey, reportData)
  * 12. Gemini API를 호출하여 특정 학생 1:1 맞춤 대입 심층 상담 리포트 생성
  * ※ 엄격한 개인정보보호: 학생 실명, 주민번호, 학번 등 개인식별정보(PII)는 절대 전달되지 않음
  */
-export async function generateStudentIndividualAiCounsel(apiKey, academicYear, anonymizedPayload) {
+export async function generateStudentIndividualAiCounsel(apiKey, academicYear, anonymizedPayload, onProgress = null) {
   const key = apiKey || await getGeminiApiKey()
   if (!key) {
     throw new Error('Google Gemini API Key가 설정되어 있지 않습니다. 관리자 환경설정을 확인해 주세요.')
@@ -1108,7 +1164,7 @@ export async function generateStudentIndividualAiCounsel(apiKey, academicYear, a
   const yr = String(academicYear || '2027')
 
   const systemInstruction = `
-당신은 대한민국 일반계 고등학교 대입 진학 지도 20년 경력의 진학지도 전문 수석교사입니다.
+당신은 대한민국 일반계 고등학교 공교육 대입 리더교사 그룹의 진학지도 전문 연구위원 교사입니다. 풍부한 진학 지도 경험은 물론, 경력의 길고 짧음을 떠나 최신 대입 전형 변화와 전형별 유불리를 데이터에 기반해 감각적이고 날카롭게 꿰뚫어 보는 혁신적인 입시 분석력을 갖춘 공교육 대입 전문가입니다.
 제공된 학생의 내신 성적, 모의고사 성적 추이, 수시 6장 지망/지원 현황, 특별전형(농어촌/기회균형) 자격 요건을 정밀 진단하여, 학생과 학부모에게 실질적인 합격 가능성을 극대화할 수 있는 심층 맞춤 진학 상담 리포트를 작성해야 합니다.
 
 [절대 불변의 분석 원칙 - 엄격 준수]
@@ -1159,7 +1215,7 @@ export async function generateStudentIndividualAiCounsel(apiKey, academicYear, a
 [학생 학업 및 수시 지원 데이터]
 ${JSON.stringify(anonymizedPayload, null, 2)}
 
-위 데이터를 바탕으로 수석교사의 관점에서 학생의 합격률을 극대화하고 실질적인 나침반이 될 수 있는 1:1 맞춤 심층 진학 상담 리포트 JSON을 작성해 주십시오.
+위 데이터를 바탕으로 공교육 대입 리더교사의 감각적이고 객관적인 데이터 분석 관점에서 학생의 합격률을 극대화하고 실질적인 나침반이 될 수 있는 1:1 맞춤 심층 진학 상담 리포트 JSON을 작성해 주십시오.
 `
 
   const requestBody = {
@@ -1178,7 +1234,7 @@ ${JSON.stringify(anonymizedPayload, null, 2)}
 
   // 지능형 재시도 및 자동 다단계 폴백 호출
   const targetModel = await getSelectedGeminiModel() || GEMINI_DEFAULT_MODEL
-  const { data: result } = await callGeminiGenerateContent(key, targetModel, requestBody)
+  const { data: result, usedModel } = await callGeminiGenerateContent(key, targetModel, requestBody, onProgress)
 
   const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text
   if (!rawText) {
@@ -1207,11 +1263,11 @@ ${JSON.stringify(anonymizedPayload, null, 2)}
 
   return {
     success: true,
-    model: targetModel,
+    model: usedModel || targetModel,
     data: {
       academicYear: yr,
       analyzedAt: nowStr,
-      model: targetModel,
+      model: usedModel || targetModel,
       report: parsed
     }
   }

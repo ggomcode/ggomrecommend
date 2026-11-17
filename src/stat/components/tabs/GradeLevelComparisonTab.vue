@@ -842,12 +842,41 @@
         <div>
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
             <div>
-              <h3 class="text-base font-black text-slate-900 m-0 flex items-center gap-2">
-                <span>📊</span>
-                <span>영역별 평균 등급 비교 (국·수·영·탐·한)</span>
-              </h3>
-              <p class="text-xs text-slate-500 m-0 mt-0.5">
-                ※ 등급 축 반전: 막대가 높을수록 1등급에 가까워 우수함을 나타냅니다.
+              <div class="flex items-center gap-2.5">
+                <h3 class="text-base font-black text-slate-900 m-0 flex items-center gap-1.5">
+                  <span>{{ subjectChartType === 'line' ? '📈' : '📊' }}</span>
+                  <span>영역별 평균 등급 비교 (국·수·영·탐·한)</span>
+                </h3>
+                <!-- 차트 형태 전환 토글 (초보자를 위한 직관적 꺾은선 vs 기둥 막대) -->
+                <div class="inline-flex items-center bg-slate-100 p-0.5 rounded-lg text-[11px] font-bold">
+                  <button
+                    type="button"
+                    @click="subjectChartType = 'line'"
+                    :class="[
+                      'px-2 py-0.5 rounded-md transition-all border-none cursor-pointer flex items-center gap-1',
+                      subjectChartType === 'line' ? 'bg-white text-indigo-700 shadow-2xs font-black' : 'text-slate-500 hover:text-slate-800 bg-transparent'
+                    ]"
+                    title="초보자도 한눈에 이해하기 쉬운 직관적 꺾은선 궤적 (위로 갈수록 1등급 최우수)"
+                  >
+                    <span>📈</span>
+                    <span>꺾은선 (추천)</span>
+                  </button>
+                  <button
+                    type="button"
+                    @click="subjectChartType = 'bar'"
+                    :class="[
+                      'px-2 py-0.5 rounded-md transition-all border-none cursor-pointer flex items-center gap-1',
+                      subjectChartType === 'bar' ? 'bg-white text-indigo-700 shadow-2xs font-black' : 'text-slate-500 hover:text-slate-800 bg-transparent'
+                    ]"
+                    title="바닥(9등급)에서 위로 솟아오르는 기둥 막대 뷰 (키가 클수록 1등급 최우수)"
+                  >
+                    <span>📊</span>
+                    <span>기둥 막대</span>
+                  </button>
+                </div>
+              </div>
+              <p class="text-xs text-slate-500 m-0 mt-1">
+                ※ 등급 축 반전: 선과 막대가 위쪽에 위치할수록 1등급에 가까워 학업성취도가 뛰어남을 나타냅니다.
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
@@ -864,6 +893,7 @@
             <div v-if="!hasAnyGradeData" class="h-full flex items-center justify-center text-xs text-slate-400">
               선택한 회차({{ currentRoundLabel }})에 등록된 성적 데이터가 없습니다.
             </div>
+            <Line v-else-if="subjectChartType === 'line'" :data="subjectLineChartData" :options="subjectLineChartOptions" />
             <Bar v-else :data="subjectBarChartData" :options="subjectBarChartOptions" />
           </div>
         </div>
@@ -1613,9 +1643,13 @@ function computeGraduateCsatStats(rows, yearStr) {
     return (list.reduce((a, b) => a + b, 0) / list.length).toFixed(2)
   }
 
-  const korAvg = calcAvg(s => s.kor)
-  const mathAvg = calcAvg(s => s.math)
-  const engAvg = calcAvg(s => s.eng)
+  const defaultGrad = getDefaultGraduateData(yearStr)
+  const korAvgRaw = calcAvg(s => s.kor)
+  const korAvg = korAvgRaw !== '-' ? korAvgRaw : defaultGrad.korAvg
+  const mathAvgRaw = calcAvg(s => s.math)
+  const mathAvg = mathAvgRaw !== '-' ? mathAvgRaw : defaultGrad.mathAvg
+  const engAvgRaw = calcAvg(s => s.eng)
+  const engAvg = engAvgRaw !== '-' ? engAvgRaw : defaultGrad.engAvg
   const inq1Avg = calcAvg(s => s.inq1)
   const inq2Avg = calcAvg(s => s.inq2)
 
@@ -1785,7 +1819,10 @@ async function handleGenerateSingleRoundAiAnalysis() {
       }
     }
 
-    const res = await generateGradeLevelAiAnalysis(statsPayload, key)
+    const res = await generateGradeLevelAiAnalysis(statsPayload, key, (msg) => {
+      aiToastMessage.value = `⚡ ${msg}`
+      aiToastType.value = 'info'
+    })
     if (res.success && res.data) {
       const newReport = {
         analyzedAt: new Date().toLocaleString('ko-KR', {
@@ -2082,11 +2119,11 @@ function getGapToG3(gradeNum) {
 const gradeComparisonRows = computed(() => {
   if (viewMode.value === '5YEAR') {
     const list = [
-      gradeData.value[3],
-      gradeData.value[2],
-      gradeData.value[1],
-      graduateData2026.value,
-      graduateData2025.value
+      graduateData2025.value, // 전전년도 고3 (2025 대입)
+      graduateData2026.value, // 전년도 고3 (2026 대입)
+      gradeData.value[3],     // 3학년 (2027 대입)
+      gradeData.value[2],     // 2학년 (2028 대입)
+      gradeData.value[1]      // 1학년 (2029 대입)
     ]
     const valid = list
       .filter(item => item.hasData && item.overallAvg !== '-')
@@ -2609,7 +2646,8 @@ const fiveYearSubjectTrajectoryChartData = computed(() => {
         backgroundColor: '#3b82f6',
         tension: 0.3,
         borderWidth: 2.5,
-        pointRadius: 4.5
+        pointRadius: 4.5,
+        spanGaps: true
       },
       {
         label: '수학',
@@ -2624,7 +2662,8 @@ const fiveYearSubjectTrajectoryChartData = computed(() => {
         backgroundColor: '#8b5cf6',
         tension: 0.3,
         borderWidth: 2.5,
-        pointRadius: 4.5
+        pointRadius: 4.5,
+        spanGaps: true
       },
       {
         label: '영어',
@@ -2639,7 +2678,8 @@ const fiveYearSubjectTrajectoryChartData = computed(() => {
         backgroundColor: '#10b981',
         tension: 0.3,
         borderWidth: 2.5,
-        pointRadius: 4.5
+        pointRadius: 4.5,
+        spanGaps: true
       },
       {
         label: '탐구',
@@ -2654,7 +2694,8 @@ const fiveYearSubjectTrajectoryChartData = computed(() => {
         backgroundColor: '#f59e0b',
         tension: 0.3,
         borderWidth: 2.5,
-        pointRadius: 4.5
+        pointRadius: 4.5,
+        spanGaps: true
       }
     ]
   }
@@ -2710,8 +2751,141 @@ const fiveYearSubjectTrajectoryChartOptions = computed(() => {
 })
 
 // -------------------------------------------------------------
-// 영역별 막대 차트 데이터 & 옵션
+// 영역별 비교 차트 데이터 & 옵션 (초보자용 직관적 꺾은선 궤적 & 바닥형 기둥 막대)
 // -------------------------------------------------------------
+const subjectChartType = ref('line') // 'line' (기본 권장: 직관적 꺾은선) | 'bar' (바닥형 기둥 막대)
+
+const subjectLineChartData = computed(() => {
+  const labels = ['국어', '수학', '영어', '탐구', '한국사']
+  const g3 = gradeData.value[3]
+  const g2 = gradeData.value[2]
+  const g1 = gradeData.value[1]
+  const g25 = graduateData2025.value
+  const g26 = graduateData2026.value
+
+  const parseVal = (v) => (v !== '-' && v !== null && v !== undefined) ? Number(v) : null
+
+  const datasets = []
+
+  if (viewMode.value === '5YEAR' && g25.hasData) {
+    datasets.push({
+      label: '2025 수능 (전전년 고3)',
+      data: [parseVal(g25.korAvg), parseVal(g25.mathAvg), parseVal(g25.engAvg), parseVal(g25.inqAvg), null],
+      borderColor: '#475569',
+      backgroundColor: '#475569',
+      borderWidth: 2.5,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      tension: 0.3,
+      spanGaps: true
+    })
+  }
+
+  if (viewMode.value === '5YEAR' && g26.hasData) {
+    datasets.push({
+      label: '2026 수능 (전년도 고3)',
+      data: [parseVal(g26.korAvg), parseVal(g26.mathAvg), parseVal(g26.engAvg), parseVal(g26.inqAvg), null],
+      borderColor: '#4f46e5',
+      backgroundColor: '#4f46e5',
+      borderWidth: 2.5,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      tension: 0.3,
+      spanGaps: true
+    })
+  }
+
+  if (g3.hasData) {
+    datasets.push({
+      label: '고3 (2027대입)',
+      data: [parseVal(g3.korAvg), parseVal(g3.mathAvg), parseVal(g3.engAvg), parseVal(g3.inqAvg), parseVal(g3.histAvg)],
+      borderColor: '#2563eb',
+      backgroundColor: '#2563eb',
+      borderWidth: 3.5,
+      pointRadius: 6,
+      pointHoverRadius: 8,
+      tension: 0.3,
+      spanGaps: true
+    })
+  }
+
+  if (g2.hasData) {
+    datasets.push({
+      label: '고2 (2028대입)',
+      data: [parseVal(g2.korAvg), parseVal(g2.mathAvg), parseVal(g2.engAvg), parseVal(g2.inqAvg), parseVal(g2.histAvg)],
+      borderColor: '#a855f7',
+      backgroundColor: '#a855f7',
+      borderWidth: 2.5,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      tension: 0.3,
+      spanGaps: true
+    })
+  }
+
+  if (g1.hasData) {
+    datasets.push({
+      label: '고1 (2029대입)',
+      data: [parseVal(g1.korAvg), parseVal(g1.mathAvg), parseVal(g1.engAvg), parseVal(g1.inqAvg), parseVal(g1.histAvg)],
+      borderColor: '#10b981',
+      backgroundColor: '#10b981',
+      borderWidth: 2.5,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      tension: 0.3,
+      spanGaps: true
+    })
+  }
+
+  return { labels, datasets }
+})
+
+const subjectLineChartOptions = computed(() => {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        backgroundColor: '#0f172a',
+        titleFont: { size: 12, weight: 'bold' },
+        bodyFont: { size: 11 },
+        padding: 10,
+        callbacks: {
+          label: (ctx) => `${ctx.dataset.label}: ${ctx.raw}등급`
+        }
+      }
+    },
+    scales: {
+      y: {
+        reverse: true, // 1등급이 최상단!
+        min: 1,
+        max: 9,
+        ticks: {
+          stepSize: 1,
+          callback: (val) => `${val}등급`,
+          font: { size: 10, weight: 'bold' },
+          color: '#64748b'
+        },
+        grid: {
+          color: '#f1f5f9'
+        }
+      },
+      x: {
+        grid: {
+          color: '#f8fafc'
+        },
+        ticks: {
+          font: { size: 11, weight: 'bold' },
+          color: '#334155'
+        }
+      }
+    }
+  }
+})
+
 const subjectBarChartData = computed(() => {
   const labels = ['국어', '수학', '영어', '탐구', '한국사']
   const g3 = gradeData.value[3]
@@ -2729,7 +2903,8 @@ const subjectBarChartData = computed(() => {
       label: '2025 수능 (전전년 고3)',
       data: [parseVal(g25.korAvg), parseVal(g25.mathAvg), parseVal(g25.engAvg), parseVal(g25.inqAvg), null],
       backgroundColor: '#475569',
-      borderRadius: 8,
+      base: 9,
+      borderRadius: { topLeft: 6, topRight: 6 },
       barPercentage: 0.7,
       categoryPercentage: 0.85
     })
@@ -2740,7 +2915,8 @@ const subjectBarChartData = computed(() => {
       label: '2026 수능 (전년도 고3)',
       data: [parseVal(g26.korAvg), parseVal(g26.mathAvg), parseVal(g26.engAvg), parseVal(g26.inqAvg), null],
       backgroundColor: '#4f46e5',
-      borderRadius: 8,
+      base: 9,
+      borderRadius: { topLeft: 6, topRight: 6 },
       barPercentage: 0.7,
       categoryPercentage: 0.85
     })
@@ -2751,7 +2927,8 @@ const subjectBarChartData = computed(() => {
       label: '고3 (2027대입)',
       data: [parseVal(g3.korAvg), parseVal(g3.mathAvg), parseVal(g3.engAvg), parseVal(g3.inqAvg), parseVal(g3.histAvg)],
       backgroundColor: '#2563eb',
-      borderRadius: 8,
+      base: 9,
+      borderRadius: { topLeft: 6, topRight: 6 },
       barPercentage: 0.7,
       categoryPercentage: 0.85
     })
@@ -2762,7 +2939,8 @@ const subjectBarChartData = computed(() => {
       label: '고2 (2028대입)',
       data: [parseVal(g2.korAvg), parseVal(g2.mathAvg), parseVal(g2.engAvg), parseVal(g2.inqAvg), parseVal(g2.histAvg)],
       backgroundColor: '#a855f7',
-      borderRadius: 8,
+      base: 9,
+      borderRadius: { topLeft: 6, topRight: 6 },
       barPercentage: 0.7,
       categoryPercentage: 0.85
     })
@@ -2773,7 +2951,8 @@ const subjectBarChartData = computed(() => {
       label: '고1 (2029대입)',
       data: [parseVal(g1.korAvg), parseVal(g1.mathAvg), parseVal(g1.engAvg), parseVal(g1.inqAvg), parseVal(g1.histAvg)],
       backgroundColor: '#10b981',
-      borderRadius: 8,
+      base: 9,
+      borderRadius: { topLeft: 6, topRight: 6 },
       barPercentage: 0.7,
       categoryPercentage: 0.85
     })

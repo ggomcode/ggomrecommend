@@ -710,6 +710,7 @@
               </button>
               <select
                 v-model="selectedGeminiModel"
+                @change="handleGeminiModelChange"
                 class="text-xs font-semibold bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded-lg pl-3 pr-8 py-2 min-w-[270px] text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer shadow-2xs"
                 title="사용할 Gemini AI 모델을 선택합니다."
               >
@@ -781,7 +782,7 @@
                 </option>
               </select>
               <span class="text-[11px] text-slate-400 font-mono">
-                (선택 모델: <code>{{ selectedGeminiModel || 'gemini-2.5-flash' }}</code>)
+                (선택 모델: <code>{{ selectedGeminiModel || 'gemini-3.8-flash' }}</code>)
               </span>
             </div>
 
@@ -795,7 +796,7 @@
               >
                 <span v-if="isGeneratingAllAi" class="animate-spin text-sm">🔄</span>
                 <span v-else>✨</span>
-                <span>{{ isGeneratingAllAi ? '전체 통계 AI 심층 분석 중… (약 5~10초 소요)' : (comprehensiveAiReportState ? '✨ 전체 대입통계 AI 분석 재갱신' : '✨ 전체 대입통계 AI 심층 분석 실행 및 DB 저장') }}</span>
+                <span>{{ isGeneratingAllAi ? (allAiProgressMessage || '전체 통계 AI 심층 분석 중… (약 5~10초 소요)') : (comprehensiveAiReportState ? '✨ 전체 대입통계 AI 분석 재갱신' : '✨ 전체 대입통계 AI 심층 분석 실행 및 DB 저장') }}</span>
               </button>
             </div>
           </div>
@@ -808,7 +809,7 @@
                 <span>{{ aiTargetAcademicYear }}학년도 AI 종합 총평 미리보기</span>
               </span>
               <span class="text-[10px] text-slate-400 font-mono">
-                모델: {{ comprehensiveAiReportState.model || selectedGeminiModel || 'gemini-2.5-flash' }}
+                모델: {{ comprehensiveAiReportState.model || selectedGeminiModel || 'gemini-3.8-flash' }}
               </span>
             </div>
             <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed m-0 bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200/80 dark:border-slate-700">
@@ -1221,7 +1222,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { supabase } from '../../utils/supabaseClient'
 import { fetchSchoolName, setSchoolNameConfig } from '../../utils/schoolConfig'
 import { getDisclosureCount, setDisclosureCount, syncRegionalToUniversities, syncPrincipalUnivsFromGoogleSheet } from '../../api/admin.js'
@@ -1353,11 +1354,16 @@ const geminiTestLoading = ref(false)
 const geminiTestResult = ref(null)
 const showGeminiKey = ref(false)
 
-const selectedGeminiModel = ref('gemini-2.5-flash')
+const selectedGeminiModel = ref('gemini-3.8-flash')
+watch(selectedGeminiModel, async (newVal) => {
+  if (newVal && !newVal.includes('gemini-2.0')) {
+    await saveSelectedGeminiModel(newVal).catch(() => {})
+  }
+})
 const geminiAvailableModels = ref([
-  { role: 'latest_flash', isDefault: true, id: 'gemini-2.5-flash', version: '2.5', label: 'Gemini 2.5 Flash (최신 / 기본 권장)' },
-  { role: 'prev_flash', isDefault: false, id: 'gemini-2.0-flash', version: '2.0', label: 'Gemini 2.0 Flash (직전 최신)' },
-  { role: 'latest_lite', isDefault: false, id: 'gemini-2.0-flash-lite', version: '2.0', label: 'Gemini 2.0 Flash-Lite (최신 경량)' }
+  { role: 'latest_flash', isDefault: true, id: 'gemini-3.8-flash', version: '3.8', label: 'Gemini 3.8 Flash (최신 / 기본 권장)' },
+  { role: 'prev_flash', isDefault: false, id: 'gemini-3.7-flash', version: '3.7', label: 'Gemini 3.7 Flash (직전 최신)' },
+  { role: 'latest_lite', isDefault: false, id: 'gemini-3.8-flash-lite', version: '3.8', label: 'Gemini 3.8 Flash-Lite (최신 경량)' }
 ])
 const isFetchingModels = ref(false)
 
@@ -1365,6 +1371,7 @@ const aiTargetAcademicYear = ref(getCurrentAcademicYear())
 const aiAvailableYears = ref(['2027', '2026', '2025', '2024'])
 const comprehensiveAiReportState = ref(null)
 const isGeneratingAllAi = ref(false)
+const allAiProgressMessage = ref('')
 
 const hasGoogleSheetPrincipalId = ref(false)
 const showPrincipalId = ref(false)
@@ -1790,7 +1797,11 @@ async function loadConfig() {
     geminiKeyInput.value = ''
     loadComprehensiveReportForTargetYear()
 
-    const savedModel = configMap['gemini_selected_model'] || localStorage.getItem('pcm_gemini_selected_model') || ''
+    let savedModel = configMap['gemini_selected_model'] || localStorage.getItem('pcm_gemini_selected_model') || ''
+    if (savedModel && savedModel.includes('gemini-2.0')) {
+      savedModel = 'gemini-3.8-flash'
+      saveSelectedGeminiModel('gemini-3.8-flash').catch(() => {})
+    }
     if (savedModel) {
       selectedGeminiModel.value = savedModel
       if (!geminiAvailableModels.value.some(m => m.id === savedModel)) {
@@ -2547,9 +2558,12 @@ async function handleGenerateAllStatAiReport() {
   }
 
   isGeneratingAllAi.value = true
+  allAiProgressMessage.value = ''
   try {
     const payload = await compileComprehensiveStatPayload(aiTargetAcademicYear.value)
-    const res = await generateComprehensiveAiStatReport(key, aiTargetAcademicYear.value, payload)
+    const res = await generateComprehensiveAiStatReport(key, aiTargetAcademicYear.value, payload, (msg) => {
+      allAiProgressMessage.value = msg
+    })
     await saveComprehensiveAiReport(aiTargetAcademicYear.value, res.data)
     comprehensiveAiReportState.value = res.data
     await loadComprehensiveAiReport(aiTargetAcademicYear.value, true)
@@ -2567,6 +2581,7 @@ async function handleGenerateAllStatAiReport() {
     })
   } finally {
     isGeneratingAllAi.value = false
+    allAiProgressMessage.value = ''
   }
 }
 
@@ -2588,6 +2603,7 @@ async function handleFetchGeminiModels(isAutoFallback = false) {
       if (!isAutoFallback || !res.models.some(m => m.id === selectedGeminiModel.value)) {
         if (res.defaultModel) {
           selectedGeminiModel.value = res.defaultModel
+          await saveSelectedGeminiModel(res.defaultModel).catch(() => {})
         }
       }
       if (!isAutoFallback) {
@@ -2611,12 +2627,19 @@ async function handleFetchGeminiModels(isAutoFallback = false) {
   }
 }
 
+async function handleGeminiModelChange() {
+  if (selectedGeminiModel.value) {
+    await saveSelectedGeminiModel(selectedGeminiModel.value).catch(e => console.warn(e))
+    console.log('[SettingsTab] Gemini 모델 변경 즉시 저장 완료:', selectedGeminiModel.value)
+  }
+}
+
 async function handleTestGeminiKey() {
   geminiTestLoading.value = true
   geminiTestResult.value = null
   try {
     const targetKey = geminiKeyInput.value.trim() || undefined
-    const chosenModel = selectedGeminiModel.value || 'gemini-2.0-flash'
+    const chosenModel = selectedGeminiModel.value || 'gemini-3.8-flash'
     const res = await testGeminiApiKey(targetKey, chosenModel)
     if (res.success) {
       await saveSelectedGeminiModel(chosenModel)
