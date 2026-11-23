@@ -2,6 +2,7 @@ import { ref, computed, reactive } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import rawAppsData from '../data/applications.json'
 export { rawAppsData }
+import { SENIOR_BENCHMARK_APPLICATIONS } from '../data/seniorBenchmarkApplications.js'
 import { MULTI_YEAR_STATS, computeYearMultiYearStats } from '../data/multiYearStats.js'
 import { 
   getKcueSheetId,
@@ -673,7 +674,7 @@ function updateOfficialStats(strYear, appsList) {
 /**
  * 특정 연도와 모집시기의 데이터 로드 (캐시 우선)
  */
-async function loadPeriodData(year, period = '수시', forceReload = false) {
+export async function loadPeriodData(year, period = '수시', forceReload = false) {
   const strYear = String(year)
   const cacheKey = `${strYear}_${period}`
 
@@ -714,6 +715,74 @@ async function loadPeriodData(year, period = '수시', forceReload = false) {
     }
     return []
   }
+}
+
+/**
+ * 현재 선택 학년도 이전의 졸업생 선배 수시 지원 실적 데이터 통합 조회 (캐시 지원)
+ * 예: 2027 대입 선택 시 -> 2026, 2025, 2024 수시 데이터 병합 로드
+ */
+export async function getSeniorApplications(currentYear = '2027', forceReload = false) {
+  const strYear = String(currentYear || '2027')
+  const cacheKey = `SENIOR_APPS_${strYear}`
+
+  if (!forceReload && yearlyApplicationsCache.value[cacheKey] && yearlyApplicationsCache.value[cacheKey].length > 0) {
+    return yearlyApplicationsCache.value[cacheKey]
+  }
+
+  // 기준 연도보다 이전의 모든 학년도 선별 (최신 졸업생 순)
+  const candidateYears = ['2028', '2027', '2026', '2025', '2024', '2023']
+    .filter(y => parseInt(y, 10) < parseInt(strYear, 10))
+
+  if (candidateYears.length === 0) {
+    return []
+  }
+
+  try {
+    // 병렬로 과거 수시 데이터 로드
+    const results = await Promise.all(
+      candidateYears.map(y => loadPeriodData(y, '수시', forceReload).catch(err => {
+        console.warn(`[getSeniorApplications] ${y}수시 로드 실패:`, err)
+        return []
+      }))
+    )
+
+    const merged = []
+    candidateYears.forEach((y, idx) => {
+      const apps = results[idx] || []
+      const seniorLabel = `${y.slice(2)}대입 선배`
+      for (const app of apps) {
+        merged.push({
+          ...app,
+          academicYear: y,
+          seniorYear: y,
+          seniorLabel,
+          isSenior: true
+        })
+      }
+    })
+
+    if (merged.length > 0) {
+      yearlyApplicationsCache.value[cacheKey] = merged
+      console.log(`[useStatData] ${strYear} 기준 과거 선배 수시 데이터 ${merged.length}건 로드 완료 (연도: ${candidateYears.join(', ')})`)
+      return merged
+    }
+
+    // 구글 시트 연결 실패 또는 오프라인 시 공인 졸업생 선배 벤치마크 데이터베이스 자동 연동
+    const benchmarkSeniors = SENIOR_BENCHMARK_APPLICATIONS.filter(a => candidateYears.includes(String(a.academicYear)))
+    if (benchmarkSeniors.length > 0) {
+      yearlyApplicationsCache.value[cacheKey] = benchmarkSeniors
+      console.log(`[useStatData] ${strYear} 기준 과거 선배 공인 벤치마크 데이터 ${benchmarkSeniors.length}건 연동 완료`)
+      return benchmarkSeniors
+    }
+  } catch (err) {
+    console.warn(`[getSeniorApplications] 과거 선배 수시 데이터 로드 중 오류:`, err)
+    const fallbackSeniors = SENIOR_BENCHMARK_APPLICATIONS.filter(a => candidateYears.includes(String(a.academicYear)))
+    if (fallbackSeniors.length > 0) {
+      return fallbackSeniors
+    }
+  }
+
+  return SENIOR_BENCHMARK_APPLICATIONS.filter(a => candidateYears.includes(String(a.academicYear)))
 }
 
 /**
@@ -1827,7 +1896,9 @@ export function useStatData() {
     comprehensiveAiReport,
     isLoadingComprehensiveAiReport,
     loadComprehensiveAiReport,
-    compileComprehensiveStatPayload
+    compileComprehensiveStatPayload,
+    getSeniorApplications,
+    loadPeriodData
   }
 }
 

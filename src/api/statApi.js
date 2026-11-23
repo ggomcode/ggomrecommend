@@ -832,8 +832,23 @@ export function parseKcueRows(csvText, customPassword = null) {
         return m ? parseInt(m[2], 10) : null
       })(),
       csatEngGrade: (() => {
-        const val = getNum('영어(등급)', '영어 (등급)', '영어_등급', '영어등급', '수능영어등급', '수능영어', '수능 영어', 'csatEngGrade')
+        const val = getNum(
+          '영어(등급)', '영어 (등급)', '영어_등급', '영어등급', 
+          '수능영어등급', '수능영어', '수능 영어', 'csatEngGrade',
+          '수능_영어', '수능(영어)', '수능영어(등급)', '수능 영어(등급)',
+          '수능_영어_등급', '수능_영어등급', '수능 영어 등급', '영어(수능)',
+          '영어_수능', '영어 (수능)', '수능영어성적'
+        )
         if (val !== null) return val
+        if (rowData) {
+          for (const k of Object.keys(rowData)) {
+            const cleanK = k.replace(/[\r\n\s]+/g, '')
+            if ((cleanK.includes('수능') || cleanK.includes('모의')) && cleanK.includes('영어') && !cleanK.includes('원점수') && !cleanK.includes('표준')) {
+              const parsed = parseInt(String(rowData[k]).trim(), 10)
+              if (!isNaN(parsed) && parsed >= 1 && parsed <= 9) return parsed
+            }
+          }
+        }
         if (csatEngColIdx !== -1) {
           if (r && r[csatEngColIdx] !== undefined) {
             const rawV = String(r[csatEngColIdx]).trim()

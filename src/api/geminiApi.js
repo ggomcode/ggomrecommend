@@ -468,35 +468,66 @@ export async function saveGradeAnalysis(round, academicYear, reportData) {
  * Google Gemini API generateContent 호출 통합 함수 (지능형 재시도 및 다단계 자동 안전 폴백)
  * 
 /**
+ * JSON 응답 안전 추출 헬퍼 (마크다운 및 전후 텍스트 자동 정제)
+ */
+export function extractCleanJson(rawText) {
+  if (!rawText || typeof rawText !== 'string') return ''
+  let cleaned = rawText.trim()
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```\s*/, '').replace(/\s*```$/, '')
+  }
+  const firstBrace = cleaned.indexOf('{')
+  const lastBrace = cleaned.lastIndexOf('}')
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    return cleaned.substring(firstBrace, lastBrace + 1)
+  }
+  return cleaned
+}
+
+/**
  * Google Gemini API generateContent 호출 통합 함수 (3단계 지능형 자동 복구 로직)
  * 
  * 1) 1차 에러: 사용자에게 묻지 않고 1.5초 대기 후 동일 모델로 즉시 다시 진행 (1차 자동 재시도)
- * 2) 2차 에러: 묻지 않고 '직전 최신 모델'로 모델을 낮추어 자동 추가 진행 (2차 자동 강등 및 재시도)
- * 3) 3차 에러: 분석을 안전하게 종료하고, 멈춘 원인 설명 및 과부하 시 잠시 후 재시도/모델 강등 안내
+ * 2) 2차 에러: 묻지 않고 '직전 최신 모델'로 모델을 낮추어 자동 추가 진행 (2차 자동 강등 및 진행)
+ * 3) 3차 에러: 필요시 경량 모델로 1회 안전 복구 시도 후, 최종 실패 시 분석을 안전하게 종료하고 멈춘 원인 설명 및 재시도 유도
  */
 export async function callGeminiGenerateContent(key, initialModel, requestBody, onProgress = null) {
-  // 지원 중단된 구형 2.0 모델이 인입되면 최신 기본 모델로 자동 교체
-  const selectedModel = (!initialModel || initialModel.includes('gemini-2.0')) 
-    ? GEMINI_DEFAULT_MODEL 
-    : initialModel
+  const clean = (m) => String(m || '').replace(/^models\//, '').trim()
 
-  const prevModel = getFallbackGeminiModel(selectedModel)
+  // 지원 중단된 구형 2.0 모델이 인입되면 최신 기본 모델로 자동 교체
+  const selectedModel = clean((!initialModel || initialModel.includes('gemini-2.0')) 
+    ? GEMINI_DEFAULT_MODEL 
+    : initialModel)
+
+  const prevModel = clean(getFallbackGeminiModel(selectedModel))
+  const liteModel = clean(selectedModel.includes('lite') ? 'gemini-2.5-flash-lite' : 'gemini-3.8-flash-lite')
 
   const stages = [
     {
       stageName: '선택 모델',
       model: selectedModel,
       maxAttempts: 2,
-      retryMessage: `선택 모델(${selectedModel}) 일시 지연 발생: 묻지 않고 즉시 다시 진행합니다... (1차 자동 재시도)`
+      retryMessage: `선택 모델(${selectedModel}) 일시 지연 발생: 1.5초 후 다시 진행합니다... (1차 자동 재시도)`
     },
     {
       stageName: '직전 최신 모델',
       model: prevModel,
-      maxAttempts: 2,
-      switchMessage: `선택 모델 일시 과부하: 묻지 않고 직전 최신 모델(${prevModel})로 낮추어 자동 추가 진행합니다... (2차 모델 강등)`,
-      retryMessage: `직전 모델(${prevModel}) 일시 지연: 1.5초 후 재시도합니다...`
+      maxAttempts: 1, // 직전 모델은 지체 없이 1회 시도 후 실패 시 경량 모델로 안전 전환
+      switchMessage: `선택 모델 일시 과부하: 직전 최신 모델(${prevModel})로 낮추어 진행합니다... (2차 모델 강등)`
     }
   ]
+
+  // 만약 prevModel이 이미 liteModel이 아니라면, 3차 안전 복구로 초경량 모델 1회 시도
+  if (prevModel !== liteModel && selectedModel !== liteModel) {
+    stages.push({
+      stageName: '최신 경량 모델',
+      model: liteModel,
+      maxAttempts: 1,
+      switchMessage: `서버 트래픽 과부하 지속: 최신 경량 모델(${liteModel})로 자동 연결하여 분석을 완료합니다... (3차 안전 복구)`
+    })
+  }
 
   let lastError = null
 
@@ -507,17 +538,22 @@ export async function callGeminiGenerateContent(key, initialModel, requestBody, 
     if (s > 0 && stage.switchMessage) {
       console.warn(`[geminiApi] ${stage.switchMessage}`)
       onProgress?.(stage.switchMessage)
-      await new Promise(r => setTimeout(r, 1500))
+      await new Promise(r => setTimeout(r, 1200))
     }
 
     for (let attempt = 1; attempt <= stage.maxAttempts; attempt++) {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 16000) // 16초 타임아웃 (응답 대기 무한루프 방지)
+
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${encodeURIComponent(key)}`
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
+          body: JSON.stringify(requestBody),
+          signal: controller.signal
         })
+        clearTimeout(timeoutId)
 
         if (res.ok) {
           const data = await res.json()
@@ -539,14 +575,14 @@ export async function callGeminiGenerateContent(key, initialModel, requestBody, 
           throw new Error('등록된 Gemini API Key가 유효하지 않습니다. 관리자 환경설정에서 API 키를 다시 확인해 주세요.')
         }
 
-        // 미지원(404) 또는 서비스 종료 모델인 경우 즉시 다음 단계(직전 모델)로 이동
+        // 미지원(404) 또는 서비스 종료 모델인 경우 즉시 다음 단계로 이동
         if (isNotFound || isDeprecated) {
-          console.warn(`[geminiApi] ${currentModel} 모델 미지원 또는 지원종료. 직전 모델로 자동 전환합니다.`)
+          console.warn(`[geminiApi] ${currentModel} 모델 미지원 또는 지원종료. 다음 모델로 자동 전환합니다.`)
           break
         }
 
-        // 1차 실패 시(동일 모델 내 재시도): 묻지 않고 1.5초 대기 후 다시 진행
-        if (attempt === 1) {
+        // 동일 모델 내 재시도 (stage.maxAttempts > 1인 경우에만 1회차 후 1.5초 대기)
+        if (attempt < stage.maxAttempts) {
           if (stage.retryMessage) {
             console.warn(`[geminiApi] ${stage.retryMessage}`)
             onProgress?.(stage.retryMessage)
@@ -555,15 +591,21 @@ export async function callGeminiGenerateContent(key, initialModel, requestBody, 
           continue
         }
 
-        // 2회차 실패: 다음 단계(직전 모델 강등)로 전환
-        console.warn(`[geminiApi] ${stage.stageName}(${currentModel}) 2회 호출 실패. 다음 단계로 전환합니다.`)
+        // 해당 단계 소진 시 다음 단계로 전환
+        console.warn(`[geminiApi] ${stage.stageName}(${currentModel}) 호출 실패. 다음 단계로 전환합니다.`)
         break
       } catch (networkErr) {
+        clearTimeout(timeoutId)
         if (networkErr.message?.includes('유효하지 않습니다')) {
           throw networkErr
         }
-        lastError = networkErr
-        if (attempt === 1) {
+        if (networkErr.name === 'AbortError') {
+          lastError = new Error(`Google API 응답 시간 초과 (16초) - ${currentModel}`)
+        } else {
+          lastError = networkErr
+        }
+
+        if (attempt < stage.maxAttempts) {
           if (stage.retryMessage) {
             onProgress?.(stage.retryMessage)
           }
@@ -575,20 +617,21 @@ export async function callGeminiGenerateContent(key, initialModel, requestBody, 
     }
   }
 
-  // 3차 에러: 모든 모델(선택 모델 + 직전 최신 모델) 호출 실패 시 분석 종료 및 원인/처방 안내
+  // 모든 단계(선택 모델 + 직전 모델 + 경량 모델) 호출 실패 시 분석 종료 및 원인/처방 안내
   const finalMsg = lastError?.message || '알 수 없는 서버 오류'
   const isHighDemand = finalMsg.includes('high demand') || 
                        finalMsg.includes('503') || 
                        finalMsg.includes('overloaded') || 
-                       finalMsg.includes('spikes in demand')
+                       finalMsg.includes('spikes in demand') ||
+                       finalMsg.includes('시간 초과')
 
   if (isHighDemand) {
     throw new Error(
       `[AI 분석 일시 중단 안내: Google AI 서버 과부하]\n` +
       `선택하신 모델(${selectedModel})과 직전 최신 모델(${prevModel})로 자동 재시도 및 모델 강등 호출을 진행하였으나, 현재 Google Gemini 본사 서버에 일시적인 트래픽 과부하(High Demand)가 지속되고 있습니다.\n\n` +
       `📌 해결 방법 안내:\n` +
-      `1. 일시적 과부하 스파이크는 보통 1~2분 내에 자동 해소되므로, 잠시 후에 다시 분석 버튼을 눌러주시면 정상 처리됩니다.\n` +
-      `2. 즉시 분석이 필요하신 경우, 관리자 [환경설정] > [Gemini AI 설정]에서 모델 버전을 'Gemini 3.7 Flash' 또는 'Gemini 3.8 Flash-Lite' 등 하위/경량 모델로 낮추어 진행해 주시기 바랍니다.`
+      `1. 일시적 과부하 스파이크는 보통 1~2분 내에 자동 해소되므로, 잠시 후에 화면의 [다시 분석하기] 버튼을 눌러주시면 정상 처리됩니다.\n` +
+      `2. 즉시 분석이 필요하신 경우, 관리자 [환경설정] > [Gemini AI 설정]에서 모델 버전을 'Gemini 3.8 Flash-Lite' 등 경량 모델로 변경해 주시기 바랍니다.`
     )
   }
 
@@ -597,16 +640,16 @@ export async function callGeminiGenerateContent(key, initialModel, requestBody, 
       `[AI 분석 일시 중단 안내: 분당 호출 한도 초과]\n` +
       `Google Gemini API의 무료 분당 요청 한도(15 RPM)를 초과하여 분석이 중단되었습니다.\n\n` +
       `📌 해결 방법 안내:\n` +
-      `약 30초~1분 정도 대기하신 후 다시 시도해 주시기 바랍니다.`
+      `약 30초~1분 정도 대기하신 후 화면의 [다시 분석하기] 버튼을 눌러 다시 시도해 주시기 바랍니다.`
     )
   }
 
   throw new Error(
     `[AI 분석 중단 안내: 서버 통신 실패]\n` +
-    `선택 모델(${selectedModel}) 및 직전 모델(${prevModel}) 호출 중 오류가 발생하여 분석을 종료했습니다.\n` +
+    `선택 모델(${selectedModel}) 및 하위 모델 호출 중 오류가 발생하여 분석을 종료했습니다.\n` +
     `원인: ${finalMsg}\n\n` +
     `📌 해결 방법 안내:\n` +
-    `잠시 후 다시 시도하시거나, 관리자 환경설정에서 API 키 및 모델 선택 상태를 확인해 주세요.`
+    `잠시 후 화면의 [다시 분석하기] 버튼을 눌러 재시도하시거나, 관리자 환경설정에서 API 키 및 모델 선택 상태를 확인해 주세요.`
   )
 }
 
@@ -727,14 +770,8 @@ ${JSON.stringify(statsPayload, null, 2)}
     throw new Error('Gemini API로부터 응답 텍스트를 수신하지 못했습니다.')
   }
 
-  // 마크다운 코드블록 정제
-  let cleanedText = rawText.trim()
-  if (cleanedText.startsWith('```json')) {
-    cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
-  } else if (cleanedText.startsWith('```')) {
-    cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '')
-  }
-
+  // 마크다운 코드블록 정제 및 순수 JSON 추출
+  const cleanedText = extractCleanJson(rawText)
   const parsed = JSON.parse(cleanedText)
   if (!parsed.gradeCards || !parsed.roadmap) {
     throw new Error('Gemini 응답 형식이 올바르지 않습니다 (gradeCards 또는 roadmap 누락).')
@@ -1040,13 +1077,7 @@ ${JSON.stringify(statsPayload, null, 2)}
     throw new Error('Gemini API로부터 응답 텍스트를 수신하지 못했습니다.')
   }
 
-  let cleanedText = rawText.trim()
-  if (cleanedText.startsWith('```json')) {
-    cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
-  } else if (cleanedText.startsWith('```')) {
-    cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '')
-  }
-
+  const cleanedText = extractCleanJson(rawText)
   const parsed = JSON.parse(cleanedText)
   if (!parsed.overallSummary || !parsed.strategyCards || !parsed.groupInsights || !parsed.bandInsights) {
     throw new Error('Gemini 응답 구조가 불완전합니다 (overallSummary, strategyCards, groupInsights, bandInsights 중 일부 누락).')
@@ -1219,15 +1250,19 @@ ${JSON.stringify(anonymizedPayload, null, 2)}
 `
 
   const requestBody = {
+    system_instruction: {
+      parts: [{ text: systemInstruction }]
+    },
     contents: [
       {
         role: 'user',
-        parts: [{ text: `${systemInstruction}\n\n${userPrompt}` }]
+        parts: [{ text: userPrompt }]
       }
     ],
     generationConfig: {
       temperature: 0.2,
       topP: 0.8,
+      maxOutputTokens: 2500,
       responseMimeType: 'application/json'
     }
   }
@@ -1241,13 +1276,7 @@ ${JSON.stringify(anonymizedPayload, null, 2)}
     throw new Error('Gemini API로부터 응답 텍스트를 수신하지 못했습니다.')
   }
 
-  let cleanedText = rawText.trim()
-  if (cleanedText.startsWith('```json')) {
-    cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
-  } else if (cleanedText.startsWith('```')) {
-    cleanedText = cleanedText.replace(/^```\s*/, '').replace(/\s*```$/, '')
-  }
-
+  const cleanedText = extractCleanJson(rawText)
   const parsed = JSON.parse(cleanedText)
   if (!parsed.summary || !parsed.basketDiagnosis || !parsed.csatStrategy || !parsed.counselScript) {
     throw new Error('Gemini 응답 구조가 불완전합니다 (summary, basketDiagnosis, csatStrategy, counselScript 중 일부 누락).')

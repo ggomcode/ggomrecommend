@@ -1661,11 +1661,12 @@ function computeGraduateCsatStats(rows, yearStr) {
   } else if (inq2Avg !== '-') {
     inqAvg = inq2Avg
   }
+  const inqAvgFinal = inqAvg !== '-' ? inqAvg : defaultGrad.inqAvg
 
-  const validAvgs = [korAvg, mathAvg, engAvg, inqAvg].filter(v => v !== '-').map(Number)
+  const validAvgs = [korAvg, mathAvg, engAvg, inqAvgFinal].filter(v => v !== '-').map(Number)
   const overallAvg = validAvgs.length > 0
     ? (validAvgs.reduce((a, b) => a + b, 0) / validAvgs.length).toFixed(2)
-    : '-'
+    : defaultGrad.overallAvg
 
   let topCount = 0
   let midCount = 0
@@ -1706,7 +1707,7 @@ function computeGraduateCsatStats(rows, yearStr) {
     korAvg,
     mathAvg,
     engAvg,
-    inqAvg,
+    inqAvg: inqAvgFinal,
     histAvg: '-',
     topTierRate,
     midTierRate,

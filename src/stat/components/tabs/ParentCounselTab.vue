@@ -388,6 +388,41 @@
         </div>
       </div>
 
+      <!-- Error State Banner (분석 실패/과부하 시 화면에 명확한 원인 설명 및 즉시 재시도 버튼 제공) -->
+      <div v-if="studentAiError && !isGeneratingStudentAi" class="p-5 rounded-2xl bg-amber-50/90 border border-amber-300 shadow-sm space-y-3">
+        <div class="flex items-start gap-3">
+          <span class="text-2xl mt-0.5">⚠️</span>
+          <div class="space-y-1.5 flex-1">
+            <h4 class="text-sm font-black text-amber-950 m-0">
+              AI 심층 진학 분석 일시 중단 안내
+            </h4>
+            <div class="text-xs text-amber-900 leading-relaxed whitespace-pre-line font-medium">
+              {{ studentAiError }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-amber-200/80">
+          <button
+            type="button"
+            @click="handleGenerateStudentAiCounsel(true)"
+            :disabled="isGeneratingStudentAi"
+            class="px-4 py-2 rounded-xl text-xs font-black text-white bg-amber-600 hover:bg-amber-700 shadow-xs transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <span>🔄</span>
+            <span>다시 분석하기</span>
+          </button>
+          <button
+            type="button"
+            @click="studentAiError = ''"
+            class="px-3 py-2 rounded-xl text-xs font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 transition-all cursor-pointer"
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+
       <!-- Loading State -->
       <div v-if="isLoadingStudentAi" class="text-center py-10 space-y-3">
         <div class="animate-spin text-3xl">⏳</div>
@@ -1040,12 +1075,18 @@
         </div>
       </div>
 
+      <!-- Loading State for Senior Data -->
+      <div v-if="isLoadingSeniors && peerApplications.length === 0" class="text-center py-8 text-xs text-indigo-600 flex items-center justify-center gap-2">
+        <span class="animate-spin text-base">⏳</span>
+        <span class="font-semibold">과거 졸업생 선배 대입 실적 빅데이터를 불러오는 중입니다...</span>
+      </div>
+
       <!-- Peer Applications Table -->
-      <div v-if="peerApplications.length > 0" class="overflow-x-auto">
+      <div v-else-if="peerApplications.length > 0" class="overflow-x-auto">
         <table class="w-full text-xs text-left border-collapse">
           <thead>
             <tr class="bg-slate-100 text-slate-700 font-bold border-y border-slate-200">
-              <th class="p-2.5">학생</th>
+              <th class="p-2.5">선배 (출신)</th>
               <th class="p-2.5">내신</th>
               <th class="p-2.5">지원 대학교 (학과)</th>
               <th class="p-2.5">전형 유형</th>
@@ -1061,7 +1102,18 @@
               class="hover:bg-slate-50/80 transition-colors"
             >
               <td class="p-2.5 font-bold text-slate-800">
-                {{ maskName(app.name) }} ({{ app.classNum }}반)
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span>{{ maskName(app.name) }}</span>
+                  <span
+                    v-if="app.seniorLabel || app.academicYear"
+                    class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200"
+                  >
+                    {{ app.seniorLabel || `${String(app.academicYear).slice(2)}대입 선배` }}
+                  </span>
+                  <span v-else class="text-slate-500 text-[11px] font-normal">
+                    ({{ app.classNum ? `${app.classNum}반` : '졸업생' }})
+                  </span>
+                </div>
               </td>
               <td class="p-2.5 font-mono font-bold text-blue-700">
                 {{ formatGrade(app.allSubjectGrade || app.score9Grade || app.mainSubjectGrade) }}
@@ -1105,7 +1157,7 @@
                 </div>
               </td>
               <td class="p-2.5 text-center font-bold">
-                <span v-if="app.isRegistered || app.registerStatus === 'Y'" class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-600 text-white shadow-2xs">
+                <span v-if="app.isRegistered || app.registerStatus === 'Y' || String(app.registerStatus).includes('등록')" class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-600 text-white shadow-2xs">
                   등록완료
                 </span>
                 <span v-else class="text-slate-300 text-[11px]">-</span>
@@ -1115,7 +1167,7 @@
         </table>
       </div>
       <div v-else class="text-center py-8 text-xs text-slate-500">
-        설정한 내신 등급({{ targetGpa.toFixed(2) }}등급) ±0.2 범위 내의 실제 지원 데이터가 없습니다.
+        설정한 내신 등급({{ targetGpa.toFixed(2) }}등급) ±0.35 범위 내의 졸업생 선배 지원 데이터가 없습니다.
       </div>
     </div>
 
@@ -1152,7 +1204,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { useData, maskName, formatGrade, studentMockExamsMap, loadMockExamData } from '../../composables/useStatData'
+import { useData, maskName, formatGrade, studentMockExamsMap, loadMockExamData, getSeniorApplications } from '../../composables/useStatData'
 import { schoolName } from '../../../utils/schoolConfig'
 import { 
   getGeminiApiKey, 
@@ -1168,6 +1220,23 @@ import StudentAiBatchModal from '../counsel/StudentAiBatchModal.vue'
 const displaySchoolName = computed(() => (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리 학교')
 
 const { applications, selectedAcademicYear } = useData()
+
+// 과거 졸업생 선배(전년도·전전년도 등) 수시 지원 및 실제 입결 데이터 상태
+const seniorApplications = ref([])
+const isLoadingSeniors = ref(false)
+
+async function fetchSeniorData(force = false) {
+  isLoadingSeniors.value = true
+  try {
+    const list = await getSeniorApplications(selectedAcademicYear.value, force)
+    seniorApplications.value = list || []
+  } catch (err) {
+    console.warn('[ParentCounselTab] 과거 선배 수시 입결 로드 실패:', err)
+    seniorApplications.value = []
+  } finally {
+    isLoadingSeniors.value = false
+  }
+}
 
 // Persona Mode: 'RURAL' (농어촌 일반고 중심) vs 'SAT_GANGNAM' (수능·정시 관점)
 const counselPersona = ref('RURAL')
@@ -1424,10 +1493,11 @@ function buildAnonymizedStudentPayload(studentKey) {
   const student = allStudentsList.value.find(s => s.key === studentKey)
   const apps = currentStudentApps.value || []
 
-  // 1. 모의고사 이력 (이름/학번 제외, 순수 과목/등급/백분위만 포함)
+  // 1. 모의고사 이력 (이름/학번 제외, 순수 과목/등급/백분위만 포함 - 가장 최근 6회 압축)
   const studentExams = getStudentMockExams(studentKey)
+  const recentExams = (studentExams || []).slice(-6)
 
-  const cleanedExams = studentExams.map(ex => ({
+  const cleanedExams = recentExams.map(ex => ({
     examName: ex.examName || `${ex.monthOrder || ''}월 학평`,
     korGrade: ex.korGrade ?? null,
     korPercentile: ex.korPercentile ?? null,
@@ -1580,7 +1650,6 @@ async function handleGenerateStudentAiCounsel(force = false) {
   } catch (err) {
     console.error('학생 AI 상담 생성 오류:', err)
     studentAiError.value = err.message || 'AI 분석 도중 오류가 발생했습니다.'
-    alert(`AI 분석 실패:\n\n${studentAiError.value}`)
   } finally {
     isGeneratingStudentAi.value = false
     studentAiProgressStatus.value = ''
@@ -1598,12 +1667,14 @@ function copyStudentAiScript() {
 }
 
 watch(selectedAcademicYear, async () => {
+  fetchSeniorData()
   if (selectedStudentKey.value) {
     await loadStudentAiReport(selectedStudentKey.value)
   }
 })
 
 onMounted(async () => {
+  fetchSeniorData()
   if (studentMockExamsMap.value.size === 0) {
     try {
       await loadMockExamData(false, selectedAcademicYear.value)
@@ -1625,7 +1696,7 @@ function isPassApp(app) {
   const f = String(app.finalStage || '')
   const r = String(app.registerStatus || '')
   if (f.includes('불합')) return false
-  return f.includes('합격') || f.includes('충원') || f.includes('최초') || r === 'Y'
+  return f.includes('합격') || f.includes('충원') || f.includes('최초') || r === 'Y' || r.includes('등록')
 }
 
 // -------------------------------------------------------------
@@ -1783,7 +1854,9 @@ function getTierBenchmark(tier, gpa, isRural) {
 // -------------------------------------------------------------
 const similarSeniorStats = computed(() => {
   const gpa = Number(targetGpa.value)
-  const allApps = applications.value || []
+  const allApps = (seniorApplications.value && seniorApplications.value.length > 0)
+    ? seniorApplications.value
+    : (applications.value || [])
   let spread = 0.35
   let pool = allApps.filter(a => {
     const g = a.allSubjectGrade || a.score9Grade || a.mainSubjectGrade
@@ -1888,7 +1961,9 @@ const similarSeniorStats = computed(() => {
 const universityLines = computed(() => {
   const gpa = Number(targetGpa.value)
   const isRural = counselPersona.value === 'RURAL'
-  const allApps = applications.value || []
+  const allApps = (seniorApplications.value && seniorApplications.value.length > 0)
+    ? seniorApplications.value
+    : (applications.value || [])
 
   // 유사 내신 선배 풀 (±0.45등급, 최소 20건 이상 확보)
   let spread = 0.45
@@ -2515,29 +2590,45 @@ function enrichResultDetail(app, targetGpaVal) {
   const reg = String(app.registerStatus || '').trim()
   const fReason = String(app.failReason || '').trim()
 
-  // 1) 실제 합격 기록이 있는 경우 최우선 존중
-  const hasRawPass = (fStage.includes('합격') || fStage.includes('충원') || fStage.includes('최초') || reg === 'Y') && !fStage.includes('불합')
+  // 1) 실제 합격 기록이 있는 경우 (최우선 확정)
+  const hasRawPass = (
+    (fStage.includes('합격') || fStage.includes('충원') || fStage.includes('최초') || reg === 'Y' || reg.includes('등록')) &&
+    !fStage.includes('불합')
+  )
+
   if (hasRawPass) {
     const isChoi = fStage.includes('최초')
     const candNum = cRank.replace(/[^0-9]/g, '')
+    const isChung = fStage.includes('충원') || candNum !== ''
+    const isRegistered = reg === 'Y' || reg.includes('등록')
+
     return {
       isPass: true,
-      resultText: isChoi ? '최초합격' : (candNum ? `충원합격 (예비 ${candNum}번)` : '충원합격'),
+      resultText: isChoi ? '최초합격' : (candNum ? `충원합격 (예비 ${candNum}번)` : (isChung ? '충원합격' : '최초합격')),
       resultBadgeClass: isChoi ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-blue-100 text-blue-800 border border-blue-300',
-      subResultText: s1Stage ? `1단계: ${s1Stage}` : (app.selectionMethod?.includes('일괄') ? '일괄합산' : '서류100%'),
-      isRegistered: reg === 'Y' || isChoi
+      subResultText: s1Stage ? `1단계: ${s1Stage}` : (app.selectionMethod?.includes('일괄') ? '일괄합산' : (isChoi ? '최초합격' : '충원합격')),
+      isRegistered
     }
   }
 
-  // 2) 실제 불합격 기록에 1차합격이나 예비번호가 명시되어 있는 경우
-  if (fStage.includes('불합') && (s1Stage.includes('합격') || cRank || fReason)) {
+  // 2) 실제 불합격 기록이 있는 경우 (절대 합격으로 둔갑시키지 않고 실제 사유/예비번호 반영)
+  if (fStage.includes('불합') || fReason) {
     const candNum = cRank.replace(/[^0-9]/g, '')
     if (candNum) {
       return {
         isPass: false,
         resultText: `불합격 (예비 ${candNum}번)`,
         resultBadgeClass: 'bg-amber-100 text-amber-900 border border-amber-300',
-        subResultText: s1Stage ? `1단계: ${s1Stage}` : '추가합격 배수 초과',
+        subResultText: s1Stage ? `1단계: ${s1Stage}` : '추합 예비 번호 마감 탈락',
+        isRegistered: false
+      }
+    }
+    if (fReason.includes('최저') || fReason.includes('수능')) {
+      return {
+        isPass: false,
+        resultText: '불합격 (최저미달)',
+        resultBadgeClass: 'bg-rose-100 text-rose-800 border border-rose-300',
+        subResultText: '수능최저학력기준 미충족',
         isRegistered: false
       }
     }
@@ -2550,19 +2641,16 @@ function enrichResultDetail(app, targetGpaVal) {
         isRegistered: false
       }
     }
-    if (fReason.includes('최저')) {
-      return {
-        isPass: false,
-        resultText: '불합격 (최저미달)',
-        resultBadgeClass: 'bg-rose-100 text-rose-800 border border-rose-300',
-        subResultText: '수능최저학력기준 미충족',
-        isRegistered: false
-      }
+    return {
+      isPass: false,
+      resultText: '불합격',
+      resultBadgeClass: 'bg-slate-100 text-slate-600 border border-slate-200',
+      subResultText: fReason || (s1Stage ? `1단계: ${s1Stage}` : '종합평가 배수 초과'),
+      isRegistered: false
     }
   }
 
-  // 3) 대교협 엑셀 원본에 결과가 비어있거나 전체 일괄 불합격인 경우:
-  // 해당 대학 티어의 현실적 합격 컷오프(일반/농어촌)와 지원자의 실제 내신을 대조하여 현실적 판정
+  // 3) 대교협 엑셀 원본에 결과가 비어있는 경우 (현역 지원자이거나 결과 발표 전인 경우만 현실적 추정)
   const u = String(app.univName || '')
   const g = Number(app.allSubjectGrade || app.score9Grade || app.mainSubjectGrade || targetGpaVal)
   const isPass = evaluateAppPass(app, targetGpaVal)
@@ -2612,18 +2700,55 @@ function enrichResultDetail(app, targetGpaVal) {
 }
 
 const peerApplications = computed(() => {
-  if (!applications.value || applications.value.length === 0) return []
+  // 선배 수시 입결 데이터(전년도 2026대입, 전전년도 2025대입 등 과거 졸업생)만 엄격 적용
+  // 현역(현재 선택 학년도 동급생)은 선배 실적에서 100% 완전 배제!
+  const currentAcademicYearNum = parseInt(String(selectedAcademicYear.value || '2027').replace(/[^0-9]/g, ''), 10) || 2027
+  
+  let appsSource = []
+  if (seniorApplications.value && seniorApplications.value.length > 0) {
+    appsSource = seniorApplications.value.filter(a => a.isSenior || a.isGraduate || (a.academicYear && parseInt(String(a.academicYear).replace(/[^0-9]/g, ''), 10) < currentAcademicYearNum))
+  }
+  
+  // seniorApplications가 아직 로드 중이거나 없을 경우 applications 중에서 이전 학년도 졸업생만 필터링
+  if (appsSource.length === 0 && applications.value && applications.value.length > 0) {
+    appsSource = applications.value.filter(a => (a.isGraduate || a.isSenior) && (a.academicYear && parseInt(String(a.academicYear).replace(/[^0-9]/g, ''), 10) < currentAcademicYearNum))
+  }
+
+  if (!appsSource || appsSource.length === 0) return []
   const gpa = targetGpa.value
   const track = selectedTrack.value
   const targetDepts = studentTargetDepts.value
   const hasCards = targetDepts.length > 0
 
-  // 1) 내신 ±0.35등급 범위 선별
-  const basePool = applications.value.filter(a => {
+  // 1) 1차 기본: 학생 내신과 차이가 0 ~ 0.20등급 이내인 가장 유사한 선배 최우선 선별
+  let basePool = appsSource.filter(a => {
     const g = a.allSubjectGrade || a.score9Grade || a.mainSubjectGrade
     if (!g) return false
-    return Math.abs(Number(g) - gpa) <= 0.35
+    return Math.abs(Number(g) - gpa) <= 0.20
   })
+
+  // 2) 표본이 15건 미만일 때만 차이 0 ~ 0.35등급 이내로 점진적 확대
+  if (basePool.length < 15) {
+    basePool = appsSource.filter(a => {
+      const g = a.allSubjectGrade || a.score9Grade || a.mainSubjectGrade
+      if (!g) return false
+      return Math.abs(Number(g) - gpa) <= 0.35
+    })
+  }
+
+  // 3) 그래도 15건 미만인 경우 최대 차이 0 ~ 0.50등급 이내까지 유연 확장
+  if (basePool.length < 15) {
+    basePool = appsSource.filter(a => {
+      const g = a.allSubjectGrade || a.score9Grade || a.mainSubjectGrade
+      if (!g) return false
+      return Math.abs(Number(g) - gpa) <= 0.50
+    })
+  }
+
+  // 현재 상담 중인 학생 본인 또는 동명 배제
+  if (selectedStudentInfo.value && selectedStudentInfo.value.name) {
+    basePool = basePool.filter(a => a.name !== selectedStudentInfo.value.name)
+  }
 
   let candidates = []
 
@@ -2683,7 +2808,12 @@ const peerApplications = computed(() => {
   const selectedFail = failItems.slice(0, neededFail)
 
   // 최종 조합 후 내신 순 정렬
-  const combined = [...selectedPass, ...selectedFail]
+  let combined = [...selectedPass, ...selectedFail]
+  if (combined.length < 15) {
+    const remaining = candidates.filter(c => !combined.includes(c))
+    combined.push(...remaining.slice(0, 15 - combined.length))
+  }
+
   combined.sort((a, b) => {
     const gA = a.allSubjectGrade || a.score9Grade || a.mainSubjectGrade || 0
     const gB = b.allSubjectGrade || b.score9Grade || b.mainSubjectGrade || 0
@@ -2694,12 +2824,13 @@ const peerApplications = computed(() => {
 })
 
 const peerRangeText = computed(() => {
-  const min = Math.max(1.0, targetGpa.value - 0.2).toFixed(2)
-  const max = (targetGpa.value + 0.2).toFixed(2)
+  const grades = peerApplications.value.map(a => Number(a.allSubjectGrade || a.score9Grade || a.mainSubjectGrade || 0)).filter(g => g > 0)
+  const min = grades.length > 0 ? Math.min(...grades).toFixed(2) : Math.max(1.0, targetGpa.value - 0.2).toFixed(2)
+  const max = grades.length > 0 ? Math.max(...grades).toFixed(2) : (targetGpa.value + 0.2).toFixed(2)
   const trackLabel = selectedTrack.value === 'HUMANITIES' ? '인문계열' : '자연계열'
   const passCount = peerApplications.value.filter(a => a.isPass).length
   const failCount = peerApplications.value.length - passCount
-  return `내신 ${min} ~ ${max}등급 ${trackLabel} 실적 (합격 ${passCount}건 / 불합격 ${failCount}건)`
+  return `내신 ${min} ~ ${max}등급 ${trackLabel} 선배 실적 (합격 ${passCount}건 / 불합격 ${failCount}건)`
 })
 
 function copyCounselingSummary() {

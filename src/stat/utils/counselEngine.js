@@ -258,8 +258,9 @@ export function matchCsatPassRate(app, csatPassRateTable = []) {
 
   const initialRate = actualRate > 0 ? actualRate : (Number(found?.initialRate || found?.nominalRate) || 10.0)
 
-  // 실질경쟁률 = 명목경쟁률 * (수능최저 충족률 / 100)
-  const realRate = Number((initialRate * (passRate / 100)).toFixed(1))
+  // 실질경쟁률 = 명목경쟁률 * (수능최저 충족률 / 100) (실질경쟁률은 명목경쟁률을 절대 초과할 수 없음)
+  const calculatedRealRate = Number((initialRate * (passRate / 100)).toFixed(1))
+  const realRate = Number(Math.min(initialRate, calculatedRealRate).toFixed(1))
   
   // 완화 배수 (명목 대비 실질이 몇 배나 떨어지는지)
   const easeFactor = passRate > 0 ? Number((100 / passRate).toFixed(1)) : 1.0
@@ -518,13 +519,15 @@ export function evaluateCardDiagnosis(app, studentGpa, mockRecord, csatPassRateT
   let hasMinScore = false
 
   const minReqClean = String(app.minScoreReq || '').trim()
-  const isNoMinReq = !minReqClean || 
+  const isNoMinReq = app.hasMinScore === false ||
+                     !minReqClean || 
                      minReqClean === '-' || 
                      minReqClean === '미적용' || 
-                     minReqClean.includes('최저미적용') || 
-                     minReqClean.includes('기준 없음') || 
-                     minReqClean.includes('최저 없음') ||
-                     minReqClean.includes('미반영')
+                     minReqClean === '해당없음' ||
+                     minReqClean.includes('없음') || 
+                     minReqClean.includes('미적용') || 
+                     minReqClean.includes('미반영') ||
+                     minReqClean.includes('면제')
 
   if (!isNoMinReq) {
     ruleParsed = parseCsatRequirement(minReqClean, app.field || '공통')
@@ -1252,14 +1255,23 @@ export function analyzePortfolio(apps = [], studentGpa = 3.0, mockRecord = null,
   const cardDiagnoses = apps.map(app => {
     const enrichedRates = ensureCompetitionRates(app, selectedYear, csatPassRateTable)
     const minReqClean = String(app.minScoreReq || '').trim()
-    const isNoMinReq = !minReqClean || 
+    const isNoMinReq = app.hasMinScore === false ||
+                       !minReqClean || 
                        minReqClean === '-' || 
                        minReqClean === '미적용' || 
-                       minReqClean.includes('최저미적용') || 
-                       minReqClean.includes('기준 없음') || 
-                       minReqClean.includes('최저 없음') ||
-                       minReqClean.includes('미반영')
-    const hasMinScore = !isNoMinReq && (app.hasMinScore !== false)
+                       minReqClean === '해당없음' ||
+                       minReqClean.includes('없음') || 
+                       minReqClean.includes('미적용') || 
+                       minReqClean.includes('미반영') ||
+                       minReqClean.includes('면제')
+
+    let hasMinScore = false
+    if (!isNoMinReq) {
+      const parsed = parseCsatRequirement(minReqClean, app.field || '공통')
+      if (parsed && parsed.isValid) {
+        hasMinScore = true
+      }
+    }
 
     const appWithRates = {
       ...app,
