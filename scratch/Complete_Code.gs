@@ -53,9 +53,9 @@ function detectLatestMockYear() {
   return maxYear;
 }
 
-// ==========================================================
-// 🚀 상단 커스텀 메뉴 등록 (심플 2단 구조)
-// ==========================================================
+// ==========================================
+// 🚀 상단 커스텀 메뉴 등록
+// ==========================================
 function onOpen() {
   const latestYear = detectLatestMockYear();
   SpreadsheetApp.getUi()
@@ -587,9 +587,13 @@ function executeMatchingLogic(susiSheet) {
       }
     }
 
-    const targetRange = susiSheet.getRange(2, sCECol, totalDataRows, 40);
-    targetRange.clearContent();
-    targetRange.setValues(outputRows);
+    // 기존 CE:DR 영역 전체 초기화 (이전 잔여 행 및 어긋난 행 완전 제거)
+    const maxRows = susiSheet.getMaxRows();
+    if (maxRows >= 2) {
+      susiSheet.getRange(2, sCECol, maxRows - 1, 40).clearContent();
+    }
+    // 현재 행 수(totalDataRows)에 정확히 맞춰 40개 열 일괄 반영
+    susiSheet.getRange(2, sCECol, totalDataRows, 40).setValues(outputRows);
 
     return {
       success: true,
