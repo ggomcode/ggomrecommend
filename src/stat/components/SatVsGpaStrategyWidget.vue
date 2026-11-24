@@ -2888,8 +2888,14 @@ function isCsatRecord(r) {
   if (!r) return false
   const name = String(r.examName || '').trim()
   const rawMonth = String(r.rawMonth || '').trim()
+  const sourceTab = String(r.sourceTab || '').trim()
   if (name.includes('수능') || name.includes('대학수학능력시험') || name === 'CSAT') return true
   if (rawMonth.includes('수능') || rawMonth.includes('대학수학능력시험') || rawMonth === 'CSAT') return true
+  if (sourceTab.includes('가채점') || r.isFallbackFromTentative) {
+    if (!name.includes('3월') && !name.includes('5월') && !name.includes('6월') && !name.includes('7월') && !name.includes('9월') && !name.includes('10월')) {
+      return true
+    }
+  }
   if (name.includes('11') || rawMonth.includes('11')) return true
   if (r.monthOrder && Number(r.monthOrder) === 11) return true
   if (r.rawRow) {

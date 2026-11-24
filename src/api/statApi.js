@@ -1220,6 +1220,16 @@ export function smartMergeMockExamRecords(resultRecords = [], tentativeRecords =
   if (!validResultRecords || validResultRecords.length === 0) return validTentativeRecords || []
   if (!validTentativeRecords || validTentativeRecords.length === 0) return validResultRecords || []
 
+  // 결과 시트에 수능(11월) 실제 확정 표준점수 데이터가 존재하는지 확인
+  const hasRealCsatStandardScoreInResult = validResultRecords.some(r => {
+    const is11OrCsat = (r.examName && (r.examName.includes('수능') || r.examName.includes('11'))) ||
+                       (r.rawMonth && (r.rawMonth.includes('수능') || r.rawMonth.includes('11'))) ||
+                       Number(r.monthOrder) === 11
+    const hasStd = (r.korStandardScore && String(r.korStandardScore).trim() !== '') ||
+                   (r.mathStandardScore && String(r.mathStandardScore).trim() !== '')
+    return is11OrCsat && hasStd
+  })
+
   // 1. 결과 시트에 존재하는 월(회차) 집합 (예: '6월', '10월' 등)
   const resultExamMonths = new Set()
   validResultRecords.forEach(r => {
@@ -1237,11 +1247,25 @@ export function smartMergeMockExamRecords(resultRecords = [], tentativeRecords =
     const m = String(r.examName || '').match(/([0-9]{1,2})\s*월/)
     const monthKey = m ? m[1] : r.examName
     resultSet.add(`${monthKey}_${r.studentKey}`)
+    if (r.legacyStudentKey) {
+      resultSet.add(`${monthKey}_${r.legacyStudentKey}`)
+    }
   })
 
   // 3. 가채점 데이터에서 보완할 레코드 추출 (실응시자만)
   const fallbackRecords = []
   validTentativeRecords.forEach(tr => {
+    const isCsat = (tr.examName && (tr.examName.includes('수능') || tr.examName.includes('11'))) ||
+                   (tr.rawMonth && (tr.rawMonth.includes('수능') || tr.rawMonth.includes('11'))) ||
+                   Number(tr.monthOrder) === 11 ||
+                   String(tr.sourceTab || '').includes('가채점')
+
+    // 수능 가채점 데이터이고, 결과 시트에 아직 확정 표준점수가 없다면 무조건 가채점 수능 레코드 유지!
+    if (isCsat && !hasRealCsatStandardScoreInResult) {
+      fallbackRecords.push({ ...tr, isFallbackFromTentative: true })
+      return
+    }
+
     const m = String(tr.examName || '').match(/([0-9]{1,2})\s*월/)
     const monthKey = m ? m[1] : tr.examName
     const hasMonthInResult = resultExamMonths.has(monthKey)
@@ -1252,7 +1276,8 @@ export function smartMergeMockExamRecords(resultRecords = [], tentativeRecords =
     } else {
       // 결과 시트가 이미 있는 회차이지만, 가채점에 실제 성적이 존재하는 누락 학생만 fallback
       const studentMonthKey = `${monthKey}_${tr.studentKey}`
-      if (!resultSet.has(studentMonthKey)) {
+      const legacyKey = tr.legacyStudentKey ? `${monthKey}_${tr.legacyStudentKey}` : null
+      if (!resultSet.has(studentMonthKey) && (!legacyKey || !resultSet.has(legacyKey))) {
         fallbackRecords.push({ ...tr, isFallbackFromTentative: true })
       }
     }
@@ -1279,7 +1304,8 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
     return await parseSingleMockTab(cleanId, tabName, customPassword)
   }
 
-  const actualTabs = await getActualGoogleSheetTabs(cleanId)
+  // forceReload를 전달하여 새로 추가/수정된 탭 목록을 강제로 갱신
+  const actualTabs = await getActualGoogleSheetTabs(cleanId, forceReload)
 
   // 학년도가 지정된 경우 해당 연도 모의 탭 탐색, 미지정 시 전체 중 탐색
   const yr = targetYear ? String(targetYear) : ''
@@ -1287,8 +1313,14 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
 
   // 1. 결과 탭(확정) 탐색: 예) '2027모의결과', '모의결과'
   const resultTab = actualTabs.find(t => isMatchYear(t) && (t.includes('모의결과') || (t.includes('모의') && t.includes('결과'))))
-  // 2. 가채점 탭 탐색: 예) '2027모의가채점', '2027가채점', '모의가채점'
-  const tentativeTab = actualTabs.find(t => isMatchYear(t) && (t.includes('가채점') || (t.includes('모의') && !t.includes('결과'))))
+
+  // 2. 가채점 탭 탐색:
+  // 중요: '등급컷', '수능최저' 등과 혼동되지 않도록 '가채점' 키워드를 정확하게 우선 탐색
+  let tentativeTab = actualTabs.find(t => isMatchYear(t) && t.includes('가채점'))
+  if (!tentativeTab && yr) {
+    const candidateTentativeTabs = [`${yr}모의가채점`, `${yr} 모의가채점`, `${yr}가채점`, '모의가채점', '2027모의가채점']
+    tentativeTab = candidateTentativeTabs.find(c => actualTabs.includes(c)) || `${yr}모의가채점`
+  }
 
   let resultRecords = []
   if (resultTab) {
@@ -1305,6 +1337,21 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
       tentativeRecords = await parseSingleMockTab(cleanId, tentativeTab, customPassword)
     } catch (e) {
       console.warn(`[statApi] ${tentativeTab} 로드 실패:`, e)
+    }
+  }
+
+  // 만약 tentativeRecords가 0건이고 yr이 있다면 대표적인 다른 탭 이름도 fallback 시도
+  if (tentativeRecords.length === 0 && yr) {
+    const fallbacks = [`${yr}모의가채점`, `${yr}가채점`, '2027모의가채점', '2027가채점'].filter(t => t !== tentativeTab)
+    for (const fbTab of fallbacks) {
+      try {
+        const records = await parseSingleMockTab(cleanId, fbTab, customPassword)
+        if (records && records.length > 0) {
+          console.log(`[statApi] 가채점 fallback 탭 '${fbTab}' 에서 ${records.length}건 로드 성공`)
+          tentativeRecords = records
+          break
+        }
+      } catch (_) {}
     }
   }
 
@@ -1361,14 +1408,40 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
   rawHeaders.forEach((h, idx) => {
     if (!h) return
     const clean = String(h).replace(/[\r\n\s]+/g, '').trim()
-    colMap[clean] = idx
+    if (colMap[clean] === undefined) {
+      colMap[clean] = idx
+    }
   })
 
-  // 44개 컬럼 표준 규격(A~AR열, 2027모의결과 등) 감지:
-  // targetTab이 '모의결과'를 포함하거나, 열 수가 40열 이상이고 '월', '이름'이 있는 경우
+  // 2차: Row 0 + Row 1 복합 헤더 매핑 (국어(원점수), 국어(등급) 등)
+  const subHeaders = rows[1] || []
+  let currentArea = ''
+  const maxCols = Math.max(rawHeaders.length, subHeaders.length)
+  for (let c = 0; c < maxCols; c++) {
+    const top = String(rawHeaders[c] || '').replace(/[\r\n\s]+/g, '').trim()
+    if (top) currentArea = top
+    const sub = String(subHeaders[c] || '').replace(/[\r\n\s]+/g, '').trim()
+    if (currentArea && sub) {
+      const k1 = `${currentArea}(${sub})`
+      const k2 = `${currentArea}_${sub}`
+      const k3 = `${currentArea}${sub}`
+      if (colMap[k1] === undefined) colMap[k1] = c
+      if (colMap[k2] === undefined) colMap[k2] = c
+      if (colMap[k3] === undefined) colMap[k3] = c
+    }
+  }
+
+  // 44개 컬럼 표준 규격(A~AR열, 2027모의결과, 2027모의가채점 등) 감지:
+  const hasStandardHeaderNames = (colMap['월'] !== undefined || colMap['월'] === 0) &&
+    (colMap['성명'] !== undefined || colMap['이름'] !== undefined || colMap['학생명'] !== undefined)
+  const isSampleStandardRow = rows[1] && rows[1].length >= 25 &&
+    (String(rows[1][0] || '').includes('월') || String(rows[1][0] || '').includes('수능') || /^[0-9]{1,2}$/.test(String(rows[1][0] || '')))
+
   const isStandard44 = !isEncrypted && (
     targetTab.includes('모의결과') ||
-    (rawHeaders.length >= 40 && (colMap['월'] !== undefined || colMap['월'] === 0) && colMap['이름'] !== undefined)
+    targetTab.includes('모의가채점') ||
+    targetTab.includes('가채점') ||
+    (rawHeaders.length >= 35 && (hasStandardHeaderNames || isSampleStandardRow))
   )
 
   const records = []
@@ -1549,8 +1622,19 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
     }
 
     if (isStandard44) {
-      // 44개 컬럼 표준 규격 직접 인덱싱 파싱 (2027모의결과 탭 등)
+      // 44개 컬럼 표준 규격 직접 인덱싱 파싱 (2027모의결과, 2027모의가채점 탭 등)
       name = String(r[5] || '').trim()
+      if (!name || name === '이름' || name === '성명') {
+        if (Array.isArray(r)) {
+          for (let c = 1; c <= Math.min(r.length - 1, 6); c++) {
+            const val = String(r[c] || '').trim()
+            if (/^[가-힣]{2,4}$/.test(val) && !['원점수', '등급', '과목', '선택', '수능', '학평', '모평', '인문', '자연', '일반', '문과', '이과'].includes(val)) {
+              name = val
+              break
+            }
+          }
+        }
+      }
       if (!name || name === '이름' || name === '성명') continue
 
       seriesNum = r[1] != null && r[1] !== '' ? Number(r[1]) : 1
@@ -1562,7 +1646,10 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
 
       rawMonth = r[0] != null ? String(r[0]).trim() : ''
       const mNum = parseInt(rawMonth.replace(/[^0-9]/g, ''), 10)
-      if (!isNaN(mNum) && mNum >= 3 && mNum <= 11) {
+      if (rawMonth.includes('수능') || (targetTab.includes('가채점') && (mNum === 11 || !mNum))) {
+        monthOrder = 11
+        examName = rawMonth.includes('수능') ? (rawMonth.includes('11') ? '11월 수능' : rawMonth) : '11월 수능'
+      } else if (!isNaN(mNum) && mNum >= 3 && mNum <= 11) {
         monthOrder = mNum
         const isMopyeong = [6, 9].includes(mNum)
         examName = `${mNum}월 ${isMopyeong ? '모평' : '학평'}`
@@ -1575,34 +1662,40 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       korStandardScore = r[10] != null && r[10] !== '' ? String(r[10]).trim() : ''
       korPercentile = r[11] != null && r[11] !== '' ? String(r[11]).trim() : ''
       korGrade = parseGradeValue(r[12], 'KOR')
+      if (korGrade === null && korRawScore) korGrade = parseGradeValue(korRawScore, 'KOR')
 
       mathSubject = r[13] != null ? String(r[13]).trim() : ''
       mathRawScore = r[16] != null && r[16] !== '' ? String(r[16]).trim() : ''
       mathStandardScore = r[17] != null && r[17] !== '' ? String(r[17]).trim() : ''
       mathPercentile = r[18] != null && r[18] !== '' ? String(r[18]).trim() : ''
       mathGrade = parseGradeValue(r[19], 'MATH')
+      if (mathGrade === null && mathRawScore) mathGrade = parseGradeValue(mathRawScore, 'MATH')
 
       engRawScore = r[20] != null && r[20] !== '' ? String(r[20]).trim() : ''
       engStandardScore = r[21] != null && r[21] !== '' ? String(r[21]).trim() : ''
       engPercentile = r[22] != null && r[22] !== '' ? String(r[22]).trim() : ''
       engGrade = parseGradeValue(r[23], 'ENG')
+      if (engGrade === null && engRawScore) engGrade = parseGradeValue(engRawScore, 'ENG')
 
       inquiry1 = r[25] != null ? String(r[25]).trim() : ''
       inq1RawScore = r[26] != null && r[26] !== '' ? String(r[26]).trim() : ''
       inq1StandardScore = r[27] != null && r[27] !== '' ? String(r[27]).trim() : ''
       inq1Percentile = r[28] != null && r[28] !== '' ? String(r[28]).trim() : ''
       inq1Grade = parseGradeValue(r[29], 'INQ')
+      if (inq1Grade === null && inq1RawScore) inq1Grade = parseGradeValue(inq1RawScore, 'INQ')
 
       inquiry2 = r[30] != null ? String(r[30]).trim() : ''
       inq2RawScore = r[31] != null && r[31] !== '' ? String(r[31]).trim() : ''
       inq2StandardScore = r[32] != null && r[32] !== '' ? String(r[32]).trim() : ''
       inq2Percentile = r[33] != null && r[33] !== '' ? String(r[33]).trim() : ''
       inq2Grade = parseGradeValue(r[34], 'INQ')
+      if (inq2Grade === null && inq2RawScore) inq2Grade = parseGradeValue(inq2RawScore, 'INQ')
 
       histRawScore = r[35] != null && r[35] !== '' ? String(r[35]).trim() : ''
       histStandardScore = r[36] != null && r[36] !== '' ? String(r[36]).trim() : ''
       histPercentile = r[37] != null && r[37] !== '' ? String(r[37]).trim() : ''
       histGrade = parseGradeValue(r[38], 'HIST')
+      if (histGrade === null && histRawScore) histGrade = parseGradeValue(histRawScore, 'HIST')
 
       secondLangSubject = r[39] != null ? String(r[39]).trim() : ''
       secondLangRawScore = r[40] != null && r[40] !== '' ? String(r[40]).trim() : ''
@@ -1686,13 +1779,24 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       }
 
       name = getVal('이름', '성명', '학생명')
+      if (!name || name === '이름' || name === '성명') {
+        if (Array.isArray(r)) {
+          for (let c = 1; c <= Math.min(r.length - 1, 6); c++) {
+            const val = String(r[c] || '').trim()
+            if (/^[가-힣]{2,4}$/.test(val) && !['원점수', '등급', '과목', '선택', '수능', '학평', '모평', '인문', '자연', '일반', '문과', '이과'].includes(val)) {
+              name = val
+              break
+            }
+          }
+        }
+      }
       if (!name || name === '이름' || name === '성명') continue
 
-      seriesNum = Number(getVal('계열번호', '계열')) || 1
+      seriesNum = Number(getVal('계열번호', '계열')) || (r && r[1] != null && !isNaN(r[1]) ? Number(r[1]) : 1)
       if (isNaN(seriesNum)) seriesNum = 1
 
-      classNum = getVal('반', '학급') || ''
-      studentNum = getVal('번호', '출석번호') || ''
+      classNum = getVal('반', '학급') || (r && r[3] != null ? String(r[3]).trim() : '')
+      studentNum = getVal('번호', '출석번호') || (r && r[4] != null ? String(r[4]).trim() : '')
       rawMonth = getVal('월', '시행월', '회차') || (r && r[0] != null ? String(r[0]).trim() : '')
       examName = getVal('시험명', '회차', '모의고사', '월', '구분', '시험구분', '시험', '학평', '모의평가')
       if (!examName && r && r[0] != null && String(r[0]).trim()) {
@@ -1707,11 +1811,16 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
           }
         }
       }
-      if (!examName) examName = targetTab
+      if (!examName) examName = rawMonth || targetTab
 
-      const mMatch = examName.match(/(10|[3-9]|11)/)
-      if (mMatch) {
-        monthOrder = Number(mMatch[1])
+      if (String(rawMonth || '').includes('수능') || String(examName || '').includes('수능') || targetTab.includes('가채점')) {
+        monthOrder = 11
+        examName = '11월 수능'
+      } else {
+        const mMatch = examName.match(/(10|[3-9]|11)/)
+        if (mMatch) {
+          monthOrder = Number(mMatch[1])
+        }
       }
 
       korSubject = getVal(
@@ -1789,6 +1898,13 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       ], 'NORMAL')
 
       grade = Number(getVal('학년', '학년구분')) || (r && r[0] != null && [1, 2, 3].includes(Number(r[0])) ? Number(r[0]) : 3)
+
+      if (korGrade === null && korRawScore) korGrade = parseGradeValue(korRawScore, 'KOR')
+      if (mathGrade === null && mathRawScore) mathGrade = parseGradeValue(mathRawScore, 'MATH')
+      if (engGrade === null && engRawScore) engGrade = parseGradeValue(engRawScore, 'ENG')
+      if (inq1Grade === null && inq1RawScore) inq1Grade = parseGradeValue(inq1RawScore, 'INQ')
+      if (inq2Grade === null && inq2RawScore) inq2Grade = parseGradeValue(inq2RawScore, 'INQ')
+      if (histGrade === null && histRawScore) histGrade = parseGradeValue(histRawScore, 'HIST')
     }
 
     const rec = {
@@ -1835,6 +1951,7 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       secondLangStandardScore,
       secondLangPercentile,
       secondLangGrade,
+      sourceTab: targetTab,
       rawRow: rowData || {}
     }
 
@@ -1843,6 +1960,7 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
     }
   }
 
+  console.log(`[statApi] '${targetTab}' 파싱 완료: 총 ${rows.length - 1}행 중 유효 성적 ${records.length}건 (표준44: ${isStandard44})`)
   return records
 }
 

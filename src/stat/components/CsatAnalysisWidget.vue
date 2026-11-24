@@ -66,7 +66,7 @@
       <span class="text-3xl block">📋</span>
       <h4 class="text-sm font-bold text-slate-700 m-0">수능 가채점 성적 데이터를 불러오는 중이거나 아직 동기화되지 않았습니다</h4>
       <p class="text-xs text-slate-500 max-w-md mx-auto">
-        구글 시트 '2027모의가채점' 탭에 11월 수능 원점수/등급을 입력하셨다면 아래 동기화 버튼을 눌러주세요.
+        구글 시트 '{{ selectedAcademicYear || '2027' }}모의가채점' 탭에 11월 수능 원점수/등급을 입력하셨다면 아래 동기화 버튼을 눌러주세요.
       </p>
       <div>
         <button
@@ -76,7 +76,7 @@
           class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
         >
           <span :class="{ 'animate-spin': isReloading || isLoadingMockExams }">🔄</span>
-          <span>{{ isReloading || isLoadingMockExams ? '구글 시트 동기화 중...' : '구글 시트에서 27명 가채점 즉시 불러오기' }}</span>
+          <span>{{ isReloading || isLoadingMockExams ? '구글 시트 동기화 중...' : '구글 시트에서 수능 가채점 데이터 즉시 불러오기' }}</span>
         </button>
       </div>
     </div>
