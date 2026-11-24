@@ -1083,16 +1083,16 @@
 
       <!-- Peer Applications Table -->
       <div v-else-if="peerApplications.length > 0" class="overflow-x-auto">
-        <table class="w-full text-xs text-left border-collapse min-w-[960px]">
+        <table class="w-full text-xs text-left border-collapse min-w-240">
           <thead>
             <tr class="bg-slate-100 text-slate-700 font-bold border-y border-slate-200">
-              <th class="p-2.5 whitespace-nowrap min-w-[110px]">선배 (출신)</th>
-              <th class="p-2.5 whitespace-nowrap text-center min-w-[55px]">내신</th>
-              <th class="p-2.5 min-w-[140px]">지원 대학교 (학과)</th>
-              <th class="p-2.5 whitespace-nowrap min-w-[115px]">전형 유형</th>
-              <th class="p-2.5 min-w-[170px]">전형 세부</th>
-              <th class="p-2.5 text-center whitespace-nowrap min-w-[185px]">결과</th>
-              <th class="p-2.5 text-center whitespace-nowrap min-w-[85px]">등록 여부</th>
+              <th class="p-2.5 whitespace-nowrap min-w-27.5">선배 (출신)</th>
+              <th class="p-2.5 whitespace-nowrap text-center min-w-13.75">내신</th>
+              <th class="p-2.5 min-w-35">지원 대학교 (학과)</th>
+              <th class="p-2.5 whitespace-nowrap min-w-28.75">전형 유형</th>
+              <th class="p-2.5 min-w-42.5">전형 세부</th>
+              <th class="p-2.5 text-center whitespace-nowrap min-w-46.25">결과</th>
+              <th class="p-2.5 text-center whitespace-nowrap min-w-21.25">등록 여부</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -1144,7 +1144,7 @@
                   <span v-else-if="app.isRecommendation" class="text-indigo-800 font-bold bg-indigo-50 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">
                     학교장추천
                   </span>
-                  <span class="break-words">{{ app.admissionDetailType || app.admissionMajorType }}</span>
+                  <span class="wrap-break-word">{{ app.admissionDetailType || app.admissionMajorType }}</span>
                 </div>
               </td>
               <td class="p-2.5 text-center whitespace-nowrap">
