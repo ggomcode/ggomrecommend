@@ -2883,18 +2883,23 @@ const avgSchoolGpa = computed(() => {
   return Number((valid.reduce((a, b) => a + b, 0) / valid.length).toFixed(2))
 })
 
-// 수능 시험 레코드 판정 (A열 또는 examName에 '수능' 표기)
+// 수능 시험 레코드 판정 (A열 또는 examName에 '수능', '11월', '11' 표기)
 function isCsatRecord(r) {
   if (!r) return false
   const name = String(r.examName || '').trim()
   const rawMonth = String(r.rawMonth || '').trim()
   if (name.includes('수능') || name.includes('대학수학능력시험') || name === 'CSAT') return true
   if (rawMonth.includes('수능') || rawMonth.includes('대학수학능력시험') || rawMonth === 'CSAT') return true
+  if (name.includes('11') || rawMonth.includes('11')) return true
+  if (r.monthOrder && Number(r.monthOrder) === 11) return true
   if (r.rawRow) {
-    if (Array.isArray(r.rawRow) && String(r.rawRow[0] || '').includes('수능')) return true
+    if (Array.isArray(r.rawRow)) {
+      const rowStr = r.rawRow.slice(0, 3).join(' ')
+      if (rowStr.includes('수능') || rowStr.includes('11')) return true
+    }
     const firstVal = String(Object.values(r.rawRow)[0] || '').trim()
-    if (firstVal.includes('수능')) return true
-    if (r.rawRow['월'] && String(r.rawRow['월']).includes('수능')) return true
+    if (firstVal.includes('수능') || firstVal.includes('11')) return true
+    if (r.rawRow['월'] && (String(r.rawRow['월']).includes('수능') || String(r.rawRow['월']).includes('11'))) return true
   }
   return false
 }
@@ -2988,17 +2993,15 @@ const subTabs = computed(() => {
   }
   if (props.visibleSections && Array.isArray(props.visibleSections)) {
     const list = allTabs.filter(t => props.visibleSections.includes(t.id))
-    // 고3 연합/모평 메뉴(['radar', 'satamRun'])에서 수능 데이터(가채점/결과)가 있으면 3. 수능 가채점/결과 분석 탭 자동 추가
+    // 고3 연합/모평 메뉴(['radar', 'satamRun'])에서는 3. 수능 가채점/결과 분석 탭을 무조건 상시 제공!
     if (props.visibleSections.includes('radar') && props.visibleSections.includes('satamRun')) {
       const records = highSchoolMockRecords.value || []
-      const hasCsat = records.some(isCsatRecord)
-      if (hasCsat) {
-        const hasStd = records.filter(isCsatRecord).some(r => r.korStandardScore || r.mathStandardScore)
-        list.push({
-          id: 'csatAnalysis',
-          label: hasStd ? '수능 결과 분석' : '수능 가채점 분석'
-        })
-      }
+      const csatList = records.filter(isCsatRecord)
+      const hasStd = csatList.some(r => r.korStandardScore || r.mathStandardScore)
+      list.push({
+        id: 'csatAnalysis',
+        label: hasStd ? '수능 결과 분석' : '수능 가채점 분석'
+      })
     }
     return list.map((t, idx) => ({ ...t, num: String(idx + 1) }))
   }

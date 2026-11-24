@@ -27,8 +27,18 @@
         </p>
       </div>
 
-      <!-- Quick KPI Badges -->
+      <!-- Quick KPI Badges & 새로고침 버튼 -->
       <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
+        <button
+          type="button"
+          @click="reloadMockData"
+          :disabled="isReloading || isLoadingMockExams"
+          class="px-3 py-1.5 rounded-xl text-xs font-bold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-2xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
+          title="구글 시트 2027모의가채점 / 2027모의결과 탭의 최신 데이터를 강제 재동기화합니다."
+        >
+          <span :class="{ 'animate-spin': isReloading || isLoadingMockExams }">🔄</span>
+          <span>{{ isReloading || isLoadingMockExams ? '동기화 중...' : '시트 가채점 동기화' }}</span>
+        </button>
         <div class="bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-xl text-right">
           <span class="text-[10px] text-indigo-700 block font-semibold">수능 실응시자</span>
           <span class="text-sm font-black text-indigo-900 font-mono">
@@ -52,12 +62,23 @@
     </div>
 
     <!-- 데이터가 없는 경우 안내 -->
-    <div v-if="csatStudents.length === 0" class="text-center py-12 bg-slate-50/70 rounded-2xl border border-dashed border-slate-200">
-      <span class="text-3xl block mb-2">📋</span>
-      <h4 class="text-sm font-bold text-slate-700 m-0">수능 가채점 성적 데이터가 등록되지 않았습니다</h4>
-      <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-        구글 시트 '2027모의가채점' 탭에 11월 수능 원점수/등급을 입력하거나, '2027모의결과'에 수능 확정 성적표를 등록하면 자동 연동됩니다.
+    <div v-if="csatStudents.length === 0" class="text-center py-10 bg-slate-50/70 rounded-2xl border border-dashed border-slate-200 space-y-3">
+      <span class="text-3xl block">📋</span>
+      <h4 class="text-sm font-bold text-slate-700 m-0">수능 가채점 성적 데이터를 불러오는 중이거나 아직 동기화되지 않았습니다</h4>
+      <p class="text-xs text-slate-500 max-w-md mx-auto">
+        구글 시트 '2027모의가채점' 탭에 11월 수능 원점수/등급을 입력하셨다면 아래 동기화 버튼을 눌러주세요.
       </p>
+      <div>
+        <button
+          type="button"
+          @click="reloadMockData"
+          :disabled="isReloading || isLoadingMockExams"
+          class="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
+        >
+          <span :class="{ 'animate-spin': isReloading || isLoadingMockExams }">🔄</span>
+          <span>{{ isReloading || isLoadingMockExams ? '구글 시트 동기화 중...' : '구글 시트에서 27명 가채점 즉시 불러오기' }}</span>
+        </button>
+      </div>
     </div>
 
     <template v-else>
@@ -635,6 +656,8 @@ import { useData } from '../composables/useStatData'
 const {
   applications,
   mockExamRecords,
+  isLoadingMockExams,
+  loadMockExamData,
   selectedAcademicYear,
   maskName,
   formatGrade
@@ -644,8 +667,22 @@ const activeViewTab = ref('individual')
 const selectedStudentKey = ref('')
 const classFilter = ref('ALL')
 const statusFilter = ref('ALL')
+const isReloading = ref(false)
 
-// 수능 레코드 판정 (11월 또는 수능)
+async function reloadMockData() {
+  if (isReloading.value) return
+  isReloading.value = true
+  try {
+    const yr = selectedAcademicYear.value || '2027'
+    await loadMockExamData(true, yr)
+  } catch (err) {
+    console.warn('[CsatAnalysisWidget] 수능 가채점 데이터 재로드 실패:', err)
+  } finally {
+    isReloading.value = false
+  }
+}
+
+// 수능 레코드 판정 (11월, 11, 수능, CSAT, 가채점 탭 출처 등 유연 매칭)
 function isCsatRecord(r) {
   if (!r) return false
   const name = String(r.examName || '').trim()
@@ -653,11 +690,21 @@ function isCsatRecord(r) {
   if (name.includes('수능') || name.includes('대학수학능력시험') || name === 'CSAT') return true
   if (rawMonth.includes('수능') || rawMonth.includes('대학수학능력시험') || rawMonth === 'CSAT') return true
   if (rawMonth.includes('11') || name.includes('11')) return true
+  if (r.monthOrder && Number(r.monthOrder) === 11) return true
   if (r.rawRow) {
-    if (Array.isArray(r.rawRow) && String(r.rawRow[0] || '').includes('수능')) return true
+    if (Array.isArray(r.rawRow)) {
+      const rowStr = r.rawRow.slice(0, 3).join(' ')
+      if (rowStr.includes('수능') || rowStr.includes('11')) return true
+    }
     const firstVal = String(Object.values(r.rawRow)[0] || '').trim()
     if (firstVal.includes('수능') || firstVal.includes('11')) return true
     if (r.rawRow['월'] && (String(r.rawRow['월']).includes('수능') || String(r.rawRow['월']).includes('11'))) return true
+  }
+  // 가채점 시트 출처이면서 3~10월 모의고사가 아니면 수능 가채점으로 채택
+  if (r.isFallbackFromTentative || String(r.sourceTab || '').includes('가채점')) {
+    if (!name.includes('3월') && !name.includes('5월') && !name.includes('6월') && !name.includes('7월') && !name.includes('9월') && !name.includes('10월')) {
+      return true
+    }
   }
   return false
 }
@@ -1117,9 +1164,24 @@ watch(csatStudents, (newList) => {
   }
 }, { immediate: true })
 
-onMounted(() => {
+onMounted(async () => {
+  const yr = selectedAcademicYear.value || '2027'
+  if (!mockExamRecords.value || mockExamRecords.value.length === 0) {
+    await loadMockExamData(false, yr).catch(() => {})
+  }
+  // 수능 레코드가 아직 없으면 구글 시트에서 최신 가채점 탭 재동기화 시도
+  if (csatStudents.value.length === 0) {
+    await loadMockExamData(true, yr).catch(() => {})
+  }
   if (csatStudents.value.length > 0 && !selectedStudentKey.value) {
     selectedStudentKey.value = csatStudents.value[0].studentKey
+  }
+})
+
+// 학년도 변경 시 자동 동기화
+watch(selectedAcademicYear, async (newYr) => {
+  if (newYr) {
+    await loadMockExamData(false, newYr).catch(() => {})
   }
 })
 </script>
