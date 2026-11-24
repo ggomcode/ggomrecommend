@@ -8,10 +8,10 @@
           <span>{{ isTentativeMode ? '📝' : '🎓' }}</span>
           <span>3. {{ isTentativeMode ? '수능 가채점 분석' : '수능 결과 분석' }}</span>
           <span class="text-slate-300">|</span>
-          <span class="font-semibold">{{ isTentativeMode ? '11월 가채점 실측 성적 기준' : '공식 실채점 확정 성적표' }}</span>
+          <span class="font-semibold">{{ isTentativeMode ? `${selectedAcademicYear || '2027'}학년도 11월 가채점 실측 성적 기준` : `${selectedAcademicYear || '2027'}학년도 공식 실채점 확정 성적표` }}</span>
         </div>
         <h3 class="text-lg sm:text-xl font-black text-slate-900 tracking-tight m-0 flex items-center gap-2 flex-wrap">
-          <span>{{ isTentativeMode ? '수능 가채점 기반 수시 최저 진단 & 대학별고사 응시 가이드' : '수능 공식 결과 기반 수시 최저 확정 & 정시 지원 분석' }}</span>
+          <span>{{ isTentativeMode ? `${selectedAcademicYear || '2027'}학년도 수능 가채점 기반 수시 최저 진단 & 대학별고사 응시 가이드` : `${selectedAcademicYear || '2027'}학년도 수능 결과 기반 수시 최저 확정 & 정시 지원 분석` }}</span>
           <span
             class="px-2 py-0.5 rounded-md text-[11px] font-bold"
             :class="isTentativeMode ? 'bg-amber-500 text-white shadow-2xs' : 'bg-emerald-600 text-white shadow-2xs'"
@@ -21,8 +21,8 @@
         </h3>
         <p class="text-xs text-slate-500 m-0 mt-1 leading-relaxed">
           {{ isTentativeMode
-            ? `수능 가채점 ${csatStudents.length}명 원점수/등급과 수시 6장 지원 카드를 1:1 대조하여 수시최저 충족 여부, 대학별고사(면접/논술) 포기 vs 응시 전략 및 영역별 성적을 분석합니다.`
-            : `공식 수능 실채점 성적표를 바탕으로 수시 수능최저 최종 충족 여부와 정시 실전 환산점수 배치선을 종합 분석합니다.`
+            ? `${selectedAcademicYear || '2027'}학년도 수능 가채점 ${csatStudents.length}명 원점수/등급과 수시 6장 지원 카드를 1:1 대조하여 수시최저 충족 여부, 대학별고사(면접/논술) 포기 vs 응시 전략 및 영역별 성적을 분석합니다.`
+            : `${selectedAcademicYear || '2027'}학년도 공식 수능 실채점 성적표를 바탕으로 수시 수능최저 최종 충족 여부와 정시 실전 환산점수 배치선을 종합 분석합니다.`
           }}
         </p>
       </div>
@@ -196,7 +196,7 @@
         <!-- 현재 선택된 학생 상세 카드 -->
         <div v-if="currentStudent" class="space-y-4">
           <!-- 1. 학생 성적 요약 카드 -->
-          <div class="bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-800 text-white p-5 rounded-2xl shadow-md space-y-4">
+          <div class="bg-linear-to-br from-indigo-900 via-slate-900 to-slate-800 text-white p-5 rounded-2xl shadow-md space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
               <div class="flex items-center gap-2.5">
                 <span class="text-lg font-black tracking-tight">
