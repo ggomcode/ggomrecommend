@@ -1083,16 +1083,16 @@
 
       <!-- Peer Applications Table -->
       <div v-else-if="peerApplications.length > 0" class="overflow-x-auto">
-        <table class="w-full text-xs text-left border-collapse">
+        <table class="w-full text-xs text-left border-collapse min-w-[960px]">
           <thead>
             <tr class="bg-slate-100 text-slate-700 font-bold border-y border-slate-200">
-              <th class="p-2.5">선배 (출신)</th>
-              <th class="p-2.5">내신</th>
-              <th class="p-2.5">지원 대학교 (학과)</th>
-              <th class="p-2.5">전형 유형</th>
-              <th class="p-2.5">전형 세부</th>
-              <th class="p-2.5 text-center">결과</th>
-              <th class="p-2.5 text-center">등록 여부</th>
+              <th class="p-2.5 whitespace-nowrap min-w-[110px]">선배 (출신)</th>
+              <th class="p-2.5 whitespace-nowrap text-center min-w-[55px]">내신</th>
+              <th class="p-2.5 min-w-[140px]">지원 대학교 (학과)</th>
+              <th class="p-2.5 whitespace-nowrap min-w-[115px]">전형 유형</th>
+              <th class="p-2.5 min-w-[170px]">전형 세부</th>
+              <th class="p-2.5 text-center whitespace-nowrap min-w-[185px]">결과</th>
+              <th class="p-2.5 text-center whitespace-nowrap min-w-[85px]">등록 여부</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -1101,31 +1101,33 @@
               :key="idx"
               class="hover:bg-slate-50/80 transition-colors"
             >
-              <td class="p-2.5 font-bold text-slate-800">
+              <td class="p-2.5 font-bold text-slate-800 whitespace-nowrap">
                 <div class="flex items-center gap-1.5 flex-wrap">
                   <span>{{ maskName(app.name) }}</span>
                   <span
                     v-if="app.seniorLabel || app.academicYear"
-                    class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200"
+                    class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 whitespace-nowrap"
                   >
                     {{ app.seniorLabel || `${String(app.academicYear).slice(2)}대입 선배` }}
                   </span>
-                  <span v-else class="text-slate-500 text-[11px] font-normal">
+                  <span v-else class="text-slate-500 text-[11px] font-normal whitespace-nowrap">
                     ({{ app.classNum ? `${app.classNum}반` : '졸업생' }})
                   </span>
                 </div>
               </td>
-              <td class="p-2.5 font-mono font-bold text-blue-700">
+              <td class="p-2.5 font-mono font-bold text-blue-700 text-center whitespace-nowrap">
                 {{ formatGrade(app.allSubjectGrade || app.score9Grade || app.mainSubjectGrade) }}
               </td>
-              <td class="p-2.5">
-                <span class="font-bold text-slate-900">{{ app.univName }}</span>
-                <span class="text-slate-500 ml-1">({{ app.dept }})</span>
+              <td class="p-2.5 leading-snug">
+                <div class="font-bold text-slate-900">{{ app.univName }}</div>
+                <div v-if="app.dept" class="text-[11px] text-slate-500 font-medium mt-0.5">
+                  ({{ app.dept }})
+                </div>
               </td>
-              <td class="p-2.5">
+              <td class="p-2.5 whitespace-nowrap">
                 <span
                   :class="[
-                    'px-2 py-0.5 rounded-md text-[11px] font-bold',
+                    'px-2.5 py-0.5 rounded-md text-[11px] font-bold inline-block whitespace-nowrap',
                     app.admissionType?.includes('교과') ? 'bg-blue-50 text-blue-700 border border-blue-200' :
                     app.admissionType?.includes('종합') ? 'bg-orange-50 text-orange-700 border border-orange-200' :
                     'bg-slate-100 text-slate-600'
@@ -1134,30 +1136,34 @@
                   {{ app.admissionType }}
                 </span>
               </td>
-              <td class="p-2.5 text-slate-600">
-                <span v-if="app.isRural" class="text-amber-800 font-bold bg-amber-100 px-1.5 py-0.5 rounded text-[10px] mr-1">
-                  농어촌
-                </span>
-                <span v-else-if="app.isRecommendation" class="text-indigo-800 font-bold bg-indigo-50 px-1.5 py-0.5 rounded text-[10px] mr-1">
-                  학교장추천
-                </span>
-                {{ app.admissionDetailType || app.admissionMajorType }}
+              <td class="p-2.5 text-slate-600 leading-snug">
+                <div class="flex items-center gap-1 flex-wrap">
+                  <span v-if="app.isRural" class="text-amber-800 font-bold bg-amber-100 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">
+                    농어촌
+                  </span>
+                  <span v-else-if="app.isRecommendation" class="text-indigo-800 font-bold bg-indigo-50 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">
+                    학교장추천
+                  </span>
+                  <span class="break-words">{{ app.admissionDetailType || app.admissionMajorType }}</span>
+                </div>
               </td>
-              <td class="p-2.5 text-center">
-                <span
-                  :class="[
-                    'px-2 py-0.5 rounded-md text-[11px] font-bold inline-block',
-                    app.resultBadgeClass || (app.isPass ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-100 text-slate-600 border border-slate-200')
-                  ]"
-                >
-                  {{ app.resultText || app.finalStage || (app.isPass ? '합격' : '불합격') }}
-                </span>
-                <div v-if="app.subResultText" class="text-[9.5px] text-slate-400 mt-0.5 font-medium">
+              <td class="p-2.5 text-center whitespace-nowrap">
+                <div>
+                  <span
+                    :class="[
+                      'px-2.5 py-0.5 rounded-md text-[11px] font-bold inline-block whitespace-nowrap shadow-2xs',
+                      app.resultBadgeClass || (app.isPass ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-100 text-slate-600 border border-slate-200')
+                    ]"
+                  >
+                    {{ app.resultText || app.finalStage || (app.isPass ? '합격' : '불합격') }}
+                  </span>
+                </div>
+                <div v-if="app.subResultText" class="text-[10px] text-slate-400 mt-1 font-medium whitespace-nowrap tracking-tight">
                   {{ app.subResultText }}
                 </div>
               </td>
-              <td class="p-2.5 text-center font-bold">
-                <span v-if="app.isRegistered || app.registerStatus === 'Y' || String(app.registerStatus).includes('등록')" class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-600 text-white shadow-2xs">
+              <td class="p-2.5 text-center font-bold whitespace-nowrap">
+                <span v-if="app.isRegistered || app.registerStatus === 'Y' || String(app.registerStatus).includes('등록')" class="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-emerald-600 text-white shadow-2xs whitespace-nowrap">
                   등록완료
                 </span>
                 <span v-else class="text-slate-300 text-[11px]">-</span>
