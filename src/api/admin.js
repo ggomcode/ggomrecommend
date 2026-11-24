@@ -1821,6 +1821,163 @@ export const reopenRound = async (id) => {
     .eq('round', id)
 }
 
+// 17-2. 최신 선발 차수 삭제 (롤백 및 연쇄 정리)
+export const deleteLatestRound = async (targetRoundId = null) => {
+  if (!supabase) return { success: false, error: 'DB 연결 없음' }
+
+  // 1. 전체 라운드 조회
+  const rounds = await getRounds()
+  if (!rounds || rounds.length <= 1) {
+    throw new Error('1차 선발일정은 삭제할 수 없습니다.')
+  }
+
+  const maxId = Math.max(...rounds.map(r => Number(r.id) || 0))
+  const roundToDelete = targetRoundId ? Number(targetRoundId) : maxId
+
+  if (roundToDelete !== maxId) {
+    throw new Error(`가장 최근 차수(${maxId}차)부터 순서대로 삭제해야 합니다.`)
+  }
+
+  // 2. 해당 차수 지원서 조회 및 첨부파일/데이터 삭제
+  const { data: apps } = await supabase
+    .from('applications')
+    .select('*')
+    .eq('round', roundToDelete)
+
+  if (apps && apps.length > 0) {
+    for (const ap of apps) {
+      try {
+        await deleteApplicationStorageFiles(ap)
+      } catch (e) {
+        console.warn('Storage file deletion error:', e)
+      }
+    }
+    const { error: delAppErr } = await supabase
+      .from('applications')
+      .delete()
+      .eq('round', roundToDelete)
+    if (delAppErr) throw delAppErr
+  }
+
+  // 3. timeline_rounds에서 해당 차수 삭제
+  const { error: delRoundErr } = await supabase
+    .from('timeline_rounds')
+    .delete()
+    .eq('id', roundToDelete)
+  if (delRoundErr) throw delRoundErr
+
+  // 4. config 및 localStorage에서 round_schedules_map의 해당 차수 제거
+  try {
+    const { data: configSched } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', 'round_schedules_map')
+      .maybeSingle()
+
+    let map = {}
+    if (configSched && configSched.value) {
+      try {
+        map = typeof configSched.value === 'string' ? JSON.parse(configSched.value) : configSched.value
+      } catch {}
+    } else if (typeof localStorage !== 'undefined') {
+      const local = localStorage.getItem('round_schedules_map')
+      if (local) {
+        try { map = JSON.parse(local) } catch {}
+      }
+    }
+
+    if (map && map[String(roundToDelete)]) {
+      delete map[String(roundToDelete)]
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('round_schedules_map', JSON.stringify(map))
+      }
+      await supabase
+        .from('config')
+        .upsert({ key: 'round_schedules_map', value: JSON.stringify(map) })
+    }
+  } catch (e) {
+    console.warn('Failed to update round_schedules_map:', e)
+  }
+
+  // 5. total_rounds 조정
+  const newTotalRounds = Math.max(1, roundToDelete - 1)
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('total_rounds', String(newTotalRounds))
+    }
+    await supabase
+      .from('config')
+      .upsert({ key: 'total_rounds', value: String(newTotalRounds) })
+  } catch (e) {
+    console.warn('Failed to update total_rounds:', e)
+  }
+
+  // 6. 감사 로그 기록
+  try {
+    const userRes = await supabase.auth.getUser()
+    if (userRes?.data?.user) {
+      await supabase.from('audit_logs').insert({
+        actor_id: userRes.data.user.id,
+        action: 'DELETE_ROUND',
+        details: { deleted_round: roundToDelete, deleted_apps_count: apps ? apps.length : 0 }
+      })
+    }
+  } catch {}
+
+  return {
+    success: true,
+    deletedRound: roundToDelete,
+    deletedAppsCount: apps ? apps.length : 0,
+    newTotalRounds
+  }
+}
+
+// 17-3. 관리자 지원서 완전 삭제 (스토리지 서명/첨부파일 및 applications 레코드 삭제)
+export const adminDeleteApplication = async (appId, studentId = null, trackId = null, roundId = null) => {
+  if (!supabase) return
+
+  let query = supabase.from('applications').select('*')
+  if (appId) {
+    query = query.eq('id', appId)
+  } else if (studentId && trackId && roundId !== null) {
+    query = query.eq('student_id', studentId).eq('univ_id', trackId).eq('round', roundId)
+  } else {
+    throw new Error('삭제할 지원서 정보가 지정되지 않았습니다.')
+  }
+
+  const { data: apps, error: selectErr } = await query
+  if (selectErr) throw selectErr
+
+  if (apps && apps.length > 0) {
+    for (const ap of apps) {
+      try {
+        await deleteApplicationStorageFiles(ap)
+      } catch (e) {
+        console.warn('스토리지 파일 삭제 실패:', e)
+      }
+      const { error: delErr } = await supabase
+        .from('applications')
+        .delete()
+        .eq('id', ap.id)
+      if (delErr) throw delErr
+    }
+
+    try {
+      const userRes = await supabase.auth.getUser()
+      if (userRes?.data?.user) {
+        await supabase.from('audit_logs').insert({
+          actor_id: userRes.data.user.id,
+          action: 'ADMIN_DELETE_APPLICATION',
+          details: {
+            deleted_count: apps.length,
+            apps: apps.map(a => ({ id: a.id, student_id: a.student_id, univ_id: a.univ_id, round: a.round }))
+          }
+        })
+      }
+    } catch {}
+  }
+}
+
 // 18. 라운드 마감 (최종 확정)
 export const finalizeRound = async (id) => {
   if (!supabase) return
