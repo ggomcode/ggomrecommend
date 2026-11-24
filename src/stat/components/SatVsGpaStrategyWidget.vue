@@ -2521,6 +2521,14 @@ function scrollToTab(tabId) {
     isClickScrolling = false
   }, 900)
 
+  if (tabId === 'csatAnalysis') {
+    const csatEl = document.getElementById('csat-analysis-section')
+    if (csatEl) {
+      csatEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+  }
+
   const targetEl = document.getElementById(`sec-${tabId}`)
   if (targetEl) {
     targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -2570,7 +2578,9 @@ function updateActiveSection() {
   // 3. 섹션 판정: 기준선(targetLine)보다 위쪽에 위치한 가장 마지막 섹션 선택
   let matchedId = sectionIds[0] || 'radar'
   for (const id of sectionIds) {
-    const el = document.getElementById(`sec-${id}`)
+    const el = id === 'csatAnalysis'
+      ? document.getElementById('csat-analysis-section')
+      : document.getElementById(`sec-${id}`)
     if (el) {
       const rect = el.getBoundingClientRect()
       if (rect.top <= targetLine) {
@@ -2977,9 +2987,20 @@ const subTabs = computed(() => {
     return allTabs.filter(t => t.id === props.onlySection)
   }
   if (props.visibleSections && Array.isArray(props.visibleSections)) {
-    return allTabs
-      .filter(t => props.visibleSections.includes(t.id))
-      .map((t, idx) => ({ ...t, num: String(idx + 1) }))
+    const list = allTabs.filter(t => props.visibleSections.includes(t.id))
+    // 고3 연합/모평 메뉴(['radar', 'satamRun'])에서 수능 데이터(가채점/결과)가 있으면 3. 수능 가채점/결과 분석 탭 자동 추가
+    if (props.visibleSections.includes('radar') && props.visibleSections.includes('satamRun')) {
+      const records = highSchoolMockRecords.value || []
+      const hasCsat = records.some(isCsatRecord)
+      if (hasCsat) {
+        const hasStd = records.filter(isCsatRecord).some(r => r.korStandardScore || r.mathStandardScore)
+        list.push({
+          id: 'csatAnalysis',
+          label: hasStd ? '수능 결과 분석' : '수능 가채점 분석'
+        })
+      }
+    }
+    return list.map((t, idx) => ({ ...t, num: String(idx + 1) }))
   }
   return allTabs
 })
