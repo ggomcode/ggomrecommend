@@ -288,7 +288,14 @@ function getStoredTabs(cleanId) {
     const raw = localStorage.getItem(`pcm_actual_sheet_tabs_${cleanId}`)
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // 'Sheet1' 단독이거나 모의/수시 관련 키워드가 없는 오염된 캐시는 무효화
+        const hasValidTabs = parsed.some(t => t.includes('수시') || t.includes('모의') || t.includes('가채점') || t.includes('결과'))
+        if (hasValidTabs && parsed.length > 1) {
+          return parsed
+        }
+        localStorage.removeItem(`pcm_actual_sheet_tabs_${cleanId}`)
+      }
     }
   } catch (_) {}
   return null
@@ -296,8 +303,11 @@ function getStoredTabs(cleanId) {
 
 function saveStoredTabs(cleanId, tabs) {
   try {
-    if (Array.isArray(tabs) && tabs.length > 0) {
-      localStorage.setItem(`pcm_actual_sheet_tabs_${cleanId}`, JSON.stringify(tabs))
+    if (Array.isArray(tabs) && tabs.length > 1) {
+      const hasValidTabs = tabs.some(t => t.includes('수시') || t.includes('모의') || t.includes('가채점') || t.includes('결과'))
+      if (hasValidTabs) {
+        localStorage.setItem(`pcm_actual_sheet_tabs_${cleanId}`, JSON.stringify(tabs))
+      }
     }
   } catch (_) {}
 }
@@ -306,9 +316,9 @@ let cachedActualTabs = null
 let cachedActualTabsTime = 0
 
 /**
- * 타임아웃(기본 4초)이 적용된 fetch 헬퍼 (무한 로딩 및 네트워크 대기 방지)
+ * 타임아웃(기본 20초)이 적용된 fetch 헬퍼 (대용량 모의/수시 시트 다운로드 대기 및 타임아웃 방지)
  */
-async function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
@@ -332,13 +342,13 @@ export async function getActualGoogleSheetTabs(sheetId, forceReload = false) {
   const now = Date.now()
 
   // 1. 메모리 캐시 확인 (5분 이내 유효)
-  if (!forceReload && cachedActualTabs && (now - cachedActualTabsTime < 300000)) {
+  if (!forceReload && cachedActualTabs && cachedActualTabs.length > 1 && (now - cachedActualTabsTime < 300000)) {
     return cachedActualTabs
   }
 
   // 2. localStorage 영구 캐시 확인
   const stored = getStoredTabs(cleanId)
-  if (!forceReload && stored && stored.length > 0) {
+  if (!forceReload && stored && stored.length > 1) {
     cachedActualTabs = stored
     cachedActualTabsTime = now
     return cachedActualTabs
@@ -358,13 +368,15 @@ export async function getActualGoogleSheetTabs(sheetId, forceReload = false) {
     const res = await fetchWithTimeout(url, {}, 15000)
     if (res.ok) {
       const buffer = await res.arrayBuffer()
-      // bookSheets: true 옵션으로 셀 파싱을 건너뛰고 탭 이름만 수 ms 내 초고속 추출
-      const wb = XLSX.read(buffer, { type: 'buffer', bookSheets: true })
-      if (wb && Array.isArray(wb.SheetNames) && wb.SheetNames.length > 0) {
-        cachedActualTabs = wb.SheetNames
-        cachedActualTabsTime = now
-        saveStoredTabs(cleanId, wb.SheetNames)
-        return cachedActualTabs
+      if (buffer && buffer.byteLength > 1000) {
+        // bookSheets: true 옵션으로 셀 파싱을 건너뛰고 탭 이름만 수 ms 내 초고속 추출
+        const wb = XLSX.read(buffer, { type: 'buffer', bookSheets: true })
+        if (wb && Array.isArray(wb.SheetNames) && wb.SheetNames.length > 1 && wb.SheetNames.some(t => t.includes('수시') || t.includes('모의') || t.includes('가채점'))) {
+          cachedActualTabs = wb.SheetNames
+          cachedActualTabsTime = now
+          saveStoredTabs(cleanId, wb.SheetNames)
+          return cachedActualTabs
+        }
       }
     }
   } catch (err) {
@@ -372,7 +384,7 @@ export async function getActualGoogleSheetTabs(sheetId, forceReload = false) {
   }
 
   // 네트워크 실패 시 기존 캐시 또는 저장소 또는 기본 탭으로 안전하게 복구 (절대 빈 배열 반환으로 화면을 깨뜨리지 않음)
-  const safeFallback = cachedActualTabs || stored || [...DEFAULT_KNOWN_TABS]
+  const safeFallback = (cachedActualTabs && cachedActualTabs.length > 1 ? cachedActualTabs : null) || stored || [...DEFAULT_KNOWN_TABS]
   cachedActualTabs = safeFallback
   cachedActualTabsTime = now
   return safeFallback
@@ -388,7 +400,8 @@ export async function fetchKcueSheetTabCsv(sheetId, tabName) {
   }
   const url = `${buildSheetTabGvizUrl(cleanId, tabName)}&_t=${Date.now()}`
   
-  const res = await fetchWithTimeout(url, {}, 6000)
+  // 1.76MB 이상의 대용량 모의고사 탭을 고려하여 타임아웃을 30초(30000ms)로 넉넉하게 적용
+  const res = await fetchWithTimeout(url, {}, 30000)
   if (!res.ok) {
     throw new Error(`[${tabName}] 탭을 읽을 수 없습니다. (HTTP ${res.status}) 시트의 공유 권한 및 탭 이름을 확인하세요.`)
   }
@@ -1298,6 +1311,9 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
   if (!forceReload && mockDataMemoryCache.has(cacheKey)) {
     return mockDataMemoryCache.get(cacheKey)
   }
+  if (forceReload) {
+    mockDataMemoryCache.delete(cacheKey)
+  }
 
   // 만약 특정 탭이 지정된 경우 해당 탭만 단독 파싱
   if (tabName) {
@@ -1312,7 +1328,14 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
   const isMatchYear = (t) => !yr || t.includes(yr)
 
   // 1. 결과 탭(확정) 탐색: 예) '2027모의결과', '모의결과'
-  const resultTab = actualTabs.find(t => isMatchYear(t) && (t.includes('모의결과') || (t.includes('모의') && t.includes('결과'))))
+  let resultTab = actualTabs.find(t => isMatchYear(t) && (t.includes('모의결과') || (t.includes('모의') && t.includes('결과'))))
+  if (!resultTab && yr) {
+    const candidateResultTabs = [`${yr}모의결과`, `${yr} 모의결과`, `${yr}결과`, '모의결과', '2027모의결과']
+    resultTab = candidateResultTabs.find(c => actualTabs.includes(c)) || `${yr}모의결과`
+  }
+  if (!resultTab) {
+    resultTab = yr ? `${yr}모의결과` : '2027모의결과'
+  }
 
   // 2. 가채점 탭 탐색:
   // 중요: '등급컷', '수능최저' 등과 혼동되지 않도록 '가채점' 키워드를 정확하게 우선 탐색
@@ -1320,6 +1343,9 @@ export async function fetchAndParseKcueMockData(sheetId = null, tabName = null, 
   if (!tentativeTab && yr) {
     const candidateTentativeTabs = [`${yr}모의가채점`, `${yr} 모의가채점`, `${yr}가채점`, '모의가채점', '2027모의가채점']
     tentativeTab = candidateTentativeTabs.find(c => actualTabs.includes(c)) || `${yr}모의가채점`
+  }
+  if (!tentativeTab) {
+    tentativeTab = yr ? `${yr}모의가채점` : '2027모의가채점'
   }
 
   let resultRecords = []

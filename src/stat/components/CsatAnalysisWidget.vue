@@ -61,6 +61,32 @@
       </div>
     </div>
 
+    <!-- 동기화 상태 안내 배너 -->
+    <div
+      v-if="reloadStatusMessage"
+      class="px-4 py-3 rounded-2xl text-xs font-semibold flex items-center justify-between shadow-2xs transition-all"
+      :class="{
+        'bg-emerald-50 text-emerald-800 border border-emerald-200': reloadStatusType === 'success',
+        'bg-rose-50 text-rose-800 border border-rose-200': reloadStatusType === 'error',
+        'bg-blue-50 text-blue-800 border border-blue-200': reloadStatusType === 'info'
+      }"
+    >
+      <div class="flex items-center gap-2">
+        <span class="text-sm">
+          {{ reloadStatusType === 'success' ? '✅' : (reloadStatusType === 'error' ? '⚠️' : '🔄') }}
+        </span>
+        <span>{{ reloadStatusMessage }}</span>
+      </div>
+      <button
+        type="button"
+        @click="reloadStatusMessage = ''"
+        class="text-xs opacity-60 hover:opacity-100 border-none bg-transparent cursor-pointer font-bold px-1"
+        title="닫기"
+      >
+        ✕
+      </button>
+    </div>
+
     <!-- 데이터가 없는 경우 안내 -->
     <div v-if="csatStudents.length === 0" class="text-center py-10 bg-slate-50/70 rounded-2xl border border-dashed border-slate-200 space-y-3">
       <span class="text-3xl block">📋</span>
@@ -668,15 +694,29 @@ const selectedStudentKey = ref('')
 const classFilter = ref('ALL')
 const statusFilter = ref('ALL')
 const isReloading = ref(false)
+const reloadStatusMessage = ref('')
+const reloadStatusType = ref('info')
 
 async function reloadMockData() {
   if (isReloading.value) return
   isReloading.value = true
+  reloadStatusMessage.value = '구글 시트에서 최신 수능 가채점 성적을 동기화하고 있습니다. 잠시만 기다려주세요...'
+  reloadStatusType.value = 'info'
   try {
     const yr = selectedAcademicYear.value || '2027'
     await loadMockExamData(true, yr)
+    const count = csatStudents.value.length
+    if (count > 0) {
+      reloadStatusMessage.value = `동기화 완료: ${yr}학년도 수능 가채점 실응시자 ${count}명의 성적이 성공적으로 반영되었습니다.`
+      reloadStatusType.value = 'success'
+    } else {
+      reloadStatusMessage.value = `⚠️ 동기화 완료되었으나 수능 가채점 응시자를 찾지 못했습니다. ('${yr}모의가채점' 탭의 행 또는 학년도를 확인해주세요)`
+      reloadStatusType.value = 'error'
+    }
   } catch (err) {
     console.warn('[CsatAnalysisWidget] 수능 가채점 데이터 재로드 실패:', err)
+    reloadStatusMessage.value = `❌ 동기화 실패: ${err.message || '네트워크 오류가 발생했습니다.'}`
+    reloadStatusType.value = 'error'
   } finally {
     isReloading.value = false
   }
