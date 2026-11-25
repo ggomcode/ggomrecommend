@@ -1206,7 +1206,14 @@ export async function saveKcueYearSheets(sheetsMap) {
  */
 export function hasAnyMockScore(r) {
   if (!r) return false
-  const isValid = (v) => v !== null && v !== undefined && String(v).trim() !== '' && String(v).trim() !== '-'
+  const isValid = (v) => {
+    if (v === null || v === undefined) return false
+    const s = String(v).trim()
+    if (!s || s === '-') return false
+    // '원점수', '표준점수', '백분위', '등급' 같은 헤더 문자열은 유효 성적에서 제외
+    if (/^(원점수|표준점수|표점|백분위|등급|선택|과목|합계|평균|총점)$/.test(s)) return false
+    return /[0-9]/.test(s)
+  }
   return (
     isValid(r.korGrade) || isValid(r.korRawScore) || isValid(r.korStandardScore) || isValid(r.korPercentile) ||
     isValid(r.mathGrade) || isValid(r.mathRawScore) || isValid(r.mathStandardScore) || isValid(r.mathPercentile) ||
@@ -1647,21 +1654,28 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       return null
     }
 
+    const isHeaderLikeName = (val) => {
+      if (!val) return true
+      return /^(이름|성명|학생명|국어선택|수학선택|탐구선택|선택과목|과목명|원점수|표준점수|표점|백분위|등급|계열|계열번호|학년|번호|구분|합계|총점|평균|영역|과목|선택|수능|학평|모평|인문|자연|일반|문과|이과)$/.test(val) ||
+        /(선택|과목|점수|등급|백분위|합계|총점)/.test(val)
+    }
+
     if (isStandard44) {
       // 44개 컬럼 표준 규격 직접 인덱싱 파싱 (2027모의결과, 2027모의가채점 탭 등)
       name = String(r[5] || '').trim()
-      if (!name || name === '이름' || name === '성명') {
+      if (isHeaderLikeName(name)) {
+        name = ''
         if (Array.isArray(r)) {
-          for (let c = 1; c <= Math.min(r.length - 1, 6); c++) {
+          for (let c = 1; c <= Math.min(r.length - 1, 5); c++) {
             const val = String(r[c] || '').trim()
-            if (/^[가-힣]{2,4}$/.test(val) && !['원점수', '등급', '과목', '선택', '수능', '학평', '모평', '인문', '자연', '일반', '문과', '이과'].includes(val)) {
+            if (/^[가-힣]{2,4}$/.test(val) && !isHeaderLikeName(val)) {
               name = val
               break
             }
           }
         }
       }
-      if (!name || name === '이름' || name === '성명') continue
+      if (!name || isHeaderLikeName(name)) continue
 
       seriesNum = r[1] != null && r[1] !== '' ? Number(r[1]) : 1
       if (isNaN(seriesNum)) seriesNum = 1
@@ -1805,18 +1819,19 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       }
 
       name = getVal('이름', '성명', '학생명')
-      if (!name || name === '이름' || name === '성명') {
+      if (isHeaderLikeName(name)) {
+        name = ''
         if (Array.isArray(r)) {
-          for (let c = 1; c <= Math.min(r.length - 1, 6); c++) {
+          for (let c = 1; c <= Math.min(r.length - 1, 5); c++) {
             const val = String(r[c] || '').trim()
-            if (/^[가-힣]{2,4}$/.test(val) && !['원점수', '등급', '과목', '선택', '수능', '학평', '모평', '인문', '자연', '일반', '문과', '이과'].includes(val)) {
+            if (/^[가-힣]{2,4}$/.test(val) && !isHeaderLikeName(val)) {
               name = val
               break
             }
           }
         }
       }
-      if (!name || name === '이름' || name === '성명') continue
+      if (!name || isHeaderLikeName(name)) continue
 
       seriesNum = Number(getVal('계열번호', '계열')) || (r && r[1] != null && !isNaN(r[1]) ? Number(r[1]) : 1)
       if (isNaN(seriesNum)) seriesNum = 1

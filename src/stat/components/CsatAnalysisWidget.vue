@@ -52,12 +52,6 @@
             <span class="text-[10.5px] font-medium text-slate-500">({{ overallStats.passCards }}/{{ overallStats.totalMinCards }}건)</span>
           </span>
         </div>
-        <div v-if="overallStats.skipCount > 0" class="bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-xl text-right">
-          <span class="text-[10px] text-rose-700 block font-semibold">수시 납치주의 (포기권고)</span>
-          <span class="text-sm font-black text-rose-700 font-mono">
-            {{ overallStats.skipCount }}명
-          </span>
-        </div>
       </div>
     </div>
 
@@ -108,9 +102,22 @@
     </div>
 
     <template v-else>
-      <!-- 🔘 서브 탭 내비게이션 (1. 개인별 정밀 분석 vs 2. 전체 통계 & 등급 분포) -->
+      <!-- 🔘 서브 탭 내비게이션 (1. 전체 통계 & 등급 분포 vs 2. 개인별 정밀 분석) -->
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <div class="inline-flex p-1 rounded-xl bg-slate-100/90 border border-slate-200/80 gap-1">
+          <button
+            type="button"
+            @click="activeViewTab = 'summary'"
+            :class="[
+              'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer border-none',
+              activeViewTab === 'summary'
+                ? 'bg-white text-indigo-950 shadow-2xs font-black'
+                : 'bg-transparent text-slate-600 hover:text-slate-900'
+            ]"
+          >
+            <span>📊</span>
+            <span>전체 통계 & 수능 영역별 등급 분포</span>
+          </button>
           <button
             type="button"
             @click="activeViewTab = 'individual'"
@@ -127,19 +134,6 @@
               {{ csatStudents.length }}명
             </span>
           </button>
-          <button
-            type="button"
-            @click="activeViewTab = 'summary'"
-            :class="[
-              'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer border-none',
-              activeViewTab === 'summary'
-                ? 'bg-white text-indigo-950 shadow-2xs font-black'
-                : 'bg-transparent text-slate-600 hover:text-slate-900'
-            ]"
-          >
-            <span>📊</span>
-            <span>전체 통계 & 수능 영역별 등급 분포</span>
-          </button>
         </div>
 
         <!-- 우측 빠른 필터/정보 -->
@@ -152,46 +146,31 @@
       <!-- [뷰 1] 개인별 정밀 분석 & 면접/논술 응시 가이드 -->
       <!-- ============================================================== -->
       <div v-if="activeViewTab === 'individual'" class="space-y-5">
-        <!-- 🎯 학생 선택 바 & 빠른 필터 -->
+        <!-- 🎯 학생 선택 바 & 빠른 필터 (반/이름 드롭다운) -->
         <div class="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80 space-y-3">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex items-center gap-2 flex-wrap">
-              <span class="text-xs font-bold text-slate-700">학생 선택:</span>
+              <span class="text-xs font-bold text-slate-700">반 선택:</span>
               <select
-                v-model="selectedStudentKey"
-                class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer min-w-48"
+                v-model="classFilter"
+                class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer min-w-24"
               >
-                <option v-for="st in filteredStudents" :key="st.studentKey" :value="st.studentKey">
-                  {{ st.classNum ? `${st.classNum}반 ` : '' }}{{ st.studentNum ? `${st.studentNum}번 ` : '' }}{{ maskName(st.name) }}
-                  (내신 {{ st.gpa || '-' }} / 국수탐 {{ st.rawSum300 || '-' }}점)
+                <option value="ALL">전체 반</option>
+                <option v-for="c in availableClasses" :key="c" :value="String(c)">
+                  {{ c }}반
                 </option>
               </select>
 
-              <!-- 빠른 반 필터 -->
-              <div class="flex items-center gap-1 ml-2">
-                <button
-                  type="button"
-                  @click="classFilter = 'ALL'"
-                  :class="[
-                    'px-2 py-1 rounded text-[11px] font-bold border cursor-pointer',
-                    classFilter === 'ALL' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                  ]"
-                >
-                  전체
-                </button>
-                <button
-                  v-for="c in availableClasses"
-                  :key="c"
-                  type="button"
-                  @click="classFilter = c"
-                  :class="[
-                    'px-2 py-1 rounded text-[11px] font-bold border cursor-pointer',
-                    classFilter === c ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                  ]"
-                >
-                  {{ c }}반
-                </button>
-              </div>
+              <span class="text-xs font-bold text-slate-700 ml-1">학생 선택:</span>
+              <select
+                v-model="selectedStudentKey"
+                class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer min-w-52"
+              >
+                <option v-for="st in filteredStudents" :key="st.studentKey" :value="st.studentKey">
+                  {{ st.classNum ? `${st.classNum}반 ` : '' }}{{ maskName(st.name) }}
+                  (내신 {{ st.gpa || '-' }} / 국수탐 {{ st.rawSum300 || '-' }}점)
+                </option>
+              </select>
             </div>
 
             <!-- 상태 필터 태그 -->
@@ -205,16 +184,6 @@
                 ]"
               >
                 전체 ({{ csatStudents.length }})
-              </button>
-              <button
-                type="button"
-                @click="statusFilter = 'SKIP'"
-                :class="[
-                  'px-2.5 py-1 rounded-lg text-[11px] font-bold border cursor-pointer transition-colors',
-                  statusFilter === 'SKIP' ? 'bg-rose-600 text-white border-rose-600' : 'bg-rose-50 text-rose-700 border-rose-200'
-                ]"
-              >
-                🚨 납치주의 ({{ overallStats.skipCount }})
               </button>
               <button
                 type="button"
@@ -297,7 +266,7 @@
               </div>
               <!-- 영어 -->
               <div class="bg-white/5 border border-white/10 rounded-xl p-2.5">
-                <div class="text-[11px] text-slate-300 font-semibold mb-1">영어 (절대)</div>
+                <div class="text-[11px] text-slate-300 font-semibold mb-1">영어</div>
                 <div class="text-base font-black text-emerald-300 font-mono">
                   {{ currentStudent.engGrade ? `${currentStudent.engGrade}등급` : '-' }}
                 </div>
@@ -331,7 +300,7 @@
               </div>
               <!-- 한국사 -->
               <div class="bg-white/5 border border-white/10 rounded-xl p-2.5">
-                <div class="text-[11px] text-slate-300 font-semibold mb-1">한국사 (필수)</div>
+                <div class="text-[11px] text-slate-300 font-semibold mb-1">한국사</div>
                 <div class="text-base font-black text-amber-300 font-mono">
                   {{ currentStudent.histGrade ? `${currentStudent.histGrade}등급` : '-' }}
                 </div>
@@ -379,7 +348,7 @@
                 <span class="text-[11px] font-normal text-slate-500">({{ currentStudent.susiApps.length }}장 지원)</span>
               </span>
               <span class="text-[11px] text-slate-400">
-                초록: 충족(응시 권고) / 빨강: 수시납치 주의(포기 권고) / 회색: 미충족
+                초록: 충족(응시 권장) / 주황: 정시비교 권고 / 회색: 미충족
               </span>
             </div>
 
@@ -503,7 +472,9 @@
           <div class="bg-indigo-50/70 p-4 rounded-2xl border border-indigo-100 text-center">
             <span class="text-xs font-bold text-indigo-700 block mb-1">수능 실응시 인원</span>
             <span class="text-2xl font-black text-indigo-950 font-mono">{{ csatStudents.length }}명</span>
-            <span class="text-[10.5px] text-indigo-600 block mt-1">11월 수능 원점수 입력자</span>
+            <span class="text-[10.5px] text-indigo-600 block mt-1">
+              {{ selectedAcademicYear || '2027' }}학년도 {{ isTentativeMode ? '수능 가채점 입력학생' : '수능 응시학생' }}
+            </span>
           </div>
 
           <div class="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-100 text-center">
@@ -689,7 +660,7 @@ const {
   formatGrade
 } = useData()
 
-const activeViewTab = ref('individual')
+const activeViewTab = ref('summary')
 const selectedStudentKey = ref('')
 const classFilter = ref('ALL')
 const statusFilter = ref('ALL')
@@ -758,10 +729,22 @@ const isTentativeMode = computed(() => {
   return !hasStd
 })
 
-// 순수 11월 수능 레코드 목록 (고3 3학년)
+// 순수 11월 수능 레코드 목록 (고3 3학년 + 헤더성 행 방어 필터링)
 const rawCsatRecords = computed(() => {
   const all = mockExamRecords.value || []
-  return all.filter(r => (Number(r.grade) === 3 || !r.grade) && isCsatRecord(r))
+  return all.filter(r => {
+    if (Number(r.grade) !== 3 && r.grade) return false
+    if (!isCsatRecord(r)) return false
+    const cleanName = String(r.name || '').trim()
+    if (!cleanName || /^(이름|성명|국어선택|수학선택|탐구선택|선택과목|과목명|원점수|표준점수|백분위|등급)$/.test(cleanName)) return false
+    if (/(선택|과목|점수|등급|백분위|합계|총점)/.test(cleanName)) return false
+    // 최소한 국/수/영/탐/한국사 중 1개 이상의 숫자 성적이 존재해야 함
+    const hasNumScore = [
+      r.korGrade, r.mathGrade, r.engGrade, r.inq1Grade, r.inq2Grade, r.histGrade,
+      r.korRawScore, r.mathRawScore, r.engRawScore, r.inq1RawScore, r.inq2RawScore
+    ].some(v => v !== null && v !== undefined && String(v).trim() !== '' && !isNaN(Number(v)) && Number(v) > 0)
+    return hasNumScore
+  })
 })
 
 // 정시 예상 지원선 산출 (원점수 300점 만점 또는 등급 평균 기준)
@@ -933,13 +916,15 @@ const csatStudents = computed(() => {
         actionText = '최저미달 (응시불가)'
         actionClass = 'bg-slate-300 text-slate-600'
       } else {
-        // 최저 충족한 경우: 정시 가능선 vs 수시 대학 비교
-        // 정시로 더 좋은 대학 갈 수 있으면 납치 주의(포기 권고)
-        if (satTier.tier < univTier && (univTier - satTier.tier >= 1)) {
-          actionText = '🚨 포기권고 (납치주의)'
-          actionClass = 'bg-rose-600 text-white animate-pulse'
+        // 최저 충족한 경우: 매우 보수적으로 정시 비교 권고 여부 판정
+        // 정시 성적이 확실한 상위권(tier <= 3, 원점수 235점↑ 또는 평균 2.6등급↓)이면서 2티어 이상 격차가 날 때만 신중 비교 권고
+        const isHighSat = satTier.tier <= 3
+        const hasBigGap = satTier.tier < univTier && (univTier - satTier.tier >= 2)
+        if (isHighSat && hasBigGap) {
+          actionText = '💡 정시비교 권고'
+          actionClass = 'bg-amber-500 text-white'
         } else if (satTier.tier <= univTier) {
-          actionText = '목숨걸고 필참'
+          actionText = '적극 응시 권장'
           actionClass = 'bg-emerald-700 text-white'
         } else {
           actionText = '적정 응시'
@@ -967,14 +952,14 @@ const csatStudents = computed(() => {
     // 학생 종합 처방 판정
     let overallDecisionText = '정상 응시'
     let overallDecisionClass = 'bg-emerald-100 text-emerald-800'
-    const hasSkip = evaluatedApps.some(a => a.actionText.includes('포기권고'))
+    const hasCompareRecommend = evaluatedApps.some(a => a.actionText.includes('정시비교'))
     const allFail = totalMinCards > 0 && passCount === 0
 
-    if (hasSkip) {
-      overallDecisionText = '🚨 수시납치 주의'
-      overallDecisionClass = 'bg-rose-100 text-rose-800 border border-rose-300 font-black'
+    if (hasCompareRecommend) {
+      overallDecisionText = '💡 정시비교 권고'
+      overallDecisionClass = 'bg-amber-100 text-amber-800 border border-amber-300 font-bold'
     } else if (allFail) {
-      overallDecisionText = '⚠️ 최저 전멸 (정시집중)'
+      overallDecisionText = '⚠️ 최저 미충족 (정시집중)'
       overallDecisionClass = 'bg-slate-200 text-slate-700'
     } else if (passCount === totalMinCards && totalMinCards > 0) {
       overallDecisionText = '✨ 최저 100% 달성'
@@ -995,6 +980,11 @@ const csatStudents = computed(() => {
       overallDecisionText,
       overallDecisionClass
     }
+  }).sort((a, b) => {
+    const classA = Number(a.classNum) || 999
+    const classB = Number(b.classNum) || 999
+    if (classA !== classB) return classA - classB
+    return String(a.name || '').localeCompare(String(b.name || ''), 'ko')
   })
 })
 
@@ -1007,15 +997,23 @@ const availableClasses = computed(() => {
   return Array.from(set).sort((a, b) => Number(a) - Number(b))
 })
 
-// 필터링된 학생 목록
+// 필터링된 학생 목록 (반별·이름순 오름차순 유지)
 const filteredStudents = computed(() => {
   return csatStudents.value.filter(s => {
     if (classFilter.value !== 'ALL' && String(s.classNum) !== String(classFilter.value)) return false
-    if (statusFilter.value === 'SKIP') return s.overallDecisionText.includes('납치')
+    if (statusFilter.value === 'SKIP') return s.overallDecisionText.includes('정시비교')
     if (statusFilter.value === 'PASS_ALL') return s.totalMinCards > 0 && s.passCount === s.totalMinCards
     if (statusFilter.value === 'FAIL_SOME') return s.totalMinCards > 0 && s.passCount < s.totalMinCards
     return true
   })
+})
+
+// 반 또는 상태 필터 변경 시 선택 학생이 목록에 없으면 첫 번째 학생 자동 선택
+watch([classFilter, statusFilter], () => {
+  const list = filteredStudents.value
+  if (list.length > 0 && !list.some(s => s.studentKey === selectedStudentKey.value)) {
+    selectedStudentKey.value = list[0].studentKey
+  }
 })
 
 // 현재 선택된 학생 객체
@@ -1040,7 +1038,7 @@ const overallStats = computed(() => {
     totalMinCards += s.totalMinCards
     passCards += s.passCount
     rawSumTotal += s.rawSum300
-    if (s.overallDecisionText.includes('납치')) skipCount++
+    if (s.overallDecisionText.includes('정시비교')) skipCount++
     if (s.totalMinCards > 0 && s.passCount === s.totalMinCards) perfectPassCount++
     if (s.totalMinCards > 0 && s.passCount < s.totalMinCards) partialFailCount++
   })
@@ -1059,19 +1057,26 @@ const overallStats = computed(() => {
   }
 })
 
-// 영역별 등급 분포표 데이터
+// 영역별 등급 분포표 데이터 (탐구1·2 통합, (절대)/(필수) 표기 제거)
 const subjectGradeDistribution = computed(() => {
   const list = csatStudents.value
   const total = list.length
   if (total === 0) return []
 
   const subjects = [
-    { key: 'kor', name: '국어', color: '#3b82f6', getGrade: s => s.korGrade, getScore: s => s.korRawScore },
-    { key: 'math', name: '수학', color: '#8b5cf6', getGrade: s => s.mathGrade, getScore: s => s.mathRawScore },
-    { key: 'eng', name: '영어(절대)', color: '#10b981', getGrade: s => s.engGrade, getScore: s => s.engRawScore },
-    { key: 'inq1', name: '탐구1', color: '#f59e0b', getGrade: s => s.inq1Grade, getScore: s => s.inq1RawScore },
-    { key: 'inq2', name: '탐구2', color: '#ec4899', getGrade: s => s.inq2Grade, getScore: s => s.inq2RawScore },
-    { key: 'hist', name: '한국사(필수)', color: '#64748b', getGrade: s => s.histGrade, getScore: s => s.histRawScore }
+    { key: 'kor', name: '국어', color: '#3b82f6', getItems: s => [{ grade: s.korGrade, score: s.korRawScore }] },
+    { key: 'math', name: '수학', color: '#8b5cf6', getItems: s => [{ grade: s.mathGrade, score: s.mathRawScore }] },
+    { key: 'eng', name: '영어', color: '#10b981', getItems: s => [{ grade: s.engGrade, score: s.engRawScore }] },
+    {
+      key: 'inq',
+      name: '탐구',
+      color: '#f59e0b',
+      getItems: s => [
+        { grade: s.inq1Grade, score: s.inq1RawScore },
+        { grade: s.inq2Grade, score: s.inq2RawScore }
+      ]
+    },
+    { key: 'hist', name: '한국사', color: '#64748b', getItems: s => [{ grade: s.histGrade, score: s.histRawScore }] }
   ]
 
   return subjects.map(sub => {
@@ -1079,23 +1084,27 @@ const subjectGradeDistribution = computed(() => {
     let gradeSum = 0, scoreSum = 0, validGradeCount = 0, validScoreCount = 0
 
     list.forEach(s => {
-      const g = Number(sub.getGrade(s))
-      const sc = Number(sub.getScore(s))
-      if (g >= 1 && g <= 9) {
-        validGradeCount++
-        gradeSum += g
-        if (g === 1) g1++
-        else if (g === 2) g2++
-        else if (g === 3) g3++
-        else g4plus++
-      }
-      if (!isNaN(sc) && sc > 0) {
-        validScoreCount++
-        scoreSum += sc
-      }
+      const items = sub.getItems(s)
+      items.forEach(item => {
+        const g = Number(item.grade)
+        const sc = Number(item.score)
+        if (g >= 1 && g <= 9) {
+          validGradeCount++
+          gradeSum += g
+          if (g === 1) g1++
+          else if (g === 2) g2++
+          else if (g === 3) g3++
+          else g4plus++
+        }
+        if (!isNaN(sc) && sc > 0) {
+          validScoreCount++
+          scoreSum += sc
+        }
+      })
     })
 
     const g13 = g1 + g2 + g3
+    const denom = validGradeCount > 0 ? validGradeCount : total
     return {
       key: sub.key,
       name: sub.name,
@@ -1103,13 +1112,13 @@ const subjectGradeDistribution = computed(() => {
       avgGrade: validGradeCount > 0 ? (gradeSum / validGradeCount).toFixed(2) : '-',
       avgScore: validScoreCount > 0 ? (scoreSum / validScoreCount).toFixed(1) : '-',
       g1,
-      g1Rate: ((g1 / total) * 100).toFixed(1),
+      g1Rate: ((g1 / denom) * 100).toFixed(1),
       g2,
-      g2Rate: ((g2 / total) * 100).toFixed(1),
+      g2Rate: ((g2 / denom) * 100).toFixed(1),
       g3,
-      g3Rate: ((g3 / total) * 100).toFixed(1),
+      g3Rate: ((g3 / denom) * 100).toFixed(1),
       g13,
-      g13Rate: ((g13 / total) * 100).toFixed(1),
+      g13Rate: ((g13 / denom) * 100).toFixed(1),
       g4plus
     }
   })
@@ -1119,25 +1128,25 @@ const subjectGradeDistribution = computed(() => {
 const studentDecisionBannerClass = computed(() => {
   if (!currentStudent.value) return 'bg-slate-50 border-slate-200'
   const text = currentStudent.value.overallDecisionText
-  if (text.includes('납치')) return 'bg-rose-50/90 border-rose-300 ring-1 ring-rose-200'
+  if (text.includes('정시비교')) return 'bg-amber-50/90 border-amber-300 ring-1 ring-amber-200'
   if (text.includes('100%')) return 'bg-emerald-50/90 border-emerald-300'
-  if (text.includes('전멸')) return 'bg-slate-100 border-slate-300'
+  if (text.includes('미충족') || text.includes('전멸')) return 'bg-slate-100 border-slate-300'
   return 'bg-blue-50/90 border-blue-200'
 })
 
 const studentDecisionIcon = computed(() => {
   if (!currentStudent.value) return '📋'
   const text = currentStudent.value.overallDecisionText
-  if (text.includes('납치')) return '🚨'
+  if (text.includes('정시비교')) return '💡'
   if (text.includes('100%')) return '✨'
-  if (text.includes('전멸')) return '⚠️'
+  if (text.includes('미충족') || text.includes('전멸')) return '⚠️'
   return '🎯'
 })
 
 const studentDecisionTitleColor = computed(() => {
   if (!currentStudent.value) return 'text-slate-900'
   const text = currentStudent.value.overallDecisionText
-  if (text.includes('납치')) return 'text-rose-900'
+  if (text.includes('정시비교')) return 'text-amber-900'
   if (text.includes('100%')) return 'text-emerald-900'
   return 'text-indigo-950'
 })
@@ -1145,16 +1154,16 @@ const studentDecisionTitleColor = computed(() => {
 const studentDecisionTitle = computed(() => {
   if (!currentStudent.value) return '대학별고사 응시 전략 분석'
   const text = currentStudent.value.overallDecisionText
-  if (text.includes('납치')) return '수시 납치 극도로 주의: 일부 대학별고사(면접/논술) 포기(불참) 적극 권고'
-  if (text.includes('100%')) return '수능최저 100% 올패스: 이번 주말 대학별고사에 전력투구 필수!'
-  if (text.includes('전멸')) return '수능최저 전멸: 불필요한 대학별고사 응시 중단 및 정시 라인 재정비'
-  return '수능최저 부분 충족: 통과된 대학 중심 대학별고사 전략적 집중 응시'
+  if (text.includes('정시비교')) return '정시 지원 가능선 비교 후 대학별고사(면접/논술) 응시 여부 신중 검토 권고'
+  if (text.includes('100%')) return '수능최저 100% 충족: 지원 대학 대학별고사 적극 응시 권장'
+  if (text.includes('미충족') || text.includes('전멸')) return '수능최저 미충족: 정시 지원 가능선 점검 및 대안 전략 수립'
+  return '수능최저 부분 충족: 통과된 대학 중심 대학별고사 전략적 응시'
 })
 
 const studentDecisionBadgeClass = computed(() => {
   if (!currentStudent.value) return 'bg-slate-200 text-slate-700'
   const text = currentStudent.value.overallDecisionText
-  if (text.includes('납치')) return 'bg-rose-600 text-white'
+  if (text.includes('정시비교')) return 'bg-amber-600 text-white'
   if (text.includes('100%')) return 'bg-emerald-600 text-white'
   return 'bg-indigo-600 text-white'
 })
@@ -1167,16 +1176,16 @@ const studentDecisionBadge = computed(() => {
 const studentDecisionMessage = computed(() => {
   if (!currentStudent.value) return ''
   const text = currentStudent.value.overallDecisionText
-  if (text.includes('납치')) {
-    return '수능 가채점 성적이 매우 우수하여 정시 환산선이 지원한 수시 대학보다 높게 형성되었습니다. 수시에 합격하면 정시 지원이 법적으로 원천 불가(수시 납치)하므로, 정시 가능선보다 낮은 대학의 면접이나 논술은 반드시 결시(포기)할 것을 적극 권고합니다.'
+  if (text.includes('정시비교')) {
+    return '수능 가채점 성적이 우수하여 정시 지원 가능선과 수시 지원 대학의 수준을 비교해 볼 필요가 있습니다. 다만 면접·논술 결시는 해당 수시 기회를 포기하는 결정이며, 이미 전형이 종료된 교과·서류 전형은 합격 시 정시 지원이 불가하므로 정시 환산점수와 배치표를 충분히 대조한 뒤 신중하게 응시 여부를 결정할 것을 권고합니다.'
   }
   if (text.includes('100%')) {
-    return '학생이 지원한 모든 수시 카드의 수능최저학력기준을 여유 있게 통과했습니다. 정시로는 이 수준의 상위권 대학 진학이 불확실하므로, 이번 주말에 잡힌 대학별고사(심층면접·논술)에 총력을 기울여 수시 최종 합격을 쟁취해야 합니다.'
+    return '학생이 지원한 모든 수시 카드의 수능최저학력기준을 충족했습니다. 수시 합격을 목표로 대학별고사(면접·논술) 준비에 집중해 최종 합격을 노리는 것을 권장합니다.'
   }
-  if (text.includes('전멸')) {
-    return '지원한 모든 수시 카드의 수능최저학력기준을 충족하지 못했습니다. 최저 미달 시 대학별고사에 응시해도 100% 불합격 처리되므로, 시험 응시를 과감히 접고 가채점 정시 지원 포트폴리오를 빠르게 수립해야 합니다.'
+  if (text.includes('미충족') || text.includes('전멸')) {
+    return '수능최저학력기준이 설정된 수시 카드를 충족하지 못했습니다. 최저 미적용 전형 여부를 확인하고, 정시 지원 가능 대학 포트폴리오를 빠르게 점검하는 것을 권고합니다.'
   }
-  return '지원한 수시 6장 중 일부 대학의 최저를 충족하였습니다. 아래 표를 확인하여 최저를 맞춘 대학의 대학별고사에 집중하고, 미달된 대학은 제외하여 수험생의 에너지와 시간을 효율적으로 집중하세요.'
+  return '지원한 수시 카드 중 일부 대학의 최저를 충족하였습니다. 아래 표를 확인하여 최저를 맞춘 대학의 대학별고사에 집중하고, 미달된 대학은 제외하여 효율적으로 준비하시기 바랍니다.'
 })
 
 function getGradeColor(grade) {
@@ -1189,6 +1198,8 @@ function getGradeColor(grade) {
 }
 
 function selectStudentAndGo(key) {
+  classFilter.value = 'ALL'
+  statusFilter.value = 'ALL'
   selectedStudentKey.value = key
   activeViewTab.value = 'individual'
   const target = document.getElementById('csat-analysis-section')
