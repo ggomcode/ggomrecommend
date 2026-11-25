@@ -3,6 +3,9 @@
     <!-- 📊 상단 7대 대입 지원 핵심 KPI 카드 (3학년 총원, 지원자, 접수건수, 수도권, 학추, 농어촌, 주요대) -->
     <StatOverviewKpiGrid />
 
+    <!-- 🏛️ 1단계: 주요 대학 및 권역별 합격 인원 단순 표 (실적 집계 & 인쇄 최적화) -->
+    <UnivPassCountTableWidget />
+
     <!-- ✨ 전체 대입통계 AI 심층 총평 배너 (Gemini AI 연계) -->
     <div v-if="comprehensiveAiReport?.overallSummary" class="bg-linear-to-r from-purple-900 via-indigo-900 to-slate-900 rounded-3xl p-6 sm:p-7 text-white shadow-md relative overflow-hidden border border-purple-800/40 no-print">
       <div class="relative z-10 space-y-2">
@@ -25,9 +28,6 @@
 
     <!-- 📈 대입 지원 개요 4대 분석 지표 (전형유형, 지역분포, 학급별, 계열별) -->
     <StatOverviewCharts class="no-print" />
-
-    <!-- 🏛️ 1단계: 주요 대학 및 권역별 합격 인원 단순 표 (실적 집계 & 인쇄 최적화) -->
-    <UnivPassCountTableWidget />
 
     <!-- 🖨️ 아래 2단계 분석 및 대학 목록은 현황표 인쇄 시 숨김 -->
     <div class="space-y-6 no-print">
