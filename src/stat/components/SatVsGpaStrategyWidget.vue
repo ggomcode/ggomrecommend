@@ -2910,6 +2910,15 @@ function isCsatRecord(r) {
   return false
 }
 
+// '모의결과' 시트에 공식 실채점 결과로 등록된 수능 레코드인지 판정
+// (가채점 시트에만 소수 입력된 경우 전체 모의고사/내신 비교 통계 왜곡 방지)
+function isOfficialCsatRecord(r) {
+  if (!isCsatRecord(r)) return false
+  const src = String(r.sourceTab || '').trim()
+  if (r.isFallbackFromTentative || src.includes('가채점')) return false
+  return src.includes('모의결과') || src.includes('결과') || Boolean(r.korStandardScore || r.mathStandardScore)
+}
+
 // 3, 5, 6, 7, 9, 10월 모의고사 레코드 판정
 function isTargetMockExam(r) {
   if (!r) return false
@@ -2940,14 +2949,15 @@ const isGradeZoomed = ref(true) // true: 3.5~7.0등급 집중 확대 | false: 1~
 
 function extractExamMonth(r) {
   if (!r) return null
-  if (isCsatRecord(r)) return 'CSAT'
+  if (isOfficialCsatRecord(r)) return 'CSAT'
+  if (isCsatRecord(r)) return null
   if (r.monthOrder) {
     const mo = Number(r.monthOrder)
-    if ([3, 4, 5, 6, 7, 8, 9, 10, 11].includes(mo)) return String(mo)
+    if ([3, 4, 5, 6, 7, 8, 9, 10].includes(mo)) return String(mo)
   }
   const name = String(r.examName || '').trim()
-  if (/^(10|[3-9]|11)$/.test(name)) return name
-  const match = name.match(/(10|[3-9]|11)\s*월?/)
+  if (/^(10|[3-9])$/.test(name)) return name
+  const match = name.match(/(10|[3-9])\s*월?/)
   if (match) return match[1]
   return null
 }
@@ -2962,13 +2972,13 @@ const highSchoolMockRecords = computed(() => {
   return all.filter(r => Number(r.grade) === 3 || !r.grade)
 })
 
-// 해당 대입학년도 수능 결과 존재 여부 판정:
+// 해당 대입학년도 공식 수능 결과 존재 여부 판정:
 // 2026학년도 이하 과거 연도는 수능 결과가 이미 확정되어 있으므로 true
-// 2027학년도 이상은 '2027모의가채점' 또는 '2027모의결과'의 A컬럼(rawMonth/examName)에 '수능'이 있는 경우에만 true
+// 2027학년도 이상은 '2027모의결과'에 공식 수능 성적이 등록된 경우에만 true (가채점 단독 입력 시에는 모의고사 기준 유지)
 const hasCsatData = computed(() => {
   if (Number(selectedAcademicYear.value) < 2027) return true
   const records = highSchoolMockRecords.value || []
-  return records.some(isCsatRecord)
+  return records.some(isOfficialCsatRecord)
 })
 
 // 대시보드 용어 통일: 수능 데이터 미등록 시 '모의고사', 수능 데이터 등록(또는 과거 수능) 시 '수능'
@@ -3627,18 +3637,17 @@ const currentSatAnalysis = computed(() => {
   const monthKey = selectedMockExamMonth.value
 
   if (monthKey === 'ALL') {
-    const csatRecords = records.filter(isCsatRecord)
-    const hasCsat = csatRecords.length > 0
-    if (hasCsat) {
-      return computeMockRecordAnalysis(csatRecords, 'CSAT', true)
+    const officialCsatRecords = records.filter(isOfficialCsatRecord)
+    if (officialCsatRecords.length > 0) {
+      return computeMockRecordAnalysis(officialCsatRecords, 'CSAT', true)
     }
     const target = records.filter(isTargetMockExam)
     return computeMockRecordAnalysis(target, 'ALL', false)
   }
 
   if (monthKey === 'CSAT') {
-    const csatRecords = records.filter(isCsatRecord)
-    return computeMockRecordAnalysis(csatRecords, 'CSAT', true)
+    const officialCsatRecords = records.filter(isOfficialCsatRecord)
+    return computeMockRecordAnalysis(officialCsatRecords, 'CSAT', true)
   }
 
   // 특정 월 필터링

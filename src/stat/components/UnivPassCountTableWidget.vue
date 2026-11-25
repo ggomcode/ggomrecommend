@@ -258,7 +258,7 @@
                       {{ app.grade || 3 }}학년 {{ app.classNum || '-' }}반 {{ app.studentNum || '-' }}번
                     </span>
                     <span class="font-bold text-slate-900">
-                      {{ app.name || '학생' }}
+                      {{ maskName(app.name) || '학생' }}
                     </span>
                     <span class="text-slate-400 font-mono text-[11px]">
                       내신 {{ app.allSubjectGrade || app.mainSubjectGrade || '-' }}등급
@@ -317,7 +317,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { Printer } from 'lucide-vue-next'
-import { useData } from '../composables/useStatData'
+import { useData, maskName } from '../composables/useStatData'
 import { schoolName } from '../../utils/schoolConfig'
 
 const displaySchoolName = computed(() => (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리고등학교')
