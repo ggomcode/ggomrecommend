@@ -769,7 +769,7 @@
 
           <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
             <span class="text-slate-500">최고 학력 코호트:</span>
-            <span class="text-indigo-700 font-black">2025 대입 (4.93등급) / 2027 대입 (5.00등급)</span>
+            <span class="text-indigo-700 font-black">2025 대입 ({{ graduateData2025.overallAvg }}등급) / 2027 대입 ({{ grade3Data.overallAvg }}등급)</span>
           </div>
         </div>
 
@@ -796,7 +796,7 @@
 
           <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
             <span class="text-slate-500">수능최저 2합5 최고:</span>
-            <span class="text-amber-800 font-black">현 고3 (31.9%) · 2025 수능 (19.1%)</span>
+            <span class="text-amber-800 font-black">현 고3 ({{ grade3Data.csat2Sum5Rate }}%) · 2025 수능 ({{ graduateData2025.csat2Sum5Rate }}%)</span>
           </div>
         </div>
 
@@ -823,7 +823,7 @@
 
           <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
             <span class="text-slate-500">영어 수능최저 효자:</span>
-            <span class="text-emerald-700 font-black">2025(4.02) · 2027(4.26) 압도적 선방</span>
+            <span class="text-emerald-700 font-black">2025({{ graduateData2025.engAvg }}) · 2027({{ grade3Data.engAvg }})</span>
           </div>
         </div>
       </div>
@@ -838,9 +838,9 @@
             </h4>
           </div>
           <p class="text-[11.5px] text-slate-700 m-0 leading-relaxed">
-            • <strong>수능 실채점 vs 모평 추이:</strong> 2025 대입 졸업생은 영어(4.02)와 탐구(5.16)의 강세로 2합5 충족률 19.1%를 달성한 반면, 2026 대입은 수능 불수능 난도로 국·수·탐 전반이 하락하였습니다.<br />
-            • <strong>현 고3(2027) 경쟁력:</strong> 현 고3은 영어(4.26) 및 탐구(4.97)에서 괄목할 성취를 보이며 상위권(12.8%)과 수능최저 2합5(31.9%)에서 5개년 중 가장 강력한 수시 최저 충족 기반을 확보하고 있습니다.<br />
-            • <strong>저학년(고1·고2) 과제:</strong> 고2(5.55등급)와 고1(5.59등급)은 영어(5.49, 5.73)에서 고3 대비 1.2~1.5등급의 큰 격차를 보이므로, 조기 개념 클리닉과 수능형 지문 적응 훈련이 시급합니다.
+            • <strong>수능 실채점 vs 모평 추이:</strong> 2025 대입 졸업생(평균 {{ graduateData2025.overallAvg }}등급)은 영어({{ graduateData2025.engAvg }})·탐구({{ graduateData2025.inqAvg }}) 기반 2합5 충족률 {{ graduateData2025.csat2Sum5Rate }}%를 기록했고, 2026 대입 졸업생은 평균 {{ graduateData2026.overallAvg }}등급(2합5 {{ graduateData2026.csat2Sum5Rate }}%)을 기록했습니다.<br />
+            • <strong>현 고3(2027) 경쟁력:</strong> 현 고3은 영어({{ grade3Data.engAvg }}) 및 탐구({{ grade3Data.inqAvg }})를 바탕으로 상위권({{ grade3Data.topTierRate }}%)과 수능최저 2합5({{ grade3Data.csat2Sum5Rate }}%) 충족 기반을 확보하고 있습니다.<br />
+            • <strong>저학년(고1·고2) 과제:</strong> 고2({{ grade2Data.overallAvg }}등급)와 고1({{ grade1Data.overallAvg }}등급)은 영어({{ grade2Data.engAvg }}, {{ grade1Data.engAvg }})와 핵심 교과 격차를 점검해 조기 개념 보강 및 수능형 지문 적응 훈련이 필요합니다.
           </p>
         </div>
       </div>
@@ -1566,50 +1566,28 @@ import { schoolName } from '../../../utils/schoolConfig'
 // 5개년 비교 뷰 모드 ('5YEAR': 2025~2029 5개년 시계열 비교 / '3GRADE': 재학생 고1~고3 집중 비교)
 const viewMode = ref('5YEAR')
 
-// 전년도(2026), 전전년도(2025) 고3 졸업생 수능 실채점 데이터
+// 전년도(2026), 전전년도(2025) 고3 졸업생 수능 실채점 데이터 (초기값은 비어있는 상태이며 시트 로드 후 실데이터로 채워짐)
 function getDefaultGraduateData(yearStr) {
-  if (yearStr === '2026') {
-    return {
-      grade: '2026',
-      academicYear: '2026',
-      gradeName: '전년도 고3 (2026 대입)',
-      badgeLabel: '졸업생 수능',
-      subLabel: '수능 실채점 232명',
-      sampleCount: 232,
-      overallAvg: '5.75',
-      korAvg: '6.10',
-      mathAvg: '5.80',
-      engAvg: '4.94',
-      inqAvg: '6.14',
-      histAvg: '-',
-      topTierRate: '3.4',
-      midTierRate: '56.6',
-      lowTierRate: '40.0',
-      csat2Sum5Rate: '7.8',
-      keyDiagnosis: '수능 난도 상승으로 국·수·탐 전반 하락, 영어(4.94) 상대적 선방 코호트',
-      hasData: true,
-      isGraduate: true
-    }
-  }
+  const is2026 = yearStr === '2026'
   return {
-    grade: '2025',
-    academicYear: '2025',
-    gradeName: '전전년도 고3 (2025 대입)',
+    grade: yearStr,
+    academicYear: yearStr,
+    gradeName: is2026 ? '전년도 고3 (2026 대입)' : '전전년도 고3 (2025 대입)',
     badgeLabel: '졸업생 수능',
-    subLabel: '수능 실채점 199명',
-    sampleCount: 199,
-    overallAvg: '4.93',
-    korAvg: '5.17',
-    mathAvg: '5.39',
-    engAvg: '4.02',
-    inqAvg: '5.16',
+    subLabel: '데이터 미등록',
+    sampleCount: 0,
+    overallAvg: '-',
+    korAvg: '-',
+    mathAvg: '-',
+    engAvg: '-',
+    inqAvg: '-',
     histAvg: '-',
-    topTierRate: '7.0',
-    midTierRate: '70.8',
-    lowTierRate: '22.2',
-    csat2Sum5Rate: '19.1',
-    keyDiagnosis: '영어(4.02) 수능최저 견인 및 2합5 충족 19.1% 달성 우수 코호트',
-    hasData: true,
+    topTierRate: '-',
+    midTierRate: '-',
+    lowTierRate: '-',
+    csat2Sum5Rate: '-',
+    keyDiagnosis: '수능 실채점 데이터 미등록',
+    hasData: false,
     isGraduate: true
   }
 }
@@ -1706,9 +1684,9 @@ function computeGraduateCsatStats(rows, yearStr) {
   const lowTierRate = sampleCount > 0 ? ((lowCount / sampleCount) * 100).toFixed(1) : '-'
   const csat2Sum5Rate = sampleCount > 0 ? ((csat2Sum5Count / sampleCount) * 100).toFixed(1) : '-'
 
-  const keyDiagnosis = yearStr === '2026'
-    ? '수능 난도 상승으로 국·수·탐 전반 하락, 영어(4.94) 상대적 선방 코호트'
-    : '영어(4.02) 수능최저 견인 및 2합5 충족 19.1% 달성 우수 코호트'
+  const keyDiagnosis = sampleCount > 0
+    ? `수능 실채점 ${sampleCount}명 기준 평균 ${overallAvg}등급 · 영어 ${engAvg}등급 · 2합5 충족 ${csat2Sum5Rate}%`
+    : '수능 실채점 데이터 미등록'
 
   return {
     grade: yearStr,
