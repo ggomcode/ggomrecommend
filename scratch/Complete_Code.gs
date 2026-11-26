@@ -23,6 +23,7 @@ const ENCRYPTED_SHEETS = [
   '2026수시',
   '2025수시',
   '2027모의결과',
+  '2026모의결과',
   '2027모의가채점'
 ];
 
@@ -423,6 +424,25 @@ function executeEncryptedDeploy(sourceSheet, targetSs, password, isFullSync) {
 
     const srcData = sourceSheet.getRange(1, 1, srcLastRow, srcLastCol).getValues();
     const srcHeaders = srcData[0];
+    const srcSubHeaders = srcData.length > 1 ? srcData[1] : [];
+    const isTwoRowMockHeader =
+      (sheetName.includes('모의') || sheetName.includes('가채점')) &&
+      srcSubHeaders.some(s => /등급|표준점수|백분위|원점수|과목명/.test(String(s || '')));
+
+    const resolvedKeys = [];
+    let currentTop = '';
+    for (let j = 0; j < srcHeaders.length; j++) {
+      const top = String(srcHeaders[j] || '').trim();
+      if (top) currentTop = top;
+      const sub = isTwoRowMockHeader ? String(srcSubHeaders[j] || '').trim() : '';
+      if (isTwoRowMockHeader && currentTop && sub) {
+        resolvedKeys.push(`${currentTop}_${sub}`);
+      } else if (top) {
+        resolvedKeys.push(top);
+      } else {
+        resolvedKeys.push(`col_${j}`);
+      }
+    }
 
     // [보안 안전장치] 기존 배포 시트에 암호화 데이터가 있을 경우 비밀번호 일치 여부 사전 검증
     const targetLastRow = targetSheet.getLastRow();
@@ -465,20 +485,27 @@ function executeEncryptedDeploy(sourceSheet, targetSs, password, isFullSync) {
       }
     }
 
-    // 1행 데이터 암호화 생성
+    // 1행 데이터 암호화 생성 (2줄 복합 헤더 모의고사 시트는 3행부터 데이터 시작 + __row 배열 보존)
     const cipherRows = [];
-    for (let i = 1; i < srcData.length; i++) {
+    const dataStartIdx = isTwoRowMockHeader ? 2 : 1;
+    for (let i = dataStartIdx; i < srcData.length; i++) {
       const row = srcData[i];
       const rowObj = {};
+      const cleanRow = [];
       let hasData = false;
       for (let j = 0; j < srcHeaders.length; j++) {
         const val = row[j];
+        const formatted = (val instanceof Date) ? Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM-dd') : val;
+        cleanRow.push(formatted !== null && formatted !== undefined ? formatted : '');
         if (val !== '' && val !== null && val !== undefined) {
           hasData = true;
-          rowObj[srcHeaders[j]] = (val instanceof Date) ? Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM-dd') : val;
+          rowObj[resolvedKeys[j]] = formatted;
         }
       }
       if (hasData) {
+        if (sheetName.includes('모의') || sheetName.includes('가채점')) {
+          rowObj.__row = cleanRow;
+        }
         cipherRows.push([encryptAES(JSON.stringify(rowObj), password)]);
       } else {
         cipherRows.push(['']);

@@ -994,9 +994,7 @@ export async function getStatSampleCipher(sheetId, forceReload = false) {
       return memorySampleCipher === STAT_NOT_ENCRYPTED_FLAG ? '' : memorySampleCipher
     }
     const sess = sessionStorage.getItem(`${STAT_SAMPLE_CIPHER_KEY}_${cleanId}`) || 
-                 localStorage.getItem(`${STAT_SAMPLE_CIPHER_KEY}_${cleanId}`) ||
-                 sessionStorage.getItem(STAT_SAMPLE_CIPHER_KEY) || 
-                 localStorage.getItem(STAT_SAMPLE_CIPHER_KEY)
+                 localStorage.getItem(`${STAT_SAMPLE_CIPHER_KEY}_${cleanId}`)
     if (sess) {
       if (sess === STAT_NOT_ENCRYPTED_FLAG) {
         memorySampleCipher = STAT_NOT_ENCRYPTED_FLAG
@@ -1540,7 +1538,7 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
   const records = []
 
   for (let i = 1; i < rows.length; i++) {
-    const r = rows[i]
+    let r = rows[i]
     if (!r || r.length === 0) continue
 
     let rowData = null
@@ -1551,6 +1549,9 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
       if (decryptedStr) {
         try {
           rowData = JSON.parse(decryptedStr)
+          if (rowData && Array.isArray(rowData.__row)) {
+            r = rowData.__row
+          }
         } catch (e) {}
       }
     }
@@ -1720,7 +1721,12 @@ async function parseSingleMockTab(cleanId, targetTab, customPassword = null) {
         /(선택|과목|점수|등급|백분위|합계|총점)/.test(val)
     }
 
-    if (isStandard44) {
+    const useStandard44Row = isStandard44 || (
+      isEncrypted && rowData && Array.isArray(rowData.__row) && rowData.__row.length >= 35 &&
+      (targetTab.includes('모의결과') || targetTab.includes('모의가채점') || targetTab.includes('가채점'))
+    )
+
+    if (useStandard44Row) {
       // 44개 컬럼 표준 규격 직접 인덱싱 파싱 (2027모의결과, 2027모의가채점 탭 등)
       name = String(r[5] || '').trim()
       if (isHeaderLikeName(name)) {
