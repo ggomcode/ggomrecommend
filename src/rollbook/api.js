@@ -188,8 +188,8 @@ export const SheetAPI = {
   },
 
   /**
-   * Send attendance override records to Google Apps Script Web App
-   * @param {Array|Object} records [{ key, date, period, studentId, ban, num, name, room, status }]
+   * Send attendance override records to Google Apps Script Web App (supports chunked batching)
+   * @param {Array|Object} records [{ key, date, period, studentId, ban, num, name, room, status, reason }]
    */
   async saveAttendanceRecords(records) {
     const url = this.getGasUrl();
@@ -198,27 +198,35 @@ export const SheetAPI = {
       return { status: 'no_gas_url', message: 'GAS URL 미설정' };
     }
 
-    const payload = Array.isArray(records) ? { records } : records;
+    const list = Array.isArray(records) ? records : [records];
+    const CHUNK_SIZE = 200;
+    let lastResult = { status: 'success', count: 0 };
 
-    // Use text/plain to avoid CORS preflight OPTIONS check in GAS Web App
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8'
-      },
-      body: JSON.stringify(payload)
-    });
+    for (let i = 0; i < list.length; i += CHUNK_SIZE) {
+      const chunk = list.slice(i, i + CHUNK_SIZE);
+      const payload = Array.isArray(records) ? { records: chunk } : chunk[0];
 
-    if (!response.ok) {
-      throw new Error(`GAS POST failed with HTTP ${response.status}`);
+      // Use text/plain to avoid CORS preflight OPTIONS check in GAS Web App
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`GAS POST failed with HTTP ${response.status}`);
+      }
+
+      try {
+        lastResult = await response.json();
+      } catch (e) {
+        lastResult = { status: 'success', raw: true };
+      }
     }
 
-    try {
-      return await response.json();
-    } catch (e) {
-      // Sometimes GAS redirects with opaque or plain response
-      return { status: 'success', raw: true };
-    }
+    return lastResult;
   },
 
   /**

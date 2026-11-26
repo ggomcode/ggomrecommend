@@ -352,7 +352,7 @@
                 </svg>
               </div>
               <span class="-mr-6 sm:-mr-7 pl-3.5 pr-5 sm:pr-6 py-1.5 rounded-l-full rounded-r-none text-xs font-bold shadow-xs whitespace-nowrap shrink-0 bg-teal-100 text-teal-800 border-y border-l border-r-0 border-teal-200">
-                고3 이동수업 · 원적학급
+                고3 선택과목 · 원적학급
               </span>
             </div>
 
@@ -365,7 +365,7 @@
             </h3>
             
             <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              고등학교 3학년 선택교육과정 이동수업(1~12반) 및 원적학급(1~11반) 출석부 생성·인쇄, 결석계 대장 조회/인쇄, 급식 인원 캘린더, 학생 검색 시스템을 이용합니다.
+              고등학교 3학년 선택교육과정 선택과목(1~12반) 및 원적학급(1~11반) 출석부 생성·인쇄, 결석계 대장 조회/인쇄, 급식 인원 캘린더, 학생 검색 시스템을 이용합니다.
             </p>
           </div>
 

@@ -325,7 +325,7 @@
                 <div class="modal-row">
                   <select id="printModalViewSelect" class="styled-select print-view-select">
                     <option value="homeroom">원적학급 주간 출석부 (1~11반)</option>
-                    <option value="moving">이동수업 출석부 (1~12반 교실)</option>
+                    <option value="moving">선택과목 출석부 (1~12반 교실)</option>
                   </select>
                 </div>
               </div>
@@ -401,6 +401,136 @@
                 <button type="button" class="btn btn-secondary" id="printNeisReportBtn">🖨️ 집계표 인쇄</button>
               </div>
               <button type="button" class="btn btn-primary" id="closeNeisReportFooterBtn">닫기</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 일자별 사유 & 미래 일정 입력 모달 -->
+        <div class="modal-backdrop no-print" id="dailyReasonModal" style="display: none;">
+          <div class="modal-dialog" style="max-width: 500px; background: #ffffff;">
+            <div class="modal-header">
+              <div class="modal-title-group">
+                <span class="modal-icon">📝</span>
+                <div>
+                  <h3 class="modal-title" id="drModalTitle">일자별 출결 · 사유 입력</h3>
+                  <p class="modal-desc">표준 사유를 선택하거나 직접 입력하고, 결석 시 전 교시를 한 번에 표시할 수 있습니다.</p>
+                </div>
+              </div>
+              <button type="button" class="modal-close-btn" id="closeDrModalBtn" title="닫기">&times;</button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
+              <div id="drStudentSelectWrap" style="display: none;">
+                <label class="modal-label">학생 선택 (반/번호/성명):</label>
+                <select id="drStudentSelect" class="styled-select" style="width: 100%;"></select>
+              </div>
+              <div id="drStudentInfoWrap">
+                <label class="modal-label">학생 정보:</label>
+                <input type="text" id="drStudentInfo" class="styled-input" readonly style="background: #f8fafc;" />
+              </div>
+              <div class="row" style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                  <label class="modal-label">날짜 (미래 일정 사전 입력 가능):</label>
+                  <input type="date" id="drDateInput" class="styled-input" />
+                </div>
+                <div style="flex: 1;">
+                  <label class="modal-label">출결 구분:</label>
+                  <select id="drStatusSelect" class="styled-select" style="width: 100%;">
+                    <option value="">(상태 유지 / 사유만 저장)</option>
+                    <option value="병">질병 (병결·병지각)</option>
+                    <option value="인(생리)">출석인정 (생리통)</option>
+                    <option value="인(체험)">출석인정 (교외체험학습)</option>
+                    <option value="인(전염병)">출석인정 (법정전염병)</option>
+                    <option value="인(경조사)">출석인정 (경조사)</option>
+                    <option value="미">미인정 (무단)</option>
+                    <option value="기">기타 결석</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label class="modal-label">사유 선택 (드롭다운 또는 직접 입력):</label>
+                <select id="drReasonPresetSelect" class="styled-select" style="width: 100%; margin-bottom: 6px;">
+                  <option value="">-- 표준 사유 선택 --</option>
+                  <option value="생리통">생리통 (출석인정)</option>
+                  <option value="학교장허가 교외체험학습">학교장허가 교외체험학습 (출석인정)</option>
+                  <option value="법정전염병">법정전염병 · 독감 등 (출석인정)</option>
+                  <option value="경조사">경조사 (출석인정)</option>
+                  <option value="감기/몸살">감기/몸살 (질병)</option>
+                  <option value="두통/복통">두통/복통 (질병)</option>
+                  <option value="병원 진료">병원 진료 (질병)</option>
+                  <option value="개인 사정">개인 사정 (미인정/기타)</option>
+                  <option value="__CUSTOM__">✏️ 직접 입력...</option>
+                </select>
+                <input type="text" id="drReasonCustomInput" class="styled-input" placeholder="사유를 직접 입력하세요 (예: 독감, 치과 진료, 조모상 등)" />
+              </div>
+              <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; cursor: pointer; font-size: 12.5px; color: #1e40af; font-weight: 700;">
+                <input type="checkbox" id="drApplyAllPeriodsChk" checked style="width: 16px; height: 16px; cursor: pointer;" />
+                <span>⚡ 결석 원클릭 적용: 해당 날짜 모든 교시(조회~종례)에 일괄 표시</span>
+              </label>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+              <button type="button" class="btn btn-secondary" id="clearDrBtn" style="color: #dc2626;">사유 삭제</button>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn btn-secondary" id="cancelDrBtn">취소</button>
+                <button type="button" class="btn btn-primary" id="saveDrBtn">저장 · 반영</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 반별 다중 월 출결 CSV 업로드 모달 -->
+        <div class="modal-backdrop no-print" id="homeroomCsvUploadModal" style="display: none;">
+          <div class="modal-dialog" style="max-width: 780px; background: #ffffff;">
+            <div class="modal-header">
+              <div class="modal-title-group">
+                <span class="modal-icon">📂</span>
+                <div>
+                  <h3 class="modal-title">반별 출결 현황 CSV 일괄 업로드</h3>
+                  <p class="modal-desc">여러 달의 CSV 파일을 한 번에 올려 원적학급 출석부·사유·선택과목 출석부에 반영합니다.</p>
+                </div>
+              </div>
+              <button type="button" class="modal-close-btn" id="closeCsvModalBtn" title="닫기">&times;</button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; background: #f8fafc; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0;">
+                <div>
+                  <label class="modal-label">대상 학급:</label>
+                  <select id="csvTargetBanSelect" class="styled-select"></select>
+                </div>
+                <div>
+                  <label class="modal-label">반영 월 필터:</label>
+                  <select id="csvMonthFilterSelect" class="styled-select">
+                    <option value="ALL">전체 월 일괄 반영</option>
+                  </select>
+                </div>
+                <div style="flex: 1; min-width: 220px;">
+                  <label class="modal-label">CSV 파일 선택 (여러 달 동시 선택 가능):</label>
+                  <input type="file" id="csvUploadFileInput" accept=".csv" multiple class="styled-input" style="padding: 5px 8px; background: #fff;" />
+                </div>
+              </div>
+              <div id="csvPreviewSummary" style="font-size: 12px; color: #475569; font-weight: 600;">
+                CSV 파일을 선택하면 출석인정 4종(생리·체험·전염병·경조사) 자동 분류 결과를 미리 볼 수 있습니다.
+              </div>
+              <div style="max-height: 320px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <table class="roster-table" style="width: 100%; font-size: 11.5px;">
+                  <thead>
+                    <tr style="background: #f1f5f9;">
+                      <th style="padding: 6px;">일자</th>
+                      <th style="padding: 6px;">학생</th>
+                      <th style="padding: 6px;">CSV 구분</th>
+                      <th style="padding: 6px;">시스템 분류(수정 가능)</th>
+                      <th style="padding: 6px;">교시</th>
+                      <th style="padding: 6px;">사유</th>
+                    </tr>
+                  </thead>
+                  <tbody id="csvPreviewBody">
+                    <tr><td colspan="6" style="padding: 20px; text-align: center; color: #94a3b8;">업로드할 CSV 파일을 선택해 주세요.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" id="cancelCsvModalBtn">닫기</button>
+              <button type="button" class="btn btn-primary" id="applyCsvUploadBtn" disabled>출석부에 일괄 반영</button>
             </div>
           </div>
         </div>
@@ -574,7 +704,7 @@ let appInstance = null
 
 const viewLabelMap = {
   homeroom: '원적학급 주간 출석부 데이터를 불러오는 중입니다...',
-  moving: '이동수업 교실별 출석부를 불러오는 중입니다...',
+  moving: '선택과목 교실별 출석부를 불러오는 중입니다...',
   today: '오늘의 실시간 출결 현황을 집계하는 중입니다...',
   absence: '결석계 접수 대장 데이터를 조회하는 중입니다...',
   lunch: '급식 식단표 데이터를 불러오는 중입니다...',
@@ -585,14 +715,14 @@ const printSheetUrl = computed(() => SheetAPI.getPrintSheetUrl())
 // 사이드바 메뉴 정의 (전체 테마와 일치하는 효율적 구조)
 const rollbookMenus = [
   { key: 'homeroom', id: 'navHomeroomBtn', label: '원적학급 출석부', sub: '담임용', icon: '🏫', desc: '담임교사용 학급 출석부 (출석체크 및 결석계 연동)' },
-  { key: 'moving', id: 'navMovingBtn', label: '이동수업 출석부', sub: '교과용', icon: '🏃', desc: '선택교과 교실별 학생 출결 체크' },
+  { key: 'moving', id: 'navMovingBtn', label: '선택과목 출석부', sub: '교과용', icon: '🏃', desc: '선택교과 교실별 학생 출결 체크' },
   { key: 'today', id: 'navTodayBtn', label: '오늘의 출결 현황', sub: '실시간', icon: '📢', desc: '전체 학급 실시간 출결 집계 및 조회' },
 ]
 
 const serviceMenus = [
   { key: 'absence', id: 'navAbsenceBtn', label: '결석계 관리', sub: '대장·인쇄', highlight: true, icon: '📑', desc: '온라인 결석계 접수 대장 조회 및 A4 공식서식 인쇄' },
   { key: 'lunch', id: 'navLunchBtn', label: '급식 캘린더', sub: '', icon: '🍱', desc: '월간 급식 식단표 및 영양 정보' },
-  { key: 'finder', id: 'navFinderBtn', label: '학생 검색', sub: '', icon: '🔍', desc: '학생 이동수업 반 및 시간표 빠른 검색' },
+  { key: 'finder', id: 'navFinderBtn', label: '학생 검색', sub: '', icon: '🔍', desc: '학생 선택과목 반 및 시간표 빠른 검색' },
 ]
 
 const allMenus = [...rollbookMenus, ...serviceMenus]

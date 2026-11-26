@@ -1006,6 +1006,41 @@
   border-right: 2px solid #000000 !important; /* 요일과 요일 구분선 (진한선) */
 }
 
+.homeroom-table .col-reason-header {
+  background-color: #eef2ff;
+  color: #1e3a8a;
+  font-size: 9px;
+}
+
+.homeroom-table .col-daily-reason {
+  font-size: 8.5px;
+  color: #334155;
+  text-align: left;
+  padding: 1.5px 4px;
+  white-space: normal;
+  word-break: keep-all;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.homeroom-table .col-daily-reason:hover {
+  background-color: #f8fafc;
+}
+
+.daily-reason-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media print {
+  .homeroom-sheet-part-next {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+}
+
 .homeroom-table .day-group-header {
   border-bottom: 1px solid #000000 !important;
   border-right: 2px solid #000000 !important; /* 요일 헤더 구분선 (진한선) */

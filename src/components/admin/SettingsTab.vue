@@ -565,7 +565,7 @@
           <div class="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-700 space-y-3">
             <div class="flex items-center justify-between">
               <label class="block text-xs font-bold text-slate-800 dark:text-slate-200">
-                5) 선택교과 출석관리 구글 스프레드시트 ID (고3 이동수업 · 원적학급 출석부) <span class="text-rose-500 font-extrabold">*필수</span>
+                5) 선택교과 출석관리 구글 스프레드시트 ID (고3 선택과목 · 원적학급 출석부) <span class="text-rose-500 font-extrabold">*필수</span>
               </label>
               <a
                 v-if="realGoogleSheetRollbookId"

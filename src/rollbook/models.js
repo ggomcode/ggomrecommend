@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Data Model & Business Logic for ggomrollbook
  */
 
@@ -31,6 +31,17 @@ export const AcademicConfig = {
   // 급식 운영 행사 (fullDayEvent이지만 급식 운영 — 여기 포함되면 급식 카운트)
   lunchServedKeywords: ['전국연합', '앨범촬영', '가온제']
 };
+
+export const STANDARD_ATTENDANCE_REASONS = [
+  { label: '생리통 (출석인정)', value: '생리통', defaultStatus: '인(생리)' },
+  { label: '학교장허가 교외체험학습 (출석인정)', value: '학교장허가 교외체험학습', defaultStatus: '인(체험)' },
+  { label: '법정전염병 · 독감 등 (출석인정)', value: '법정전염병', defaultStatus: '인(전염병)' },
+  { label: '경조사 (출석인정)', value: '경조사', defaultStatus: '인(경조사)' },
+  { label: '감기/몸살 (질병)', value: '감기/몸살', defaultStatus: '병' },
+  { label: '두통/복통 (질병)', value: '두통/복통', defaultStatus: '병' },
+  { label: '병원 진료 (질병)', value: '병원 진료', defaultStatus: '병' },
+  { label: '개인 사정 (미인정/기타)', value: '개인 사정', defaultStatus: '' }
+];
 
 // ──── HTML Escape Utility ────────────────────────────────────────────────────
 const _escMap = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -221,6 +232,21 @@ export const RollbookModel = {
     const firstVal = (csvRows[0] && csvRows[0][0]) ? String(csvRows[0][0]).trim() : '';
     const isHeader = !firstVal.match(/^\d{4}-\d{2}-\d{2}/);
     const startIdx = isHeader ? 1 : 0;
+
+    // Header-based column resolution (supports both legacy 10-col and new 11-col with I=사유)
+    let reasonIdx = -1;
+    let updatedAtIdx = 8;
+    let docSubIdx = 9;
+    if (isHeader && Array.isArray(csvRows[0])) {
+      const hdr = csvRows[0].map(h => String(h || '').replace(/\s+/g, '').trim());
+      const foundReason = hdr.findIndex(h => h === '사유' || h.includes('사유'));
+      const foundUpdated = hdr.findIndex(h => h === '수정일시' || h.includes('수정'));
+      const foundDoc = hdr.findIndex(h => h.includes('서류'));
+      if (foundReason !== -1) reasonIdx = foundReason;
+      if (foundUpdated !== -1) updatedAtIdx = foundUpdated;
+      if (foundDoc !== -1) docSubIdx = foundDoc;
+    }
+
     for (let r = startIdx; r < csvRows.length; r++) {
       const row = csvRows[r];
       if (!row || row.length < 3) continue;
@@ -233,13 +259,14 @@ export const RollbookModel = {
       const name = (row[5] || '').trim();
       const room = (row[6] || '').trim();
       const status = (row[7] || '').trim();
-      const updatedAt = (row[8] || '').trim();
-      const docSubRaw = (row[9] || '').trim();
+      const reason = reasonIdx !== -1 ? String(row[reasonIdx] || '').trim() : '';
+      const updatedAt = String(row[updatedAtIdx] || '').trim();
+      const docSubRaw = String(row[docSubIdx] || '').trim();
       const docSubmitted = docSubRaw === '1' || docSubRaw.toLowerCase() === 'true' || docSubRaw === '제출' || docSubRaw.toUpperCase() === 'Y';
 
       // If key is present, or construct key: date_period_studentId
       const finalKey = key || `${date}_${period}_${ban}${num.padStart(2, '0')}`;
-      if (finalKey && status) {
+      if (finalKey && (status || reason)) {
         overridesMap.set(finalKey, {
           key: finalKey,
           date,
@@ -249,6 +276,7 @@ export const RollbookModel = {
           name,
           room,
           status,
+          reason,
           updatedAt,
           docSubmitted
         });
@@ -256,6 +284,144 @@ export const RollbookModel = {
     }
 
     return overridesMap;
+  },
+
+  /**
+   * 특정 학생·일자의 일일 사유 조회 (조례~종례 overridesMap 우선, 없으면 승인된 결석계 대장 사유)
+   */
+  getDailyReason(studentId, dateStr, overridesMap, registryMap = null) {
+    if (!studentId || !dateStr) return '';
+    if (overridesMap) {
+      const periods = ['조', 1, 2, 3, 4, 5, 6, 7, '종'];
+      for (const p of periods) {
+        const rec = overridesMap.get(`${dateStr}_${p}_${studentId}`);
+        if (rec && rec.reason && String(rec.reason).trim()) {
+          return String(rec.reason).trim();
+        }
+      }
+    }
+    if (registryMap) {
+      const regKey = `${dateStr}_${studentId}`;
+      const reg = registryMap.get ? registryMap.get(regKey) : registryMap[regKey];
+      if (reg && reg.reason && String(reg.reason).trim()) {
+        return String(reg.reason).trim();
+      }
+    }
+    return '';
+  },
+
+  /**
+   * CSV 일자 문자열("2026.03.10.(화)" 또는 "2026-03-10")을 YYYY-MM-DD로 정규화
+   */
+  parseCsvDateString(rawDate) {
+    const s = String(rawDate || '').trim();
+    const m = s.match(/(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+    if (!m) return '';
+    return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  },
+
+  /**
+   * CSV 결시교시 문자열("조회,1교시,2교시,...,종례,")을 교시 배열(['조', 1, 2, ..., '종'])로 변환
+   */
+  parseCsvPeriods(rawPeriods) {
+    const tokens = String(rawPeriods || '').split(',').map(t => t.trim()).filter(Boolean);
+    const result = [];
+    for (const t of tokens) {
+      if (t.includes('조회') || t === '조') {
+        if (!result.includes('조')) result.push('조');
+      } else if (t.includes('종례') || t === '종') {
+        if (!result.includes('종')) result.push('종');
+      } else {
+        const m = t.match(/(\d+)/);
+        if (m) {
+          const p = parseInt(m[1], 10);
+          if (p >= 1 && p <= 7 && !result.includes(p)) result.push(p);
+        }
+      }
+    }
+    return result;
+  },
+
+  /**
+   * CSV 출결구분 + 사유(F열)를 시스템 표준 상태코드로 자동 분류
+   * - 출석인정(결석/지각/조퇴/결과): 생리통 / 교외체험학습 / 전염병 / 경조사 4종 구분
+   */
+  classifyCsvAttendanceStatus(catText, reasonText) {
+    const cat = String(catText || '').replace(/\s+/g, '').trim();
+    const reason = String(reasonText || '').replace(/\s+/g, '').trim();
+
+    if (cat.includes('질병')) return '병';
+    if (cat.includes('미인정') || cat.includes('무단')) return '미';
+    if (cat.includes('기타')) return '기';
+
+    if (cat.includes('인정')) {
+      if (/생리|월경/.test(reason)) return '인(생리)';
+      if (/체험|교외/.test(reason)) return '인(체험)';
+      if (/전염|감염|법정|독감|코로나|인플루엔자|수두|결핵|홍역|유행성/.test(reason)) return '인(전염병)';
+      if (/경조|장례|조부|조모|외조|부친|모친|조부모|결혼|상\(/.test(reason)) return '인(경조사)';
+      return '인(체험)';
+    }
+
+    return '병';
+  },
+
+  /**
+   * 원적학급 월별 출결 현황 CSV 텍스트 파싱
+   */
+  parseHomeroomCsv(csvRows, targetBan, allStudents) {
+    if (!csvRows || csvRows.length < 2) return [];
+    const headers = csvRows[0].map(h => String(h || '').replace(/\s+/g, '').trim());
+    const idxDate = headers.findIndex(h => h.includes('일자') || h.includes('날짜'));
+    const idxNum = headers.findIndex(h => h === '번호');
+    const idxName = headers.findIndex(h => h.includes('성명') || h.includes('이름'));
+    const idxCat = headers.findIndex(h => h.includes('출결구분') || h.includes('구분'));
+    const idxPeriods = headers.findIndex(h => h.includes('결시교시') || h.includes('교시'));
+    const idxReason = headers.findIndex(h => h.includes('사유'));
+
+    const dIdx = idxDate !== -1 ? idxDate : 0;
+    const nIdx = idxNum !== -1 ? idxNum : 1;
+    const nmIdx = idxName !== -1 ? idxName : 2;
+    const cIdx = idxCat !== -1 ? idxCat : 3;
+    const pIdx = idxPeriods !== -1 ? idxPeriods : 4;
+    const rIdx = idxReason !== -1 ? idxReason : 5;
+
+    const classStudents = (allStudents || []).filter(s => Number(s.ban) === Number(targetBan));
+    const entries = [];
+
+    for (let i = 1; i < csvRows.length; i++) {
+      const row = csvRows[i];
+      if (!row || row.length < 4) continue;
+      const dateStr = this.parseCsvDateString(row[dIdx]);
+      if (!dateStr) continue;
+
+      const numVal = parseInt(String(row[nIdx] || '').trim(), 10);
+      const nameVal = String(row[nmIdx] || '').trim();
+      const catText = String(row[cIdx] || '').trim();
+      const periods = this.parseCsvPeriods(row[pIdx]);
+      const reason = String(row[rIdx] || '').trim();
+      const status = this.classifyCsvAttendanceStatus(catText, reason);
+
+      let matchedStudent = classStudents.find(s => s.num === numVal && (!nameVal || s.name === nameVal));
+      if (!matchedStudent && nameVal) {
+        matchedStudent = classStudents.find(s => s.name === nameVal);
+      }
+
+      entries.push({
+        date: dateStr,
+        month: dateStr.slice(0, 7), // YYYY-MM
+        ban: targetBan,
+        num: matchedStudent ? matchedStudent.num : (isNaN(numVal) ? '' : numVal),
+        name: matchedStudent ? matchedStudent.name : nameVal,
+        studentId: matchedStudent ? matchedStudent.studentId : '',
+        catText,
+        status,
+        periods: periods.length > 0 ? periods : ['조', 1, 2, 3, 4, 5, 6, 7, '종'],
+        reason,
+        matched: !!matchedStudent
+      });
+    }
+
+    return entries;
   },
 
   /**

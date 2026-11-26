@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Moving Class Rollbook View Generator (이동수업 출석부 1~12반)
  * Generates 2 pages per day on A4 Landscape (15mm margins).
  * Page 1: 1~4 Periods (4 Columns)
@@ -198,6 +198,9 @@ export const MovingRollbookView = {
         cellTitle = `[공식 결석계 승인: ${status.fullStatus || currentStatusText}] 증빙서류 확인 완료 | 클릭 시 변경 확인`;
       }
 
+      const dailyReason = RollbookModel.getDailyReason(st.studentId, dayInfo.dateStr, overridesMap, registryMap);
+      const combinedRemark = [displayRemark, dailyReason].filter(Boolean).join(' · ');
+
       return `
         <tr class="student-row ${is50Dark}">
           <td class="col-seq">${idx + 1}</td>
@@ -220,7 +223,7 @@ export const MovingRollbookView = {
               title="${cellTitle}">
             ${escapeHtml(status.text) || '<span class="check-box"></span>'}${cellBadge}
           </td>
-          <td class="col-remark" data-student-id="${escapeHtml(st.studentId)}" data-base-remark="${escapeHtml(baseRemark)}">${escapeHtml(displayRemark)}</td>
+          <td class="col-remark" data-student-id="${escapeHtml(st.studentId)}" data-base-remark="${escapeHtml(baseRemark)}" title="${escapeHtml(combinedRemark)}">${escapeHtml(combinedRemark)}</td>
         </tr>
       `;
     }).join('');
@@ -238,6 +241,13 @@ export const MovingRollbookView = {
 
         <div class="table-wrapper">
           <table class="roster-table">
+            <colgroup>
+              <col style="width: 28px;">
+              <col style="width: 46px;">
+              <col style="width: 50px;">
+              <col style="width: 34px;">
+              <col>
+            </colgroup>
             <thead>
               <tr>
                 <th class="col-seq">연번</th>

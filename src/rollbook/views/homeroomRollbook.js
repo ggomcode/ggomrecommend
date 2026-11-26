@@ -1,4 +1,4 @@
-﻿/**
+/**
  * HomeroomRollbookView - 원적학급(담임용) 주간 출석부 렌더링 뷰
  * 담임교사가 자신의 학급 학생 전체의 주간 출결(조례~종례)을 한눈에 조회·수정합니다.
  *
@@ -39,12 +39,17 @@ export const HomeroomRollbookView = {
       const students = (allStudents || []).filter(s => s.ban === ban);
       students.sort((a, b) => a.num - b.num);
 
-      return this._renderClassSheet(ban, students, holidaysMap, weekObj, options);
+      const part1Days = days.slice(0, 3); // 월, 화, 수
+      const part2Days = days.slice(3);    // 목, 금
+      const parts = [part1Days, part2Days].filter(p => p.length > 0);
+      return parts.map((pDays, pIdx) =>
+        this._renderClassSheet(ban, students, holidaysMap, weekObj, options, pDays, pIdx + 1, parts.length)
+      ).join('\n');
     }).join('\n');
   },
 
-  _renderClassSheet(ban, students, holidaysMap, weekObj, options = {}) {
-    const days = weekObj.days; // [{ dateStr, dayOfWeek, label }, ...]
+  _renderClassSheet(ban, students, holidaysMap, weekObj, options = {}, targetDays = null, partNum = 1, totalParts = 1) {
+    const days = targetDays || weekObj.days; // [{ dateStr, dayOfWeek, label }, ...]
 
     // Build day/session columns header
     // Each day has: 조례('조'), 1..maxPeriod, 종례('종')
@@ -85,17 +90,17 @@ export const HomeroomRollbookView = {
       const dayEndClass = isLastDay ? 'col-day-end' : '';
 
       headerTopRow += `
-        <th colspan="${spec.periods.length}" class="col-day-header ${dayEndClass}">
+        <th colspan="${spec.periods.length + 1}" class="col-day-header ${dayEndClass}">
           ${spec.label} (${spec.day})
         </th>
       `;
 
-      spec.periods.forEach((p, pIdx) => {
-        const isDayEnd = (pIdx === spec.periods.length - 1);
-        const pClass = isDayEnd ? 'col-day-end col-period-header' : 'col-period-header';
-        headerBottomRow += `<th class="${pClass}">${p}</th>`;
+      spec.periods.forEach((p) => {
+        headerBottomRow += `<th class="col-period-header">${p}</th>`;
         colGroupHtml += `<col class="col-period" style="width: 26px;">`;
       });
+      headerBottomRow += `<th class="col-day-end col-reason-header">사유</th>`;
+      colGroupHtml += `<col class="col-daily-reason">`;
     });
 
     // Student rows
@@ -183,8 +188,6 @@ export const HomeroomRollbookView = {
           }
 
           const tintClass = isTint ? 'cell-tint-10' : '';
-          const isDayEnd = (pIdx === spec.periods.length - 1);
-          const dayEndClass = isDayEnd ? 'col-day-end' : '';
           const overriddenClass = isOverridden ? `cell-overridden status-${overrideCat}` : '';
 
           let cellBadge = '';
@@ -203,7 +206,7 @@ export const HomeroomRollbookView = {
           }
 
           cellsHtml += `
-            <td class="period-cell interactive-cell ${tintClass} ${dayEndClass} ${overriddenClass} ${isDocSubmitted} ${registryClass} ${conflictClass}"
+            <td class="period-cell interactive-cell ${tintClass} ${overriddenClass} ${isDocSubmitted} ${registryClass} ${conflictClass}"
                 data-action="attendance-cell"
                 data-student-id="${escapeHtml(st.studentId)}"
                 data-date="${escapeHtml(dayInfo.dateStr)}"
@@ -221,6 +224,20 @@ export const HomeroomRollbookView = {
               ${escapeHtml(cellText) || '<span class="check-box-sm"></span>'}${cellBadge}
             </td>`;
         });
+
+        const dailyReason = RollbookModel.getDailyReason(st.studentId, dayInfo.dateStr, overridesMap, registryMap);
+        cellsHtml += `
+          <td class="col-daily-reason col-day-end interactive-reason-cell"
+              data-action="daily-reason-cell"
+              data-student-id="${escapeHtml(st.studentId)}"
+              data-date="${escapeHtml(dayInfo.dateStr)}"
+              data-ban="${escapeHtml(st.ban)}"
+              data-num="${escapeHtml(st.num)}"
+              data-name="${escapeHtml(st.name)}"
+              data-reason="${escapeHtml(dailyReason)}"
+              title="${dailyReason ? escapeHtml(dailyReason) + ' (클릭하여 사유 수정)' : '클릭하여 사유 입력'}">
+            ${dailyReason ? `<span class="daily-reason-text">${escapeHtml(dailyReason)}</span>` : ''}
+          </td>`;
       });
 
       const displayRemark = RollbookModel.getEffectiveDisplayRemark(st.pRemark, st.studentId, days, overridesMap, showSpecialStudents, st, registryMap);
@@ -241,7 +258,7 @@ export const HomeroomRollbookView = {
     // Daily summary tfoot rows
     const presenceRowHtml = daySpecs.map((spec, dIdx) => {
       const stats = this._calcDailyStats(students, spec.day, days[dIdx].dateStr, overridesMap, showSpecialStudents, registryMap);
-      return `<td colspan="${spec.periods.length}" class="col-day-end stat-presence-cell" data-date="${days[dIdx].dateStr}">
+      return `<td colspan="${spec.periods.length + 1}" class="col-day-end stat-presence-cell" data-date="${days[dIdx].dateStr}">
         <span class="stat-main-num">${stats.present}명</span> <span class="stat-sub">/ ${students.length}명</span>
       </td>`;
     }).join('');
@@ -250,17 +267,19 @@ export const HomeroomRollbookView = {
       const stats = this._calcDailyStats(students, spec.day, days[dIdx].dateStr, overridesMap, showSpecialStudents, registryMap);
       const text = `결석 ${stats.absence} · 지각 ${stats.late} · 조퇴 ${stats.earlyLeave} · 결과 ${stats.classSkipped}`;
       const hasAny = (stats.absence + stats.late + stats.earlyLeave + stats.classSkipped) > 0;
-      return `<td colspan="${spec.periods.length}" class="col-day-end stat-absence-cell ${hasAny ? 'has-absence' : ''}" data-date="${days[dIdx].dateStr}">
+      return `<td colspan="${spec.periods.length + 1}" class="col-day-end stat-absence-cell ${hasAny ? 'has-absence' : ''}" data-date="${days[dIdx].dateStr}">
         ${text}
       </td>`;
     }).join('');
 
     const weekTitle = (weekObj && weekObj.title) || (weekObj && weekObj.weekNum ? `2학기 ${weekObj.weekNum}주차` : (weekObj && weekObj.label) || '');
-    const rangeText = (weekObj && weekObj.rangeStr) || (days && days.length > 0 ? `${days[0].displayDate || days[0].label} ~ ${days[days.length - 1].displayDate || days[days.length - 1].label}` : '');
-    const periodDisplay = rangeText ? `${weekTitle} (${rangeText})` : weekTitle;
+    const rangeText = (days && days.length > 0 ? `${days[0].displayDate || days[0].label} ~ ${days[days.length - 1].displayDate || days[days.length - 1].label}` : '');
+    const dayRangeLabel = days.map(d => d.dayOfWeek).join('·');
+    const pageBadge = totalParts > 1 ? ` · ${dayRangeLabel} (${partNum}/${totalParts})` : '';
+    const periodDisplay = rangeText ? `${weekTitle} (${rangeText})${pageBadge}` : `${weekTitle}${pageBadge}`;
 
     return `
-      <div class="rollbook-sheet homeroom-sheet" data-ban="${ban}">
+      <div class="rollbook-sheet homeroom-sheet ${partNum > 1 ? 'homeroom-sheet-part-next' : ''}" data-ban="${ban}" data-part="${partNum}">
         <div class="sheet-header">
           <div class="sheet-title-group">
             <h2 class="sheet-title">제 3 학년 ${ban} 반 주간 출석부</h2>

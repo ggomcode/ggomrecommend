@@ -234,6 +234,7 @@ class App {
     // Modal Listeners
     this.setupPrintModalListeners();
     this.setupNeisReportListeners();
+    this.setupDailyReasonAndCsvListeners();
   }
 
   updatePrintOrientation() {
@@ -897,13 +898,19 @@ class App {
     const container = document.getElementById('appOutput') || document.getElementById('contentContainer');
     if (!container) return;
 
-    // 1. Left Click: Cycle Attendance Status or Mark All Present Button
+    // 1. Left Click: Cycle Attendance Status, Mark All Present, or Daily Reason Cell
     container.addEventListener('click', (e) => {
       // Button: Mark All Present in Column
       const allPresentBtn = e.target.closest('.btn-all-present');
       if (allPresentBtn) {
         const col = allPresentBtn.closest('.period-column');
         if (col) this.markAllPresentInColumn(col);
+        return;
+      }
+
+      const reasonCell = e.target.closest('.interactive-reason-cell');
+      if (reasonCell) {
+        this.openDailyReasonModal({ ...reasonCell.dataset });
         return;
       }
 
@@ -1325,6 +1332,8 @@ class App {
     if (this.undoStack.length > 50) this.undoStack.shift();
 
     const isBackToOriginal = RollbookModel.isStatusEquivalent(nextStatus, originalStatus);
+    const existingRec = this.state.attendanceOverrides.get(key);
+    const preservedReason = (existingRec && existingRec.reason) || RollbookModel.getDailyReason(studentId, date, this.state.attendanceOverrides, this.state.registryMap);
 
     // Update memory map
     if (isBackToOriginal) {
@@ -1340,6 +1349,7 @@ class App {
         name,
         room: room || '',
         status: nextStatus,
+        reason: preservedReason || '',
         updatedAt: new Date().toISOString()
       });
     }
@@ -1361,6 +1371,7 @@ class App {
         name,
         room,
         status: '',
+        reason: '',
         action: 'delete'
       });
     } else {
@@ -1373,7 +1384,8 @@ class App {
         num,
         name,
         room,
-        status: nextStatus
+        status: nextStatus,
+        reason: preservedReason || ''
       });
     }
   }
@@ -1403,6 +1415,8 @@ class App {
       });
 
       const isBackToOriginal = RollbookModel.isStatusEquivalent(targetStatus, origStatus);
+      const existingRec = this.state.attendanceOverrides.get(key);
+      const preservedReason = (existingRec && existingRec.reason) || RollbookModel.getDailyReason(studentId, date, this.state.attendanceOverrides, this.state.registryMap);
 
       if (isBackToOriginal) {
         this.state.attendanceOverrides.delete(key);
@@ -1416,6 +1430,7 @@ class App {
           name,
           room: c.dataset.room || '',
           status: '',
+          reason: '',
           action: 'delete'
         });
       } else {
@@ -1429,6 +1444,7 @@ class App {
           name,
           room: c.dataset.room || '',
           status: targetStatus,
+          reason: preservedReason || '',
           updatedAt: new Date().toISOString()
         });
         recordsToSave.push({
@@ -1440,7 +1456,8 @@ class App {
           num,
           name,
           room: c.dataset.room || '',
-          status: targetStatus
+          status: targetStatus,
+          reason: preservedReason || ''
         });
       }
 
@@ -1952,6 +1969,15 @@ class App {
         </div>
 
         ${specialToggleHtml}
+
+        <div class="control-group" style="display: flex; gap: 6px; align-items: center;">
+          <button type="button" id="openCsvUploadModalBtn" class="pill-btn" style="background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; font-weight: 700;" title="반별 월별 출결 현황 CSV 일괄 업로드">
+            📂 출결 CSV 업로드
+          </button>
+          <button type="button" id="openFutureScheduleBtn" class="pill-btn" style="background: #f0fdf4; color: #15803d; border-color: #bbf7d0; font-weight: 700;" title="미래 일정/결석 사전 등록 및 원클릭 전 교시 표시">
+            📅 일정·결석 사전등록
+          </button>
+        </div>
       `;
     } else if (view === 'homeroom') {
       // Week Dropdown
@@ -2008,6 +2034,15 @@ class App {
         </div>
 
         ${specialToggleHtml}
+
+        <div class="control-group" style="display: flex; gap: 6px; align-items: center;">
+          <button type="button" id="openCsvUploadModalBtn" class="pill-btn" style="background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; font-weight: 700;" title="반별 월별 출결 현황 CSV 일괄 업로드">
+            📂 출결 CSV 업로드
+          </button>
+          <button type="button" id="openFutureScheduleBtn" class="pill-btn" style="background: #f0fdf4; color: #15803d; border-color: #bbf7d0; font-weight: 700;" title="미래 일정/결석 사전 등록 및 원클릭 전 교시 표시">
+            📅 일정·결석 사전등록
+          </button>
+        </div>
       `;
     } else if (view === 'lunch') {
       const monthOptions = LunchCalendarView.getAvailableMonths().map(m =>
@@ -2050,6 +2085,15 @@ class App {
           <span>※ 오늘 날짜(${this.todayInfo.display}) 기준 3학년 전체 교무실 출결 브리핑 및 학급별 현황판입니다.</span>
         </div>
         ${specialToggleHtml}
+
+        <div class="control-group" style="display: flex; gap: 6px; align-items: center;">
+          <button type="button" id="openCsvUploadModalBtn" class="pill-btn" style="background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; font-weight: 700;" title="반별 월별 출결 현황 CSV 일괄 업로드">
+            📂 출결 CSV 업로드
+          </button>
+          <button type="button" id="openFutureScheduleBtn" class="pill-btn" style="background: #f0fdf4; color: #15803d; border-color: #bbf7d0; font-weight: 700;" title="미래 일정/결석 사전 등록 및 원클릭 전 교시 표시">
+            📅 일정·결석 사전등록
+          </button>
+        </div>
       `;
     }
 
@@ -2118,6 +2162,16 @@ class App {
         this.renderControls();
         this.renderContent();
       }, { signal });
+    }
+
+    const csvBtn = document.getElementById('openCsvUploadModalBtn');
+    if (csvBtn) {
+      csvBtn.addEventListener('click', () => this.openCsvUploadModal(), { signal });
+    }
+
+    const futureBtn = document.getElementById('openFutureScheduleBtn');
+    if (futureBtn) {
+      futureBtn.addEventListener('click', () => this.openDailyReasonModal({ mode: 'future' }), { signal });
     }
 
     // Special student toggle
@@ -2582,6 +2636,346 @@ class App {
         this.renderContent();
       }
     }, 1000);
+  }
+  setupDailyReasonAndCsvListeners() {
+    // 1) 일자별 사유 & 미래 일정 입력 모달
+    const drModal = document.getElementById('dailyReasonModal');
+    if (drModal) {
+      const closeDr = () => { drModal.style.display = 'none'; };
+      document.getElementById('closeDrModalBtn')?.addEventListener('click', closeDr);
+      document.getElementById('cancelDrBtn')?.addEventListener('click', closeDr);
+      drModal.addEventListener('click', (e) => { if (e.target === drModal) closeDr(); });
+
+      const presetSel = document.getElementById('drReasonPresetSelect');
+      const customInp = document.getElementById('drReasonCustomInput');
+      const statusSel = document.getElementById('drStatusSelect');
+      if (presetSel && customInp) {
+        presetSel.addEventListener('change', () => {
+          const val = presetSel.value;
+          if (val === '__CUSTOM__') {
+            customInp.value = '';
+            customInp.focus();
+          } else if (val) {
+            customInp.value = val;
+            if (statusSel) {
+              const map = {
+                '생리통': '인(생리)',
+                '학교장허가 교외체험학습': '인(체험)',
+                '법정전염병': '인(전염병)',
+                '경조사': '인(경조사)',
+                '감기/몸살': '병',
+                '두통/복통': '병',
+                '병원 진료': '병'
+              };
+              if (map[val]) statusSel.value = map[val];
+            }
+          }
+        });
+      }
+
+      document.getElementById('saveDrBtn')?.addEventListener('click', () => this.saveDailyReasonFromModal(false));
+      document.getElementById('clearDrBtn')?.addEventListener('click', () => this.saveDailyReasonFromModal(true));
+    }
+
+    // 2) 반별 다중 월 출결 CSV 업로드 모달
+    const csvModal = document.getElementById('homeroomCsvUploadModal');
+    if (csvModal) {
+      const closeCsv = () => { csvModal.style.display = 'none'; };
+      document.getElementById('closeCsvModalBtn')?.addEventListener('click', closeCsv);
+      document.getElementById('cancelCsvModalBtn')?.addEventListener('click', closeCsv);
+      csvModal.addEventListener('click', (e) => { if (e.target === csvModal) closeCsv(); });
+
+      document.getElementById('csvUploadFileInput')?.addEventListener('change', (e) => {
+        this.handleCsvFilesSelected(e.target.files);
+      });
+      document.getElementById('csvTargetBanSelect')?.addEventListener('change', () => {
+        const input = document.getElementById('csvUploadFileInput');
+        if (input && input.files && input.files.length > 0) {
+          this.handleCsvFilesSelected(input.files);
+        }
+      });
+      document.getElementById('csvMonthFilterSelect')?.addEventListener('change', () => this.renderCsvPreview());
+      document.getElementById('applyCsvUploadBtn')?.addEventListener('click', () => this.applyCsvUpload());
+    }
+  }
+
+  openDailyReasonModal(data = {}) {
+    const modal = document.getElementById('dailyReasonModal');
+    if (!modal) return;
+
+    const isFutureMode = data.mode === 'future';
+    const studentSelectWrap = document.getElementById('drStudentSelectWrap');
+    const studentInfoWrap = document.getElementById('drStudentInfoWrap');
+    const studentSelect = document.getElementById('drStudentSelect');
+    const studentInfo = document.getElementById('drStudentInfo');
+    const dateInput = document.getElementById('drDateInput');
+    const statusSelect = document.getElementById('drStatusSelect');
+    const presetSelect = document.getElementById('drReasonPresetSelect');
+    const customInput = document.getElementById('drReasonCustomInput');
+    const applyAllChk = document.getElementById('drApplyAllPeriodsChk');
+
+    const defaultBan = (this.state.selectedBans && this.state.selectedBans[0]) || 1;
+    if (isFutureMode && studentSelect && studentSelectWrap && studentInfoWrap) {
+      const classStudents = (this.state.allStudents || [])
+        .filter(s => s.ban === defaultBan)
+        .sort((a, b) => a.num - b.num);
+      studentSelect.innerHTML = classStudents
+        .map(s => `<option value="${escapeHtml(s.studentId)}" data-ban="${s.ban}" data-num="${s.num}" data-name="${escapeHtml(s.name)}">${s.ban}반 ${s.num}번 ${escapeHtml(s.name)}</option>`)
+        .join('');
+      studentSelectWrap.style.display = 'block';
+      studentInfoWrap.style.display = 'none';
+      this._drTarget = { mode: 'future' };
+    } else {
+      if (studentSelectWrap) studentSelectWrap.style.display = 'none';
+      if (studentInfoWrap) studentInfoWrap.style.display = 'block';
+      if (studentInfo) studentInfo.value = `${data.ban || defaultBan}반 ${data.num || ''}번 ${data.name || ''}`;
+      this._drTarget = {
+        mode: 'cell',
+        studentId: data.studentId,
+        ban: data.ban,
+        num: data.num,
+        name: data.name
+      };
+    }
+
+    const todayStr = this.todayInfo?.dateStr || new Date().toISOString().slice(0, 10);
+    if (dateInput) dateInput.value = data.date || todayStr;
+
+    const currentReason = data.reason || '';
+    if (customInput) customInput.value = currentReason;
+    if (presetSelect) {
+      const matchedOpt = Array.from(presetSelect.options).find(o => o.value === currentReason);
+      presetSelect.value = matchedOpt ? currentReason : (currentReason ? '__CUSTOM__' : '');
+    }
+    if (statusSelect) statusSelect.value = isFutureMode ? '병' : '';
+    if (applyAllChk) applyAllChk.checked = true;
+
+    modal.style.display = 'flex';
+  }
+
+  saveDailyReasonFromModal(isClear = false) {
+    const modal = document.getElementById('dailyReasonModal');
+    const dateInput = document.getElementById('drDateInput');
+    const statusSelect = document.getElementById('drStatusSelect');
+    const customInput = document.getElementById('drReasonCustomInput');
+    const applyAllChk = document.getElementById('drApplyAllPeriodsChk');
+
+    let { studentId, ban, num, name } = this._drTarget || {};
+    if (this._drTarget?.mode === 'future') {
+      const sel = document.getElementById('drStudentSelect');
+      const opt = sel?.selectedOptions?.[0];
+      if (!opt) return;
+      studentId = opt.value;
+      ban = opt.dataset.ban;
+      num = opt.dataset.num;
+      name = opt.dataset.name;
+    }
+
+    const date = (dateInput?.value || '').trim();
+    if (!studentId || !date) return;
+
+    const reasonText = isClear ? '' : (customInput?.value || '').trim();
+    const chosenStatus = statusSelect?.value || '';
+    const applyAll = !!(applyAllChk && applyAllChk.checked);
+
+    const dObj = new Date(date + 'T00:00:00');
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const dayOfWeek = dayNames[dObj.getDay()] || '월';
+    const maxP = AcademicConfig.periodsPerDay[dayOfWeek] || 6;
+    const allPeriods = ['조'];
+    for (let p = 1; p <= maxP; p++) allPeriods.push(p);
+    allPeriods.push('종');
+
+    const recordsToSave = [];
+    const targetPeriods = applyAll ? allPeriods : ['조'];
+
+    targetPeriods.forEach(p => {
+      const key = `${date}_${p}_${studentId}`;
+      const existing = this.state.attendanceOverrides.get(key);
+      const nextStatus = isClear
+        ? (existing?.status || '')
+        : (chosenStatus || existing?.status || '');
+
+      if (!nextStatus && !reasonText) {
+        this.state.attendanceOverrides.delete(key);
+        recordsToSave.push({ key, date, period: p, studentId, ban, num, name, room: `${ban}반`, status: '', reason: '', action: 'delete' });
+      } else {
+        this.state.attendanceOverrides.set(key, {
+          key,
+          date,
+          period: p,
+          studentId,
+          ban,
+          num,
+          name,
+          room: existing?.room || `${ban}반`,
+          status: nextStatus,
+          reason: reasonText,
+          updatedAt: new Date().toISOString()
+        });
+        recordsToSave.push({
+          key,
+          date,
+          period: p,
+          studentId,
+          ban,
+          num,
+          name,
+          room: existing?.room || `${ban}반`,
+          status: nextStatus,
+          reason: reasonText
+        });
+      }
+    });
+
+    if (modal) modal.style.display = 'none';
+    this.renderContent();
+    if (recordsToSave.length > 0) {
+      this.scheduleSaveToGas(recordsToSave);
+    }
+  }
+
+  openCsvUploadModal() {
+    const modal = document.getElementById('homeroomCsvUploadModal');
+    if (!modal) return;
+    const banSel = document.getElementById('csvTargetBanSelect');
+    if (banSel) {
+      const defaultBan = (this.state.selectedBans && this.state.selectedBans[0]) || 1;
+      banSel.innerHTML = this.allBans.map(b => `<option value="${b}" ${b === defaultBan ? 'selected' : ''}>${b}반</option>`).join('');
+    }
+    const fileInput = document.getElementById('csvUploadFileInput');
+    if (fileInput) fileInput.value = '';
+    this._parsedCsvEntries = [];
+    const monthSel = document.getElementById('csvMonthFilterSelect');
+    if (monthSel) monthSel.innerHTML = '<option value="ALL">전체 월 일괄 반영</option>';
+    const body = document.getElementById('csvPreviewBody');
+    if (body) body.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #94a3b8;">업로드할 CSV 파일을 선택해 주세요.</td></tr>';
+    const applyBtn = document.getElementById('applyCsvUploadBtn');
+    if (applyBtn) applyBtn.disabled = true;
+    modal.style.display = 'flex';
+  }
+
+  async handleCsvFilesSelected(fileList) {
+    if (!fileList || fileList.length === 0) return;
+    const banSel = document.getElementById('csvTargetBanSelect');
+    const targetBan = parseInt(banSel?.value || '1', 10);
+
+    const allEntries = [];
+    for (const file of Array.from(fileList)) {
+      const text = await file.text();
+      const rows = SheetAPI.parseCsv(text);
+      const parsed = RollbookModel.parseHomeroomCsv(rows, targetBan, this.state.allStudents);
+      allEntries.push(...parsed);
+    }
+    this._parsedCsvEntries = allEntries;
+
+    const months = Array.from(new Set(allEntries.map(e => e.month).filter(Boolean))).sort();
+    const monthSel = document.getElementById('csvMonthFilterSelect');
+    if (monthSel) {
+      monthSel.innerHTML = `<option value="ALL">전체 월 일괄 반영 (${allEntries.length}건)</option>` +
+        months.map(m => `<option value="${m}">${m} (${allEntries.filter(e => e.month === m).length}건)</option>`).join('');
+    }
+    this.renderCsvPreview();
+  }
+
+  renderCsvPreview() {
+    const body = document.getElementById('csvPreviewBody');
+    const summary = document.getElementById('csvPreviewSummary');
+    const applyBtn = document.getElementById('applyCsvUploadBtn');
+    const monthFilter = document.getElementById('csvMonthFilterSelect')?.value || 'ALL';
+    if (!body) return;
+
+    const entries = (this._parsedCsvEntries || []).filter(e => monthFilter === 'ALL' || e.month === monthFilter);
+    this._filteredCsvEntries = entries;
+
+    if (entries.length === 0) {
+      body.innerHTML = '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #94a3b8;">표시할 데이터가 없습니다.</td></tr>';
+      if (applyBtn) applyBtn.disabled = true;
+      return;
+    }
+
+    const matchedCount = entries.filter(e => e.matched).length;
+    if (summary) {
+      summary.textContent = `총 ${entries.length}건 파싱 완료 (학생 매칭 성공: ${matchedCount}건 / 미매칭: ${entries.length - matchedCount}건)`;
+    }
+    if (applyBtn) applyBtn.disabled = matchedCount === 0;
+
+    const statusOptions = [
+      { v: '병', l: '질병 (병)' },
+      { v: '인(생리)', l: '인정 (생리통)' },
+      { v: '인(체험)', l: '인정 (체험학습)' },
+      { v: '인(전염병)', l: '인정 (전염병)' },
+      { v: '인(경조사)', l: '인정 (경조사)' },
+      { v: '미', l: '미인정 (미)' },
+      { v: '기', l: '기타 (기)' }
+    ];
+
+    body.innerHTML = entries.map((e, idx) => `
+      <tr style="${e.matched ? '' : 'background: #fef2f2;'}">
+        <td style="padding: 4px 6px;">${escapeHtml(e.date)}</td>
+        <td style="padding: 4px 6px;">${escapeHtml(String(e.num))}번 ${escapeHtml(e.name)}${e.matched ? '' : ' ⚠️'}</td>
+        <td style="padding: 4px 6px;">${escapeHtml(e.catText)}</td>
+        <td style="padding: 4px 6px;">
+          <select class="styled-select csv-row-status" data-idx="${idx}" style="font-size: 11px; padding: 2px 4px;">
+            ${statusOptions.map(o => `<option value="${o.v}" ${e.status === o.v ? 'selected' : ''}>${o.l}</option>`).join('')}
+          </select>
+        </td>
+        <td style="padding: 4px 6px;">${escapeHtml(e.periods.join(','))}</td>
+        <td style="padding: 4px 6px;">
+          <input type="text" class="styled-input csv-row-reason" data-idx="${idx}" value="${escapeHtml(e.reason)}" style="font-size: 11px; padding: 2px 4px;" />
+        </td>
+      </tr>
+    `).join('');
+
+    body.querySelectorAll('.csv-row-status').forEach(sel => {
+      sel.addEventListener('change', () => {
+        const idx = parseInt(sel.dataset.idx, 10);
+        if (entries[idx]) entries[idx].status = sel.value;
+      });
+    });
+    body.querySelectorAll('.csv-row-reason').forEach(inp => {
+      inp.addEventListener('input', () => {
+        const idx = parseInt(inp.dataset.idx, 10);
+        if (entries[idx]) entries[idx].reason = inp.value;
+      });
+    });
+  }
+
+  async applyCsvUpload() {
+    const entries = (this._filteredCsvEntries || []).filter(e => e.matched && e.studentId);
+    if (entries.length === 0) return;
+
+    const recordsToSave = [];
+    const nowIso = new Date().toISOString();
+
+    entries.forEach(entry => {
+      entry.periods.forEach(p => {
+        const key = `${entry.date}_${p}_${entry.studentId}`;
+        const rec = {
+          key,
+          date: entry.date,
+          period: p,
+          studentId: entry.studentId,
+          ban: String(entry.ban),
+          num: String(entry.num),
+          name: entry.name,
+          room: `${entry.ban}반`,
+          status: entry.status,
+          reason: entry.reason || '',
+          updatedAt: nowIso
+        };
+        this.state.attendanceOverrides.set(key, rec);
+        recordsToSave.push(rec);
+      });
+    });
+
+    const modal = document.getElementById('homeroomCsvUploadModal');
+    if (modal) modal.style.display = 'none';
+    this.renderContent();
+
+    if (recordsToSave.length > 0) {
+      this.scheduleSaveToGas(recordsToSave);
+    }
   }
 }
 
