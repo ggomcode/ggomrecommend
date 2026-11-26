@@ -425,52 +425,103 @@ export const RollbookModel = {
   },
 
   /**
-   * Generate Academic Weeks:
-   * 2학기 6주차 ~ 21주차 (설정값 기반 자동 생성)
+   * 날짜 기준 학년도 계산 (3월 ~ 익년 2월이 해당 학년도)
    */
-  getAcademicWeeks() {
+  getAcademicYearForDate(customDate = null) {
+    const d = customDate ? new Date(customDate) : new Date();
+    const m = d.getMonth() + 1;
+    const y = d.getFullYear();
+    return m >= 3 ? y : y - 1;
+  },
+
+  /**
+   * 특정 학년도(3월 ~ 익년 2월)의 전체 주차 생성
+   * - 학기('1': 3~8월, '2': 9~2월), 월, 월별 주차 자동 태깅
+   */
+  getAcademicWeeksForYear(academicYear = 2026) {
+    const y = Number(academicYear) || 2026;
     const weeks = [];
-    const { semesterStartDate, startWeekNum, endWeekNum } = AcademicConfig;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    const curWeek = this.getCurrentWeekNum();
+    // 학년도 시작일(3월 1일)이 속한 주의 월요일 (토/일이면 다음 주 월요일)
+    const march1 = new Date(y, 2, 1);
+    const dow = march1.getDay();
+    const startMon = new Date(march1);
+    if (dow === 6) startMon.setDate(march1.getDate() + 2);
+    else if (dow === 0) startMon.setDate(march1.getDate() + 1);
+    else startMon.setDate(march1.getDate() - (dow - 1));
 
-    for (let w = startWeekNum; w <= endWeekNum; w++) {
-      const offsetDays = (w - startWeekNum) * 7;
-      const mon = new Date(semesterStartDate.getTime() + offsetDays * 86400000);
+    // 학년도 종료일(익년 2월 말일)
+    const febEnd = new Date(y + 1, 2, 0);
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const semCounters = { '1': 0, '2': 0 };
+    const monthCounters = {};
+
+    let cursor = new Date(startMon);
+    while (cursor <= febEnd) {
       const days = [];
-
       for (let d = 0; d < 5; d++) {
-        const date = new Date(mon.getTime() + d * 86400000);
+        const date = new Date(cursor.getTime() + d * 86400000);
         const yyyy = date.getFullYear();
         const mm = String(date.getMonth() + 1).padStart(2, '0');
         const dd = String(date.getDate()).padStart(2, '0');
-        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-        const dayName = dayNames[date.getDay()];
-
         days.push({
           dateStr: `${yyyy}-${mm}-${dd}`,
           displayDate: `${mm}.${dd}`,
           label: `${mm}.${dd}`,
           fullDisplayDate: `${yyyy}년 ${parseInt(mm, 10)}월 ${parseInt(dd, 10)}일`,
-          dayOfWeek: dayName,
+          dayOfWeek: dayNames[date.getDay()],
           dateObj: date
         });
-
       }
 
-      const isCurrent = (w === curWeek);
-      weeks.push({
-        weekNum: w,
-        label: `2학기 ${w}주차 (${days[0].displayDate} ~ ${days[4].displayDate})${isCurrent ? ' ★ [이번 주]' : ''}`,
-        shortLabel: `${w}주차`,
-        title: `2학기 ${w}주차`,
-        rangeStr: `${days[0].displayDate} ~ ${days[4].displayDate}`,
-        isCurrent,
-        days
-      });
+      // 수요일(대표일) 기준으로 소속 월·학기 결정
+      const repDate = days[2].dateObj;
+      const repCalYear = repDate.getFullYear();
+      const repMonth = repDate.getMonth() + 1;
+
+      // 범위 밖(2월 이전이나 익년 3월 이후) 주차는 제외
+      if ((repCalYear === y && repMonth >= 3) || (repCalYear === y + 1 && repMonth <= 2)) {
+        const semester = (repMonth >= 3 && repMonth <= 8) ? '1' : '2';
+        semCounters[semester] += 1;
+        const mKey = `${repCalYear}-${repMonth}`;
+        monthCounters[mKey] = (monthCounters[mKey] || 0) + 1;
+        const monthWeekNum = monthCounters[mKey];
+
+        const monStart = new Date(days[0].dateObj);
+        monStart.setHours(0, 0, 0, 0);
+        const sunEnd = new Date(monStart.getTime() + 6 * 86400000);
+        const isCurrent = today >= monStart && today <= sunEnd;
+
+        weeks.push({
+          weekId: days[0].dateStr,
+          weekNum: semCounters[semester],
+          academicYear: y,
+          semester,
+          calYear: repCalYear,
+          month: repMonth,
+          monthWeekNum,
+          label: `${repMonth}월 ${monthWeekNum}주차 (${days[0].displayDate} ~ ${days[4].displayDate})${isCurrent ? ' ★ [이번 주]' : ''}`,
+          shortLabel: `${repMonth}월 ${monthWeekNum}주차`,
+          title: `${y}학년도 ${semester}학기 ${repMonth}월 ${monthWeekNum}주차`,
+          rangeStr: `${days[0].displayDate} ~ ${days[4].displayDate}`,
+          isCurrent,
+          days
+        });
+      }
+
+      cursor = new Date(cursor.getTime() + 7 * 86400000);
     }
 
     return weeks;
+  },
+
+  /**
+   * Generate Academic Weeks (현재 학년도 전체 주차)
+   */
+  getAcademicWeeks() {
+    return this.getAcademicWeeksForYear(this.getAcademicYearForDate());
   },
 
   /**

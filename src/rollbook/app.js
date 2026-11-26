@@ -13,10 +13,17 @@ import { AbsenceRegistryView } from './views/absenceRegistry.js';
 
 class App {
   constructor() {
-    const autoWeek = RollbookModel.getCurrentWeekNum();
     const autoMonth = RollbookModel.getCurrentLunchMonth();
+    const detectedYear = RollbookModel.getAcademicYearForDate();
+    const autoAcademicYear = [2026, 2027, 2028].includes(detectedYear) ? detectedYear : 2026;
+    const initialWeeks = RollbookModel.getAcademicWeeksForYear(autoAcademicYear);
+    const todayWeekObj = initialWeeks.find(w => w.isCurrent) || initialWeeks[0];
 
-    this.autoWeek = autoWeek;
+    this.autoAcademicYear = autoAcademicYear;
+    this.autoSemester = todayWeekObj ? todayWeekObj.semester : '1';
+    this.autoCalMonth = todayWeekObj ? todayWeekObj.month : (new Date().getMonth() + 1);
+    this.autoWeekId = todayWeekObj ? todayWeekObj.weekId : '';
+    this.autoWeek = todayWeekObj ? todayWeekObj.weekNum : RollbookModel.getCurrentWeekNum();
     this.todayInfo = RollbookModel.getTodayInfo();
 
     this.state = {
@@ -26,8 +33,12 @@ class App {
       registryMap: new Map(),
       allStudents: [],
       holidaysMap: { fullDayEvents: {}, periodOverrides: {} },
-      weeks: [],
-      currentWeekNum: autoWeek,
+      selectedAcademicYear: autoAcademicYear,
+      selectedSemester: this.autoSemester,
+      selectedCalMonth: this.autoCalMonth,
+      selectedWeekId: this.autoWeekId,
+      weeks: initialWeeks,
+      currentWeekNum: this.autoWeek,
       selectedDayIdx: 'all', // 'all' or 0 (월), 1 (화), 2 (수), 3 (목), 4 (금)
       selectedRooms: [...AcademicConfig.allRooms],
       selectedBans: [...AcademicConfig.allBans],
@@ -57,7 +68,7 @@ class App {
   }
 
   async init() {
-    this.state.weeks = RollbookModel.getAcademicWeeks();
+    this.state.weeks = RollbookModel.getAcademicWeeksForYear(this.state.selectedAcademicYear);
     this.updateStatusIndicator();
     this.restoreHashState();
     this.updatePrintOrientation();
@@ -112,7 +123,9 @@ class App {
   updateStatusIndicator() {
     const todayEl = document.getElementById('todayBadge');
     if (todayEl) {
-      todayEl.innerHTML = `<span>📅</span> 오늘: <strong>${this.todayInfo.display}</strong> <span class="badge-sub">(${this.autoWeek}주차 자동 선택)</span>`;
+      const todayW = this.state.weeks.find(w => w.weekId === this.autoWeekId);
+      const todayWeekLabel = todayW ? `${todayW.month}월 ${todayW.monthWeekNum}주차` : `${this.autoWeek}주차`;
+      todayEl.innerHTML = `<span>📅</span> 오늘: <strong>${this.todayInfo.display}</strong> <span class="badge-sub">(${todayWeekLabel} 자동 선택)</span>`;
     }
 
     const el = document.getElementById('syncStatus');
@@ -274,14 +287,16 @@ class App {
     params.set('v', view);
 
     if (view === 'moving') {
-      params.set('w', currentWeekNum);
+      if (this.state.selectedWeekId) params.set('wid', this.state.selectedWeekId);
+      params.set('ay', this.state.selectedAcademicYear);
       if (selectedDayIdx !== 'all') params.set('d', selectedDayIdx);
       if (selectedRooms.length !== this.allRooms.length) {
         params.set('r', selectedRooms.join(','));
       }
       if (this.state.showSpecialStudents) params.set('sp', '1');
     } else if (view === 'homeroom') {
-      params.set('w', currentWeekNum);
+      if (this.state.selectedWeekId) params.set('wid', this.state.selectedWeekId);
+      params.set('ay', this.state.selectedAcademicYear);
       if (selectedBans.length !== this.allBans.length) {
         params.set('b', selectedBans.join(','));
       }
@@ -311,9 +326,32 @@ class App {
         });
       }
 
-      const w = parseInt(params.get('w'), 10);
-      if (!isNaN(w) && w >= AcademicConfig.startWeekNum && w <= AcademicConfig.endWeekNum) {
-        this.state.currentWeekNum = w;
+      const ay = parseInt(params.get('ay'), 10);
+      if ([2026, 2027, 2028].includes(ay)) {
+        this.state.selectedAcademicYear = ay;
+        this.state.weeks = RollbookModel.getAcademicWeeksForYear(ay);
+      }
+
+      const wid = params.get('wid');
+      if (wid) {
+        const matchedWeek = this.state.weeks.find(wk => wk.weekId === wid);
+        if (matchedWeek) {
+          this.state.selectedWeekId = matchedWeek.weekId;
+          this.state.selectedSemester = matchedWeek.semester;
+          this.state.selectedCalMonth = matchedWeek.month;
+          this.state.currentWeekNum = matchedWeek.weekNum;
+        }
+      } else {
+        const w = parseInt(params.get('w'), 10);
+        if (!isNaN(w)) {
+          const matchedWeek = this.state.weeks.find(wk => wk.weekNum === w);
+          if (matchedWeek) {
+            this.state.selectedWeekId = matchedWeek.weekId;
+            this.state.selectedSemester = matchedWeek.semester;
+            this.state.selectedCalMonth = matchedWeek.month;
+            this.state.currentWeekNum = matchedWeek.weekNum;
+          }
+        }
       }
 
       const d = params.get('d');
@@ -360,7 +398,7 @@ class App {
     const weekSelect = document.getElementById('printModalWeekSelect');
     if (weekSelect) {
       weekSelect.innerHTML = weeks.map(w =>
-        `<option value="${w.weekNum}" ${w.weekNum === currentWeekNum ? 'selected' : ''}>${escapeHtml(w.label)}</option>`
+        `<option value="${w.weekId}" ${w.weekId === this.state.selectedWeekId ? 'selected' : ''}>${escapeHtml(w.title)} (${w.rangeStr})</option>`
       ).join('');
     }
 
@@ -498,8 +536,8 @@ class App {
   updatePrintModalDayLabels() {
     const weekSelect = document.getElementById('printModalWeekSelect');
     if (!weekSelect) return;
-    const weekNum = parseInt(weekSelect.value, 10);
-    const weekObj = this.state.weeks.find(w => w.weekNum === weekNum);
+    const weekId = weekSelect.value;
+    const weekObj = this.state.weeks.find(w => w.weekId === weekId);
     if (!weekObj) return;
 
     const days = ['월', '화', '수', '목', '금'];
@@ -553,8 +591,8 @@ class App {
     const targetPrintView = viewSelect ? viewSelect.value : ((this.state.view === 'moving') ? 'moving' : 'homeroom');
 
     const weekSelect = document.getElementById('printModalWeekSelect');
-    const targetWeekNum = weekSelect ? parseInt(weekSelect.value, 10) : this.state.currentWeekNum;
-    const weekObj = weeks.find(w => w.weekNum === targetWeekNum) || weeks[0];
+    const targetWeekId = weekSelect ? weekSelect.value : this.state.selectedWeekId;
+    const weekObj = weeks.find(w => w.weekId === targetWeekId) || weeks[0];
 
     const checkedDayIdxs = Array.from(document.querySelectorAll('.print-day-cb:checked')).map(el => parseInt(el.value, 10));
     const targetDays = checkedDayIdxs.map(idx => weekObj.days[idx]).filter(Boolean);
@@ -1887,6 +1925,58 @@ class App {
     badge.className = `status-badge ${isSaving ? 'status-saving' : 'status-saved'}`;
   }
 
+  renderWeekSelectorGroupHtml() {
+    const { weeks, selectedAcademicYear, selectedSemester, selectedCalMonth, selectedWeekId } = this.state;
+
+    const academicYearOptions = [2026, 2027, 2028].map(y =>
+      `<option value="${y}" ${y === selectedAcademicYear ? 'selected' : ''}>${y}학년도</option>`
+    ).join('');
+
+    const semesterOptions = ['1', '2'].map(s =>
+      `<option value="${s}" ${s === String(selectedSemester) ? 'selected' : ''}>${s}학기</option>`
+    ).join('');
+
+    const semesterWeeks = weeks.filter(w => String(w.semester) === String(selectedSemester));
+    const monthsInSemester = [];
+    semesterWeeks.forEach(w => {
+      if (!monthsInSemester.some(m => m.month === w.month)) {
+        monthsInSemester.push({ month: w.month, calYear: w.calYear });
+      }
+    });
+
+    const activeMonth = monthsInSemester.some(m => m.month === selectedCalMonth)
+      ? selectedCalMonth
+      : (monthsInSemester[0]?.month || selectedCalMonth);
+
+    const monthOptions = monthsInSemester.map(m =>
+      `<option value="${m.month}" ${m.month === activeMonth ? 'selected' : ''}>${m.month}월</option>`
+    ).join('');
+
+    const monthWeeks = semesterWeeks.filter(w => w.month === activeMonth);
+    const weekOptions = monthWeeks.map(w =>
+      `<option value="${w.weekId}" ${w.weekId === selectedWeekId ? 'selected' : ''}>${escapeHtml(w.label)}</option>`
+    ).join('');
+
+    const todayLabel = (this.autoWeek && typeof this.autoWeek === 'object')
+      ? `${this.autoWeek.month}월 ${this.autoWeek.monthWeekNum}주`
+      : `${this.autoWeek}주차`;
+
+    return `
+      <div class="control-group">
+        <label class="control-label">기간 선택:</label>
+        <div class="week-select-container" style="flex-wrap: wrap; gap: 6px;">
+          <select id="academicYearSelect" class="styled-select" title="학년도 선택 (3월~다음해 2월)">${academicYearOptions}</select>
+          <select id="semesterSelect" class="styled-select" title="학기 선택">${semesterOptions}</select>
+          <select id="calMonthSelect" class="styled-select" title="월 선택">${monthOptions}</select>
+          <select id="weekSelect" class="styled-select" title="주차 선택">${weekOptions}</select>
+          <button type="button" id="resetTodayWeekBtn" class="pill-btn ${selectedWeekId === this.autoWeekId ? 'pill-today-active' : 'pill-today-jump'}" title="오늘에 해당하는 주차(${todayLabel})로 바로 이동">
+            🎯 오늘 (${todayLabel})
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
   // ── Controls Rendering ──────────────────────────────────────────────────
   renderControls() {
     const container = document.getElementById('toolbarControls');
@@ -1900,10 +1990,7 @@ class App {
     let html = '';
 
     if (view === 'moving') {
-      // 1. Week Dropdown
-      const weekOptions = weeks.map(w =>
-        `<option value="${w.weekNum}" ${w.weekNum === currentWeekNum ? 'selected' : ''}>${escapeHtml(w.label)}</option>`
-      ).join('');
+      const weekSelectorHtml = this.renderWeekSelectorGroupHtml();
 
       // 2. Day selector
       const days = ['월', '화', '수', '목', '금'];
@@ -1946,15 +2033,7 @@ class App {
       `;
 
       html = `
-        <div class="control-group">
-          <label class="control-label">주차 선택:</label>
-          <div class="week-select-container">
-            <select id="weekSelect" class="styled-select">${weekOptions}</select>
-            <button type="button" id="resetTodayWeekBtn" class="pill-btn ${currentWeekNum === this.autoWeek ? 'pill-today-active' : 'pill-today-jump'}" title="오늘에 해당하는 ${this.autoWeek}주차로 바로 이동">
-              🎯 오늘 (${this.autoWeek}주차)
-            </button>
-          </div>
-        </div>
+        ${weekSelectorHtml}
 
         <div class="control-group">
           <label class="control-label">요일:</label>
@@ -1980,10 +2059,7 @@ class App {
         </div>
       `;
     } else if (view === 'homeroom') {
-      // Week Dropdown
-      const weekOptions = weeks.map(w =>
-        `<option value="${w.weekNum}" ${w.weekNum === currentWeekNum ? 'selected' : ''}>${escapeHtml(w.label)}</option>`
-      ).join('');
+      const weekSelectorHtml = this.renderWeekSelectorGroupHtml();
 
       // Ban selector (학급 드롭다운)
       const isCustomBanMulti = this.state.selectedBans.length > 1 && this.state.selectedBans.length < this.allBans.length;
@@ -2016,15 +2092,7 @@ class App {
       `;
 
       html = `
-        <div class="control-group">
-          <label class="control-label">주차 선택:</label>
-          <div class="week-select-container">
-            <select id="weekSelect" class="styled-select">${weekOptions}</select>
-            <button type="button" id="resetTodayWeekBtn" class="pill-btn ${currentWeekNum === this.autoWeek ? 'pill-today-active' : 'pill-today-jump'}" title="오늘에 해당하는 ${this.autoWeek}주차로 바로 이동">
-              🎯 오늘 (${this.autoWeek}주차)
-            </button>
-          </div>
-        </div>
+        ${weekSelectorHtml}
 
         <div class="control-group">
           <label class="control-label" for="banSelect">학급 선택:</label>
@@ -2104,11 +2172,77 @@ class App {
   attachDynamicControlEvents() {
     const signal = this._dynamicAbort.signal;
 
+    // Academic Year select
+    const academicYearSelect = document.getElementById('academicYearSelect');
+    if (academicYearSelect) {
+      academicYearSelect.addEventListener('change', (e) => {
+        const ay = parseInt(e.target.value, 10);
+        this.state.selectedAcademicYear = ay;
+        this.state.weeks = RollbookModel.getAcademicWeeksForYear(ay);
+        const firstWeek = this.state.weeks.find(w => w.semester === this.state.selectedSemester && w.month === this.state.selectedCalMonth)
+          || this.state.weeks.find(w => w.semester === this.state.selectedSemester)
+          || this.state.weeks[0];
+        if (firstWeek) {
+          this.state.selectedSemester = firstWeek.semester;
+          this.state.selectedCalMonth = firstWeek.month;
+          this.state.selectedWeekId = firstWeek.weekId;
+          this.state.currentWeekNum = firstWeek.weekNum;
+        }
+        this.pushHashState();
+        this.renderControls();
+        this.renderContent();
+      }, { signal });
+    }
+
+    // Semester select
+    const semesterSelect = document.getElementById('semesterSelect');
+    if (semesterSelect) {
+      semesterSelect.addEventListener('change', (e) => {
+        const sem = String(e.target.value);
+        this.state.selectedSemester = sem;
+        const firstWeek = this.state.weeks.find(w => String(w.semester) === sem) || this.state.weeks[0];
+        if (firstWeek) {
+          this.state.selectedCalMonth = firstWeek.month;
+          this.state.selectedWeekId = firstWeek.weekId;
+          this.state.currentWeekNum = firstWeek.weekNum;
+        }
+        this.pushHashState();
+        this.renderControls();
+        this.renderContent();
+      }, { signal });
+    }
+
+    // Calendar Month select
+    const calMonthSelect = document.getElementById('calMonthSelect');
+    if (calMonthSelect) {
+      calMonthSelect.addEventListener('change', (e) => {
+        const m = parseInt(e.target.value, 10);
+        this.state.selectedCalMonth = m;
+        const firstWeek = this.state.weeks.find(w => w.semester === this.state.selectedSemester && w.month === m)
+          || this.state.weeks.find(w => w.semester === this.state.selectedSemester)
+          || this.state.weeks[0];
+        if (firstWeek) {
+          this.state.selectedWeekId = firstWeek.weekId;
+          this.state.currentWeekNum = firstWeek.weekNum;
+        }
+        this.pushHashState();
+        this.renderControls();
+        this.renderContent();
+      }, { signal });
+    }
+
     // Week select
     const weekSelect = document.getElementById('weekSelect');
     if (weekSelect) {
       weekSelect.addEventListener('change', (e) => {
-        this.state.currentWeekNum = parseInt(e.target.value, 10);
+        const wid = e.target.value;
+        const matched = this.state.weeks.find(w => w.weekId === wid);
+        if (matched) {
+          this.state.selectedWeekId = matched.weekId;
+          this.state.selectedSemester = matched.semester;
+          this.state.selectedCalMonth = matched.month;
+          this.state.currentWeekNum = matched.weekNum;
+        }
         this.pushHashState();
         this.renderControls();
         this.renderContent();
@@ -2119,7 +2253,12 @@ class App {
     const resetTodayBtn = document.getElementById('resetTodayWeekBtn');
     if (resetTodayBtn) {
       resetTodayBtn.addEventListener('click', () => {
-        this.state.currentWeekNum = this.autoWeek;
+        this.state.selectedAcademicYear = this.autoAcademicYear;
+        this.state.weeks = RollbookModel.getAcademicWeeksForYear(this.autoAcademicYear);
+        this.state.selectedSemester = this.autoSemester;
+        this.state.selectedCalMonth = this.autoCalMonth;
+        this.state.selectedWeekId = this.autoWeekId;
+        this.state.currentWeekNum = this.autoWeek ? this.autoWeek.weekNum : 1;
         this.pushHashState();
         this.renderControls();
         this.renderContent();
@@ -2202,8 +2341,8 @@ class App {
     const container = document.getElementById('appOutput') || document.getElementById('contentContainer');
     if (!container) return;
 
-    const { view, allStudents, holidaysMap, weeks, currentWeekNum, selectedDayIdx, selectedRooms, selectedBans, selectedLunchYear, selectedLunchMonth, finderQuery, showSpecialStudents } = this.state;
-    const weekObj = weeks.find(w => w.weekNum === currentWeekNum) || weeks[0];
+    const { view, allStudents, holidaysMap, weeks, selectedWeekId, selectedDayIdx, selectedRooms, selectedBans, selectedLunchYear, selectedLunchMonth, finderQuery, showSpecialStudents } = this.state;
+    const weekObj = weeks.find(w => w.weekId === selectedWeekId) || weeks[0];
 
     let html = '';
 
