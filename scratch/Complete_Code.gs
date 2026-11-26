@@ -259,7 +259,30 @@ function deployAllRegisteredSheets() {
     }
   }
 
+  recordDeployTimestampToBasicStats(targetSs);
   ui.alert(`🎉 [일괄 배포 완료]\n\n` + results.join('\n'));
+}
+
+/**
+ * 배포용 시트의 '기본통계' 시트 B31 셀에 최종 배포 시각(KST) 기록
+ */
+function recordDeployTimestampToBasicStats(targetSs) {
+  try {
+    let basicSheet = targetSs.getSheetByName('기본통계');
+    if (!basicSheet) {
+      basicSheet = targetSs.insertSheet('기본통계');
+    }
+    if (basicSheet.getMaxRows() < 31) {
+      basicSheet.insertRowsAfter(basicSheet.getMaxRows(), 31 - basicSheet.getMaxRows());
+    }
+    if (basicSheet.getMaxColumns() < 2) {
+      basicSheet.insertColumnAfter(1);
+    }
+    const deployedAtStr = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm');
+    basicSheet.getRange('B31').setValue("'" + deployedAtStr);
+  } catch (e) {
+    // 기록 실패가 배포 흐름을 중단하지 않도록 무시
+  }
 }
 
 /**
@@ -308,6 +331,7 @@ function deployCurrentActiveSheet() {
 
     const res = executeEncryptedDeploy(currentSheet, targetSs, password, true);
     if (res.success) {
+      recordDeployTimestampToBasicStats(targetSs);
       ui.alert(`🎉 [단독 배포 성공]\n\n• 시트: '${sheetName}'\n• 배포 방식: A열 단일 암호화 배포\n• 반영 행 수: ${res.totalRows}건${matchSummary}`);
     } else {
       ui.alert(`❌ [단독 배포 실패]\n\n• 시트: '${sheetName}'\n• 오류 내용: ${res.error}`);
@@ -322,6 +346,7 @@ function deployCurrentActiveSheet() {
 
     const res = executePlainDeploy(currentSheet, targetSs);
     if (res.success) {
+      recordDeployTimestampToBasicStats(targetSs);
       ui.alert(`🎉 [단독 배포 성공]\n\n• 시트: '${sheetName}'\n• 배포 방식: 원본 평문 배포\n• 반영 행 수: ${res.rows}행 x ${res.cols}열`);
     } else {
       ui.alert(`❌ [단독 배포 실패]\n\n• 시트: '${sheetName}'\n• 오류 내용: ${res.error}`);
@@ -463,15 +488,13 @@ function executeEncryptedDeploy(sourceSheet, targetSs, password, isFullSync) {
     // 배포 시트의 과거 잔여 열 및 찌꺼기 데이터 전체 소거 (완전 무결성 보장)
     targetSheet.clearContents();
 
-    // 불필요하게 늘어난 잉여 열 정리 (A열 암호문 + B열 배포시각 메타셀 유지, C열 이후 축소)
+    // 불필요하게 늘어난 잉여 열 정리 (A열만 남기거나 2열 이후 축소하여 시트 초경량화)
     if (targetSheet.getMaxColumns() > 2) {
       try {
-        targetSheet.deleteColumns(3, targetSheet.getMaxColumns() - 2);
+        targetSheet.deleteColumns(2, targetSheet.getMaxColumns() - 1);
       } catch (colErr) {
         // 열 삭제 제한 환경일 경우 패스
       }
-    } else if (targetSheet.getMaxColumns() < 2) {
-      targetSheet.insertColumnAfter(1);
     }
 
     // 행 크기 확보
@@ -480,10 +503,8 @@ function executeEncryptedDeploy(sourceSheet, targetSs, password, isFullSync) {
       targetSheet.insertRowsAfter(targetCurrentMaxRows, srcLastRow - targetCurrentMaxRows);
     }
 
-    // A1 헤더 설정 및 B1 배포 시각 기록 (KST)
+    // A1 헤더 설정
     targetSheet.getRange(1, 1).setValue(TARGET_ENC_COL_NAME);
-    const deployedAtStr = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm');
-    targetSheet.getRange(1, 2).setValue('synced_at:' + deployedAtStr);
 
     // A열에 2행부터 암호문 일괄 덮어쓰기
     targetSheet.getRange(2, 1, cipherRows.length, 1).setValues(cipherRows);

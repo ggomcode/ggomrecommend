@@ -1169,6 +1169,17 @@ export async function fetchBasicSchoolStats(sheetId, forceReload = false) {
 
     const wb = XLSX.read(csvText, { type: 'string' })
     const sheet = wb.Sheets[wb.SheetNames[0]]
+
+    // '기본통계' 시트 B31 셀에 기록된 최종 배포 시각(KST) 읽기
+    const b31Cell = sheet && sheet['B31'] ? (sheet['B31'].w || sheet['B31'].v) : ''
+    if (b31Cell) {
+      const cleanB31 = String(b31Cell).replace(/^synced_at:/i, '').trim()
+      const formatted = formatSyncedAtKorean(cleanB31)
+      if (formatted) {
+        latestSheetSyncedAt.value = formatted
+      }
+    }
+
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 })
 
     let yearRow = null
