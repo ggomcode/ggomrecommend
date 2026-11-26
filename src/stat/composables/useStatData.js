@@ -1020,7 +1020,7 @@ async function applyYearAndScope(year, scope, forceReload = false) {
 
   isLoadingYearData.value = true
 
-  // 무한 로딩 방지 비상 타임아웃 세이프가드 (8초 초과 시 강제 해제)
+  // 무한 로딩 방지 비상 타임아웃 세이프가드 (30초 초과 시 강제 해제 - fetchWithTimeout 30초와 정합)
   const safeguardTimer = setTimeout(() => {
     if (isLoadingYearData.value) {
       console.warn('[useStatData] Safeguard timer triggered: force clearing isLoadingYearData')
@@ -1032,7 +1032,7 @@ async function applyYearAndScope(year, scope, forceReload = false) {
       }
       isLoadingYearData.value = false
     }
-  }, 8000)
+  }, 30000)
 
   try {
     // 1. 구글 시트의 '기본통계' 탭 로드
@@ -1096,14 +1096,18 @@ async function setScope(scope) {
 }
 
 async function initYearSheets() {
+  isLoadingYearData.value = true
   try {
     const sheetId = await getKcueSheetId()
-    const basic = await fetchBasicSchoolStats(sheetId)
+    const [basic, sheets] = await Promise.all([
+      fetchBasicSchoolStats(sheetId).catch(() => ({})),
+      getKcueYearSheets().catch(() => ({})),
+      loadRemoteMultiYearStats().catch(() => {})
+    ])
     if (basic && typeof basic === 'object') {
       basicSchoolStats.value = basic
     }
 
-    const sheets = await getKcueYearSheets()
     if (sheets && typeof sheets === 'object') {
       kcueYearSheets.value = sheets
       const years = Object.keys(sheets).sort((a, b) => Number(b) - Number(a))
@@ -1111,13 +1115,12 @@ async function initYearSheets() {
         availableAcademicYears.value = years
       }
     }
-    // 원격 Supabase 및 캐시 5개년 통계 로드
-    await loadRemoteMultiYearStats()
 
     // 초기 로드 실행
     await applyYearAndScope(selectedAcademicYear.value, selectedScope.value)
   } catch (e) {
     console.warn('Failed to load KCUE year sheets in useStatData:', e)
+    isLoadingYearData.value = false
   }
 }
 initYearSheets()
