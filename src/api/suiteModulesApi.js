@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { supabase } from '../utils/supabaseClient.js'
+import { getStatSessionPassword } from './statApi.js'
 
 // ── 기본 시스템명 및 캐시 키 ──────────────────────────────────────────
 export const DEFAULT_SYSTEM_NAME = ''
@@ -258,7 +259,7 @@ export function getIsoDateFromTimestamp(ts) {
  * - URL 파라미터에는 어떠한 평문 정보(st, 20261029 등)도 노출되지 않고 순수 암호문만 포함
  * - expiresAtOrTtl: 유효 만료일자("YYYY-MM-DD") 또는 타임스탬프 (미지정 시 내일 23:59:59 KST)
  */
-export async function generateSecretAccessToken(moduleId, dateStr = null, expiresAtOrTtl = null) {
+export async function generateSecretAccessToken(moduleId, dateStr = null, expiresAtOrTtl = null, statPassword = null) {
   const modCode = MODULE_CODE_MAP[moduleId]
   if (!modCode) throw new Error('Unknown module ID for secret token: ' + moduleId)
 
@@ -277,7 +278,13 @@ export async function generateSecretAccessToken(moduleId, dateStr = null, expire
 
   const iv = cryptoObj.getRandomValues(new Uint8Array(12))
   const nonce = Math.random().toString(36).slice(2, 8)
-  const payload = enc.encode(`${modCode}:${dStr}:${expiresAt}:${nonce}`)
+  const resolvedStatPw = (moduleId === 'stat' || moduleId === 'stat_simple')
+    ? (statPassword ?? getStatSessionPassword())
+    : ''
+  const rawPayload = resolvedStatPw
+    ? JSON.stringify({ m: modCode, d: dStr, e: expiresAt, n: nonce, sp: resolvedStatPw })
+    : `${modCode}:${dStr}:${expiresAt}:${nonce}`
+  const payload = enc.encode(rawPayload)
   const encryptedBuf = await cryptoObj.subtle.encrypt({ name: 'AES-GCM', iv }, key, payload)
 
   const combined = new Uint8Array(iv.length + encryptedBuf.byteLength)
@@ -382,7 +389,16 @@ export async function verifySecretAccessToken(token, expectedModuleId = null) {
 
     const decryptedBuf = await cryptoObj.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipherData)
     const payloadText = new TextDecoder().decode(decryptedBuf)
-    const [decMod, decDate, decExp] = payloadText.split(':')
+    let decMod, decDate, decExp, statPassword = ''
+    if (payloadText.startsWith('{')) {
+      const parsed = JSON.parse(payloadText)
+      decMod = parsed.m
+      decDate = parsed.d
+      decExp = parsed.e
+      statPassword = parsed.sp || ''
+    } else {
+      ;[decMod, decDate, decExp] = payloadText.split(':')
+    }
 
     const mappedModuleId = CODE_TO_MODULE_MAP[decMod]
     if (!mappedModuleId) {
@@ -403,7 +419,8 @@ export async function verifySecretAccessToken(token, expectedModuleId = null) {
       moduleId: mappedModuleId,
       modCode: decMod,
       dateStr: decDate,
-      expiresAt
+      expiresAt,
+      statPassword
     }
   } catch (err) {
     return { valid: false, reason: 'decryption_failed' }
@@ -467,7 +484,8 @@ export async function getOrGenerateModuleSecretUrl(module, customExpireDate = nu
 
   if (token && !needRegenerate) {
     const check = await verifySecretAccessToken(token, moduleId)
-    if (!check.valid) {
+    const needsStatKey = (moduleId === 'stat' || moduleId === 'stat_simple') && !!getStatSessionPassword() && !check.statPassword
+    if (!check.valid || needsStatKey) {
       needRegenerate = true
     }
   }

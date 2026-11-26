@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/auth'
 import { checkRuralSystemOpenStatus } from '../api/ruralApi.js'
 import { checkExamIntentSystemEnabled } from '../api/examIntentApi.js'
 import { checkJuniorCollegeSystemEnabled } from '../api/juniorCollegeApi.js'
-import { isKcueStatSystemEnabled } from '../api/statApi.js'
+import { isKcueStatSystemEnabled, setStatSessionPassword } from '../api/statApi.js'
 import { 
   isModuleSecretAccessEnabled, 
   getModuleIdByPath, 
@@ -169,7 +169,10 @@ router.beforeEach(async to => {
       return { path: '/login', query: { error: 'secret_closed', module: verifiedModuleId } }
     }
 
-    // 3) 검증 통과: 게스트 세션 승인 및 1일 한정 티켓 등록
+    // 3) 검증 통과: 시크릿 토큰에 봉인된 시트 복호화 키 자동 적용 + 게스트 세션 승인 및 1일 한정 티켓 등록
+    if (verifyResult.statPassword) {
+      setStatSessionPassword(verifyResult.statPassword)
+    }
     if (!auth.isAdmin && !auth.isTeacher) {
       auth.loginAsGuest(verifiedModuleId, { ...verifyResult, token })
     }

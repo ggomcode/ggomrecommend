@@ -1645,11 +1645,13 @@ async function refreshModuleSecretUrls() {
       moduleSecretUrls.value[m.id] = await getOrGenerateModuleSecretUrl(m)
     }
     if (m.id === 'stat' && m.simpleSecretAccessEnabled) {
-      moduleSecretUrls.value['stat_simple'] = await getOrGenerateModuleSecretUrl({
+      const proxyMod = {
         id: 'stat_simple',
         secretAccessExpireDate: m.simpleSecretAccessExpireDate,
         secretAccessToken: m.simpleSecretAccessToken
-      })
+      }
+      moduleSecretUrls.value['stat_simple'] = await getOrGenerateModuleSecretUrl(proxyMod)
+      m.simpleSecretAccessToken = proxyMod.secretAccessToken
     }
   }
 }
