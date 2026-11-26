@@ -197,7 +197,7 @@
           <div class="flex items-center gap-2">
             <span class="text-xs font-black text-slate-800 flex items-center gap-1.5">
               <span>🌟</span>
-              <span>5개년 코호트별 종합 학력 지표 (2025~2029 대입)</span>
+              <span>5개년 종합 학력 지표 (2025~2029 대입)</span>
             </span>
             <span class="text-[11px] text-slate-500 font-medium">※ 2025·2026: 수능 실채점 / 2027~2029: {{ currentRoundLabel }}</span>
           </div>
