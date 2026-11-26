@@ -19,16 +19,21 @@
 
       <!-- Quick Metrics & Print Button -->
       <div class="flex items-center gap-2 self-start sm:self-center shrink-0">
-        <div class="bg-indigo-50/70 border border-indigo-200/80 px-3 py-1.5 rounded-xl text-right">
-          <span class="text-[10px] text-slate-500 font-medium block">총 합격 건수 (중복포함)</span>
-          <span class="text-xs sm:text-sm font-black text-indigo-700 font-mono">
-            {{ totalPassedAppsCount }}건
-            <span class="text-[10px] font-semibold text-slate-500">(실인원 {{ totalUniquePassedStudents }}명)</span>
+        <div class="flex flex-col items-end">
+          <div class="bg-indigo-50/70 border border-indigo-200/80 px-3 py-1.5 rounded-xl text-right">
+            <span class="text-[10px] text-slate-500 font-medium block">총 합격 건수 (중복포함)</span>
+            <span class="text-xs sm:text-sm font-black text-indigo-700 font-mono">
+              {{ totalPassedAppsCount }}건
+              <span class="text-[10px] font-semibold text-slate-500">(실인원 {{ totalUniquePassedStudents }}명)</span>
+            </span>
+          </div>
+          <span v-if="sheetSyncedAt" class="text-[10px] text-slate-400 font-mono mt-1 pr-0.5">
+            ({{ sheetSyncedAt }} 현재)
           </span>
         </div>
 
         <button
-          v-if="auth.isAdmin"
+          v-if="canPrint"
           type="button"
           @click="handlePrint"
           class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 hover:border-slate-300 transition-all cursor-pointer shadow-2xs"
@@ -51,7 +56,7 @@
           주요 대학 및 권역별 합격 건수 현황표
         </h1>
         <span class="text-xs font-mono font-bold text-black">
-          총 합격 건수: {{ totalPassedAppsCount }}건 (실인원 {{ totalUniquePassedStudents }}명)
+          총 합격 건수: {{ totalPassedAppsCount }}건 (실인원 {{ totalUniquePassedStudents }}명)<template v-if="sheetSyncedAt"> · ({{ sheetSyncedAt }} 현재)</template>
         </span>
       </div>
     </div>
@@ -327,16 +332,19 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { Printer } from 'lucide-vue-next'
 import { useData, maskName } from '../composables/useStatData'
 import { useAuthStore } from '../../stores/auth'
 import { schoolName } from '../../utils/schoolConfig'
 
+const route = useRoute()
 const auth = useAuthStore()
+const canPrint = computed(() => auth.isAdmin && !auth.isGuest && !route.query?.sec && route.path !== '/stat-simple')
 
 const displaySchoolName = computed(() => (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리고등학교')
 
-const { filteredApplications, selectedAcademicYear } = useData()
+const { filteredApplications, selectedAcademicYear, sheetSyncedAt } = useData()
 
 // -------------------------------------------------------------
 // 1. 합격 판정 헬퍼 (최초합격, 충원합격, 최종합격, 등록완료 포함)

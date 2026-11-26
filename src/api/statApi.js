@@ -1,6 +1,33 @@
+import { ref } from 'vue'
 import { supabase } from '../utils/supabaseClient'
 import * as XLSX from 'xlsx'
 import CryptoJS from 'crypto-js'
+
+export const latestSheetSyncedAt = ref('')
+
+function formatSyncedAtKorean(raw) {
+  if (!raw) return ''
+  const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
+  const s = String(raw).trim()
+  const m = s.match(/(\d{4})[-./](\d{1,2})[-./](\d{1,2})[\sT]+(\d{1,2}):(\d{2})/)
+  if (m) {
+    const [, y, mo, d, h, mi] = m
+    const w = WEEKDAYS[new Date(Date.UTC(Number(y), Number(mo) - 1, Number(d))).getUTCDay()]
+    return `${y}년 ${Number(mo)}월 ${Number(d)}일(${w}) ${String(h).padStart(2, '0')}:${mi}`
+  }
+  const dt = new Date(s)
+  if (!isNaN(dt.getTime())) {
+    const kst = new Date(dt.getTime() + 9 * 60 * 60 * 1000)
+    const y = kst.getUTCFullYear()
+    const mo = kst.getUTCMonth() + 1
+    const d = kst.getUTCDate()
+    const w = WEEKDAYS[kst.getUTCDay()]
+    const h = String(kst.getUTCHours()).padStart(2, '0')
+    const mi = String(kst.getUTCMinutes()).padStart(2, '0')
+    return `${y}년 ${mo}월 ${d}일(${w}) ${h}:${mi}`
+  }
+  return s
+}
 
 export const STAT_PASSWORD_SESSION_KEY = 'pcm_stat_secret_key'
 
@@ -405,6 +432,10 @@ export async function fetchKcueSheetTabCsv(sheetId, tabName) {
   if (!res.ok) {
     throw new Error(`[${tabName}] 탭을 읽을 수 없습니다. (HTTP ${res.status}) 시트의 공유 권한 및 탭 이름을 확인하세요.`)
   }
+  const lastMod = res.headers?.get?.('last-modified')
+  if (lastMod && !latestSheetSyncedAt.value) {
+    latestSheetSyncedAt.value = formatSyncedAtKorean(lastMod)
+  }
   return await res.text()
 }
 
@@ -454,6 +485,16 @@ export function parseKcueRows(csvText, customPassword = null) {
 
   const password = customPassword || getStatSessionPassword()
   const rawHeaders = rows[0] || []
+
+  // B1 등 헤더 행에 기록된 암호화 배포 시각(synced_at:YYYY-MM-DD HH:mm) 추출
+  for (const h of rawHeaders) {
+    const hs = String(h || '').trim()
+    if (hs.startsWith('synced_at:')) {
+      const formatted = formatSyncedAtKorean(hs.slice('synced_at:'.length))
+      if (formatted) latestSheetSyncedAt.value = formatted
+      break
+    }
+  }
   
   // 1. A열(0-index: 0), FA열(157번째, 0-index: 156), DA열(105번째, 0-index: 104), CA열(79번째, 0-index: 78) 또는 'encrypted_data' 헤더 열 확인
   let encColIdx = rawHeaders.findIndex(h => String(h || '').trim() === 'encrypted_data')

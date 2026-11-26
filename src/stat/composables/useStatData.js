@@ -18,7 +18,8 @@ import {
   clearStatSessionPassword,
   fetchAndParseKcueMockData,
   groupMockRecordsByStudent,
-  DEFAULT_CSAT_PASS_RATE_BENCHMARK
+  DEFAULT_CSAT_PASS_RATE_BENCHMARK,
+  latestSheetSyncedAt
 } from '../../api/statApi.js'
 import { supabase } from '../../utils/supabaseClient'
 import { schoolName } from '../../utils/schoolConfig'
@@ -1898,7 +1899,8 @@ export function useStatData() {
     loadComprehensiveAiReport,
     compileComprehensiveStatPayload,
     getSeniorApplications,
-    loadPeriodData
+    loadPeriodData,
+    sheetSyncedAt: latestSheetSyncedAt
   }
 }
 
