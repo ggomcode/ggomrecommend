@@ -116,16 +116,21 @@
               {{ statsMap[target.id]?.applyCount || 0 }}건
             </div>
 
-            <!-- Unique student count badge (when different from applyCount) -->
+            <!-- Total application count & unique student count badge -->
             <div
-              v-if="statsMap[target.id]?.studentCount > 0 && statsMap[target.id]?.applyCount !== statsMap[target.id]?.studentCount"
-              class="text-[9px] font-mono text-slate-400 mt-0.5 print:text-[8px] print:text-slate-600"
+              v-if="statsMap[target.id]?.totalApplyCount > 0"
+              class="text-[9.5px] font-mono text-slate-400 mt-0.5 print:text-[8px] print:text-slate-600 truncate max-w-full"
             >
-              (실인원 {{ statsMap[target.id]?.studentCount }}명)
+              <template v-if="statsMap[target.id]?.studentCount > 0 && statsMap[target.id]?.applyCount !== statsMap[target.id]?.studentCount">
+                지원 {{ statsMap[target.id]?.totalApplyCount }}건 · 실 {{ statsMap[target.id]?.studentCount }}명
+              </template>
+              <template v-else>
+                지원 {{ statsMap[target.id]?.totalApplyCount }}건
+              </template>
             </div>
             <div
-              v-else-if="(statsMap[target.id]?.applyCount || 0) === 0"
-              class="text-[9px] font-mono text-slate-300 mt-0.5 print:hidden"
+              v-else
+              class="text-[9.5px] font-mono text-slate-300 mt-0.5 print:hidden"
             >
               -
             </div>
@@ -191,14 +196,19 @@
             </div>
 
             <div
-              v-if="statsMap[target.id]?.studentCount > 0 && statsMap[target.id]?.applyCount !== statsMap[target.id]?.studentCount"
-              class="text-[9px] font-mono text-slate-400 mt-0.5 print:text-[8px] print:text-slate-600"
+              v-if="statsMap[target.id]?.totalApplyCount > 0"
+              class="text-[9.5px] font-mono text-slate-400 mt-0.5 print:text-[8px] print:text-slate-600 truncate max-w-full"
             >
-              (실인원 {{ statsMap[target.id]?.studentCount }}명)
+              <template v-if="statsMap[target.id]?.studentCount > 0 && statsMap[target.id]?.applyCount !== statsMap[target.id]?.studentCount">
+                지원 {{ statsMap[target.id]?.totalApplyCount }}건 · 실 {{ statsMap[target.id]?.studentCount }}명
+              </template>
+              <template v-else>
+                지원 {{ statsMap[target.id]?.totalApplyCount }}건
+              </template>
             </div>
             <div
-              v-else-if="(statsMap[target.id]?.applyCount || 0) === 0"
-              class="text-[9px] font-mono text-slate-300 mt-0.5 print:hidden"
+              v-else
+              class="text-[9.5px] font-mono text-slate-300 mt-0.5 print:hidden"
             >
               -
             </div>
@@ -232,7 +242,7 @@
               <h3 class="text-xl font-black text-slate-900 m-0 flex items-center gap-2">
                 <span>{{ selectedCategoryModal.name }}</span>
                 <span class="text-sm font-black text-indigo-600 font-mono bg-indigo-50 px-2.5 py-0.5 rounded-lg border border-indigo-100">
-                  총 {{ selectedCategoryModal.apps.length }}건 합격 (실인원 {{ selectedCategoryModal.studentCount }}명)
+                  합격 {{ selectedCategoryModal.apps.length }}건 / 지원 {{ selectedCategoryModal.totalApplyCount }}건 (실인원 {{ selectedCategoryModal.studentCount }}명)
                 </span>
               </h3>
             </div>
@@ -724,10 +734,12 @@ const totalPassedAppsCount = computed(() => {
 
 const statsMap = computed(() => {
   const map = {}
+  const allApps = filteredApplications.value || []
   const passed = allPassedApps.value
 
   // 주요 31개 대학 매칭
   MAJOR_TARGETS.forEach(target => {
+    const totalMatchedApps = allApps.filter(target.matcher)
     const matchedApps = passed.filter(target.matcher)
     const studentKeys = new Set(matchedApps.map(getStudentKey))
     map[target.id] = {
@@ -735,12 +747,14 @@ const statsMap = computed(() => {
       name: target.name,
       studentCount: studentKeys.size,
       applyCount: matchedApps.length,
+      totalApplyCount: totalMatchedApps.length,
       apps: matchedApps
     }
   })
 
   // 그 밖의 대학 권역별 매칭
   REGIONAL_TARGETS.forEach(target => {
+    const totalMatchedApps = allApps.filter(target.matcher)
     const matchedApps = passed.filter(target.matcher)
     const studentKeys = new Set(matchedApps.map(getStudentKey))
     map[target.id] = {
@@ -748,6 +762,7 @@ const statsMap = computed(() => {
       name: target.name,
       studentCount: studentKeys.size,
       applyCount: matchedApps.length,
+      totalApplyCount: totalMatchedApps.length,
       apps: matchedApps
     }
   })
