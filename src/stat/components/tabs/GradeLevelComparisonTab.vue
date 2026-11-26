@@ -175,6 +175,18 @@
       </div>
     </div>
 
+    <!-- 로딩 원반 (데이터 불러오는 중) -->
+    <div v-if="isLoadingData" class="bg-white rounded-3xl border border-slate-200 shadow-sm py-20 px-6 flex flex-col items-center justify-center text-center">
+      <div class="w-12 h-12 rounded-full border-4 border-indigo-200 border-t-indigo-600 animate-spin mb-4"></div>
+      <p class="text-sm font-black text-slate-800 m-0">
+        학년별 성적 비교 데이터를 불러오는 중입니다...
+      </p>
+      <p class="text-xs text-slate-500 mt-1.5 m-0">
+        5개년 모의고사·수능 원자료 복호화 및 시계열 집계를 진행하고 있습니다.
+      </p>
+    </div>
+
+    <template v-else>
     <!-- ============================================================ -->
     <!-- 2. 종합 학력 KPI 카드 그리드 (5개년 전체 vs 재학생 3개 학년)     -->
     <!-- ============================================================ -->
@@ -1507,6 +1519,7 @@
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
