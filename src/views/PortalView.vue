@@ -13,7 +13,7 @@
           </div>
           <div class="flex flex-col leading-tight">
             <span class="text-xs font-bold text-blue-600 tracking-wide">{{ schoolName }}</span>
-            <h1 class="text-base font-bold text-slate-900 m-0 portal-title-font min-h-[1.25rem]">{{ displaySystemName }}</h1>
+            <h1 class="text-base font-bold text-slate-900 m-0 portal-title-font min-h-5">{{ displaySystemName }}</h1>
           </div>
         </div>
 
@@ -72,7 +72,7 @@
           <span class="text-slate-300">|</span>
           <span class="portal-title-font">{{ displaySystemName }}</span>
         </div>
-        <h2 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-3 portal-title-font min-h-[2.5rem]">
+        <h2 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-3 portal-title-font min-h-10">
           {{ displaySystemName }}
         </h2>
         <p class="text-base text-slate-600 leading-relaxed">
