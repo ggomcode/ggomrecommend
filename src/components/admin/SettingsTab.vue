@@ -1388,7 +1388,7 @@ import {
   fetchAvailableGeminiModels
 } from '../../api/geminiApi.js'
 import { getCurrentAcademicYear, compileComprehensiveStatPayload, loadComprehensiveAiReport } from '../../stat/composables/useStatData.js'
-import { getKcueSheetId, extractSheetId, saveKcueSheetId, KCUE_SHEET_KEY } from '../../api/statApi.js'
+import { getKcueSheetId, extractSheetId, saveKcueSheetId, KCUE_SHEET_KEY, verifyStatSheetPassword, getStatSessionPassword, setStatSessionPassword } from '../../api/statApi.js'
 import { getAdmissionSheetId, saveAdmissionSheetId, fetchAdmissionCalendarData } from '../../services/admissionCalendarService.js'
 import { dialog } from '../common/dialog.js'
 import { useAuthStore } from '../../stores/auth'
@@ -1402,6 +1402,9 @@ import {
   getModuleSecretUrl,
   getOrGenerateModuleSecretUrl,
   generateSecretAccessToken,
+  verifySecretAccessToken,
+  saveSealedStatSheetPassword,
+  fetchSealedStatSheetPassword,
   getTodayDateString,
   getTodayIsoDate,
   getNextDayIsoDate,
@@ -1639,6 +1642,44 @@ function getSecretDdayLabel(m) {
   return '만료됨'
 }
 
+async function ensureVerifiedStatPasswordForSecretLink(interactive = true) {
+  const sheetId = await getKcueSheetId()
+  if (!sheetId) return ''
+  const existingPw = getStatSessionPassword()
+  const check = await verifyStatSheetPassword(sheetId, existingPw)
+  if (!check.isEncrypted) return ''
+  if (check.success && existingPw) {
+    saveSealedStatSheetPassword(existingPw).catch(() => {})
+    return existingPw
+  }
+
+  const sealedPw = await fetchSealedStatSheetPassword()
+  if (sealedPw) {
+    const sealedCheck = await verifyStatSheetPassword(sheetId, sealedPw)
+    if (sealedCheck.success) {
+      setStatSessionPassword(sealedPw)
+      return sealedPw
+    }
+  }
+  if (!interactive) return ''
+
+  const inputPw = window.prompt('시크릿 링크에 복호화 키를 포함하려면 대교협 구글 시트 암호화 비밀번호를 입력해 주세요:')
+  if (!inputPw || !inputPw.trim()) return null
+  const cleanPw = inputPw.trim()
+  const verifyInput = await verifyStatSheetPassword(sheetId, cleanPw)
+  if (!verifyInput.success) {
+    await dialog.alert({
+      title: '비밀번호 불일치',
+      level: 'error',
+      message: verifyInput.message || '시트 암호화 비밀번호가 일치하지 않습니다.'
+    })
+    return null
+  }
+  setStatSessionPassword(cleanPw)
+  saveSealedStatSheetPassword(cleanPw).catch(() => {})
+  return cleanPw
+}
+
 async function refreshModuleSecretUrls() {
   for (const m of suiteModules.value) {
     if (m.secretAccessEnabled) {
@@ -1676,8 +1717,13 @@ function getSimpleSecretDdayLabel(m) {
 async function handleSimpleSecretExpireDateChange(m, newDateStr) {
   if (!newDateStr) return
   const clean = String(newDateStr).trim()
+  const statPw = await ensureVerifiedStatPasswordForSecretLink(true)
+  if (statPw === null) return
+
   m.simpleSecretAccessExpireDate = clean
   m.simpleSecretAccessExpiresAt = parseExpireDateToTimestamp(clean)
+  m.simpleSecretAccessDate = getTodayDateString()
+  m.simpleSecretAccessToken = await generateSecretAccessToken('stat_simple', m.simpleSecretAccessDate, m.simpleSecretAccessExpiresAt, statPw)
 
   const proxyMod = {
     id: 'stat_simple',
@@ -1687,7 +1733,6 @@ async function handleSimpleSecretExpireDateChange(m, newDateStr) {
     secretAccessToken: m.simpleSecretAccessToken
   }
   moduleSecretUrls.value['stat_simple'] = await getOrGenerateModuleSecretUrl(proxyMod, clean)
-  m.simpleSecretAccessToken = proxyMod.secretAccessToken
   try {
     localStorage.setItem('suite_modules_cache', JSON.stringify(suiteModules.value))
     await saveSuiteModules(suiteModules.value)
@@ -1701,6 +1746,31 @@ async function setPresetSimpleExpireDate(m, days) {
 }
 
 async function copySimpleSecretUrl(m) {
+  const statPw = await ensureVerifiedStatPasswordForSecretLink(true)
+  if (statPw === null) return
+
+  const check = m.simpleSecretAccessToken
+    ? await verifySecretAccessToken(m.simpleSecretAccessToken, 'stat_simple')
+    : { valid: false }
+  if (!check.valid || (statPw && check.statPassword !== statPw)) {
+    const expStr = m.simpleSecretAccessExpireDate || getNextDayIsoDate(1)
+    m.simpleSecretAccessExpireDate = expStr
+    m.simpleSecretAccessExpiresAt = parseExpireDateToTimestamp(expStr)
+    m.simpleSecretAccessDate = getTodayDateString()
+    m.simpleSecretAccessToken = await generateSecretAccessToken('stat_simple', m.simpleSecretAccessDate, m.simpleSecretAccessExpiresAt, statPw)
+    moduleSecretUrls.value['stat_simple'] = await getOrGenerateModuleSecretUrl({
+      id: 'stat_simple',
+      secretAccessExpireDate: expStr,
+      secretAccessToken: m.simpleSecretAccessToken
+    }, expStr)
+    try {
+      localStorage.setItem('suite_modules_cache', JSON.stringify(suiteModules.value))
+      await saveSuiteModules(suiteModules.value)
+    } catch (err) {
+      console.error('Failed to persist upgraded simple secret token:', err)
+    }
+  }
+
   const url = moduleSecretUrls.value['stat_simple'] || await getOrGenerateModuleSecretUrl({
     id: 'stat_simple',
     secretAccessExpireDate: m.simpleSecretAccessExpireDate,
@@ -1720,7 +1790,13 @@ async function copySimpleSecretUrl(m) {
 }
 
 async function toggleSimpleSecretAccess(m) {
-  m.simpleSecretAccessEnabled = !m.simpleSecretAccessEnabled
+  const nextEnabled = !m.simpleSecretAccessEnabled
+  let statPw = ''
+  if (nextEnabled) {
+    statPw = await ensureVerifiedStatPasswordForSecretLink(true)
+    if (statPw === null) return
+  }
+  m.simpleSecretAccessEnabled = nextEnabled
   if (m.simpleSecretAccessEnabled) {
     if (!m.simpleSecretAccessExpireDate || m.simpleSecretAccessExpireDate < todayIsoDate.value) {
       m.simpleSecretAccessExpireDate = getNextDayIsoDate(1)
@@ -1728,7 +1804,7 @@ async function toggleSimpleSecretAccess(m) {
     const expiresAt = parseExpireDateToTimestamp(m.simpleSecretAccessExpireDate)
     m.simpleSecretAccessExpiresAt = expiresAt
     m.simpleSecretAccessDate = getTodayDateString()
-    m.simpleSecretAccessToken = await generateSecretAccessToken('stat_simple', m.simpleSecretAccessDate, expiresAt)
+    m.simpleSecretAccessToken = await generateSecretAccessToken('stat_simple', m.simpleSecretAccessDate, expiresAt, statPw)
     moduleSecretUrls.value['stat_simple'] = await getOrGenerateModuleSecretUrl({
       id: 'stat_simple',
       secretAccessExpireDate: m.simpleSecretAccessExpireDate,
@@ -1758,9 +1834,18 @@ async function toggleSimpleSecretAccess(m) {
 async function handleSecretExpireDateChange(m, newDateStr) {
   if (!newDateStr) return
   const clean = String(newDateStr).trim()
+  let statPw = ''
+  if (m.id === 'stat') {
+    statPw = await ensureVerifiedStatPasswordForSecretLink(true)
+    if (statPw === null) return
+  }
   m.secretAccessExpireDate = clean
   const expiresAt = parseExpireDateToTimestamp(clean)
   m.secretAccessExpiresAt = expiresAt
+  if (m.id === 'stat') {
+    m.secretAccessDate = getTodayDateString()
+    m.secretAccessToken = await generateSecretAccessToken(m.id, m.secretAccessDate, expiresAt, statPw)
+  }
 
   // 새 토큰 및 URL 즉시 재발급
   moduleSecretUrls.value[m.id] = await getOrGenerateModuleSecretUrl(m, clean)
@@ -1778,6 +1863,27 @@ async function setPresetExpireDate(m, days) {
 }
 
 async function copySecretUrl(m) {
+  if (m.id === 'stat') {
+    const statPw = await ensureVerifiedStatPasswordForSecretLink(true)
+    if (statPw === null) return
+    const check = m.secretAccessToken
+      ? await verifySecretAccessToken(m.secretAccessToken, m.id)
+      : { valid: false }
+    if (!check.valid || (statPw && check.statPassword !== statPw)) {
+      const expStr = m.secretAccessExpireDate || getNextDayIsoDate(1)
+      m.secretAccessExpireDate = expStr
+      m.secretAccessExpiresAt = parseExpireDateToTimestamp(expStr)
+      m.secretAccessDate = getTodayDateString()
+      m.secretAccessToken = await generateSecretAccessToken(m.id, m.secretAccessDate, m.secretAccessExpiresAt, statPw)
+      moduleSecretUrls.value[m.id] = await getOrGenerateModuleSecretUrl(m, expStr)
+      try {
+        localStorage.setItem('suite_modules_cache', JSON.stringify(suiteModules.value))
+        await saveSuiteModules(suiteModules.value)
+      } catch (err) {
+        console.error('Failed to persist upgraded secret token:', err)
+      }
+    }
+  }
   const url = moduleSecretUrls.value[m.id] || await getOrGenerateModuleSecretUrl(m)
   const dday = getSecretDdayLabel(m)
   const expStr = m.secretAccessExpireDate || todayIsoDate.value
@@ -1793,7 +1899,13 @@ async function copySecretUrl(m) {
 }
 
 async function toggleSecretAccess(m) {
-  m.secretAccessEnabled = !m.secretAccessEnabled
+  const nextEnabled = !m.secretAccessEnabled
+  let statPw = ''
+  if (nextEnabled && m.id === 'stat') {
+    statPw = await ensureVerifiedStatPasswordForSecretLink(true)
+    if (statPw === null) return
+  }
+  m.secretAccessEnabled = nextEnabled
   if (m.secretAccessEnabled) {
     // 기존에 만료일이 없거나 이미 지난 날짜라면 내일(+1일)로 기본 설정
     if (!m.secretAccessExpireDate || m.secretAccessExpireDate < todayIsoDate.value) {
@@ -1802,7 +1914,7 @@ async function toggleSecretAccess(m) {
     const expiresAt = parseExpireDateToTimestamp(m.secretAccessExpireDate)
     m.secretAccessExpiresAt = expiresAt
     m.secretAccessDate = getTodayDateString()
-    const token = await generateSecretAccessToken(m.id, m.secretAccessDate, expiresAt)
+    const token = await generateSecretAccessToken(m.id, m.secretAccessDate, expiresAt, statPw)
     m.secretAccessToken = token
     moduleSecretUrls.value[m.id] = await getOrGenerateModuleSecretUrl(m, m.secretAccessExpireDate)
   } else {

@@ -298,6 +298,79 @@ export async function generateSecretAccessToken(moduleId, dateStr = null, expire
   return b64url
 }
 
+const STAT_SEALED_KEY_CONFIG = 'stat_sheet_secret_sealed'
+
+/**
+ * 대교협 시트 복호화 비밀번호를 AES-256-GCM으로 봉인하여 Supabase config에 저장
+ * (시크릿 링크 접속 시 별도 비밀번호 입력 없이 자동 복호화용)
+ */
+export async function saveSealedStatSheetPassword(password) {
+  if (!password || !supabase) return false
+  const cryptoObj = typeof window !== 'undefined' ? window.crypto : globalThis.crypto
+  if (!cryptoObj?.subtle) return false
+
+  try {
+    const enc = new TextEncoder()
+    const keySeed = enc.encode(`${SECRET_KEY_STR}_stat_sheet_key`)
+    const keyHash = await cryptoObj.subtle.digest('SHA-256', keySeed)
+    const key = await cryptoObj.subtle.importKey('raw', keyHash, { name: 'AES-GCM' }, false, ['encrypt'])
+
+    const iv = cryptoObj.getRandomValues(new Uint8Array(12))
+    const encryptedBuf = await cryptoObj.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(String(password).trim()))
+    const combined = new Uint8Array(iv.length + encryptedBuf.byteLength)
+    combined.set(iv, 0)
+    combined.set(new Uint8Array(encryptedBuf), iv.length)
+
+    let binary = ''
+    for (let i = 0; i < combined.length; i++) binary += String.fromCharCode(combined[i])
+    const sealed = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+
+    const { error } = await supabase
+      .from('config')
+      .upsert({ key: STAT_SEALED_KEY_CONFIG, value: sealed }, { onConflict: 'key' })
+    return !error
+  } catch (e) {
+    console.warn('Failed to save sealed stat sheet password:', e)
+    return false
+  }
+}
+
+/**
+ * Supabase config에 봉인된 대교협 시트 복호화 비밀번호 조회 및 복원
+ */
+export async function fetchSealedStatSheetPassword() {
+  if (!supabase) return ''
+  const cryptoObj = typeof window !== 'undefined' ? window.crypto : globalThis.crypto
+  if (!cryptoObj?.subtle) return ''
+
+  try {
+    const { data, error } = await supabase
+      .from('config')
+      .select('value')
+      .eq('key', STAT_SEALED_KEY_CONFIG)
+      .maybeSingle()
+
+    if (error || !data?.value) return ''
+    let str = String(data.value).trim().replace(/-/g, '+').replace(/_/g, '/')
+    while (str.length % 4) str += '='
+    const binary = atob(str)
+    const rawBytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) rawBytes[i] = binary.charCodeAt(i)
+    if (rawBytes.length < 28) return ''
+
+    const iv = rawBytes.slice(0, 12)
+    const cipherData = rawBytes.slice(12)
+    const enc = new TextEncoder()
+    const keySeed = enc.encode(`${SECRET_KEY_STR}_stat_sheet_key`)
+    const keyHash = await cryptoObj.subtle.digest('SHA-256', keySeed)
+    const key = await cryptoObj.subtle.importKey('raw', keyHash, { name: 'AES-GCM' }, false, ['decrypt'])
+    const decryptedBuf = await cryptoObj.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipherData)
+    return new TextDecoder().decode(decryptedBuf) || ''
+  } catch (e) {
+    return ''
+  }
+}
+
 /**
  * 비밀 접속 AES-256-GCM 토큰 검증 및 복호화
  * - 완전 암호화 토큰 및 기존 레거시 포맷({modCode}{dateStr}_...) 동시 호환 지원

@@ -9,7 +9,8 @@ import {
   getModuleIdByPath, 
   MODULE_ROUTE_MAP,
   verifySecretAccessToken,
-  CODE_TO_MODULE_MAP
+  CODE_TO_MODULE_MAP,
+  fetchSealedStatSheetPassword
 } from '../api/suiteModulesApi.js'
 
 const routes = [
@@ -169,9 +170,12 @@ router.beforeEach(async to => {
       return { path: '/login', query: { error: 'secret_closed', module: verifiedModuleId } }
     }
 
-    // 3) 검증 통과: 시크릿 토큰에 봉인된 시트 복호화 키 자동 적용 + 게스트 세션 승인 및 1일 한정 티켓 등록
+    // 3) 검증 통과: 시크릿 토큰 또는 봉인 설정에 저장된 시트 복호화 키 자동 적용 + 게스트 세션 승인 및 1일 한정 티켓 등록
     if (verifyResult.statPassword) {
       setStatSessionPassword(verifyResult.statPassword)
+    } else if (verifiedModuleId === 'stat' || verifiedModuleId === 'stat_simple') {
+      const sealedPw = await fetchSealedStatSheetPassword()
+      if (sealedPw) setStatSessionPassword(sealedPw)
     }
     if (!auth.isAdmin && !auth.isTeacher) {
       auth.loginAsGuest(verifiedModuleId, { ...verifyResult, token })

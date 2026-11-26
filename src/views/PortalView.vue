@@ -600,7 +600,8 @@ import {
   DEFAULT_SYSTEM_NAME,
   fetchSuiteModules,
   getModuleStatus,
-  DEFAULT_SUITE_MODULES
+  DEFAULT_SUITE_MODULES,
+  saveSealedStatSheetPassword
 } from '../api/suiteModulesApi.js'
 
 const router = useRouter()
@@ -796,6 +797,9 @@ async function enterStatSystem() {
     // 1. 시트가 비암호화 상태이거나 기존 세션 암호로 복호화 가능한지 먼저 비동기 확인
     const verifyRes = await verifyStatSheetPassword(sheetId, existingPw)
     if (verifyRes.success) {
+      if (verifyRes.isEncrypted && existingPw) {
+        saveSealedStatSheetPassword(existingPw).catch(() => {})
+      }
       // ⭕ 통과 (시트 미암호화 또는 세션 암호 일치): 모달 없이 즉시 대시보드 입장!
       shouldKeepLoading = true
       statLoadingMessage.value = '대입 통계 대시보드를 불러오는 중입니다...'
@@ -857,6 +861,9 @@ async function submitStatPassword() {
 
     // ⭕ 인증 성공: 브라우저 세션에 저장하고 시스템 대문 통과
     setStatSessionPassword(pw)
+    if (verifyRes.isEncrypted) {
+      saveSealedStatSheetPassword(pw).catch(() => {})
+    }
     showStatPasswordModal.value = false
     isCheckingStat.value = true
     statLoadingMessage.value = '대입 통계 대시보드를 불러오는 중입니다...'

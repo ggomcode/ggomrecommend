@@ -701,9 +701,8 @@ export async function loadPeriodData(year, period = '수시', forceReload = fals
       yearlyApplicationsCache.value[cacheKey] = loaded
       return loaded
     }
-    // 시트에서 데이터를 찾지 못한 경우: 2027 수시는 번들 원자료로 안전 복구
+    // 시트에서 데이터를 찾지 못한 경우: 2027 수시는 번들 원자료로 안전 복구 (캐시 오염 방지 위해 캐시 저장은 생략)
     if (strYear === '2027' && period === '수시') {
-      yearlyApplicationsCache.value[cacheKey] = rawAppsData
       return rawAppsData
     }
     return []
