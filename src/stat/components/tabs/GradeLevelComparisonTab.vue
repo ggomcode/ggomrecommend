@@ -769,7 +769,7 @@
 
           <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
             <span class="text-slate-500">최고 학력 코호트:</span>
-            <span class="text-indigo-700 font-black">2025 대입 ({{ graduateData2025.overallAvg }}등급) / 2027 대입 ({{ grade3Data.overallAvg }}등급)</span>
+            <span class="text-indigo-700 font-black">2025 대입 ({{ graduateData2025.overallAvg }}등급) / 2027 대입 ({{ gradeData[3].overallAvg }}등급)</span>
           </div>
         </div>
 
@@ -796,7 +796,7 @@
 
           <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
             <span class="text-slate-500">수능최저 2합5 최고:</span>
-            <span class="text-amber-800 font-black">현 고3 ({{ grade3Data.csat2Sum5Rate }}%) · 2025 수능 ({{ graduateData2025.csat2Sum5Rate }}%)</span>
+            <span class="text-amber-800 font-black">현 고3 ({{ gradeData[3].csat2Sum5Rate }}%) · 2025 수능 ({{ graduateData2025.csat2Sum5Rate }}%)</span>
           </div>
         </div>
 
@@ -823,7 +823,7 @@
 
           <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
             <span class="text-slate-500">영어 수능최저 효자:</span>
-            <span class="text-emerald-700 font-black">2025({{ graduateData2025.engAvg }}) · 2027({{ grade3Data.engAvg }})</span>
+            <span class="text-emerald-700 font-black">2025({{ graduateData2025.engAvg }}) · 2027({{ gradeData[3].engAvg }})</span>
           </div>
         </div>
       </div>
@@ -839,8 +839,8 @@
           </div>
           <p class="text-[11.5px] text-slate-700 m-0 leading-relaxed">
             • <strong>수능 실채점 vs 모평 추이:</strong> 2025 대입 졸업생(평균 {{ graduateData2025.overallAvg }}등급)은 영어({{ graduateData2025.engAvg }})·탐구({{ graduateData2025.inqAvg }}) 기반 2합5 충족률 {{ graduateData2025.csat2Sum5Rate }}%를 기록했고, 2026 대입 졸업생은 평균 {{ graduateData2026.overallAvg }}등급(2합5 {{ graduateData2026.csat2Sum5Rate }}%)을 기록했습니다.<br />
-            • <strong>현 고3(2027) 경쟁력:</strong> 현 고3은 영어({{ grade3Data.engAvg }}) 및 탐구({{ grade3Data.inqAvg }})를 바탕으로 상위권({{ grade3Data.topTierRate }}%)과 수능최저 2합5({{ grade3Data.csat2Sum5Rate }}%) 충족 기반을 확보하고 있습니다.<br />
-            • <strong>저학년(고1·고2) 과제:</strong> 고2({{ grade2Data.overallAvg }}등급)와 고1({{ grade1Data.overallAvg }}등급)은 영어({{ grade2Data.engAvg }}, {{ grade1Data.engAvg }})와 핵심 교과 격차를 점검해 조기 개념 보강 및 수능형 지문 적응 훈련이 필요합니다.
+            • <strong>현 고3(2027) 경쟁력:</strong> 현 고3은 영어({{ gradeData[3].engAvg }}) 및 탐구({{ gradeData[3].inqAvg }})를 바탕으로 상위권({{ gradeData[3].topTierRate }}%)과 수능최저 2합5({{ gradeData[3].csat2Sum5Rate }}%) 충족 기반을 확보하고 있습니다.<br />
+            • <strong>저학년(고1·고2) 과제:</strong> 고2({{ gradeData[2].overallAvg }}등급)와 고1({{ gradeData[1].overallAvg }}등급)은 영어({{ gradeData[2].engAvg }}, {{ gradeData[1].engAvg }})와 핵심 교과 격차를 점검해 조기 개념 보강 및 수능형 지문 적응 훈련이 필요합니다.
           </p>
         </div>
       </div>
