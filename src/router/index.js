@@ -98,6 +98,11 @@ const routes = [
     component: () => import('../views/StatView.vue'),
     meta: { requiresTeacherOrAdmin: true },
   },
+  {
+    path: '/stat-simple',
+    component: () => import('../views/StatSimpleView.vue'),
+    meta: { requiresTeacherOrAdmin: true },
+  },
 {
     path: '/:pathMatch(.*)*',
     redirect: '/login',
@@ -225,7 +230,7 @@ router.beforeEach(async to => {
     return '/select-system'
   }
 
-  if (to.path === '/stat') {
+  if (to.path === '/stat' || to.path === '/stat-simple') {
     const isEnabled = await isKcueStatSystemEnabled()
     if (!isEnabled) return '/select-system'
   }

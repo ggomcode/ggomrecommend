@@ -139,13 +139,19 @@ export const DEFAULT_SUITE_MODULES = [
     secretAccessExpireDate: '',
     secretAccessExpiresAt: null,
     secretAccessDate: '',
-    secretAccessToken: ''
+    secretAccessToken: '',
+    simpleSecretAccessEnabled: false,
+    simpleSecretAccessExpireDate: '',
+    simpleSecretAccessExpiresAt: null,
+    simpleSecretAccessDate: '',
+    simpleSecretAccessToken: ''
   }
 ]
 
 // ── 모듈별 내부 라우트 경로 매핑 ─────────────────────────────────────
 export const MODULE_ROUTE_MAP = {
   stat: '/stat',
+  stat_simple: '/stat-simple',
   rollbook: '/rollbook',
   rural: '/rural',
   junior_college: '/junior-college',
@@ -156,6 +162,7 @@ export const MODULE_ROUTE_MAP = {
 // ── 모듈별 2글자 고유 식별 코드 매핑 ──────────────────────────────────
 export const MODULE_CODE_MAP = {
   stat: 'st',
+  stat_simple: 'ss',
   rollbook: 'rb',
   rural: 'ru',
   junior_college: 'jc',
@@ -165,6 +172,7 @@ export const MODULE_CODE_MAP = {
 
 export const CODE_TO_MODULE_MAP = {
   st: 'stat',
+  ss: 'stat_simple',
   rb: 'rollbook',
   ru: 'rural',
   jc: 'junior_college',
@@ -408,6 +416,7 @@ export async function verifySecretAccessToken(token, expectedModuleId = null) {
 export function getModuleIdByPath(path) {
   if (!path) return null
   const cleanPath = path.split('?')[0].replace(/\/+$/, '')
+  if (cleanPath === '/stat-simple') return 'stat_simple'
   if (cleanPath === '/stat') return 'stat'
   if (cleanPath === '/rollbook') return 'rollbook'
   if (cleanPath === '/rural') return 'rural'
@@ -491,17 +500,27 @@ let _cachedModulesListTime = 0
  */
 export async function isModuleSecretAccessEnabled(moduleId) {
   if (!moduleId) return false
+  const checkMod = (list) => {
+    if (moduleId === 'stat_simple') {
+      const statMod = list.find(m => m.id === 'stat')
+      if (statMod) return !!(statMod.simpleSecretAccessEnabled || statMod.extraConfig?.simpleSecretAccessEnabled)
+      return false
+    }
+    const mod = list.find(m => m.id === moduleId)
+    if (mod) return !!(mod.secretAccessEnabled || mod.extraConfig?.secretAccessEnabled)
+    return null
+  }
+
   const now = Date.now()
   if (_cachedModulesList && (now - _cachedModulesListTime < 8000)) {
-    const mod = _cachedModulesList.find(m => m.id === moduleId)
-    if (mod) return !!(mod.secretAccessEnabled || mod.extraConfig?.secretAccessEnabled)
+    const res = checkMod(_cachedModulesList)
+    if (res !== null) return res
   }
 
   const modules = await fetchSuiteModules()
   _cachedModulesList = modules
   _cachedModulesListTime = now
-  const target = modules.find(m => m.id === moduleId)
-  return !!(target?.secretAccessEnabled || target?.extraConfig?.secretAccessEnabled)
+  return !!checkMod(modules)
 }
 
 // ── 추천 시스템 이름 목록 (관리자 편의 퀵픽) ───────────────────────────
@@ -683,7 +702,12 @@ export async function fetchSuiteModules() {
         secretAccessDate: item.extra_config?.secretAccessDate || '',
         secretAccessExpireDate: item.extra_config?.secretAccessExpireDate || getIsoDateFromTimestamp(item.extra_config?.secretAccessExpiresAt) || '',
         secretAccessExpiresAt: item.extra_config?.secretAccessExpiresAt || null,
-        secretAccessToken: item.extra_config?.secretAccessToken || ''
+        secretAccessToken: item.extra_config?.secretAccessToken || '',
+        simpleSecretAccessEnabled: !!(item.extra_config?.simpleSecretAccessEnabled ?? false),
+        simpleSecretAccessDate: item.extra_config?.simpleSecretAccessDate || '',
+        simpleSecretAccessExpireDate: item.extra_config?.simpleSecretAccessExpireDate || getIsoDateFromTimestamp(item.extra_config?.simpleSecretAccessExpiresAt) || '',
+        simpleSecretAccessExpiresAt: item.extra_config?.simpleSecretAccessExpiresAt || null,
+        simpleSecretAccessToken: item.extra_config?.simpleSecretAccessToken || ''
       }))
       modules = mergeModulesWithDefaults(dbModules, DEFAULT_SUITE_MODULES)
       _cachedModulesList = modules
@@ -755,7 +779,12 @@ export async function saveSuiteModules(modulesList) {
         secretAccessDate: m.secretAccessDate || '',
         secretAccessExpireDate: m.secretAccessExpireDate || '',
         secretAccessExpiresAt: m.secretAccessExpiresAt || null,
-        secretAccessToken: m.secretAccessToken || ''
+        secretAccessToken: m.secretAccessToken || '',
+        simpleSecretAccessEnabled: !!m.simpleSecretAccessEnabled,
+        simpleSecretAccessDate: m.simpleSecretAccessDate || '',
+        simpleSecretAccessExpireDate: m.simpleSecretAccessExpireDate || '',
+        simpleSecretAccessExpiresAt: m.simpleSecretAccessExpiresAt || null,
+        simpleSecretAccessToken: m.simpleSecretAccessToken || ''
       },
       updated_at: new Date().toISOString()
     }))
@@ -864,6 +893,11 @@ function mergeModulesWithDefaults(savedList, defaults) {
         secretAccessExpireDate: saved?.secretAccessExpireDate || saved?.extraConfig?.secretAccessExpireDate || getIsoDateFromTimestamp(saved?.secretAccessExpiresAt || saved?.extraConfig?.secretAccessExpiresAt) || '',
         secretAccessExpiresAt: saved?.secretAccessExpiresAt || saved?.extraConfig?.secretAccessExpiresAt || null,
         secretAccessToken: saved?.secretAccessToken || saved?.extraConfig?.secretAccessToken || '',
+        simpleSecretAccessEnabled: !!(saved?.simpleSecretAccessEnabled ?? saved?.extraConfig?.simpleSecretAccessEnabled ?? def.simpleSecretAccessEnabled ?? false),
+        simpleSecretAccessDate: saved?.simpleSecretAccessDate || saved?.extraConfig?.simpleSecretAccessDate || '',
+        simpleSecretAccessExpireDate: saved?.simpleSecretAccessExpireDate || saved?.extraConfig?.simpleSecretAccessExpireDate || getIsoDateFromTimestamp(saved?.simpleSecretAccessExpiresAt || saved?.extraConfig?.simpleSecretAccessExpiresAt) || '',
+        simpleSecretAccessExpiresAt: saved?.simpleSecretAccessExpiresAt || saved?.extraConfig?.simpleSecretAccessExpiresAt || null,
+        simpleSecretAccessToken: saved?.simpleSecretAccessToken || saved?.extraConfig?.simpleSecretAccessToken || '',
         // 보존할 고유 메타데이터
         icon: def.icon,
         colorTheme: def.colorTheme

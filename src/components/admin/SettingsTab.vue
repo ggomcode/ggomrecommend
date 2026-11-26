@@ -711,7 +711,7 @@
               <select
                 v-model="selectedGeminiModel"
                 @change="handleGeminiModelChange"
-                class="text-xs font-semibold bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded-lg pl-3 pr-8 py-2 min-w-[270px] text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer shadow-2xs"
+                class="text-xs font-semibold bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded-lg pl-3 pr-8 py-2 min-w-67.5 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer shadow-2xs"
                 title="사용할 Gemini AI 모델을 선택합니다."
               >
                 <option v-for="m in geminiAvailableModels" :key="m.id" :value="m.id">
@@ -775,7 +775,7 @@
               <select
                 v-model="aiTargetAcademicYear"
                 @change="handleAiTargetYearChange"
-                class="text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg pl-3 pr-8 py-2 min-w-[150px] text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400 cursor-pointer shadow-2xs"
+                class="text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg pl-3 pr-8 py-2 min-w-37.5 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400 cursor-pointer shadow-2xs"
               >
                 <option v-for="yr in aiAvailableYears" :key="yr" :value="yr">
                   {{ yr }}학년도 대입
@@ -1164,6 +1164,155 @@
                   </p>
                 </div>
               </div>
+
+              <!-- 🏆 합격자 간단 통계 Secret 접속경로 (수시 지원 통계 분석 모듈 전용: 상단 KPI + 현황표만 노출) -->
+              <div
+                v-if="m.id === 'stat'"
+                class="mt-2.5 p-3 rounded-xl border transition-all"
+                :class="m.simpleSecretAccessEnabled
+                  ? (isSimpleSecretExpired(m)
+                      ? 'bg-rose-50/70 dark:bg-rose-950/20 border-rose-300 dark:border-rose-800 ring-1 ring-rose-300/40 shadow-xs'
+                      : 'bg-indigo-50/80 dark:bg-indigo-950/20 border-indigo-300 dark:border-indigo-800 ring-1 ring-indigo-300/40 shadow-xs')
+                  : 'bg-slate-50 dark:bg-slate-900/40 border-slate-200/70 dark:border-slate-800'"
+              >
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-1.5 min-w-0 flex-wrap">
+                    <span class="text-sm">🏆</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                      합격자 간단 통계 Secret 접속경로
+                    </span>
+                    <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold shrink-0">
+                      ID: {{ MODULE_CODE_MAP['stat_simple'] || 'ss' }}
+                    </span>
+                    <span
+                      class="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border shrink-0"
+                      :class="m.simpleSecretAccessEnabled
+                        ? (isSimpleSecretExpired(m)
+                            ? 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-900/50 dark:text-rose-300'
+                            : 'bg-indigo-100 text-indigo-900 border-indigo-300 dark:bg-indigo-900/50 dark:text-indigo-300')
+                        : 'bg-slate-100 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400'"
+                    >
+                      {{ m.simpleSecretAccessEnabled ? (isSimpleSecretExpired(m) ? '⚠️ 만료됨' : `🔓 열림 (${getSimpleSecretDdayLabel(m)})`) : '🔒 닫힘 (차단)' }}
+                    </span>
+                  </div>
+
+                  <!-- 토글 스위치 -->
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      @click.stop="toggleSimpleSecretAccess(m)"
+                      class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                      :class="m.simpleSecretAccessEnabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'"
+                      :title="m.simpleSecretAccessEnabled ? '합격자 간단 통계 Secret 접속경로 닫기' : '합격자 간단 통계 Secret 접속경로 열기'"
+                    >
+                      <span
+                        class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                        :class="m.simpleSecretAccessEnabled ? 'translate-x-4' : 'translate-x-0'"
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 열림 상태일 때: 유효 날짜 지정, 전용 Secret URL 및 복사 버튼 -->
+                <div v-if="m.simpleSecretAccessEnabled" class="mt-2.5 pt-2 border-t border-indigo-200/80 dark:border-indigo-800/50 space-y-2">
+                  <!-- 만료일자 설정 & 빠른 프리셋 버튼 -->
+                  <div class="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-indigo-100/60 dark:bg-indigo-950/40 border border-indigo-200/90 dark:border-indigo-800/60 text-xs">
+                    <div class="flex items-center gap-1.5 text-indigo-950 dark:text-indigo-100 font-semibold">
+                      <span>📅</span>
+                      <span>접속 유효 만료일:</span>
+                      <input
+                        type="date"
+                        :min="todayIsoDate"
+                        :value="m.simpleSecretAccessExpireDate || todayIsoDate"
+                        @change="handleSimpleSecretExpireDateChange(m, $event.target.value)"
+                        class="px-2 py-0.5 text-xs font-bold font-mono rounded border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-2xs focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <span class="text-[11px] font-normal text-indigo-800 dark:text-indigo-300">23:59까지</span>
+                    </div>
+
+                    <!-- 퀵 프리셋 버튼 -->
+                    <div class="flex items-center gap-1 shrink-0">
+                      <span class="text-[10px] text-indigo-800 dark:text-indigo-300 mr-0.5">빠른 지정:</span>
+                      <button
+                        type="button"
+                        @click.stop="setPresetSimpleExpireDate(m, 0)"
+                        class="px-1.5 py-0.5 text-[10px] font-semibold rounded border border-indigo-300 dark:border-indigo-700 hover:bg-indigo-200 bg-white dark:bg-slate-800 text-indigo-900 dark:text-indigo-200 transition-colors cursor-pointer"
+                        :class="{ 'bg-indigo-600! text-white! border-indigo-700!': m.simpleSecretAccessExpireDate === todayIsoDate }"
+                      >
+                        오늘까지
+                      </button>
+                      <button
+                        type="button"
+                        @click.stop="setPresetSimpleExpireDate(m, 1)"
+                        class="px-1.5 py-0.5 text-[10px] font-semibold rounded border border-indigo-300 dark:border-indigo-700 hover:bg-indigo-200 bg-white dark:bg-slate-800 text-indigo-900 dark:text-indigo-200 transition-colors cursor-pointer"
+                        :class="{ 'bg-indigo-600! text-white! border-indigo-700!': m.simpleSecretAccessExpireDate === getNextDayIsoDate(1) }"
+                      >
+                        내일(+1일)
+                      </button>
+                      <button
+                        type="button"
+                        @click.stop="setPresetSimpleExpireDate(m, 2)"
+                        class="px-1.5 py-0.5 text-[10px] font-semibold rounded border border-indigo-300 dark:border-indigo-700 hover:bg-indigo-200 bg-white dark:bg-slate-800 text-indigo-900 dark:text-indigo-200 transition-colors cursor-pointer"
+                        :class="{ 'bg-indigo-600! text-white! border-indigo-700!': m.simpleSecretAccessExpireDate === getNextDayIsoDate(2) }"
+                      >
+                        모레(+2일)
+                      </button>
+                      <button
+                        type="button"
+                        @click.stop="setPresetSimpleExpireDate(m, 6)"
+                        class="px-1.5 py-0.5 text-[10px] font-semibold rounded border border-indigo-300 dark:border-indigo-700 hover:bg-indigo-200 bg-white dark:bg-slate-800 text-indigo-900 dark:text-indigo-200 transition-colors cursor-pointer"
+                        :class="{ 'bg-indigo-600! text-white! border-indigo-700!': m.simpleSecretAccessExpireDate === getNextDayIsoDate(6) }"
+                      >
+                        7일간
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- 만료 경고 배너 (만료된 경우) -->
+                  <div v-if="isSimpleSecretExpired(m)" class="p-2 rounded bg-rose-100 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 text-[11px] text-rose-900 dark:text-rose-200 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-1.5">
+                      <span>⚠️</span>
+                      <strong>설정된 유효 만료일({{ m.simpleSecretAccessExpireDate }})이 경과하여 접속이 차단되었습니다.</strong>
+                    </div>
+                    <button
+                      type="button"
+                      @click.stop="setPresetSimpleExpireDate(m, 1)"
+                      class="px-2 py-0.5 text-[10px] font-bold rounded bg-rose-600 hover:bg-rose-700 text-white cursor-pointer border-none"
+                    >
+                      내일까지로 연장
+                    </button>
+                  </div>
+
+                  <!-- URL 입력창 & 복사 버튼 -->
+                  <div class="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      readonly
+                      :value="moduleSecretUrls['stat_simple'] || '암호화 링크 생성 중...'"
+                      class="flex-1 text-[11px] font-mono bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-800 rounded px-2 py-1 text-slate-800 dark:text-slate-200 select-all focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      @click.stop="copySimpleSecretUrl(m)"
+                      class="shrink-0 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors cursor-pointer border-none shadow-2xs flex items-center gap-1"
+                    >
+                      <span>📋</span>
+                      <span>URL 복사</span>
+                    </button>
+                  </div>
+
+                  <div class="flex items-center justify-between text-[10px] text-indigo-900 dark:text-indigo-200/90 leading-relaxed">
+                    <span>💡 메뉴·필터 없이 <strong>상단 7대 KPI 카드 + 주요 대학 및 권역별 합격 인원 현황표</strong>만 단독 표시됩니다 (성명 마스킹 <code>**동</code> 적용).</span>
+                    <span v-if="m.simpleSecretAccessDate" class="text-indigo-700 font-mono font-semibold">발급: {{ m.simpleSecretAccessDate }}</span>
+                  </div>
+                </div>
+
+                <div v-else class="mt-1">
+                  <p class="text-[10px] text-slate-400 m-0 leading-relaxed">
+                    현재 합격자 간단 통계 게스트 접속이 차단되어 있습니다. 토글을 켜면 사이드바/메뉴 없이 KPI와 대학별 합격 인원 현황표만 열람할 수 있는 전용 링크가 생성됩니다.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1495,6 +1644,112 @@ async function refreshModuleSecretUrls() {
     if (m.secretAccessEnabled) {
       moduleSecretUrls.value[m.id] = await getOrGenerateModuleSecretUrl(m)
     }
+    if (m.id === 'stat' && m.simpleSecretAccessEnabled) {
+      moduleSecretUrls.value['stat_simple'] = await getOrGenerateModuleSecretUrl({
+        id: 'stat_simple',
+        secretAccessExpireDate: m.simpleSecretAccessExpireDate,
+        secretAccessToken: m.simpleSecretAccessToken
+      })
+    }
+  }
+}
+
+function isSimpleSecretExpired(m) {
+  if (!m || !m.simpleSecretAccessEnabled) return false
+  return isSecretExpired({
+    secretAccessEnabled: m.simpleSecretAccessEnabled,
+    secretAccessExpiresAt: m.simpleSecretAccessExpiresAt,
+    secretAccessExpireDate: m.simpleSecretAccessExpireDate
+  })
+}
+
+function getSimpleSecretDdayLabel(m) {
+  return getSecretDdayLabel({
+    secretAccessEnabled: m.simpleSecretAccessEnabled,
+    secretAccessExpiresAt: m.simpleSecretAccessExpiresAt,
+    secretAccessExpireDate: m.simpleSecretAccessExpireDate
+  })
+}
+
+async function handleSimpleSecretExpireDateChange(m, newDateStr) {
+  if (!newDateStr) return
+  const clean = String(newDateStr).trim()
+  m.simpleSecretAccessExpireDate = clean
+  m.simpleSecretAccessExpiresAt = parseExpireDateToTimestamp(clean)
+
+  const proxyMod = {
+    id: 'stat_simple',
+    secretAccessExpireDate: clean,
+    secretAccessExpiresAt: m.simpleSecretAccessExpiresAt,
+    secretAccessDate: m.simpleSecretAccessDate,
+    secretAccessToken: m.simpleSecretAccessToken
+  }
+  moduleSecretUrls.value['stat_simple'] = await getOrGenerateModuleSecretUrl(proxyMod, clean)
+  m.simpleSecretAccessToken = proxyMod.secretAccessToken
+  try {
+    localStorage.setItem('suite_modules_cache', JSON.stringify(suiteModules.value))
+    await saveSuiteModules(suiteModules.value)
+  } catch (err) {
+    console.error('Failed to save simple secret expire date change:', err)
+  }
+}
+
+async function setPresetSimpleExpireDate(m, days) {
+  await handleSimpleSecretExpireDateChange(m, getNextDayIsoDate(days))
+}
+
+async function copySimpleSecretUrl(m) {
+  const url = moduleSecretUrls.value['stat_simple'] || await getOrGenerateModuleSecretUrl({
+    id: 'stat_simple',
+    secretAccessExpireDate: m.simpleSecretAccessExpireDate,
+    secretAccessToken: m.simpleSecretAccessToken
+  })
+  const dday = getSimpleSecretDdayLabel(m)
+  const expStr = m.simpleSecretAccessExpireDate || todayIsoDate.value
+  try {
+    await navigator.clipboard.writeText(url)
+    dialog.alert({
+      title: '합격자 간단 통계 Secret URL 복사 완료',
+      message: `합격자 간단 통계 전용 Secret 접속 링크가 클립보드에 복사되었습니다.\n\n[Secret 접속 URL]\n${url}\n\n* 모듈 ID: ${MODULE_CODE_MAP['stat_simple'] || 'ss'}\n* 유효 만료일: ${expStr} 23:59까지 (${dday})\n* 사이드바/메뉴 없이 상단 7대 KPI 카드와 주요 대학 및 권역별 합격 인원 현황표만 표시됩니다.`
+    })
+  } catch (e) {
+    window.prompt('아래 Secret 접속 URL을 복사(Ctrl+C)하세요:', url)
+  }
+}
+
+async function toggleSimpleSecretAccess(m) {
+  m.simpleSecretAccessEnabled = !m.simpleSecretAccessEnabled
+  if (m.simpleSecretAccessEnabled) {
+    if (!m.simpleSecretAccessExpireDate || m.simpleSecretAccessExpireDate < todayIsoDate.value) {
+      m.simpleSecretAccessExpireDate = getNextDayIsoDate(1)
+    }
+    const expiresAt = parseExpireDateToTimestamp(m.simpleSecretAccessExpireDate)
+    m.simpleSecretAccessExpiresAt = expiresAt
+    m.simpleSecretAccessDate = getTodayDateString()
+    m.simpleSecretAccessToken = await generateSecretAccessToken('stat_simple', m.simpleSecretAccessDate, expiresAt)
+    moduleSecretUrls.value['stat_simple'] = await getOrGenerateModuleSecretUrl({
+      id: 'stat_simple',
+      secretAccessExpireDate: m.simpleSecretAccessExpireDate,
+      secretAccessToken: m.simpleSecretAccessToken
+    }, m.simpleSecretAccessExpireDate)
+  } else {
+    m.simpleSecretAccessToken = null
+    m.simpleSecretAccessExpiresAt = null
+    delete moduleSecretUrls.value['stat_simple']
+  }
+
+  try {
+    localStorage.setItem('suite_modules_cache', JSON.stringify(suiteModules.value))
+    await saveSuiteModules(suiteModules.value)
+    if (m.simpleSecretAccessEnabled) {
+      const expStr = m.simpleSecretAccessExpireDate || todayIsoDate.value
+      dialog.alert({
+        title: '합격자 간단 통계 Secret 접속 활성화',
+        message: `'합격자 간단 통계' 전용 Secret 접속 통로가 열렸습니다.\n\n[모듈 식별 ID: ${MODULE_CODE_MAP['stat_simple'] || 'ss'}]\n유효 만료일: ${expStr} 23:59까지 (${getSimpleSecretDdayLabel(m)})\n\n[URL 복사] 버튼을 눌러 링크를 전달하시면, 메뉴나 다른 통계 없이 상단 KPI 카드와 대학별 합격 인원 현황표만 깔끔하게 열람할 수 있습니다.`
+      })
+    }
+  } catch (err) {
+    console.error('Failed to toggle simple secret access:', err)
   }
 }
 

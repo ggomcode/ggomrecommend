@@ -10,20 +10,20 @@
           <span class="text-slate-500 font-semibold">{{ selectedAcademicYear }}학년도 집계</span>
         </div>
         <h3 class="text-base sm:text-lg font-black text-slate-900 tracking-tight m-0">
-          주요 대학 및 권역별 합격 인원 현황표
+          주요 대학 및 권역별 합격 건수 현황표
         </h3>
         <p class="text-xs text-slate-500 m-0 mt-0.5">
-          단일 학생 기준 실제 최종 합격 인원(명) 집계표입니다. (중복 합격 포함 시 지원 건수 병기)
+          대학·전형별 최종 합격 건수(건) 집계표입니다. (동일 대학·권역 내 복수 합격 시 실인원(명) 병기)
         </p>
       </div>
 
       <!-- Quick Metrics & Print Button -->
       <div class="flex items-center gap-2 self-start sm:self-center shrink-0">
         <div class="bg-indigo-50/70 border border-indigo-200/80 px-3 py-1.5 rounded-xl text-right">
-          <span class="text-[10px] text-slate-500 font-medium block">총 합격 인원 (순수)</span>
+          <span class="text-[10px] text-slate-500 font-medium block">총 합격 건수 (중복포함)</span>
           <span class="text-xs sm:text-sm font-black text-indigo-700 font-mono">
-            {{ totalUniquePassedStudents }}명
-            <span class="text-[10px] font-semibold text-slate-400">({{ totalPassedAppsCount }}건)</span>
+            {{ totalPassedAppsCount }}건
+            <span class="text-[10px] font-semibold text-slate-500">(실인원 {{ totalUniquePassedStudents }}명)</span>
           </span>
         </div>
 
@@ -47,10 +47,10 @@
       </div>
       <div class="flex items-baseline justify-between mt-1">
         <h1 class="text-xl font-black text-black tracking-tight m-0">
-          주요 대학 및 권역별 합격 인원 현황표
+          주요 대학 및 권역별 합격 건수 현황표
         </h1>
         <span class="text-xs font-mono font-bold text-black">
-          총 합격 인원: {{ totalUniquePassedStudents }}명 (총 {{ totalPassedAppsCount }}건)
+          총 합격 건수: {{ totalPassedAppsCount }}건 (실인원 {{ totalUniquePassedStudents }}명)
         </span>
       </div>
     </div>
@@ -65,7 +65,7 @@
           </h4>
         </div>
         <span class="text-[11px] text-slate-400 font-mono print:hidden">
-          합격 {{ majorGroupPassedStudentCount }}명 ({{ majorGroupPassedApplyCount }}건)
+          합격 {{ majorGroupPassedApplyCount }}건 (실인원 {{ majorGroupPassedStudentCount }}명)
         </span>
       </div>
 
@@ -99,31 +99,31 @@
             {{ target.name }}
           </div>
 
-          <!-- Cell Bottom: Pass Count (인원 수) -->
+          <!-- Cell Bottom: Pass Count (합격 건수 기준) -->
           <div class="p-2 sm:p-2.5 text-center flex flex-col items-center justify-center bg-white print:p-1.5">
             <div
               :class="[
                 'font-mono text-sm sm:text-base font-black tracking-tight leading-none',
                 'print:text-black print:text-xs',
-                target.id === 'MED' && statsMap[target.id]?.studentCount > 0
+                target.id === 'MED' && statsMap[target.id]?.applyCount > 0
                   ? 'text-rose-600'
-                  : statsMap[target.id]?.studentCount > 0
+                  : statsMap[target.id]?.applyCount > 0
                     ? 'text-indigo-700'
                     : 'text-slate-400 font-semibold text-xs sm:text-sm'
               ]"
             >
-              {{ statsMap[target.id]?.studentCount || 0 }}명
+              {{ statsMap[target.id]?.applyCount || 0 }}건
             </div>
 
-            <!-- Total application count badge (if distinct from student count) -->
+            <!-- Unique student count badge (when different from applyCount) -->
             <div
-              v-if="statsMap[target.id]?.applyCount > 0 && statsMap[target.id]?.applyCount !== statsMap[target.id]?.studentCount"
+              v-if="statsMap[target.id]?.studentCount > 0 && statsMap[target.id]?.applyCount !== statsMap[target.id]?.studentCount"
               class="text-[9px] font-mono text-slate-400 mt-0.5 print:text-[8px] print:text-slate-600"
             >
-              ({{ statsMap[target.id]?.applyCount }}건)
+              (실인원 {{ statsMap[target.id]?.studentCount }}명)
             </div>
             <div
-              v-else-if="statsMap[target.id]?.studentCount === 0"
+              v-else-if="(statsMap[target.id]?.applyCount || 0) === 0"
               class="text-[9px] font-mono text-slate-300 mt-0.5 print:hidden"
             >
               -
@@ -143,7 +143,7 @@
           </h4>
         </div>
         <span class="text-[11px] text-slate-400 font-mono print:hidden">
-          합격 {{ regionalGroupPassedStudentCount }}명 ({{ regionalGroupPassedApplyCount }}건)
+          합격 {{ regionalGroupPassedApplyCount }}건 (실인원 {{ regionalGroupPassedStudentCount }}명)
         </span>
       </div>
 
@@ -181,22 +181,22 @@
               :class="[
                 'font-mono text-sm sm:text-base font-black tracking-tight leading-none',
                 'print:text-black print:text-xs',
-                statsMap[target.id]?.studentCount > 0
+                statsMap[target.id]?.applyCount > 0
                   ? 'text-emerald-700'
                   : 'text-slate-400 font-semibold text-xs sm:text-sm'
               ]"
             >
-              {{ statsMap[target.id]?.studentCount || 0 }}명
+              {{ statsMap[target.id]?.applyCount || 0 }}건
             </div>
 
             <div
-              v-if="statsMap[target.id]?.applyCount > 0 && statsMap[target.id]?.applyCount !== statsMap[target.id]?.studentCount"
+              v-if="statsMap[target.id]?.studentCount > 0 && statsMap[target.id]?.applyCount !== statsMap[target.id]?.studentCount"
               class="text-[9px] font-mono text-slate-400 mt-0.5 print:text-[8px] print:text-slate-600"
             >
-              ({{ statsMap[target.id]?.applyCount }}건)
+              (실인원 {{ statsMap[target.id]?.studentCount }}명)
             </div>
             <div
-              v-else-if="statsMap[target.id]?.studentCount === 0"
+              v-else-if="(statsMap[target.id]?.applyCount || 0) === 0"
               class="text-[9px] font-mono text-slate-300 mt-0.5 print:hidden"
             >
               -
@@ -231,7 +231,7 @@
               <h3 class="text-xl font-black text-slate-900 m-0 flex items-center gap-2">
                 <span>{{ selectedCategoryModal.name }}</span>
                 <span class="text-sm font-black text-indigo-600 font-mono bg-indigo-50 px-2.5 py-0.5 rounded-lg border border-indigo-100">
-                  총 {{ selectedCategoryModal.studentCount }}명 합격 ({{ selectedCategoryModal.apps.length }}건)
+                  총 {{ selectedCategoryModal.apps.length }}건 합격 (실인원 {{ selectedCategoryModal.studentCount }}명)
                 </span>
               </h3>
             </div>
