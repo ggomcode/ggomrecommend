@@ -420,12 +420,13 @@ export async function getActualGoogleSheetTabs(sheetId, forceReload = false) {
 /**
  * 특정 시트 탭의 CSV 내용 비동기 가져오기
  */
-export async function fetchKcueSheetTabCsv(sheetId, tabName) {
+export async function fetchKcueSheetTabCsv(sheetId, tabName, range = null) {
   const cleanId = extractSheetId(sheetId)
   if (!cleanId) {
     throw new Error('유효한 구글 시트 ID가 설정되지 않았습니다.')
   }
-  const url = `${buildSheetTabGvizUrl(cleanId, tabName)}&_t=${Date.now()}`
+  const rangeParam = range ? `&range=${encodeURIComponent(range)}` : ''
+  const url = `${buildSheetTabGvizUrl(cleanId, tabName)}${rangeParam}&_t=${Date.now()}`
   
   // 1.76MB 이상의 대용량 모의고사 탭을 고려하여 타임아웃을 30초(30000ms)로 넉넉하게 적용
   const res = await fetchWithTimeout(url, {}, 30000)
@@ -1164,16 +1165,21 @@ export async function fetchBasicSchoolStats(sheetId, forceReload = false) {
   }
 
   try {
-    const csvText = await fetchKcueSheetTabCsv(cleanId, '기본통계')
+    const [csvText, b31Csv] = await Promise.all([
+      fetchKcueSheetTabCsv(cleanId, '기본통계'),
+      fetchKcueSheetTabCsv(cleanId, '기본통계', 'B31:B31').catch(() => '')
+    ])
     if (!csvText || !csvText.trim()) return cachedBasicStats || {}
 
     const wb = XLSX.read(csvText, { type: 'string' })
     const sheet = wb.Sheets[wb.SheetNames[0]]
 
-    // '기본통계' 시트 B31 셀에 기록된 최종 배포 시각(KST) 읽기
-    const b31Cell = sheet && sheet['B31'] ? (sheet['B31'].w || sheet['B31'].v) : ''
-    if (b31Cell) {
-      const cleanB31 = String(b31Cell).replace(/^synced_at:/i, '').trim()
+    // '기본통계' 시트 B31 셀에 기록된 최종 배포 시각(KST) 읽기 (GViz range=B31:B31 우선, fallback으로 sheet['B31'])
+    const rawB31 = b31Csv
+      ? String(b31Csv).trim().replace(/^["']+|["']+$/g, '').trim()
+      : (sheet && sheet['B31'] ? (sheet['B31'].w || sheet['B31'].v) : '')
+    if (rawB31) {
+      const cleanB31 = String(rawB31).replace(/^synced_at:/i, '').trim()
       const formatted = formatSyncedAtKorean(cleanB31)
       if (formatted) {
         latestSheetSyncedAt.value = formatted
