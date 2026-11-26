@@ -35,13 +35,15 @@ export const HomeroomRollbookView = {
       `;
     }
 
+    const days = weekObj.days;
+    const part1Days = days.slice(0, 3); // 월, 화, 수
+    const part2Days = days.slice(3);    // 목, 금
+    const parts = [part1Days, part2Days].filter(p => p.length > 0);
+
     return selectedBans.map(ban => {
       const students = (allStudents || []).filter(s => s.ban === ban);
       students.sort((a, b) => a.num - b.num);
 
-      const part1Days = days.slice(0, 3); // 월, 화, 수
-      const part2Days = days.slice(3);    // 목, 금
-      const parts = [part1Days, part2Days].filter(p => p.length > 0);
       return parts.map((pDays, pIdx) =>
         this._renderClassSheet(ban, students, holidaysMap, weekObj, options, pDays, pIdx + 1, parts.length)
       ).join('\n');
