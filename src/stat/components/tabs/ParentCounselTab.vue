@@ -272,6 +272,7 @@
             총 {{ currentStudentApps.length }}장 등록됨
           </span>
           <button
+            v-if="auth.isAdmin"
             type="button"
             @click="isPrintModalOpen = true"
             class="px-3 py-1 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
@@ -364,6 +365,7 @@
         <div class="flex items-center gap-2 shrink-0">
           <!-- A4 상담 리포트 인쇄 버튼 -->
           <button
+            v-if="auth.isAdmin"
             type="button"
             @click="isPrintModalOpen = true"
             class="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
@@ -1210,7 +1212,10 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
+import { useAuthStore } from '../../../stores/auth'
 import { useData, maskName, formatGrade, studentMockExamsMap, loadMockExamData, getSeniorApplications } from '../../composables/useStatData'
+
+const auth = useAuthStore()
 import { schoolName } from '../../../utils/schoolConfig'
 import { 
   getGeminiApiKey, 

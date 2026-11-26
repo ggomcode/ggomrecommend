@@ -19,7 +19,7 @@
       </div>
 
       <!-- Action Buttons -->
-      <div class="flex items-center gap-2 shrink-0">
+      <div v-if="auth.isAdmin" class="flex items-center gap-2 shrink-0">
         <button
           type="button"
           @click="triggerPrint"
@@ -1498,6 +1498,9 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useAuthStore } from '../../../stores/auth'
+
+const auth = useAuthStore()
 
 // Quick Slide Jump Navigation
 const slideList = [

@@ -45,6 +45,7 @@
           </span>
         </div>
         <button
+          v-if="auth.isAdmin"
           type="button"
           @click="isTeacherReportModalOpen = true"
           class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer border-none"
@@ -229,6 +230,7 @@
 
               <!-- 교사별 상담록 인쇄 버튼 -->
               <button
+                v-if="auth.isAdmin"
                 type="button"
                 @click="isTeacherReportModalOpen = true"
                 class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer border-none"
@@ -239,6 +241,7 @@
               </button>
 
               <button
+                v-if="auth.isAdmin"
                 type="button"
                 @click="isPrintModalOpen = true"
                 class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer border-none"
@@ -1000,7 +1003,10 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useAuthStore } from '../../../stores/auth'
 import { useData, maskName, formatGrade, formatStudentCode, loadCsatPassRateData, csatPassRateTable } from '../../composables/useStatData'
+
+const auth = useAuthStore()
 import CompetitionRateMicroChart from '../CompetitionRateMicroChart.vue'
 import CsatMinScoreTracker from '../CsatMinScoreTracker.vue'
 

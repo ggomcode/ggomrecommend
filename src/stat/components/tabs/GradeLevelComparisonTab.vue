@@ -127,6 +127,7 @@
               <span>새로고침</span>
             </button>
             <button
+              v-if="auth.isAdmin"
               @click="printReport"
               class="py-1.5 px-3 rounded-lg bg-white/15 hover:bg-white/25 text-white font-bold text-xs transition-colors cursor-pointer border-none flex items-center justify-center gap-1.5"
               title="비교 분석 보고서 인쇄"

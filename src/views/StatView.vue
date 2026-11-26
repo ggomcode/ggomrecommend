@@ -411,7 +411,7 @@ const menuGroups = computed(() => [
         iconComponent: FileSpreadsheet, 
         badge: applications.value?.length ? applications.value.length.toLocaleString() : '0' 
       },
-      { id: 'report', name: '공식 인쇄 보고서', iconComponent: Printer }
+      ...(auth.isAdmin ? [{ id: 'report', name: '공식 인쇄 보고서', iconComponent: Printer }] : [])
     ]
   }
 ])

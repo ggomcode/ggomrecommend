@@ -13,6 +13,7 @@
         </div>
         <div class="flex items-center space-x-2">
           <button
+            v-if="auth.isAdmin"
             type="button"
             @click="triggerPrint"
             class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center space-x-1.5 cursor-pointer border-none"
@@ -233,6 +234,9 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useAuthStore } from '../../../stores/auth'
+
+const auth = useAuthStore()
 
 const props = defineProps({
   isOpen: { type: Boolean, default: false },

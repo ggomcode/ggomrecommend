@@ -837,6 +837,7 @@
             <span>전략 요약 복사</span>
           </button>
           <button
+            v-if="auth.isAdmin"
             type="button"
             @click="printCounselCard"
             class="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
@@ -874,7 +875,10 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useAuthStore } from '../../../stores/auth'
 import { schoolName } from '../../../utils/schoolConfig'
+
+const auth = useAuthStore()
 
 const displaySchoolName = computed(() => (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리고등학교')
 

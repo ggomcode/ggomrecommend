@@ -49,6 +49,7 @@
 
           <!-- Print / PDF Button -->
           <button
+            v-if="auth.isAdmin"
             type="button"
             @click="triggerPrint"
             class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-extrabold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-all shadow-xs cursor-pointer border-none"
@@ -450,7 +451,10 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useAuthStore } from '../../../stores/auth'
 import { useData } from '../../composables/useStatData'
+
+const auth = useAuthStore()
 import { schoolName } from '../../../utils/schoolConfig'
 import ScatterPlotGrid from './ScatterPlotGrid.vue'
 

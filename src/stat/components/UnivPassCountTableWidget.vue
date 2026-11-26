@@ -28,6 +28,7 @@
         </div>
 
         <button
+          v-if="auth.isAdmin"
           type="button"
           @click="handlePrint"
           class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 hover:border-slate-300 transition-all cursor-pointer shadow-2xs"
@@ -318,7 +319,10 @@
 import { ref, computed } from 'vue'
 import { Printer } from 'lucide-vue-next'
 import { useData, maskName } from '../composables/useStatData'
+import { useAuthStore } from '../../stores/auth'
 import { schoolName } from '../../utils/schoolConfig'
+
+const auth = useAuthStore()
 
 const displaySchoolName = computed(() => (schoolName.value && schoolName.value !== '우리학교') ? schoolName.value : '우리고등학교')
 

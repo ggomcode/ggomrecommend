@@ -34,6 +34,7 @@
             <span>5개년 통계 엑셀</span>
           </button>
           <button
+            v-if="auth.isAdmin"
             type="button"
             @click="window.print()"
             class="px-3.5 py-2 rounded-xl text-xs font-black text-slate-950 bg-amber-400 hover:bg-amber-300 transition-all flex items-center gap-1.5 cursor-pointer border-none shadow-sm"
@@ -526,7 +527,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useAuthStore } from '../../../stores/auth'
 import { Bar, Line } from 'vue-chartjs'
+
+const auth = useAuthStore()
 import * as XLSX from 'xlsx'
 import { useStatData } from '../../composables/useStatData'
 

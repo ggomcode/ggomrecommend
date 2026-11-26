@@ -32,7 +32,7 @@
         </div>
       </div>
 
-      <div class="flex items-center space-x-2">
+      <div v-if="auth.isAdmin" class="flex items-center space-x-2">
         <span class="text-xs text-slate-500 font-semibold hidden md:inline-flex items-center gap-1">
           <span>📄</span>
           <span>A4 세로 딱 1페이지 인쇄 규격</span>
@@ -458,7 +458,10 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useAuthStore } from '../../../stores/auth'
 import { useStatData } from '../../composables/useStatData'
+
+const auth = useAuthStore()
 import { schoolName } from '../../../utils/schoolConfig'
 import { calculateSatamRunStats } from '../../utils/satamRunCalculator'
 
