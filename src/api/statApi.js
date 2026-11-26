@@ -57,7 +57,7 @@ export function decryptAES(cipherText, password) {
 }
 
 export const KCUE_SHEET_KEY = 'google_sheet_kcue_id'
-export const DEFAULT_KCUE_SHEET_ID = '1hkgi-WKdbh_cIK1Ctzv3BBxqKLe50DCKAT8cmT9wbWg'
+export const DEFAULT_KCUE_SHEET_ID = ''
 
 // 하위 호환성을 위한 키 및 기본값
 export const KCUE_YEAR_SHEETS_KEY = 'kcue_year_sheets'
@@ -109,6 +109,7 @@ export function getKcueTabName(year, type = '수시') {
  */
 export function buildSheetWebUrl(sheetId = null, gid = null) {
   const cleanId = sheetId ? extractSheetId(sheetId) : DEFAULT_KCUE_SHEET_ID
+  if (!cleanId) return ''
   const hash = gid ? `#gid=${gid}` : ''
   return `https://docs.google.com/spreadsheets/d/${cleanId}/edit${hash}`
 }
@@ -1159,6 +1160,7 @@ let cachedBasicStatsTime = 0
  */
 export async function fetchBasicSchoolStats(sheetId, forceReload = false) {
   const cleanId = extractSheetId(sheetId) || DEFAULT_KCUE_SHEET_ID
+  if (!cleanId) return cachedBasicStats || {}
   const now = Date.now()
   if (!forceReload && cachedBasicStats && (now - cachedBasicStatsTime < 300000)) {
     return cachedBasicStats
