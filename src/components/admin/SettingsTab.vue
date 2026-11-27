@@ -1907,9 +1907,9 @@ async function toggleSecretAccess(m) {
   }
   m.secretAccessEnabled = nextEnabled
   if (m.secretAccessEnabled) {
-    // 기존에 만료일이 없거나 이미 지난 날짜라면 내일(+1일)로 기본 설정
+    // 기존에 만료일이 없거나 이미 지난 날짜라면 기본 설정 (rollbook은 학기/학년도 고정용 장기 만료)
     if (!m.secretAccessExpireDate || m.secretAccessExpireDate < todayIsoDate.value) {
-      m.secretAccessExpireDate = getNextDayIsoDate(1)
+      m.secretAccessExpireDate = m.id === 'rollbook' ? '2099-12-31' : getNextDayIsoDate(1)
     }
     const expiresAt = parseExpireDateToTimestamp(m.secretAccessExpireDate)
     m.secretAccessExpiresAt = expiresAt

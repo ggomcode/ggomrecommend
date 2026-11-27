@@ -26,6 +26,7 @@ class App {
     this.autoWeek = todayWeekObj ? todayWeekObj.weekNum : RollbookModel.getCurrentWeekNum();
     this.todayInfo = RollbookModel.getTodayInfo();
 
+    this.loadedAcademicYears = new Set();
     this.state = {
       view: 'homeroom', // 'moving' | 'homeroom' | 'lunch' | 'finder' | 'today' | 'absence'
       absenceFilters: { grade: '3', ban: '', num: '', name: '', month: '', printStatus: 'all' },
@@ -81,14 +82,15 @@ class App {
   async loadData() {
     this.showLoading(true);
     try {
-      const { attendanceCsv, holidaysCsv, recordsCsv, registryCsv, isLive, timestamp } = await SheetAPI.loadAllData();
+      const targetYear = this.state.selectedAcademicYear;
+      const { attendanceCsv, holidaysCsv, attendanceRecords, registryCsv, isLive, timestamp } = await SheetAPI.loadAllData(targetYear);
       const attRows = SheetAPI.parseCsv(attendanceCsv);
       const holRows = SheetAPI.parseCsv(holidaysCsv);
-      const recRows = SheetAPI.parseCsv(recordsCsv || '');
 
       this.state.allStudents = RollbookModel.parseAttendanceData(attRows);
       this.state.holidaysMap = RollbookModel.parseHolidaysData(holRows);
-      this.state.attendanceOverrides = RollbookModel.parseAttendanceRecords(recRows);
+      this.state.attendanceOverrides = RollbookModel.parseSupabaseRecords(attendanceRecords || []);
+      this.loadedAcademicYears.add(targetYear);
       if (registryCsv) {
         this.state.absenceRegistryRecords = AbsenceRegistryView.parseRegistryCsv(registryCsv);
         this.state.registryMap = RollbookModel.parseRegistryData(this.state.absenceRegistryRecords, this.state.allStudents);
@@ -1887,6 +1889,26 @@ class App {
     this.scheduleSaveToGas(recordsToRevert);
   }
 
+  async ensureAcademicYearRecordsLoaded(academicYear) {
+    const y = Number(academicYear);
+    if (!y || this.loadedAcademicYears.has(y)) return;
+    try {
+      this.updateSaveIndicator('출결기록 불러오는 중... ☁️', true);
+      const rows = await SheetAPI.fetchAttendanceRecordsByYear(y);
+      RollbookModel.parseSupabaseRecords(rows, this.state.attendanceOverrides);
+      this.loadedAcademicYears.add(y);
+      this.updateSaveIndicator('불러오기 완료 ✅', false);
+      setTimeout(() => {
+        const badge = document.getElementById('saveStatus');
+        if (badge) badge.style.display = 'none';
+      }, 2000);
+      this.renderContent();
+    } catch (err) {
+      console.error('Failed to load academic year records:', err);
+      this.updateSaveIndicator('조회 실패 ⚠️ (권한/네트워크 확인)', false);
+    }
+  }
+
   scheduleSaveToGas(recordOrRecords) {
     const list = Array.isArray(recordOrRecords) ? recordOrRecords : [recordOrRecords];
     this._saveQueue.push(...list);
@@ -1895,22 +1917,30 @@ class App {
 
     if (this._saveTimer) clearTimeout(this._saveTimer);
     this._saveTimer = setTimeout(async () => {
-      const recordsToSend = [...this._saveQueue];
+      const rawQueue = [...this._saveQueue];
       this._saveQueue = [];
+
+      // 동일 key 중복 변경 시 최신 항목만 전송
+      const dedupMap = new Map();
+      rawQueue.forEach(rec => {
+        if (!rec) return;
+        const k = String(rec.key || `${rec.date}_${rec.period}_${rec.studentId}`).trim();
+        if (k) dedupMap.set(k, { ...rec, key: k });
+      });
+      const recordsToSend = Array.from(dedupMap.values());
+      if (recordsToSend.length === 0) return;
+
       try {
-        const res = await SheetAPI.saveAttendanceRecords(recordsToSend);
+        await SheetAPI.saveAttendanceRecords(recordsToSend);
         this.updateSaveIndicator('저장 완료 ✅', false);
         setTimeout(() => {
           const badge = document.getElementById('saveStatus');
           if (badge) badge.style.display = 'none';
         }, 3000);
       } catch (err) {
-        console.error('Save to GAS failed:', err);
-        this.updateSaveIndicator('저장 완료 (세션) ✅', false);
-        setTimeout(() => {
-          const badge = document.getElementById('saveStatus');
-          if (badge) badge.style.display = 'none';
-        }, 3000);
+        console.error('Save to Supabase failed:', err);
+        this._saveQueue.unshift(...recordsToSend);
+        this.updateSaveIndicator('저장 실패 ⚠️ (다시 시도 필요)', false);
       }
     }, 600);
   }
@@ -2191,6 +2221,7 @@ class App {
         this.pushHashState();
         this.renderControls();
         this.renderContent();
+        this.ensureAcademicYearRecordsLoaded(ay);
       }, { signal });
     }
 
@@ -2258,10 +2289,11 @@ class App {
         this.state.selectedSemester = this.autoSemester;
         this.state.selectedCalMonth = this.autoCalMonth;
         this.state.selectedWeekId = this.autoWeekId;
-        this.state.currentWeekNum = this.autoWeek ? this.autoWeek.weekNum : 1;
+        this.state.currentWeekNum = typeof this.autoWeek === 'object' ? (this.autoWeek?.weekNum || 1) : (this.autoWeek || 1);
         this.pushHashState();
         this.renderControls();
         this.renderContent();
+        this.ensureAcademicYearRecordsLoaded(this.autoAcademicYear);
       }, { signal });
     }
 

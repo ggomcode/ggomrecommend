@@ -1,3 +1,25 @@
+import { supabase } from '../utils/supabaseClient.js';
+
+function getRollbookSecretToken() {
+  try {
+    const ticketStr = sessionStorage.getItem('pcm_guest_ticket');
+    if (ticketStr) {
+      const t = JSON.parse(ticketStr);
+      if (t && t.moduleId === 'rollbook' && t.token) {
+        return String(t.token).trim();
+      }
+    }
+  } catch (e) {}
+  try {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      const sec = sp.get('sec') || sp.get('token');
+      if (sec) return String(sec).trim();
+    }
+  } catch (e) {}
+  return '';
+}
+
 /**
  * ─────────────────────────────────────────────────────────────────────────────
  * [통합 환경 설정] 선택교과 출석관리 및 결석계 관리 시스템
@@ -87,34 +109,76 @@ export const SheetAPI = {
   },
 
   /**
-   * Fetch sheet data via gviz JSONP or CSV
+   * Fetch rollbook attendance records for an academic year (March ~ Feb) from Supabase RPC with pagination
    */
-  async loadAllData() {
+  async fetchAttendanceRecordsByYear(academicYear = 2026) {
+    if (!supabase) {
+      throw new Error('Supabase 클라이언트가 초기화되지 않았습니다.');
+    }
+    const y = Number(academicYear) || 2026;
+    const startDate = `${y}-03-01`;
+    const endDate = `${y + 1}-02-29`;
+    const secretToken = getRollbookSecretToken() || null;
+
+    const allRows = [];
+    const PAGE_SIZE = 1000;
+    let offset = 0;
+
+    while (true) {
+      const { data, error } = await supabase
+        .rpc('get_rollbook_records', {
+          p_start_date: startDate,
+          p_end_date: endDate,
+          p_secret_token: secretToken
+        })
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      if (error) {
+        throw new Error(`출결기록 조회 실패: ${error.message || '권한 또는 네트워크 오류'}`);
+      }
+
+      const batch = Array.isArray(data) ? data : [];
+      allRows.push(...batch);
+      if (batch.length < PAGE_SIZE) break;
+      offset += PAGE_SIZE;
+    }
+
+    return allRows;
+  },
+
+  /**
+   * Fetch sheet data (출결사항, 행사및휴일) from Google Sheets + 출결기록 from Supabase
+   */
+  async loadAllData(academicYear = null) {
     let attendanceCsv = '';
     let holidaysCsv = '';
-    let recordsCsv = '';
+    let attendanceRecords = [];
     let isLive = false;
 
+    const targetYear = Number(academicYear) || (() => {
+      const now = new Date();
+      return (now.getMonth() + 1) >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+    })();
+
     try {
-      // Live fetch for attendance, holidays, and records sheet
-      const [attData, holData, recData] = await Promise.all([
+      const [attData, holData, supaRecords] = await Promise.all([
         this.fetchSheetCsv(this.gidAttendance),
         this.fetchSheetCsv(this.gidHolidays),
-        this.fetchSheetByName(this.sheetNameRecords).catch(() => '')
+        this.fetchAttendanceRecordsByYear(targetYear)
       ]);
       attendanceCsv = attData;
       holidaysCsv = holData;
-      recordsCsv = recData;
+      attendanceRecords = supaRecords;
       isLive = true;
     } catch (err) {
-      console.error('Live Google Sheets fetch failed:', err);
+      console.error('Data load failed:', err);
       throw err;
     }
 
     return {
       attendanceCsv,
       holidaysCsv,
-      recordsCsv,
+      attendanceRecords,
       isLive,
       timestamp: new Date()
     };
@@ -188,45 +252,48 @@ export const SheetAPI = {
   },
 
   /**
-   * Send attendance override records to Google Apps Script Web App (supports chunked batching)
-   * @param {Array|Object} records [{ key, date, period, studentId, ban, num, name, room, status, reason }]
+   * Save attendance override records to Supabase via secure RPC (deduplicated & chunked)
+   * @param {Array|Object} records [{ key, date, period, studentId, ban, num, name, room, status, reason, docSubmitted, action }]
    */
   async saveAttendanceRecords(records) {
-    const url = this.getGasUrl();
-    if (!url) {
-      console.warn('Google Apps Script Web App URL이 설정되지 않았습니다.');
-      return { status: 'no_gas_url', message: 'GAS URL 미설정' };
+    if (!supabase) {
+      throw new Error('Supabase 클라이언트가 초기화되지 않았습니다.');
     }
+    const rawList = Array.isArray(records) ? records : [records];
+    if (rawList.length === 0) return { status: 'success', upserted: 0, deleted: 0 };
 
-    const list = Array.isArray(records) ? records : [records];
+    const dedupMap = new Map();
+    rawList.forEach(rec => {
+      if (!rec) return;
+      const key = String(rec.key || `${rec.date}_${rec.period}_${rec.studentId}`).trim();
+      if (!key) return;
+      dedupMap.set(key, { ...rec, key });
+    });
+    const list = Array.from(dedupMap.values());
+    if (list.length === 0) return { status: 'success', upserted: 0, deleted: 0 };
+
+    const secretToken = getRollbookSecretToken() || null;
     const CHUNK_SIZE = 200;
-    let lastResult = { status: 'success', count: 0 };
+    let totalUpserted = 0;
+    let totalDeleted = 0;
 
     for (let i = 0; i < list.length; i += CHUNK_SIZE) {
       const chunk = list.slice(i, i + CHUNK_SIZE);
-      const payload = Array.isArray(records) ? { records: chunk } : chunk[0];
-
-      // Use text/plain to avoid CORS preflight OPTIONS check in GAS Web App
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
-        },
-        body: JSON.stringify(payload)
+      const { data, error } = await supabase.rpc('save_rollbook_records', {
+        p_records: chunk,
+        p_secret_token: secretToken
       });
 
-      if (!response.ok) {
-        throw new Error(`GAS POST failed with HTTP ${response.status}`);
+      if (error) {
+        throw new Error(`출결기록 저장 실패: ${error.message || '권한 또는 네트워크 오류'}`);
       }
-
-      try {
-        lastResult = await response.json();
-      } catch (e) {
-        lastResult = { status: 'success', raw: true };
+      if (data && typeof data === 'object') {
+        totalUpserted += Number(data.upserted || 0);
+        totalDeleted += Number(data.deleted || 0);
       }
     }
 
-    return lastResult;
+    return { status: 'success', upserted: totalUpserted, deleted: totalDeleted };
   },
 
   /**

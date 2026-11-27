@@ -540,7 +540,7 @@ export async function getModuleSecretUrl(moduleId, customDateStr = null, customE
 export async function getOrGenerateModuleSecretUrl(module, customExpireDate = null) {
   if (!module) return ''
   const moduleId = typeof module === 'string' ? module : module.id
-  const targetExpireDate = customExpireDate || (typeof module === 'object' ? module.secretAccessExpireDate : null) || getNextDayIsoDate(1)
+  const targetExpireDate = customExpireDate || (typeof module === 'object' ? module.secretAccessExpireDate : null) || (moduleId === 'rollbook' ? '2099-12-31' : getNextDayIsoDate(1))
 
   let token = typeof module === 'object' ? module?.secretAccessToken : null
   let needRegenerate = !token

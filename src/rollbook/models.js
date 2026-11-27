@@ -287,6 +287,47 @@ export const RollbookModel = {
   },
 
   /**
+   * Parse Supabase rollbook_records rows into an override Map
+   */
+  parseSupabaseRecords(rows, targetMap = null) {
+    const overridesMap = targetMap instanceof Map ? targetMap : new Map();
+    if (!Array.isArray(rows) || rows.length === 0) return overridesMap;
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row) continue;
+
+      const date = String(row.record_date || '').trim();
+      const periodRaw = String(row.period || '').trim();
+      const ban = String(row.ban || '').trim();
+      const num = String(row.num || '').trim();
+      const studentId = String(row.student_id || '').trim();
+      const key = String(row.record_key || '').trim() || `${date}_${periodRaw}_${studentId || (ban + num.padStart(2, '0'))}`;
+      const status = String(row.status || '').trim();
+      const reason = String(row.reason || '').trim();
+      const docSubmitted = Boolean(row.doc_submitted);
+
+      if (key && (status || reason || docSubmitted)) {
+        overridesMap.set(key, {
+          key,
+          date,
+          period: parseInt(periodRaw, 10) || periodRaw,
+          ban,
+          num,
+          name: String(row.name || '').trim(),
+          room: String(row.room || '').trim(),
+          status,
+          reason,
+          updatedAt: row.updated_at ? String(row.updated_at) : '',
+          docSubmitted
+        });
+      }
+    }
+
+    return overridesMap;
+  },
+
+  /**
    * 특정 학생·일자의 일일 사유 조회 (조례~종례 overridesMap 우선, 없으면 승인된 결석계 대장 사유)
    */
   getDailyReason(studentId, dateStr, overridesMap, registryMap = null) {
