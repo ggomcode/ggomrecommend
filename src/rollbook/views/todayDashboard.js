@@ -21,14 +21,15 @@ export const TodayDashboardView = {
     // Check full day holiday / event
     const fullDayEvent = holidaysMap.fullDayEvents[dateStr];
 
-    const totalStudents = allStudents.length;
+    const enrolledStudents = allStudents.filter(st => RollbookModel.isStudentEnrolledOnDate(st, dateStr));
+    const totalStudents = enrolledStudents.length;
     const absenceList = [];
     const lateList = [];
     const earlyLeaveList = [];
     const skipList = [];
 
     // Analyze each student for today
-    allStudents.forEach(st => {
+    enrolledStudents.forEach(st => {
       const analysis = RollbookModel.analyzeDailyAttendance(st, dayOfWeek, dateStr, overridesMap, showSpecialStudents);
       if (analysis.isNormal) return;
 

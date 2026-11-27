@@ -1664,19 +1664,8 @@ class App {
         return;
       }
 
-      // 2. Multi-period / Homeroom view:
-      const dateCells = tr ? tr.querySelectorAll('.interactive-cell[data-date]') : [];
-      const dates = Array.from(new Set(Array.from(dateCells).map(c => c.dataset.date))).filter(Boolean);
-
-      const newRemark = RollbookModel.getEffectiveDisplayRemark(
-        baseRemark,
-        studentId,
-        dates,
-        this.state.attendanceOverrides,
-        this.state.showSpecialStudents,
-        student
-      );
-      cell.textContent = newRemark;
+      // 2. Multi-period / Homeroom view: keep only P-column baseRemark (daily reasons have dedicated columns)
+      cell.textContent = baseRemark;
     });
   }
 

@@ -92,12 +92,19 @@ export const RollbookModel = {
 
       const ban = (row[0] || '').trim();
       const num = (row[1] || '').trim();
-      const name = (row[2] || '').trim();
+      const rawName = (row[2] || '').trim();
       const gender = (row[3] || '').trim();
-      if (!ban || !name) continue;
+      const enrollmentChangeDate = this.parseCsvDateString(row[4]);
 
       // Col 15 is Column P ('비고')
       const pRemark = (row[15] || '').trim();
+      const hasWithdrawalRemark = /자퇴|전출|유예/.test(pRemark);
+
+      if (!ban || (!rawName && !num)) continue;
+      if (!rawName && !hasWithdrawalRemark && !enrollmentChangeDate) continue;
+
+      const isPlaceholderName = !rawName;
+      const name = rawName || (pRemark ? `(${pRemark})` : '(학적변동)');
 
       // Weekly recurring attendance (Cols 16 to 30)
       const weeklyAtt = {
@@ -143,8 +150,10 @@ export const RollbookModel = {
         ban: parseInt(ban, 10),
         num: parseInt(num, 10),
         name,
+        isPlaceholderName,
         gender,
         pRemark,
+        enrollmentChangeDate,
         studentId,
         weeklyAtt,
         timetable
@@ -446,13 +455,16 @@ export const RollbookModel = {
       if (!matchedStudent && nameVal) {
         matchedStudent = classStudents.find(s => s.name === nameVal);
       }
+      if (!matchedStudent && !isNaN(numVal)) {
+        matchedStudent = classStudents.find(s => s.num === numVal && (s.isPlaceholderName || /자퇴|전출|유예/.test(s.pRemark || '')));
+      }
 
       entries.push({
         date: dateStr,
         month: dateStr.slice(0, 7), // YYYY-MM
         ban: targetBan,
         num: matchedStudent ? matchedStudent.num : (isNaN(numVal) ? '' : numVal),
-        name: matchedStudent ? matchedStudent.name : nameVal,
+        name: matchedStudent ? (matchedStudent.isPlaceholderName && nameVal ? nameVal : matchedStudent.name) : nameVal,
         studentId: matchedStudent ? matchedStudent.studentId : '',
         catText,
         status,
@@ -699,11 +711,39 @@ export const RollbookModel = {
   },
 
   /**
+   * 특정 날짜(YYYY-MM-DD) 기준 학생 재적 여부 판정
+   * - P열에 자퇴/전출/유예 포함 + E열 변동일: 변동일(포함)까지 재적, 이후 제외
+   * - P열에 전입/재입학 포함 + E열 변동일: 변동일(포함)부터 재적, 이전 제외
+   */
+  isStudentEnrolledOnDate(student, dateStr = null) {
+    if (!student) return false;
+    const pRemark = (student.pRemark || '').trim();
+    const changeDate = student.enrollmentChangeDate || '';
+    const isExit = /자퇴|전출|유예/.test(pRemark);
+    const isEntry = /전입|재입학/.test(pRemark);
+
+    if (isExit) {
+      if (!changeDate) return false;
+      if (!dateStr) return false;
+      return dateStr <= changeDate;
+    }
+    if (isEntry) {
+      if (!changeDate) return true;
+      if (!dateStr) return true;
+      return dateStr >= changeDate;
+    }
+    return true;
+  },
+
+  /**
    * Get special student / pass / itinerant mark for morning/afternoon sessions ('조', '종')
    */
   getSpecialMarkOnly(student, dateStr = null, showSpecialStudent = false) {
     const pRemark = student ? (student.pRemark || '') : '';
-    if (pRemark.includes('자퇴') || pRemark.includes('위탁') || pRemark.includes('전출')) {
+    if (!this.isStudentEnrolledOnDate(student, dateStr)) {
+      return { text: pRemark || '비재적', isShaded: true };
+    }
+    if (pRemark.includes('위탁') && !/자퇴|전출|유예/.test(pRemark)) {
       return { text: pRemark, isShaded: true };
     }
     if (showSpecialStudent && pRemark.includes('특수')) return { text: '특', isShaded: true };
@@ -991,6 +1031,18 @@ export const RollbookModel = {
   },
 
   analyzeDailyAttendance(student, dayOfWeek, dateStr, overridesMap = null, showSpecialStudent = false, registryMap = null) {
+    if (!this.isStudentEnrolledOnDate(student, dateStr)) {
+      return {
+        isNormal: false,
+        isExcluded: true,
+        isAbsence: false,
+        isLate: false,
+        isEarlyLeave: false,
+        isClassSkipped: false,
+        summary: '',
+        sessions: []
+      };
+    }
     const maxPeriod = AcademicConfig.periodsPerDay[dayOfWeek] || 6;
     const periods = ['조'];
     for (let p = 1; p <= maxPeriod; p++) periods.push(p);
@@ -1353,8 +1405,11 @@ export const RollbookModel = {
     if (!student) return { text: '', isShaded: false, is50Dark: false, isPresent: true, category: 'present' };
     const pRemark = student.pRemark || '';
 
-    // 1. 자퇴 / 위탁 / 전출 -> 50% dark shading for entire row, not present
-    if (pRemark.includes('자퇴') || pRemark.includes('위탁') || pRemark.includes('전출')) {
+    // 1. 학적변동(자퇴/전출/유예/전입전) 또는 단순 위탁 -> 50% dark shading, not present
+    if (!this.isStudentEnrolledOnDate(student, dateStr)) {
+      return { text: pRemark || '제외', isShaded: true, is50Dark: true, isPresent: false, category: 'drop', isExcludedByEnrollment: true };
+    }
+    if (pRemark.includes('위탁') && !/자퇴|전출|유예/.test(pRemark)) {
       return { text: pRemark, isShaded: true, is50Dark: true, isPresent: false, category: 'drop' };
     }
 
@@ -1552,11 +1607,14 @@ export const RollbookModel = {
   /**
    * Check if a student is eligible for lunch on a specific day
    */
-  isStudentEatingLunch(student, dayOfWeek) {
+  isStudentEatingLunch(student, dayOfWeek, dateStr = null) {
     const pRemark = student.pRemark;
+    if (!this.isStudentEnrolledOnDate(student, dateStr)) {
+      return false;
+    }
 
-    // 순회, 자퇴, 위탁, 전출 -> Always excluded from lunch
-    if (pRemark.includes('순회') || pRemark.includes('자퇴') || pRemark.includes('위탁') || pRemark.includes('전출')) {
+    // 순회, 위탁 -> Always excluded from lunch
+    if (pRemark.includes('순회') || (pRemark.includes('위탁') && !/자퇴|전출|유예/.test(pRemark))) {
       return false;
     }
 

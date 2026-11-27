@@ -162,8 +162,8 @@ export const MovingRollbookView = {
       `;
     }
 
-    // Render student table rows (up to 35 rows)
-    const students = roster.students || [];
+    // Render student table rows (up to 35 rows, excluding non-enrolled on this date)
+    const students = (roster.students || []).filter(st => RollbookModel.isStudentEnrolledOnDate(st, dayInfo.dateStr));
     const overridesMap = options.overridesMap || null;
     const registryMap = options.registryMap || null;
 

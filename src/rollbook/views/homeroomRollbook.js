@@ -109,9 +109,13 @@ export const HomeroomRollbookView = {
     const showSpecialStudents = !!options.showSpecialStudents;
     const overridesMap = options.overridesMap || null;
     const registryMap = options.registryMap || null;
+    const activeStudents = (students || []).filter(st =>
+      days.some(d => RollbookModel.isStudentEnrolledOnDate(st, d.dateStr))
+    );
 
-    const rowsHtml = students.map((st, idx) => {
-      const isDarkRow = (st.pRemark.includes('자퇴') || st.pRemark.includes('위탁') || st.pRemark.includes('전출'));
+    const rowsHtml = activeStudents.map((st, idx) => {
+      const isSimpleEntrusted = st.pRemark.includes('위탁') && !/자퇴|전출|유예/.test(st.pRemark);
+      const isDarkRow = isSimpleEntrusted;
       const darkClass = isDarkRow ? 'row-dark-50' : '';
 
       let cellsHtml = '';
@@ -242,7 +246,6 @@ export const HomeroomRollbookView = {
           </td>`;
       });
 
-      const displayRemark = RollbookModel.getEffectiveDisplayRemark(st.pRemark, st.studentId, days, overridesMap, showSpecialStudents, st, registryMap);
       const baseRemark = RollbookModel.getDisplayRemark(st.pRemark, days, showSpecialStudents);
 
       return `
@@ -251,7 +254,7 @@ export const HomeroomRollbookView = {
           <td class="col-num">${st.num}</td>
           <td class="col-id">${escapeHtml(st.studentId)}</td>
           <td class="col-name">${escapeHtml(st.name)}</td>
-          <td class="col-remark" data-student-id="${escapeHtml(st.studentId)}" data-base-remark="${escapeHtml(baseRemark)}">${escapeHtml(displayRemark)}</td>
+          <td class="col-remark" data-student-id="${escapeHtml(st.studentId)}" data-base-remark="${escapeHtml(baseRemark)}">${escapeHtml(baseRemark)}</td>
           ${cellsHtml}
         </tr>
       `;
@@ -259,14 +262,18 @@ export const HomeroomRollbookView = {
 
     // Daily summary tfoot rows
     const presenceRowHtml = daySpecs.map((spec, dIdx) => {
-      const stats = this._calcDailyStats(students, spec.day, days[dIdx].dateStr, overridesMap, showSpecialStudents, registryMap);
-      return `<td colspan="${spec.periods.length + 1}" class="col-day-end stat-presence-cell" data-date="${days[dIdx].dateStr}">
-        <span class="stat-main-num">${stats.present}명</span> <span class="stat-sub">/ ${students.length}명</span>
+      const dateStr = days[dIdx].dateStr;
+      const dayEnrolled = activeStudents.filter(st => RollbookModel.isStudentEnrolledOnDate(st, dateStr));
+      const stats = this._calcDailyStats(dayEnrolled, spec.day, dateStr, overridesMap, showSpecialStudents, registryMap);
+      return `<td colspan="${spec.periods.length + 1}" class="col-day-end stat-presence-cell" data-date="${dateStr}">
+        <span class="stat-main-num">${stats.present}명</span> <span class="stat-sub">/ ${dayEnrolled.length}명</span>
       </td>`;
     }).join('');
 
     const absenceRowHtml = daySpecs.map((spec, dIdx) => {
-      const stats = this._calcDailyStats(students, spec.day, days[dIdx].dateStr, overridesMap, showSpecialStudents, registryMap);
+      const dateStr = days[dIdx].dateStr;
+      const dayEnrolled = activeStudents.filter(st => RollbookModel.isStudentEnrolledOnDate(st, dateStr));
+      const stats = this._calcDailyStats(dayEnrolled, spec.day, dateStr, overridesMap, showSpecialStudents, registryMap);
       const text = `결석 ${stats.absence} · 지각 ${stats.late} · 조퇴 ${stats.earlyLeave} · 결과 ${stats.classSkipped}`;
       const hasAny = (stats.absence + stats.late + stats.earlyLeave + stats.classSkipped) > 0;
       return `<td colspan="${spec.periods.length + 1}" class="col-day-end stat-absence-cell ${hasAny ? 'has-absence' : ''}" data-date="${days[dIdx].dateStr}">
@@ -291,7 +298,7 @@ export const HomeroomRollbookView = {
             </div>
           </div>
           <div class="sheet-meta">
-            <span class="meta-item">재적: <strong>${students.length}명</strong></span>
+            <span class="meta-item">재적: <strong>${days.length > 0 ? activeStudents.filter(st => RollbookModel.isStudentEnrolledOnDate(st, days[days.length - 1].dateStr)).length : activeStudents.length}명</strong></span>
             <span class="meta-item print-timestamp" data-timestamp=""></span>
           </div>
         </div>
