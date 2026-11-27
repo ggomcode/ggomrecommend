@@ -209,14 +209,17 @@
           </div>
         </div>
 
-        <!-- 우측 상태 지표 배지들 -->
-        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+        <!-- 우측 상태 지표 배지 & 주요 액션 버튼 -->
+        <div class="flex items-center gap-2 shrink-0">
           <div id="todayBadge" class="status-badge status-today">
             <span>📅</span> 오늘: 계산 중...
           </div>
-          <div id="syncStatus" class="status-badge status-live">
-            <span class="status-dot"></span>데이터 준비 중...
-          </div>
+          <button type="button" id="openCsvUploadModalBtn" class="pill-btn" style="background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; font-weight: 700;" title="반별 월별 출결 현황 CSV 일괄 업로드">
+            📂 출결 CSV 업로드
+          </button>
+          <button type="button" id="openFutureScheduleBtn" class="pill-btn" style="background: #f0fdf4; color: #15803d; border-color: #bbf7d0; font-weight: 700;" title="미래 일정/결석 사전 등록 및 원클릭 전 교시 표시">
+            📅 일정·결석 사전등록
+          </button>
           <div id="saveStatus" class="status-badge status-saved" style="display: none;">
             <span>☁️</span> <span id="saveStatusText">저장됨</span>
           </div>

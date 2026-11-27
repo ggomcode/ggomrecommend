@@ -129,22 +129,14 @@ class App {
       const todayWeekLabel = todayW ? `${todayW.month}월 ${todayW.monthWeekNum}주차` : `${this.autoWeek}주차`;
       todayEl.innerHTML = `<span>📅</span> 오늘: <strong>${this.todayInfo.display}</strong> <span class="badge-sub">(${todayWeekLabel} 자동 선택)</span>`;
     }
-
-    const el = document.getElementById('syncStatus');
-    if (!el) return;
-
-    const count = this.state.allStudents ? this.state.allStudents.length : 0;
-    if (this.state.isLive) {
-      el.className = 'status-badge status-live';
-      el.innerHTML = `<span class="status-dot"></span>구글 시트 실시간 연결됨 (${count}명)`;
-    } else {
-      el.className = 'status-badge status-offline';
-      el.innerHTML = `<span class="status-dot"></span>구글 시트 연결 실패`;
-    }
   }
 
   setupEventListeners() {
     const signal = this._globalAbort.signal;
+
+    // Header Action Buttons (CSV Batch Upload & Future Schedule)
+    document.getElementById('openCsvUploadModalBtn')?.addEventListener('click', () => this.openCsvUploadModal(), { signal });
+    document.getElementById('openFutureScheduleBtn')?.addEventListener('click', () => this.openDailyReasonModal({ mode: 'future' }), { signal });
 
     // View Switcher Buttons
     document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -2078,15 +2070,6 @@ class App {
         </div>
 
         ${specialToggleHtml}
-
-        <div class="control-group" style="display: flex; gap: 6px; align-items: center;">
-          <button type="button" id="openCsvUploadModalBtn" class="pill-btn" style="background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; font-weight: 700;" title="반별 월별 출결 현황 CSV 일괄 업로드">
-            📂 출결 CSV 업로드
-          </button>
-          <button type="button" id="openFutureScheduleBtn" class="pill-btn" style="background: #f0fdf4; color: #15803d; border-color: #bbf7d0; font-weight: 700;" title="미래 일정/결석 사전 등록 및 원클릭 전 교시 표시">
-            📅 일정·결석 사전등록
-          </button>
-        </div>
       `;
     } else if (view === 'homeroom') {
       const weekSelectorHtml = this.renderWeekSelectorGroupHtml();
@@ -2132,15 +2115,6 @@ class App {
         </div>
 
         ${specialToggleHtml}
-
-        <div class="control-group" style="display: flex; gap: 6px; align-items: center;">
-          <button type="button" id="openCsvUploadModalBtn" class="pill-btn" style="background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; font-weight: 700;" title="반별 월별 출결 현황 CSV 일괄 업로드">
-            📂 출결 CSV 업로드
-          </button>
-          <button type="button" id="openFutureScheduleBtn" class="pill-btn" style="background: #f0fdf4; color: #15803d; border-color: #bbf7d0; font-weight: 700;" title="미래 일정/결석 사전 등록 및 원클릭 전 교시 표시">
-            📅 일정·결석 사전등록
-          </button>
-        </div>
       `;
     } else if (view === 'lunch') {
       const monthOptions = LunchCalendarView.getAvailableMonths().map(m =>
@@ -2183,15 +2157,6 @@ class App {
           <span>※ 오늘 날짜(${this.todayInfo.display}) 기준 3학년 전체 교무실 출결 브리핑 및 학급별 현황판입니다.</span>
         </div>
         ${specialToggleHtml}
-
-        <div class="control-group" style="display: flex; gap: 6px; align-items: center;">
-          <button type="button" id="openCsvUploadModalBtn" class="pill-btn" style="background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; font-weight: 700;" title="반별 월별 출결 현황 CSV 일괄 업로드">
-            📂 출결 CSV 업로드
-          </button>
-          <button type="button" id="openFutureScheduleBtn" class="pill-btn" style="background: #f0fdf4; color: #15803d; border-color: #bbf7d0; font-weight: 700;" title="미래 일정/결석 사전 등록 및 원클릭 전 교시 표시">
-            📅 일정·결석 사전등록
-          </button>
-        </div>
       `;
     }
 
@@ -2333,16 +2298,6 @@ class App {
         this.renderControls();
         this.renderContent();
       }, { signal });
-    }
-
-    const csvBtn = document.getElementById('openCsvUploadModalBtn');
-    if (csvBtn) {
-      csvBtn.addEventListener('click', () => this.openCsvUploadModal(), { signal });
-    }
-
-    const futureBtn = document.getElementById('openFutureScheduleBtn');
-    if (futureBtn) {
-      futureBtn.addEventListener('click', () => this.openDailyReasonModal({ mode: 'future' }), { signal });
     }
 
     // Special student toggle
