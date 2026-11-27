@@ -502,9 +502,16 @@
                     <option value="ALL">전체 월 일괄 반영</option>
                   </select>
                 </div>
-                <div style="flex: 1; min-width: 220px;">
-                  <label class="modal-label">CSV 파일 선택 (여러 달 동시 선택 가능):</label>
-                  <input type="file" id="csvUploadFileInput" accept=".csv" multiple class="styled-input" style="padding: 5px 8px; background: #fff;" />
+                <div style="flex: 1; min-width: 260px;">
+                  <label class="modal-label">CSV 파일 드래그 & 드롭 (여러 달 동시 가능):</label>
+                  <div
+                    id="csvUploadDropZone"
+                    style="border: 2px dashed #94a3b8; border-radius: 10px; padding: 12px 14px; background: #ffffff; text-align: center; cursor: pointer; transition: all 0.15s ease;"
+                  >
+                    <div style="font-size: 12.5px; font-weight: 700; color: #0f766e;">📥 CSV 파일을 여기에 끌어다 놓으세요</div>
+                    <div id="csvDropFileNames" style="font-size: 11px; color: #64748b; margin-top: 3px;">여러 달의 .csv 파일을 한 번에 드롭하거나 클릭해 선택할 수 있습니다.</div>
+                    <input type="file" id="csvUploadFileInput" accept=".csv" multiple style="display: none;" />
+                  </div>
                 </div>
               </div>
               <div id="csvPreviewSummary" style="font-size: 12px; color: #475569; font-weight: 600;">

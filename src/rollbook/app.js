@@ -2856,13 +2856,43 @@ class App {
       document.getElementById('cancelCsvModalBtn')?.addEventListener('click', closeCsv);
       csvModal.addEventListener('click', (e) => { if (e.target === csvModal) closeCsv(); });
 
-      document.getElementById('csvUploadFileInput')?.addEventListener('change', (e) => {
+      const dropZone = document.getElementById('csvUploadDropZone');
+      const fileInput = document.getElementById('csvUploadFileInput');
+
+      if (dropZone && fileInput) {
+        dropZone.addEventListener('click', () => fileInput.click());
+        ['dragenter', 'dragover'].forEach(evtName => {
+          dropZone.addEventListener(evtName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.style.borderColor = '#0d9488';
+            dropZone.style.background = '#f0fdfa';
+          });
+        });
+        ['dragleave', 'drop'].forEach(evtName => {
+          dropZone.addEventListener(evtName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.style.borderColor = '#94a3b8';
+            dropZone.style.background = '#ffffff';
+          });
+        });
+        dropZone.addEventListener('drop', (e) => {
+          const files = Array.from(e.dataTransfer?.files || []).filter(f => f.name.toLowerCase().endsWith('.csv'));
+          if (files.length === 0) {
+            alert('CSV(.csv) 파일만 업로드할 수 있습니다.');
+            return;
+          }
+          this.handleCsvFilesSelected(files);
+        });
+      }
+
+      fileInput?.addEventListener('change', (e) => {
         this.handleCsvFilesSelected(e.target.files);
       });
       document.getElementById('csvTargetBanSelect')?.addEventListener('change', () => {
-        const input = document.getElementById('csvUploadFileInput');
-        if (input && input.files && input.files.length > 0) {
-          this.handleCsvFilesSelected(input.files);
+        if (this._selectedCsvFiles && this._selectedCsvFiles.length > 0) {
+          this.handleCsvFilesSelected(this._selectedCsvFiles);
         }
       });
       document.getElementById('csvMonthFilterSelect')?.addEventListener('change', () => this.renderCsvPreview());
@@ -3016,7 +3046,10 @@ class App {
     }
     const fileInput = document.getElementById('csvUploadFileInput');
     if (fileInput) fileInput.value = '';
+    this._selectedCsvFiles = [];
     this._parsedCsvEntries = [];
+    const fileNamesEl = document.getElementById('csvDropFileNames');
+    if (fileNamesEl) fileNamesEl.textContent = '여러 달의 .csv 파일을 한 번에 드롭하거나 클릭해 선택할 수 있습니다.';
     const monthSel = document.getElementById('csvMonthFilterSelect');
     if (monthSel) monthSel.innerHTML = '<option value="ALL">전체 월 일괄 반영</option>';
     const body = document.getElementById('csvPreviewBody');
@@ -3028,11 +3061,19 @@ class App {
 
   async handleCsvFilesSelected(fileList) {
     if (!fileList || fileList.length === 0) return;
+    const files = Array.from(fileList);
+    this._selectedCsvFiles = files;
+
+    const fileNamesEl = document.getElementById('csvDropFileNames');
+    if (fileNamesEl) {
+      fileNamesEl.textContent = `선택된 파일 (${files.length}개): ${files.map(f => f.name).join(', ')}`;
+    }
+
     const banSel = document.getElementById('csvTargetBanSelect');
     const targetBan = parseInt(banSel?.value || '1', 10);
 
     const allEntries = [];
-    for (const file of Array.from(fileList)) {
+    for (const file of files) {
       const text = await file.text();
       const rows = SheetAPI.parseCsv(text);
       const parsed = RollbookModel.parseHomeroomCsv(rows, targetBan, this.state.allStudents);
