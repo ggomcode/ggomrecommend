@@ -5,7 +5,7 @@ function getRollbookSecretToken() {
     const ticketStr = sessionStorage.getItem('pcm_guest_ticket');
     if (ticketStr) {
       const t = JSON.parse(ticketStr);
-      if (t && t.moduleId === 'rollbook' && t.token) {
+      if (t && (t.moduleId === 'rollbook' || t.moduleId === 'rollbook_teacher') && t.token) {
         return String(t.token).trim();
       }
     }

@@ -1165,6 +1165,134 @@
                 </div>
               </div>
 
+              <!-- 👩‍🏫 교과교사 Secret 접속경로 (선택교과 출석관리 모듈 전용: 로그인 없이 학기/학년도 내내 고정 접속) -->
+              <div
+                v-if="m.id === 'rollbook'"
+                class="mt-2.5 p-3 rounded-xl border transition-all"
+                :class="m.teacherSecretAccessEnabled
+                  ? (isTeacherSecretExpired(m)
+                      ? 'bg-rose-50/70 dark:bg-rose-950/20 border-rose-300 dark:border-rose-800 ring-1 ring-rose-300/40 shadow-xs'
+                      : 'bg-teal-50/80 dark:bg-teal-950/20 border-teal-300 dark:border-teal-800 ring-1 ring-teal-300/40 shadow-xs')
+                  : 'bg-slate-50 dark:bg-slate-900/40 border-slate-200/70 dark:border-slate-800'"
+              >
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-1.5 min-w-0 flex-wrap">
+                    <span class="text-sm">👩‍🏫</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                      교과교사 Secret 접속경로
+                    </span>
+                    <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold shrink-0">
+                      ID: {{ MODULE_CODE_MAP['rollbook_teacher'] || 'rt' }}
+                    </span>
+                    <span
+                      class="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full border shrink-0"
+                      :class="m.teacherSecretAccessEnabled
+                        ? (isTeacherSecretExpired(m)
+                            ? 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-900/50 dark:text-rose-300'
+                            : 'bg-teal-100 text-teal-900 border-teal-300 dark:bg-teal-900/50 dark:text-teal-300')
+                        : 'bg-slate-100 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400'"
+                    >
+                      {{ m.teacherSecretAccessEnabled ? (isTeacherSecretExpired(m) ? '⚠️ 만료됨' : `🔓 열림 (${m.teacherSecretAccessExpireDate === '2099-12-31' ? '상시 고정' : getTeacherSecretDdayLabel(m)})`) : '🔒 닫힘 (차단)' }}
+                    </span>
+                  </div>
+
+                  <!-- 토글 스위치 -->
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      @click.stop="toggleTeacherSecretAccess(m)"
+                      class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                      :class="m.teacherSecretAccessEnabled ? 'bg-teal-600' : 'bg-slate-300 dark:bg-slate-700'"
+                      :title="m.teacherSecretAccessEnabled ? '교과교사 Secret 접속경로 닫기' : '교과교사 Secret 접속경로 열기'"
+                    >
+                      <span
+                        class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                        :class="m.teacherSecretAccessEnabled ? 'translate-x-4' : 'translate-x-0'"
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                <div v-if="m.teacherSecretAccessEnabled" class="mt-2.5 pt-2 border-t border-teal-200/80 dark:border-teal-800/50 space-y-2">
+                  <div class="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-teal-100/60 dark:bg-teal-950/40 border border-teal-200/90 dark:border-teal-800/60 text-xs">
+                    <div class="flex items-center gap-1.5 text-teal-950 dark:text-teal-100 font-semibold">
+                      <span>📅</span>
+                      <span>접속 유효 만료일:</span>
+                      <input
+                        type="date"
+                        :min="todayIsoDate"
+                        :value="m.teacherSecretAccessExpireDate || '2099-12-31'"
+                        @change="handleTeacherSecretExpireDateChange(m, $event.target.value)"
+                        class="px-2 py-0.5 text-xs font-bold font-mono rounded border border-teal-300 dark:border-teal-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-2xs focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer"
+                      />
+                      <span class="text-[11px] font-normal text-teal-800 dark:text-teal-300">23:59까지</span>
+                    </div>
+
+                    <div class="flex items-center gap-1 shrink-0">
+                      <span class="text-[10px] text-teal-800 dark:text-teal-300 mr-0.5">빠른 지정:</span>
+                      <button
+                        type="button"
+                        @click.stop="handleTeacherSecretExpireDateChange(m, '2099-12-31')"
+                        class="px-1.5 py-0.5 text-[10px] font-semibold rounded border border-teal-300 dark:border-teal-700 hover:bg-teal-200 bg-white dark:bg-slate-800 text-teal-900 dark:text-teal-200 transition-colors cursor-pointer"
+                        :class="{ 'bg-teal-600! text-white! border-teal-700!': m.teacherSecretAccessExpireDate === '2099-12-31' }"
+                      >
+                        학기/학년도 고정
+                      </button>
+                      <button
+                        type="button"
+                        @click.stop="setPresetTeacherExpireDate(m, 30)"
+                        class="px-1.5 py-0.5 text-[10px] font-semibold rounded border border-teal-300 dark:border-teal-700 hover:bg-teal-200 bg-white dark:bg-slate-800 text-teal-900 dark:text-teal-200 transition-colors cursor-pointer"
+                        :class="{ 'bg-teal-600! text-white! border-teal-700!': m.teacherSecretAccessExpireDate === getNextDayIsoDate(30) }"
+                      >
+                        30일간
+                      </button>
+                    </div>
+                  </div>
+
+                  <div v-if="isTeacherSecretExpired(m)" class="p-2 rounded bg-rose-100 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 text-[11px] text-rose-900 dark:text-rose-200 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-1.5">
+                      <span>⚠️</span>
+                      <strong>설정된 유효 만료일({{ m.teacherSecretAccessExpireDate }})이 경과하여 접속이 차단되었습니다.</strong>
+                    </div>
+                    <button
+                      type="button"
+                      @click.stop="handleTeacherSecretExpireDateChange(m, '2099-12-31')"
+                      class="px-2 py-0.5 text-[10px] font-bold rounded bg-rose-600 hover:bg-rose-700 text-white cursor-pointer border-none"
+                    >
+                      상시 고정으로 복구
+                    </button>
+                  </div>
+
+                  <div class="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      readonly
+                      :value="moduleSecretUrls['rollbook_teacher'] || '암호화 링크 생성 중...'"
+                      class="flex-1 text-[11px] font-mono bg-white dark:bg-slate-900 border border-teal-300 dark:border-teal-800 rounded px-2 py-1 text-slate-800 dark:text-slate-200 select-all focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      @click.stop="copyTeacherSecretUrl(m)"
+                      class="shrink-0 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-teal-600 hover:bg-teal-700 text-white transition-colors cursor-pointer border-none shadow-2xs flex items-center gap-1"
+                    >
+                      <span>📋</span>
+                      <span>URL 복사</span>
+                    </button>
+                  </div>
+
+                  <div class="flex items-center justify-between text-[10px] text-teal-900 dark:text-teal-200/90 leading-relaxed">
+                    <span>💡 교과교사가 별도 로그인 없이 출석부 열람 및 출결 체크·사유 입력을 수행할 수 있는 전용 링크입니다.</span>
+                    <span v-if="m.teacherSecretAccessDate" class="text-teal-700 font-mono font-semibold">발급: {{ m.teacherSecretAccessDate }}</span>
+                  </div>
+                </div>
+
+                <div v-else class="mt-1">
+                  <p class="text-[10px] text-slate-400 m-0 leading-relaxed">
+                    현재 교과교사 게스트 접속이 차단되어 있습니다. 토글을 켜면 교과교사가 별도 로그인 없이 출석부를 열람·체크할 수 있는 고정 링크가 생성됩니다.
+                  </p>
+                </div>
+              </div>
+
               <!-- 🏆 합격자 간단 통계 Secret 접속경로 (수시 지원 통계 분석 모듈 전용: 상단 KPI + 현황표만 노출) -->
               <div
                 v-if="m.id === 'stat'"
@@ -1694,6 +1822,15 @@ async function refreshModuleSecretUrls() {
       moduleSecretUrls.value['stat_simple'] = await getOrGenerateModuleSecretUrl(proxyMod)
       m.simpleSecretAccessToken = proxyMod.secretAccessToken
     }
+    if (m.id === 'rollbook' && m.teacherSecretAccessEnabled) {
+      const proxyMod = {
+        id: 'rollbook_teacher',
+        secretAccessExpireDate: m.teacherSecretAccessExpireDate || '2099-12-31',
+        secretAccessToken: m.teacherSecretAccessToken
+      }
+      moduleSecretUrls.value['rollbook_teacher'] = await getOrGenerateModuleSecretUrl(proxyMod)
+      m.teacherSecretAccessToken = proxyMod.secretAccessToken
+    }
   }
 }
 
@@ -1828,6 +1965,105 @@ async function toggleSimpleSecretAccess(m) {
     }
   } catch (err) {
     console.error('Failed to toggle simple secret access:', err)
+  }
+}
+
+function isTeacherSecretExpired(m) {
+  if (!m || !m.teacherSecretAccessEnabled) return false
+  return isSecretExpired({
+    secretAccessEnabled: m.teacherSecretAccessEnabled,
+    secretAccessExpiresAt: m.teacherSecretAccessExpiresAt,
+    secretAccessExpireDate: m.teacherSecretAccessExpireDate
+  })
+}
+
+function getTeacherSecretDdayLabel(m) {
+  return getSecretDdayLabel({
+    secretAccessEnabled: m.teacherSecretAccessEnabled,
+    secretAccessExpiresAt: m.teacherSecretAccessExpiresAt,
+    secretAccessExpireDate: m.teacherSecretAccessExpireDate
+  })
+}
+
+async function handleTeacherSecretExpireDateChange(m, newDateStr) {
+  if (!newDateStr) return
+  const clean = String(newDateStr).trim()
+  m.teacherSecretAccessExpireDate = clean
+  m.teacherSecretAccessExpiresAt = parseExpireDateToTimestamp(clean)
+  m.teacherSecretAccessDate = getTodayDateString()
+  m.teacherSecretAccessToken = await generateSecretAccessToken('rollbook_teacher', m.teacherSecretAccessDate, m.teacherSecretAccessExpiresAt)
+  moduleSecretUrls.value['rollbook_teacher'] = await getOrGenerateModuleSecretUrl({
+    id: 'rollbook_teacher',
+    secretAccessExpireDate: clean,
+    secretAccessToken: m.teacherSecretAccessToken
+  }, clean)
+  try {
+    localStorage.setItem('suite_modules_cache', JSON.stringify(suiteModules.value))
+    await saveSuiteModules(suiteModules.value)
+  } catch (err) {
+    console.error('Failed to save teacher secret expire date change:', err)
+  }
+}
+
+async function setPresetTeacherExpireDate(m, days) {
+  const newDate = getNextDayIsoDate(days)
+  await handleTeacherSecretExpireDateChange(m, newDate)
+}
+
+async function copyTeacherSecretUrl(m) {
+  const url = moduleSecretUrls.value['rollbook_teacher'] || await getOrGenerateModuleSecretUrl({
+    id: 'rollbook_teacher',
+    secretAccessExpireDate: m.teacherSecretAccessExpireDate || '2099-12-31',
+    secretAccessToken: m.teacherSecretAccessToken
+  })
+  const expStr = m.teacherSecretAccessExpireDate || '2099-12-31'
+  const expLabel = expStr === '2099-12-31' ? '학기/학년도 상시 고정' : `${expStr} 23:59까지 (${getTeacherSecretDdayLabel(m)})`
+  try {
+    await navigator.clipboard.writeText(url)
+    dialog.alert({
+      title: '교과교사 Secret 접속 URL 복사 완료',
+      message: `교과교사용 선택교과 출석부 Secret 접속 링크가 클립보드에 복사되었습니다.\n\n[Secret 접속 URL]\n${url}\n\n* 모듈 ID: ${MODULE_CODE_MAP['rollbook_teacher'] || 'rt'}\n* 유효 기간: ${expLabel}\n* 링크 소지자는 별도 로그인 없이 출석부 열람 및 출결 체크가 가능합니다.`
+    })
+  } catch (e) {
+    window.prompt('아래 교과교사 Secret 접속 URL을 복사(Ctrl+C)하세요:', url)
+  }
+}
+
+async function toggleTeacherSecretAccess(m) {
+  const nextEnabled = !m.teacherSecretAccessEnabled
+  m.teacherSecretAccessEnabled = nextEnabled
+  if (m.teacherSecretAccessEnabled) {
+    if (!m.teacherSecretAccessExpireDate || m.teacherSecretAccessExpireDate < todayIsoDate.value) {
+      m.teacherSecretAccessExpireDate = '2099-12-31'
+    }
+    const expiresAt = parseExpireDateToTimestamp(m.teacherSecretAccessExpireDate)
+    m.teacherSecretAccessExpiresAt = expiresAt
+    m.teacherSecretAccessDate = getTodayDateString()
+    m.teacherSecretAccessToken = await generateSecretAccessToken('rollbook_teacher', m.teacherSecretAccessDate, expiresAt)
+    moduleSecretUrls.value['rollbook_teacher'] = await getOrGenerateModuleSecretUrl({
+      id: 'rollbook_teacher',
+      secretAccessExpireDate: m.teacherSecretAccessExpireDate,
+      secretAccessToken: m.teacherSecretAccessToken
+    }, m.teacherSecretAccessExpireDate)
+  } else {
+    m.teacherSecretAccessToken = null
+    m.teacherSecretAccessExpiresAt = null
+    delete moduleSecretUrls.value['rollbook_teacher']
+  }
+
+  try {
+    localStorage.setItem('suite_modules_cache', JSON.stringify(suiteModules.value))
+    await saveSuiteModules(suiteModules.value)
+    if (m.teacherSecretAccessEnabled) {
+      const expStr = m.teacherSecretAccessExpireDate || '2099-12-31'
+      const expLabel = expStr === '2099-12-31' ? '학기/학년도 상시 고정' : `${expStr} 23:59까지 (${getTeacherSecretDdayLabel(m)})`
+      dialog.alert({
+        title: '교과교사 Secret 접속 활성화',
+        message: `선택교과 출석관리 '교과교사 전용 Secret 접속 통로'가 열렸습니다.\n\n[모듈 식별 ID: ${MODULE_CODE_MAP['rollbook_teacher'] || 'rt'}]\n유효 기간: ${expLabel}\n\n[URL 복사] 버튼을 눌러 교과교사에게 전달하시면 로그인 없이 출석부 열람 및 출결 체크가 가능합니다.`
+      })
+    }
+  } catch (err) {
+    console.error('Failed to toggle teacher secret access:', err)
   }
 }
 

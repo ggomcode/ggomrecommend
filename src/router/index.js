@@ -192,7 +192,8 @@ router.beforeEach(async to => {
   // 0-1. 활성화된 게스트 세션의 모듈 내부 탭 이동 및 새로고침 검증
   if (auth.isGuest) {
     const curModuleId = getModuleIdByPath(to.path)
-    if (curModuleId && curModuleId === auth.guestModule) {
+    const isRollbookMatch = auth.guestModule === 'rollbook_teacher' && curModuleId === 'rollbook'
+    if (curModuleId && (curModuleId === auth.guestModule || isRollbookMatch)) {
       // sessionStorage 티켓 만료 확인 (우연한 접속 또는 1일 경과 접속 차단)
       let hasValidTicket = false
       try {
@@ -261,7 +262,8 @@ router.beforeEach(async to => {
     }
   }
 
-  const isGuestAuthorized = auth.isGuest && auth.guestModule === getModuleIdByPath(to.path)
+  const routeModuleId = getModuleIdByPath(to.path)
+  const isGuestAuthorized = auth.isGuest && (auth.guestModule === routeModuleId || (auth.guestModule === 'rollbook_teacher' && routeModuleId === 'rollbook'))
 
   if (to.meta.requiresTeacherOrAdmin && !auth.isAdmin && !auth.isTeacher && !isGuestAuthorized) return '/login'
   if (to.meta.requiresAuth && !auth.isAdmin && !auth.isTeacher && !auth.isStudent && !isGuestAuthorized) return '/login'

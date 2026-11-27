@@ -68,9 +68,8 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_modules_text TEXT;
-  v_modules_json JSONB;
-  v_elem         JSONB;
+  v_sec_enabled  BOOLEAN;
+  v_extra_config JSONB;
   v_clean_token  TEXT := COALESCE(TRIM(p_secret_token), '');
   v_now_ms       BIGINT := (EXTRACT(EPOCH FROM NOW()) * 1000)::BIGINT;
 BEGIN
@@ -85,44 +84,42 @@ BEGIN
     END IF;
   END IF;
 
-  -- 2) 비로그인(게스트) 교과교사 시크릿 토큰 검증
+  -- 2) 비로그인(게스트) 학교 관리자 / 교과교사 시크릿 토큰 검증 (system_modules 테이블)
   IF v_clean_token = '' THEN
     RETURN FALSE;
   END IF;
 
-  SELECT value INTO v_modules_text
-  FROM public.config
-  WHERE key = 'suite_modules'
+  SELECT secret_access_enabled, extra_config
+  INTO v_sec_enabled, v_extra_config
+  FROM public.system_modules
+  WHERE id = 'rollbook'
   LIMIT 1;
 
-  IF v_modules_text IS NULL OR TRIM(v_modules_text) = '' THEN
+  IF v_extra_config IS NULL THEN
     RETURN FALSE;
   END IF;
 
-  BEGIN
-    v_modules_json := v_modules_text::JSONB;
-  EXCEPTION WHEN OTHERS THEN
-    RETURN FALSE;
-  END;
-
-  IF jsonb_typeof(v_modules_json) <> 'array' THEN
-    RETURN FALSE;
+  -- 2-1) 학교 관리자용 시크릿 토큰 확인
+  IF COALESCE(v_sec_enabled, (v_extra_config->>'secretAccessEnabled')::BOOLEAN, FALSE) = TRUE
+     AND COALESCE(TRIM(v_extra_config->>'secretAccessToken'), '') = v_clean_token
+     AND (
+       NULLIF(TRIM(v_extra_config->>'secretAccessExpiresAt'), '') IS NULL
+       OR (v_extra_config->>'secretAccessExpiresAt')::BIGINT > v_now_ms
+     )
+  THEN
+    RETURN TRUE;
   END IF;
 
-  FOR v_elem IN SELECT * FROM jsonb_array_elements(v_modules_json)
-  LOOP
-    IF v_elem->>'id' = 'rollbook' THEN
-      IF COALESCE((v_elem->>'secretAccessEnabled')::BOOLEAN, FALSE) = TRUE
-         AND COALESCE(TRIM(v_elem->>'secretAccessToken'), '') = v_clean_token
-         AND (
-           NULLIF(TRIM(v_elem->>'secretAccessExpiresAt'), '') IS NULL
-           OR (v_elem->>'secretAccessExpiresAt')::BIGINT > v_now_ms
-         )
-      THEN
-        RETURN TRUE;
-      END IF;
-    END IF;
-  END LOOP;
+  -- 2-2) 교과교사용 시크릿 토큰 확인
+  IF COALESCE((v_extra_config->>'teacherSecretAccessEnabled')::BOOLEAN, FALSE) = TRUE
+     AND COALESCE(TRIM(v_extra_config->>'teacherSecretAccessToken'), '') = v_clean_token
+     AND (
+       NULLIF(TRIM(v_extra_config->>'teacherSecretAccessExpiresAt'), '') IS NULL
+       OR (v_extra_config->>'teacherSecretAccessExpiresAt')::BIGINT > v_now_ms
+     )
+  THEN
+    RETURN TRUE;
+  END IF;
 
   RETURN FALSE;
 END;

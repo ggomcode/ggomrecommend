@@ -120,7 +120,12 @@ export const DEFAULT_SUITE_MODULES = [
     secretAccessExpireDate: '',
     secretAccessExpiresAt: null,
     secretAccessDate: '',
-    secretAccessToken: ''
+    secretAccessToken: '',
+    teacherSecretAccessEnabled: false,
+    teacherSecretAccessExpireDate: '',
+    teacherSecretAccessExpiresAt: null,
+    teacherSecretAccessDate: '',
+    teacherSecretAccessToken: ''
   },
   {
     id: 'stat',
@@ -154,6 +159,7 @@ export const MODULE_ROUTE_MAP = {
   stat: '/stat',
   stat_simple: '/stat-simple',
   rollbook: '/rollbook',
+  rollbook_teacher: '/rollbook',
   rural: '/rural',
   junior_college: '/junior-college',
   exam_intent: '/exam-intent-manage',
@@ -165,6 +171,7 @@ export const MODULE_CODE_MAP = {
   stat: 'st',
   stat_simple: 'ss',
   rollbook: 'rb',
+  rollbook_teacher: 'rt',
   rural: 'ru',
   junior_college: 'jc',
   exam_intent: 'ei',
@@ -175,6 +182,7 @@ export const CODE_TO_MODULE_MAP = {
   st: 'stat',
   ss: 'stat_simple',
   rb: 'rollbook',
+  rt: 'rollbook_teacher',
   ru: 'rural',
   jc: 'junior_college',
   ei: 'exam_intent',
@@ -540,7 +548,7 @@ export async function getModuleSecretUrl(moduleId, customDateStr = null, customE
 export async function getOrGenerateModuleSecretUrl(module, customExpireDate = null) {
   if (!module) return ''
   const moduleId = typeof module === 'string' ? module : module.id
-  const targetExpireDate = customExpireDate || (typeof module === 'object' ? module.secretAccessExpireDate : null) || (moduleId === 'rollbook' ? '2099-12-31' : getNextDayIsoDate(1))
+  const targetExpireDate = customExpireDate || (typeof module === 'object' ? module.secretAccessExpireDate : null) || ((moduleId === 'rollbook' || moduleId === 'rollbook_teacher') ? '2099-12-31' : getNextDayIsoDate(1))
 
   let token = typeof module === 'object' ? module?.secretAccessToken : null
   let needRegenerate = !token
@@ -595,6 +603,11 @@ export async function isModuleSecretAccessEnabled(moduleId) {
     if (moduleId === 'stat_simple') {
       const statMod = list.find(m => m.id === 'stat')
       if (statMod) return !!(statMod.simpleSecretAccessEnabled || statMod.extraConfig?.simpleSecretAccessEnabled)
+      return false
+    }
+    if (moduleId === 'rollbook_teacher') {
+      const rbMod = list.find(m => m.id === 'rollbook')
+      if (rbMod) return !!(rbMod.teacherSecretAccessEnabled || rbMod.extraConfig?.teacherSecretAccessEnabled)
       return false
     }
     const mod = list.find(m => m.id === moduleId)
@@ -798,7 +811,12 @@ export async function fetchSuiteModules() {
         simpleSecretAccessDate: item.extra_config?.simpleSecretAccessDate || '',
         simpleSecretAccessExpireDate: item.extra_config?.simpleSecretAccessExpireDate || getIsoDateFromTimestamp(item.extra_config?.simpleSecretAccessExpiresAt) || '',
         simpleSecretAccessExpiresAt: item.extra_config?.simpleSecretAccessExpiresAt || null,
-        simpleSecretAccessToken: item.extra_config?.simpleSecretAccessToken || ''
+        simpleSecretAccessToken: item.extra_config?.simpleSecretAccessToken || '',
+        teacherSecretAccessEnabled: !!(item.extra_config?.teacherSecretAccessEnabled ?? false),
+        teacherSecretAccessDate: item.extra_config?.teacherSecretAccessDate || '',
+        teacherSecretAccessExpireDate: item.extra_config?.teacherSecretAccessExpireDate || getIsoDateFromTimestamp(item.extra_config?.teacherSecretAccessExpiresAt) || '',
+        teacherSecretAccessExpiresAt: item.extra_config?.teacherSecretAccessExpiresAt || null,
+        teacherSecretAccessToken: item.extra_config?.teacherSecretAccessToken || ''
       }))
       modules = mergeModulesWithDefaults(dbModules, DEFAULT_SUITE_MODULES)
       _cachedModulesList = modules
@@ -875,7 +893,12 @@ export async function saveSuiteModules(modulesList) {
         simpleSecretAccessDate: m.simpleSecretAccessDate || '',
         simpleSecretAccessExpireDate: m.simpleSecretAccessExpireDate || '',
         simpleSecretAccessExpiresAt: m.simpleSecretAccessExpiresAt || null,
-        simpleSecretAccessToken: m.simpleSecretAccessToken || ''
+        simpleSecretAccessToken: m.simpleSecretAccessToken || '',
+        teacherSecretAccessEnabled: !!m.teacherSecretAccessEnabled,
+        teacherSecretAccessDate: m.teacherSecretAccessDate || '',
+        teacherSecretAccessExpireDate: m.teacherSecretAccessExpireDate || '',
+        teacherSecretAccessExpiresAt: m.teacherSecretAccessExpiresAt || null,
+        teacherSecretAccessToken: m.teacherSecretAccessToken || ''
       },
       updated_at: new Date().toISOString()
     }))
@@ -989,6 +1012,11 @@ function mergeModulesWithDefaults(savedList, defaults) {
         simpleSecretAccessExpireDate: saved?.simpleSecretAccessExpireDate || saved?.extraConfig?.simpleSecretAccessExpireDate || getIsoDateFromTimestamp(saved?.simpleSecretAccessExpiresAt || saved?.extraConfig?.simpleSecretAccessExpiresAt) || '',
         simpleSecretAccessExpiresAt: saved?.simpleSecretAccessExpiresAt || saved?.extraConfig?.simpleSecretAccessExpiresAt || null,
         simpleSecretAccessToken: saved?.simpleSecretAccessToken || saved?.extraConfig?.simpleSecretAccessToken || '',
+        teacherSecretAccessEnabled: !!(saved?.teacherSecretAccessEnabled ?? saved?.extraConfig?.teacherSecretAccessEnabled ?? def.teacherSecretAccessEnabled ?? false),
+        teacherSecretAccessDate: saved?.teacherSecretAccessDate || saved?.extraConfig?.teacherSecretAccessDate || '',
+        teacherSecretAccessExpireDate: saved?.teacherSecretAccessExpireDate || saved?.extraConfig?.teacherSecretAccessExpireDate || getIsoDateFromTimestamp(saved?.teacherSecretAccessExpiresAt || saved?.extraConfig?.teacherSecretAccessExpiresAt) || '',
+        teacherSecretAccessExpiresAt: saved?.teacherSecretAccessExpiresAt || saved?.extraConfig?.teacherSecretAccessExpiresAt || null,
+        teacherSecretAccessToken: saved?.teacherSecretAccessToken || saved?.extraConfig?.teacherSecretAccessToken || '',
         // 보존할 고유 메타데이터
         icon: def.icon,
         colorTheme: def.colorTheme
