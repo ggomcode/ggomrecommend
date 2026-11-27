@@ -816,8 +816,9 @@
   width: 15%;
   font-size: 8px;
   color: #475569;
-  white-space: normal;
-  word-break: keep-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   line-height: 1.15;
 }
 
@@ -1017,8 +1018,10 @@
   color: #334155;
   text-align: left;
   padding: 1.5px 4px;
-  white-space: normal;
-  word-break: keep-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0;
   line-height: 1.2;
   cursor: pointer;
 }
@@ -1028,10 +1031,10 @@
 }
 
 .daily-reason-text {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  display: block;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media print {
@@ -1744,6 +1747,20 @@
   position: relative;
 }
 
+.interactive-cell {
+  cursor: pointer;
+  user-select: none;
+  line-height: 1.15;
+  box-sizing: border-box;
+  transition: background-color 0.12s ease;
+}
+
+.homeroom-table tbody tr.homeroom-student-row td {
+  height: 22px;
+  box-sizing: border-box;
+  line-height: 1.15;
+}
+
 .interactive-cell:hover {
   background-color: #e0e7ff !important;
   outline: 1.5px solid #6366f1;
@@ -1778,7 +1795,10 @@
   color: #b91c1c !important;
 }
 
-.status-saenggyeol {
+.status-saenggyeol,
+.status-cheheom,
+.status-gyeongjosa,
+.status-jeonyeom {
   background-color: #dbeafe !important;
   color: #1d4ed8 !important;
 }

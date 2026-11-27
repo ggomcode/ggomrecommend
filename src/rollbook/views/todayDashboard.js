@@ -15,7 +15,7 @@ export const TodayDashboardView = {
    * @param {Object} options { showSpecialStudents: false }
    */
   render(allStudents, holidaysMap, overridesMap, todayInfo, options = {}) {
-    const { dateStr, dayOfWeek, fullDisplayDate, weekNum } = todayInfo;
+    const { dateStr, dayOfWeek, fullDisplayDate, weekNum, weekLabel } = todayInfo;
     const showSpecialStudents = !!options.showSpecialStudents;
 
     // Check full day holiday / event
@@ -125,7 +125,7 @@ export const TodayDashboardView = {
         <div class="page-header">
           <div class="page-title-group">
             <h2 class="page-title">📢 3학년 출결 일일 현황판 (교무실 브리핑)</h2>
-            <span class="page-period-tag">${escapeHtml(fullDisplayDate)} (${dayOfWeek}요일) · ${weekNum}주차</span>
+            <span class="page-period-tag">${escapeHtml(fullDisplayDate || dateStr)} (${dayOfWeek || ''}요일) · ${escapeHtml(weekLabel || `${weekNum}주차`)}</span>
             ${fullDayEvent ? `<span class="holiday-pill">${escapeHtml(fullDayEvent)}</span>` : ''}
           </div>
           <div class="page-meta">

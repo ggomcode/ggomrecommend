@@ -1654,13 +1654,17 @@ class App {
       const baseRemark = cell.dataset.baseRemark || '';
       const tr = cell.closest('tr');
 
-      // 1. Moving Rollbook view (single period column): keep it clean and period-specific
+      // 1. Moving Rollbook view (single period column): keep it 4-char core keyword or '원적참조'
       const periodCol = cell.closest('.period-column');
       if (periodCol) {
         const periodCell = tr ? tr.querySelector('.interactive-cell[data-period]') : null;
         const currentStatus = periodCell ? (periodCell.dataset.currentStatus || '') : '';
+        const dateStr = periodCell ? (periodCell.dataset.date || '') : '';
         const periodRemark = RollbookModel.getStatusRemarkText(currentStatus);
-        cell.textContent = (baseRemark && periodRemark) ? `${baseRemark}, ${periodRemark}` : (periodRemark || baseRemark);
+        const dailyReason = dateStr ? RollbookModel.getDailyReason(studentId, dateStr, this.state.attendanceOverrides, this.state.registryMap) : '';
+        const fullTooltip = [baseRemark, periodRemark, dailyReason].filter(Boolean).join(' · ');
+        cell.textContent = RollbookModel.formatMovingRemark(baseRemark, periodRemark, dailyReason);
+        if (fullTooltip) cell.title = fullTooltip;
         return;
       }
 

@@ -199,7 +199,8 @@ export const MovingRollbookView = {
       }
 
       const dailyReason = RollbookModel.getDailyReason(st.studentId, dayInfo.dateStr, overridesMap, registryMap);
-      const combinedRemark = [displayRemark, dailyReason].filter(Boolean).join(' · ');
+      const fullTooltip = [displayRemark, dailyReason].filter(Boolean).join(' · ');
+      const shortRemark = RollbookModel.formatMovingRemark(baseRemark, periodStatusRemark, dailyReason);
 
       return `
         <tr class="student-row ${is50Dark}">
@@ -223,7 +224,7 @@ export const MovingRollbookView = {
               title="${cellTitle}">
             ${escapeHtml(status.text) || '<span class="check-box"></span>'}${cellBadge}
           </td>
-          <td class="col-remark" data-student-id="${escapeHtml(st.studentId)}" data-base-remark="${escapeHtml(baseRemark)}" title="${escapeHtml(combinedRemark)}">${escapeHtml(combinedRemark)}</td>
+          <td class="col-remark" data-student-id="${escapeHtml(st.studentId)}" data-base-remark="${escapeHtml(baseRemark)}" title="${escapeHtml(fullTooltip)}">${escapeHtml(shortRemark)}</td>
         </tr>
       `;
     }).join('');

@@ -587,11 +587,20 @@ export const RollbookModel = {
     const dd = String(today.getDate()).padStart(2, '0');
     const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
     const dayName = dayNames[today.getDay()];
-    const currentWeekNum = this.getCurrentWeekNum(today);
+    const academicYear = this.getAcademicYearForDate(today);
+    const yearWeeks = this.getAcademicWeeksForYear(academicYear);
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+    const matchedWeek = yearWeeks.find(w => w.isCurrent) || yearWeeks.find(w => w.days.some(d => d.dateStr === todayStr));
+    const currentWeekNum = matchedWeek ? matchedWeek.weekNum : this.getCurrentWeekNum(today);
+    const weekLabel = matchedWeek ? `${matchedWeek.semester}학기 ${matchedWeek.month}월 ${matchedWeek.monthWeekNum}주차` : `${currentWeekNum}주차`;
 
     return {
-      dateStr: `${yyyy}-${mm}-${dd}`,
+      dateStr: todayStr,
       display: `${yyyy}.${mm}.${dd} (${dayName})`,
+      fullDisplayDate: `${yyyy}년 ${parseInt(mm, 10)}월 ${parseInt(dd, 10)}일`,
+      dayOfWeek: dayName,
+      weekNum: currentWeekNum,
+      weekLabel,
       currentWeekNum,
       dateObj: today
     };
@@ -660,9 +669,11 @@ export const RollbookModel = {
   getNextAttendanceStatus(currentStatus, originalStatus = '') {
     const orig = (originalStatus || '').trim();
     const curr = (currentStatus || '').trim();
-    const baseCycle = ['', '미', '인(생리)', '인(체험)', '인(경조사)', '인(전염병)', '병', '기'];
-    const cycle = (orig && !baseCycle.includes(orig)) ? [orig, ...baseCycle] : baseCycle;
-    const idx = cycle.indexOf(curr);
+    const baseCycle = ['', '미', '인(생리)', '병', '기'];
+    const isInCategory = (s) => /^인(\(|$)/.test(s) || s === '생리' || s === '체험' || s === '경조사' || s === '전염병';
+    const normalizedCurr = isInCategory(curr) ? '인(생리)' : curr;
+    const cycle = (orig && !baseCycle.includes(orig) && !isInCategory(orig)) ? [orig, ...baseCycle] : baseCycle;
+    const idx = cycle.indexOf(normalizedCurr);
     if (idx === -1) return cycle[1] || '';
     return cycle[(idx + 1) % cycle.length];
   },
@@ -673,9 +684,11 @@ export const RollbookModel = {
   getPrevAttendanceStatus(currentStatus, originalStatus = '') {
     const orig = (originalStatus || '').trim();
     const curr = (currentStatus || '').trim();
-    const baseCycle = ['', '미', '인(생리)', '인(체험)', '인(경조사)', '인(전염병)', '병', '기'];
-    const cycle = (orig && !baseCycle.includes(orig)) ? [orig, ...baseCycle] : baseCycle;
-    const idx = cycle.indexOf(curr);
+    const baseCycle = ['', '미', '인(생리)', '병', '기'];
+    const isInCategory = (s) => /^인(\(|$)/.test(s) || s === '생리' || s === '체험' || s === '경조사' || s === '전염병';
+    const normalizedCurr = isInCategory(curr) ? '인(생리)' : curr;
+    const cycle = (orig && !baseCycle.includes(orig) && !isInCategory(orig)) ? [orig, ...baseCycle] : baseCycle;
+    const idx = cycle.indexOf(normalizedCurr);
     if (idx === -1) return cycle[cycle.length - 1];
     return cycle[(idx - 1 + cycle.length) % cycle.length];
   },
@@ -1540,6 +1553,64 @@ export const RollbookModel = {
         .trim();
     }
     return result;
+  },
+
+  /**
+   * 선택과목 출석부 비고란용 4글자 핵심단어 추출
+   * - 복잡한 복합 사유 또는 4글자 초과 시 '원적참조' 반환
+   */
+  formatMovingRemark(baseRemark = '', periodStatusRemark = '', dailyReason = '') {
+    const rawReason = String(dailyReason || periodStatusRemark || '').trim();
+    const cleanBase = String(baseRemark || '').trim();
+
+    if (!rawReason) {
+      if (!cleanBase) return '';
+      return cleanBase.length <= 4 ? cleanBase : '원적참조';
+    }
+
+    // 복합 출결(예: '질병 지각 후 질병 조퇴(아토피)')은 즉시 원적참조
+    const actionMatches = rawReason.match(/결석|지각|조퇴|결과/g) || [];
+    if (actionMatches.length >= 2 || /후\s/.test(rawReason)) {
+      return '원적참조';
+    }
+
+    // 핵심 키워드 매칭 (최대 4글자)
+    const keywordRules = [
+      [/생리/, '생리통'],
+      [/체험/, '체험학습'],
+      [/경조사/, '경조사'],
+      [/전염병|감염병/, '전염병'],
+      [/독감/, '독감'],
+      [/코로나/, '코로나'],
+      [/골절/, '골절'],
+      [/태만/, '태만'],
+      [/늦잠/, '늦잠'],
+      [/감기/, '감기'],
+      [/몸살/, '몸살'],
+      [/복통/, '복통'],
+      [/두통/, '두통'],
+      [/치과/, '치과'],
+      [/병원|진료|외래/, '병원진료'],
+      [/대회/, '대회참가'],
+      [/면접/, '면접'],
+      [/논술/, '논술'],
+      [/실기/, '실기']
+    ];
+    for (const [regex, shortWord] of keywordRules) {
+      if (regex.test(rawReason)) return shortWord;
+    }
+
+    // 괄호 부가설명 및 앞쪽 출결구분 접두어 제거 후 4글자 이하이면 사용
+    let core = rawReason
+      .replace(/\([^)]*\)/g, '')
+      .replace(/^(질병|병결|병지각|병조퇴|병결과|인정|미인정|기타|결석|지각|조퇴|결과|병|인|미|기)\s*[·,/\-]?\s*/g, '')
+      .replace(/[·,\s]+/g, '')
+      .trim();
+
+    if (core && core.length <= 4) {
+      return core;
+    }
+    return '원적참조';
   },
 
   /**
